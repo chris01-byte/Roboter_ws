@@ -1,0 +1,58 @@
+[INFO] [1791436676.217109082] [controller_server]: 
+	controller_server lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791436676.243173973] [controller_server]: Creating controller server
+[INFO] [1791436676.438583014] [local_costmap.local_costmap]: 
+	local_costmap lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791436676.443500578] [local_costmap.local_costmap]: Creating Costmap
+[INFO] [1791436678.366203004] [controller_server]: Configuring controller interface
+[INFO] [1791436678.366696518] [controller_server]: getting goal checker plugins..
+[INFO] [1791436678.366979285] [controller_server]: Controller frequency set to 20.0000Hz
+[INFO] [1791436678.367036471] [local_costmap.local_costmap]: Configuring
+[INFO] [1791436678.387955684] [local_costmap.local_costmap]: Using plugin "obstacle_layer"
+[INFO] [1791436678.397656611] [local_costmap.local_costmap]: Subscribed to Topics: vl53_left vl53_right vl53_left_mark vl53_right_mark oak
+[INFO] [1791436678.430781679] [local_costmap.local_costmap]: Initialized plugin "obstacle_layer"
+[INFO] [1791436678.430830582] [local_costmap.local_costmap]: Using plugin "inflation_layer"
+[INFO] [1791436678.431796809] [local_costmap.local_costmap]: Initialized plugin "inflation_layer"
+[INFO] [1791436678.465889455] [controller_server]: Created progress_checker : progress_checker of type nav2_controller::PoseProgressChecker
+[INFO] [1791436678.468080890] [controller_server]: Created goal checker : general_goal_checker of type nav2_controller::SimpleGoalChecker
+[INFO] [1791436678.472086119] [controller_server]: Controller Server has general_goal_checker  goal checkers available.
+[INFO] [1791436678.473601194] [controller_server]: Created controller : FollowPath of type nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791436678.484783059] [controller_server]: Controller Server has FollowPath  controllers available.
+[INFO] [1791436678.534132676] [controller_server]: Activating
+[INFO] [1791436678.534252307] [local_costmap.local_costmap]: Activating
+[INFO] [1791436678.534270354] [local_costmap.local_costmap]: Checking transform
+[INFO] [1791436678.534522444] [local_costmap.local_costmap]: start
+[INFO] [1791436678.744096355] [controller_server]: Activating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791436678.744172560] [controller_server]: Creating bond (controller_server) to lifecycle manager.
+[INFO] [1791436704.119045867] [controller_server]: Received a goal, begin computing control effort.
+[WARN] [1791436704.121112002] [controller_server]: No goal checker was specified in parameter 'current_goal_checker'. Server will use only plugin loaded general_goal_checker . This warning will appear once.
+[INFO] [1791436718.821265249] [controller_server]: Goal was canceled. Stopping the robot.
+[INFO] [1791436718.821333612] [controller_server]: [follow_path] [ActionServer] Client requested to cancel the goal. Cancelling.
+[INFO] [1791436721.654245541] [controller_server]: Received a goal, begin computing control effort.
+[INFO] [1791436725.656889135] [controller_server]: Reached the goal!
+[INFO] [1791436828.023537432] [controller_server]: Received a goal, begin computing control effort.
+[INFO] [1791436875.175326010] [controller_server]: Reached the goal!
+[INFO] [1791436909.642884148] [controller_server]: Received a goal, begin computing control effort.
+[INFO] [1791436916.395005631] [controller_server]: Goal was canceled. Stopping the robot.
+[INFO] [1791436916.395066873] [controller_server]: [follow_path] [ActionServer] Client requested to cancel the goal. Cancelling.
+[INFO] [1791436919.380174621] [controller_server]: Received a goal, begin computing control effort.
+[INFO] [1791436953.032399468] [controller_server]: Reached the goal!
+[INFO] [1791437115.043484981] [controller_server]: Received a goal, begin computing control effort.
+[INFO] [1791437124.693672986] [controller_server]: Goal was canceled. Stopping the robot.
+[INFO] [1791437124.693727859] [controller_server]: [follow_path] [ActionServer] Client requested to cancel the goal. Cancelling.
+[INFO] [1791437129.256495559] [rclcpp]: signal_handler(signum=2)
+[INFO] [1791437129.256572916] [controller_server]: Running Nav2 LifecycleNode rcl preshutdown (controller_server)
+[INFO] [1791437129.256634388] [controller_server]: Deactivating
+[INFO] [1791437129.256651074] [controller_server]: Deactivating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791437129.256669902] [local_costmap.local_costmap]: Deactivating
+[INFO] [1791437129.335420056] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[INFO] [1791437129.345677751] [controller_server]: Cleaning up
+[INFO] [1791437129.345723189] [controller_server]: Cleaning up controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791437129.345799885] [local_costmap.local_costmap]: Cleaning up
+[INFO] [1791437129.377683664] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[INFO] [1791437129.394159925] [local_costmap.local_costmap]: Destroying
+[INFO] [1791437129.407742888] [controller_server]: Destroying

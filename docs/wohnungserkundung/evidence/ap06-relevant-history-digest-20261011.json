@@ -1,0 +1,100 @@
+{
+  "kind": "AP06 history-relevant pure policy digest reduction",
+  "baseline": "d9e722e305e2f70ef671a5cbcfdee92484351601",
+  "actual_adaptive_counter": {
+    "before_hash_calls": 11,
+    "after_hash_calls": 1,
+    "selected_tasks": 1,
+    "successful_selection_stub": false
+  },
+  "targeted": {
+    "first_suite": 150,
+    "second_suite": 8,
+    "overlap": 7,
+    "unique": 151
+  },
+  "recorded_terminal_B": {
+    "before": {
+      "diagnostic_only": true,
+      "geometry_only_no_health_or_mission_authority": true,
+      "actual_original_frozen_input": true,
+      "python_binding": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+      "native_binding": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/explore/lib/python3.10/site-packages/explore/_reserved_sweep.cpython-310-aarch64-linux-gnu.so",
+      "elapsed_s": 3.594411743004457,
+      "error": null,
+      "selected": [
+        {
+          "goal": [
+            1.4849999668076634,
+            -0.48499998915940523,
+            0.0
+          ],
+          "requires_native_plan": true,
+          "observation_points": 90,
+          "evidence_key": "5c36088224972a4448398e223180b698796d450a5eeffa3dcc02bc9e85478365"
+        }
+      ],
+      "ranking": {
+        "raw": 15,
+        "unsafe": 9,
+        "deferred_or_served": 3,
+        "accepted": 1,
+        "route_rejections": {
+          "goal_orientation_invalid": 8,
+          "no_visible_frontier": 1
+        },
+        "proposal_search_stopped_on_eligible_task": true
+      },
+      "original_deadline_s": 5.0
+    },
+    "after": {
+      "diagnostic_only": true,
+      "geometry_only_no_health_or_mission_authority": true,
+      "actual_original_frozen_input": true,
+      "python_binding": "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/explore/metric_frontier_runtime.py",
+      "native_binding": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/explore/lib/python3.10/site-packages/explore/_reserved_sweep.cpython-310-aarch64-linux-gnu.so",
+      "elapsed_s": 3.0315402779961005,
+      "error": null,
+      "selected": [
+        {
+          "goal": [
+            1.4849999668076634,
+            -0.48499998915940523,
+            0.0
+          ],
+          "requires_native_plan": true,
+          "observation_points": 90,
+          "evidence_key": "5c36088224972a4448398e223180b698796d450a5eeffa3dcc02bc9e85478365"
+        }
+      ],
+      "ranking": {
+        "raw": 15,
+        "unsafe": 9,
+        "deferred_or_served": 3,
+        "accepted": 1,
+        "route_rejections": {
+          "goal_orientation_invalid": 8,
+          "no_visible_frontier": 1
+        },
+        "proposal_search_stopped_on_eligible_task": true
+      },
+      "original_deadline_s": 5.0
+    },
+    "same_native_sha256": "486ba89c2dd60ed520d18187a19f9f9422c669fedb23b882547eccf801cdf83d",
+    "timing_scope": "one frozen geometry profile per revision; no live mission or health qualification"
+  },
+  "limits": "Only unvisited queries with no tried neighbour at ALL checked positions omit an unused preselection digest. Actual selected task always hashes current evidence; own/nearby history retains full digest. No timeout/source/mission changes.",
+  "files": {
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/explore/metric_frontier_runtime.py": "1af9d48f7f9e879787ed7e04d4248b62698bfd17a289882891f1042b3a157ac6",
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/test/test_metric_unrelated_history_digest.py": "8b63b94f89282f914a9862e97eef8ab639279203c6e4ba636ffd6a478bf41a30",
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/test/data/ap06_b13_budget_history.json": "e79b067c796332151d5bfc0205b8b7819ba65b7bc54cf2ae12bc33f9e6cc14d9",
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/test/data/ap06_b13_budget_history.npz": "8bf46bb6af801dec4d4cf1ff240b3fffd40d9667a9089638ace5f26a96d2dad1",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/unrelated-history-adaptive-red/results.xml": "f4ce37424b60bfbfd3123b22aa66085bd665f6e47eaea3325947b15cbeac1634",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/unrelated-history-targeted/results.xml": "02d70afeb95628c088304b5b534bd422fb4d640b5d1054a36d499a94890a79b2",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/unrelated-history-recorded/results.xml": "42b09bbcb5fde00ea6630aa98efb8b43103fc7fbd5ae9adde9250f49846d44b4",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/frozen-v13-terminal-b-profile/result.json": "7def93ed8be439855126be6b5f1a3a123f7817e42fc28a0594a31268150c5ee0",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/frozen-v13-terminal-b-unrelated-history-r13-native/result.json": "b4a8a2e79eb0b01cadc0ab85ab2782c169b3a6c15d08576c61de7ffb2927729f"
+  },
+  "next": "common build plus full relevant regression and unchanged original mission cases",
+  "hardware_qualification": false
+}

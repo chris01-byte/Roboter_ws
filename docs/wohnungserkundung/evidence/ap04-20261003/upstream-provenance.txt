@@ -1,0 +1,6 @@
+Repository: https://github.com/mertgulerx/frontier_exploration_ros2
+Pin: 418e9717564a895214275e088ea7075b8ac88f64
+Archive: https://codeload.github.com/mertgulerx/frontier_exploration_ros2/tar.gz/418e9717564a895214275e088ea7075b8ac88f64
+Archive SHA256: 9229f43781678d0ce7ae5cd81d990c0f6c6c27681903859bc30d539e210c3af2
+License: Apache-2.0, Copyright 2026 Mert Güler
+No upstream source changes; no runtime dependency integrated.

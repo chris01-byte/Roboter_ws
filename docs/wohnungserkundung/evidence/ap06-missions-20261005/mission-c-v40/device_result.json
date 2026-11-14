@@ -1,0 +1,16 @@
+{
+  "plant_tick_gaps": [
+    0.062291979003930464,
+    0.03766052398714237,
+    0.048124477005330846,
+    0.04158725801971741,
+    0.05186504701850936,
+    0.07038127197301947
+  ],
+  "simulated_register_writes": 494,
+  "source_periods_unchanged": true,
+  "separate_source_process": true,
+  "actual_cpu_affinity": [
+    4
+  ]
+}

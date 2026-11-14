@@ -1,0 +1,10 @@
+{
+  "architecture": "x86_64",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "hostname": "aeb5723056f9",
+  "jetson_release_present": false,
+  "local_jetson_project_accessible": false,
+  "app_terminal_probe": "previously no attached terminal; latest read did not return and was terminated",
+  "shutdown_authorized_by_user": true,
+  "jetson_shutdown_executed": false
+}

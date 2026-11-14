@@ -1,0 +1,91 @@
+{
+  "case": "door68_start_a",
+  "profile": "finite-unmasked",
+  "passed": false,
+  "original_qualification": false,
+  "hardware_qualified": false,
+  "harness_returncode": 1,
+  "raw_result_path": "/workspace/scratch/ap06-concept-20261008/visibility-a/result.json",
+  "diagnostic_status": "criteria_not_met",
+  "raw_harness_passed": false,
+  "raw_result_sha256": "01e7a773c19b28083b638c1c69a221c23de2eea343f5f9716256f6786bddd104",
+  "raw_manifest_compatible": false,
+  "identity_errors": [],
+  "reasons": {
+    "harness": "AP06 acceptance not met: pose_stale_after_processing",
+    "terminal": "pose_stale_after_processing",
+    "completion_blocker": "accessible_or_unresolved_work"
+  },
+  "measurements": {
+    "travel_m": 1.8357640412866538,
+    "rear_cleared": false,
+    "minimum_padded_clearance_m": 0.07342677582597279,
+    "map_growth": true,
+    "map_save": {
+      "success": true,
+      "message": "Karte 'amadeus' als Version 20261008T052526037800Z-a4455bc3ce19 gespeichert."
+    },
+    "checkpoint_after_save": {
+      "state": "unavailable",
+      "reason": "metric_checkpoint_exact_saved_snapshot_unavailable",
+      "motion_authorized": false
+    },
+    "action_active_at_terminal": {
+      "/explore_area/_action/status": [],
+      "/navigate_to_pose/_action/status": []
+    },
+    "command_values_at_terminal": {
+      "/cmd_vel_nav": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_smoothed": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_nav_raw": [
+        0.0,
+        0.0
+      ]
+    },
+    "metric": {
+      "state": "failed",
+      "arrivals": 3,
+      "observations": 3,
+      "attempt": 12,
+      "attempts": 12,
+      "failures": 2,
+      "reachable_boundary_cells": 658,
+      "unknown_cells_in_scope": 59942,
+      "completion_blocker": "accessible_or_unresolved_work"
+    },
+    "manager_state": "failed",
+    "map_oracle": {
+      "reference_free_cells": 128256,
+      "reference_observed_cells": 94068,
+      "reference_observed_fraction": 0.733439371257485,
+      "maximum_occupied_wall_error_m": 0.02549506714621604
+    }
+  },
+  "positive_mission_criteria": {
+    "explorer_success": false,
+    "manager_success": false,
+    "three_arrivals": true,
+    "three_observations": true,
+    "rear_cleared_both_doors": false,
+    "map_growth": true,
+    "reference_observed_fraction": false,
+    "maximum_map_error": true
+  },
+  "criteria_score": {
+    "met": 4,
+    "failed": 4,
+    "unavailable": 0,
+    "total": 8,
+    "applicable_to_case": true
+  }
+}

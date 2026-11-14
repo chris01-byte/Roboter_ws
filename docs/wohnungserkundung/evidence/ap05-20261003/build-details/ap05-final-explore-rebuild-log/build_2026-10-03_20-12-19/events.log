@@ -1,0 +1,154 @@
+[0.000000] (-) TimerEvent: {}
+[0.000978] (-) JobUnselected: {'identifier': 'amadeus_map_identity'}
+[0.001018] (-) JobUnselected: {'identifier': 'base_hardware'}
+[0.001039] (-) JobUnselected: {'identifier': 'mission_manager'}
+[0.001055] (-) JobUnselected: {'identifier': 'nav2_common'}
+[0.001070] (-) JobUnselected: {'identifier': 'nav2_msgs'}
+[0.001085] (-) JobUnselected: {'identifier': 'robot_interfaces'}
+[0.001099] (-) JobUnselected: {'identifier': 'robot_map_manager'}
+[0.001112] (-) JobUnselected: {'identifier': 'robot_navigation'}
+[0.001126] (-) JobUnselected: {'identifier': 'robot_state_estimation'}
+[0.001146] (explore) JobQueued: {'identifier': 'explore', 'dependencies': OrderedDict([('amadeus_map_identity', '/evidence/ap05-final-install/amadeus_map_identity'), ('base_hardware', '/evidence/ap05-final-install/base_hardware'), ('nav2_common', '/evidence/ap05-final-install/nav2_common'), ('robot_interfaces', '/evidence/ap05-final-install/robot_interfaces'), ('nav2_msgs', '/evidence/ap05-final-install/nav2_msgs'), ('robot_state_estimation', '/evidence/ap05-final-install/robot_state_estimation')])}
+[0.001209] (explore) JobStarted: {'identifier': 'explore'}
+[0.099743] (-) TimerEvent: {}
+[0.199957] (-) TimerEvent: {}
+[0.300459] (-) TimerEvent: {}
+[0.376385] (explore) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../../ap05-final-build/explore', 'build', '--build-base', '/evidence/ap05-final-build/explore/build', 'install', '--record', '/evidence/ap05-final-build/explore/install.log', '--install-scripts', '$base/lib/explore', '--single-version-externally-managed', 'install_data'], 'cwd': '/evidence/ap05-repo/src/explore', 'env': OrderedDict([('HTTPS_PROXY', 'http://172.31.5.205:8080'), ('no_proxy', 'localhost,127.0.0.1,::1'), ('HOSTNAME', 'b76691f97cd6'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/evidence/ap05-final-install/nav2_msgs/lib:/evidence/ap05-final-install/robot_interfaces/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/root'), ('OLDPWD', '/'), ('NO_PROXY', 'localhost,127.0.0.1,::1'), ('ROS_PYTHON_VERSION', '3'), ('SSL_CERT_FILE', '/run/ca-bundle.crt'), ('https_proxy', 'http://172.31.5.205:8080'), ('COLCON_PREFIX_PATH', '/evidence/ap05-final-install'), ('ROS_DISTRO', 'humble'), ('http_proxy', 'http://172.31.5.205:8080'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('ROS_LOCALHOST_ONLY', '1'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('REQUESTS_CA_BUNDLE', '/run/ca-bundle.crt'), ('LANG', 'C.UTF-8'), ('ROS_DOMAIN_ID', '230'), ('AMENT_PREFIX_PATH', '/evidence/ap05-final-install/robot_state_estimation:/evidence/ap05-final-install/base_hardware:/evidence/ap05-final-install/amadeus_map_identity:/evidence/ap05-final-install/robot_map_manager:/evidence/ap05-final-install/robot_navigation:/evidence/ap05-final-install/explore:/evidence/ap05-final-install/mission_manager:/evidence/ap05-final-install/robot_interfaces:/evidence/ap05-final-install/nav2_msgs:/evidence/ap05-final-install/nav2_common:/opt/ros/humble'), ('PWD', '/evidence/ap05-final-build/explore'), ('LC_ALL', 'C.UTF-8'), ('PYTHONPATH', '/evidence/ap05-final-build/explore/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap05-final-install/explore/lib/python3.10/site-packages:/evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages:/evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages:/evidence/ap05-final-install/amadeus_map_identity/lib/python3.10/site-packages:/evidence/ap05-final-install/robot_map_manager/lib/python3.10/site-packages:/evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages:/evidence/ap05-final-install/explore/lib/python3.10/site-packages:/evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages:/evidence/ap05-final-install/robot_interfaces/local/lib/python3.10/dist-packages:/evidence/ap05-final-install/nav2_msgs/local/lib/python3.10/dist-packages:/evidence/ap05-final-install/nav2_common/local/lib/python3.10/dist-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('HTTP_PROXY', 'http://172.31.5.205:8080'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/evidence/ap05-final-install/nav2_msgs:/evidence/ap05-final-install/robot_interfaces:/evidence/ap05-final-install/nav2_common'), ('PIP_CERT', '/run/ca-bundle.crt')]), 'shell': False}
+[0.400565] (-) TimerEvent: {}
+[0.500823] (-) TimerEvent: {}
+[0.515302] (explore) StdoutLine: {'line': b'running egg_info\n'}
+[0.515592] (explore) StdoutLine: {'line': b'writing ../../../ap05-final-build/explore/explore.egg-info/PKG-INFO\n'}
+[0.515827] (explore) StdoutLine: {'line': b'writing dependency_links to ../../../ap05-final-build/explore/explore.egg-info/dependency_links.txt\n'}
+[0.516309] (explore) StdoutLine: {'line': b'writing entry points to ../../../ap05-final-build/explore/explore.egg-info/entry_points.txt\n'}
+[0.516459] (explore) StdoutLine: {'line': b'writing requirements to ../../../ap05-final-build/explore/explore.egg-info/requires.txt\n'}
+[0.516618] (explore) StdoutLine: {'line': b'writing top-level names to ../../../ap05-final-build/explore/explore.egg-info/top_level.txt\n'}
+[0.518618] (explore) StdoutLine: {'line': b"reading manifest file '../../../ap05-final-build/explore/explore.egg-info/SOURCES.txt'\n"}
+[0.519815] (explore) StdoutLine: {'line': b"writing manifest file '../../../ap05-final-build/explore/explore.egg-info/SOURCES.txt'\n"}
+[0.519984] (explore) StdoutLine: {'line': b'running build\n'}
+[0.520018] (explore) StdoutLine: {'line': b'running build_py\n'}
+[0.521223] (explore) StdoutLine: {'line': b'copying explore/region_graph_status.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.521372] (explore) StdoutLine: {'line': b'copying explore/metric_frontier_candidates.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.521484] (explore) StdoutLine: {'line': b'copying explore/portal_task_evidence.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.521609] (explore) StdoutLine: {'line': b'copying explore/lidar_motion.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.521744] (explore) StdoutLine: {'line': b'copying explore/metric_frontier_runtime.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.521926] (explore) StdoutLine: {'line': b'copying explore/region_graph.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.522024] (explore) StdoutLine: {'line': b'copying explore/metric_progress.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.522115] (explore) StdoutLine: {'line': b'copying explore/portal_frozen_scan_runtime.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.522235] (explore) StdoutLine: {'line': b'copying explore/child_result_policy.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.522351] (explore) StdoutLine: {'line': b'copying explore/exploration_migration.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.522434] (explore) StdoutLine: {'line': b'copying explore/exploration_nav_runtime.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.522540] (explore) StdoutLine: {'line': b'copying explore/metric_frontier.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.522643] (explore) StdoutLine: {'line': b'copying explore/portal_traversal_evidence.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.522746] (explore) StdoutLine: {'line': b'copying explore/frontier_task_feed.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.522864] (explore) StdoutLine: {'line': b'copying explore/metric_checkpoint.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.523132] (explore) StdoutLine: {'line': b'copying explore/portal_traversal_runtime.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.523256] (explore) StdoutLine: {'line': b'copying explore/region_graph_shadow_lifecycle.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.523360] (explore) StdoutLine: {'line': b'copying explore/portal_plan_adapter.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.523529] (explore) StdoutLine: {'line': b'copying explore/raw_map_portal_adapter.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.523590] (explore) StdoutLine: {'line': b'copying explore/exploration_policy.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.523721] (explore) StdoutLine: {'line': b'copying explore/exploration_completion.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.523770] (explore) StdoutLine: {'line': b'copying explore/frontier_task_evidence.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.523919] (explore) StdoutLine: {'line': b'copying explore/map_status_adapter.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.523960] (explore) StdoutLine: {'line': b'copying explore/portal_memory.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.524040] (explore) StdoutLine: {'line': b'copying explore/portal_planning.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.524229] (explore) StdoutLine: {'line': b'copying explore/explore_node.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.524687] (explore) StdoutLine: {'line': b'copying explore/frontier_task_resolution.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.525020] (explore) StdoutLine: {'line': b'copying explore/exploration_scope.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.525207] (explore) StdoutLine: {'line': b'copying explore/frontier_goal_candidate.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.525467] (explore) StdoutLine: {'line': b'copying explore/__init__.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.525880] (explore) StdoutLine: {'line': b'copying explore/exploration_persistence.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.525932] (explore) StdoutLine: {'line': b'copying explore/region_graph_shadow.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.525982] (explore) StdoutLine: {'line': b'copying explore/exploration_child_goal.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.526130] (explore) StdoutLine: {'line': b'copying explore/portal_source_adapter.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.526584] (explore) StdoutLine: {'line': b'running install\n'}
+[0.526947] (explore) StdoutLine: {'line': b'running install_lib\n'}
+[0.527622] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/region_graph_status.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.527849] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/metric_frontier_candidates.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.528213] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/portal_task_evidence.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.528271] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/lidar_motion.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.528424] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/metric_frontier_runtime.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.528555] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/region_graph.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.528807] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/metric_progress.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.528951] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/portal_frozen_scan_runtime.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.529198] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/child_result_policy.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.529237] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/exploration_migration.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.529365] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/exploration_nav_runtime.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.529512] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/metric_frontier.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.529669] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/portal_traversal_evidence.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.529788] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/frontier_task_feed.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.529937] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/metric_checkpoint.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.530087] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/portal_traversal_runtime.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.530254] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/region_graph_shadow_lifecycle.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.530376] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/portal_plan_adapter.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.530515] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/raw_map_portal_adapter.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.530654] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/exploration_policy.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.530825] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/exploration_completion.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.530964] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/frontier_task_evidence.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.531091] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/map_status_adapter.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.531239] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/portal_memory.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.531407] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/portal_planning.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.531520] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/explore_node.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.531935] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/frontier_task_resolution.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.532096] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/exploration_scope.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.532265] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/frontier_goal_candidate.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.532396] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/__init__.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.532528] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/exploration_persistence.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.532664] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/region_graph_shadow.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.532792] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/exploration_child_goal.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.532911] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/portal_source_adapter.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.533573] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/region_graph_status.py to region_graph_status.cpython-310.pyc\n'}
+[0.536465] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/metric_frontier_candidates.py to metric_frontier_candidates.cpython-310.pyc\n'}
+[0.537672] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/portal_task_evidence.py to portal_task_evidence.cpython-310.pyc\n'}
+[0.541359] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/lidar_motion.py to lidar_motion.cpython-310.pyc\n'}
+[0.542760] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py to metric_frontier_runtime.cpython-310.pyc\n'}
+[0.554416] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/region_graph.py to region_graph.cpython-310.pyc\n'}
+[0.558936] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/metric_progress.py to metric_progress.cpython-310.pyc\n'}
+[0.560205] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/portal_frozen_scan_runtime.py to portal_frozen_scan_runtime.cpython-310.pyc\n'}
+[0.561561] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/child_result_policy.py to child_result_policy.cpython-310.pyc\n'}
+[0.562500] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/exploration_migration.py to exploration_migration.cpython-310.pyc\n'}
+[0.563791] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/exploration_nav_runtime.py to exploration_nav_runtime.cpython-310.pyc\n'}
+[0.565015] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py to metric_frontier.cpython-310.pyc\n'}
+[0.569004] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/portal_traversal_evidence.py to portal_traversal_evidence.cpython-310.pyc\n'}
+[0.570852] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/frontier_task_feed.py to frontier_task_feed.cpython-310.pyc\n'}
+[0.572601] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/metric_checkpoint.py to metric_checkpoint.cpython-310.pyc\n'}
+[0.573602] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/portal_traversal_runtime.py to portal_traversal_runtime.cpython-310.pyc\n'}
+[0.574789] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/region_graph_shadow_lifecycle.py to region_graph_shadow_lifecycle.cpython-310.pyc\n'}
+[0.576512] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/portal_plan_adapter.py to portal_plan_adapter.cpython-310.pyc\n'}
+[0.577038] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/raw_map_portal_adapter.py to raw_map_portal_adapter.cpython-310.pyc\n'}
+[0.578658] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/exploration_policy.py to exploration_policy.cpython-310.pyc\n'}
+[0.582501] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/exploration_completion.py to exploration_completion.cpython-310.pyc\n'}
+[0.583877] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/frontier_task_evidence.py to frontier_task_evidence.cpython-310.pyc\n'}
+[0.586129] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/map_status_adapter.py to map_status_adapter.cpython-310.pyc\n'}
+[0.587609] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/portal_memory.py to portal_memory.cpython-310.pyc\n'}
+[0.591273] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/portal_planning.py to portal_planning.cpython-310.pyc\n'}
+[0.592685] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/explore_node.py to explore_node.cpython-310.pyc\n'}
+[0.600924] (-) TimerEvent: {}
+[0.622880] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/frontier_task_resolution.py to frontier_task_resolution.cpython-310.pyc\n'}
+[0.624146] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/exploration_scope.py to exploration_scope.cpython-310.pyc\n'}
+[0.625393] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/frontier_goal_candidate.py to frontier_goal_candidate.cpython-310.pyc\n'}
+[0.626894] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/__init__.py to __init__.cpython-310.pyc\n'}
+[0.627145] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/exploration_persistence.py to exploration_persistence.cpython-310.pyc\n'}
+[0.628729] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/region_graph_shadow.py to region_graph_shadow.cpython-310.pyc\n'}
+[0.631646] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/exploration_child_goal.py to exploration_child_goal.cpython-310.pyc\n'}
+[0.633217] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/portal_source_adapter.py to portal_source_adapter.cpython-310.pyc\n'}
+[0.634668] (explore) StdoutLine: {'line': b'running install_data\n'}
+[0.634812] (explore) StdoutLine: {'line': b'copying resource/explore -> /evidence/ap05-final-install/explore/share/ament_index/resource_index/packages\n'}
+[0.634967] (explore) StdoutLine: {'line': b'copying package.xml -> /evidence/ap05-final-install/explore/share/explore\n'}
+[0.635096] (explore) StdoutLine: {'line': b'copying README.md -> /evidence/ap05-final-install/explore/share/explore\n'}
+[0.635342] (explore) StdoutLine: {'line': b'copying launch/explore.launch.py -> /evidence/ap05-final-install/explore/share/explore/launch\n'}
+[0.635499] (explore) StdoutLine: {'line': b'copying config/explore_params.yaml -> /evidence/ap05-final-install/explore/share/explore/config\n'}
+[0.635627] (explore) StdoutLine: {'line': b'copying config/hwt601_recovery_acceptance_params.yaml -> /evidence/ap05-final-install/explore/share/explore/config\n'}
+[0.635756] (explore) StdoutLine: {'line': b'copying config/metric_frontier_simulation_params.yaml -> /evidence/ap05-final-install/explore/share/explore/config\n'}
+[0.635936] (explore) StdoutLine: {'line': b'copying config/hwt601_parity_params.yaml -> /evidence/ap05-final-install/explore/share/explore/config\n'}
+[0.636063] (explore) StdoutLine: {'line': b'copying config/door_test_params.yaml -> /evidence/ap05-final-install/explore/share/explore/config\n'}
+[0.636241] (explore) StdoutLine: {'line': b'copying config/metric_frontier_params.yaml -> /evidence/ap05-final-install/explore/share/explore/config\n'}
+[0.636366] (explore) StdoutLine: {'line': b'copying behavior_trees/navigate_to_pose_no_recovery.xml -> /evidence/ap05-final-install/explore/share/explore/behavior_trees\n'}
+[0.636503] (explore) StdoutLine: {'line': b'running install_egg_info\n'}
+[0.638036] (explore) StdoutLine: {'line': b"removing '/evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore-0.1.0-py3.10.egg-info' (and everything under it)\n"}
+[0.638298] (explore) StdoutLine: {'line': b'Copying ../../../ap05-final-build/explore/explore.egg-info to /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore-0.1.0-py3.10.egg-info\n'}
+[0.639005] (explore) StdoutLine: {'line': b'running install_scripts\n'}
+[0.653616] (explore) StdoutLine: {'line': b'Installing explore script to /evidence/ap05-final-install/explore/lib/explore\n'}
+[0.654519] (explore) StdoutLine: {'line': b"writing list of installed files to '/evidence/ap05-final-build/explore/install.log'\n"}
+[0.673039] (explore) CommandEnded: {'returncode': 0}
+[0.682035] (explore) JobEnded: {'identifier': 'explore', 'rc': 0}
+[0.682609] (-) EventReactorShutdown: {}

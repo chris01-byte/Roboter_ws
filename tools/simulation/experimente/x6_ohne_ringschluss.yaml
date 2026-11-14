@@ -1,0 +1,5 @@
+# Experiment X6: slam_toolbox ohne Ringschluss (do_loop_closing false).
+# Prüft, ob die Fehlläufe allein vom falschen Ringschluss in der symmetrischen Welt kommen.
+slam_toolbox:
+  ros__parameters:
+    do_loop_closing: false

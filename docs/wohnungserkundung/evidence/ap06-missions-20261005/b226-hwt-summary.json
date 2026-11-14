@@ -1,0 +1,86 @@
+{
+  "mission-b-v221": {
+    "transitions": [
+      {
+        "at": 126270.11286749,
+        "state": "STARTUP",
+        "reason": "raw_missing_stale_or_invalid",
+        "fault": null
+      },
+      {
+        "at": 126270.4650993,
+        "state": "STARTUP",
+        "reason": "yaw_missing_stale_or_invalid",
+        "fault": null
+      },
+      {
+        "at": 126293.664363162,
+        "state": "STARTUP",
+        "reason": "yaw_uncalibrated_or_faulted",
+        "fault": null
+      },
+      {
+        "at": 126294.366238671,
+        "state": "HEALTHY",
+        "reason": "raw_sources_ready",
+        "fault": null
+      },
+      {
+        "at": 126572.780417566,
+        "state": "HOLD",
+        "reason": "wheel_missing_stale_or_invalid",
+        "fault": null
+      },
+      {
+        "at": 126574.817292979,
+        "state": "TERMINAL_FAULT",
+        "reason": "wheel_missing_stale_or_invalid",
+        "fault": "wheel_missing_stale_or_invalid"
+      },
+      {
+        "at": 126578.872928489,
+        "state": "TERMINAL_FAULT",
+        "reason": "wheel_missing_stale_or_invalid",
+        "fault": "wheel_missing_stale_or_invalid"
+      }
+    ],
+    "timing_rejections": [
+      {
+        "reason": "encoder_luecke_nicht_ueberbrueckbar",
+        "pair_duration_s": 0.0005011570028727874,
+        "sample_gap_s": 0.19733614099095576,
+        "read_end_age_s": 0.1975867194996681
+      }
+    ]
+  },
+  "mission-gyro-v225": {
+    "transitions": [
+      {
+        "at": 126780.195402922,
+        "state": "STARTUP",
+        "reason": "yaw_missing_stale_or_invalid",
+        "fault": null
+      },
+      {
+        "at": 126804.894646456,
+        "state": "STARTUP",
+        "reason": "wheel_missing_stale_or_invalid",
+        "fault": null
+      },
+      {
+        "at": 126845.444419456,
+        "state": "STARTUP",
+        "reason": "wheel_missing_stale_or_invalid",
+        "fault": null
+      }
+    ],
+    "timing_rejections": [
+      {
+        "reason": "encoder_luecke_nicht_ueberbrueckbar",
+        "pair_duration_s": 0.00016220500401686877,
+        "sample_gap_s": 0.3295038740034215,
+        "read_end_age_s": 0.3295849765127059
+      }
+    ]
+  }
+}

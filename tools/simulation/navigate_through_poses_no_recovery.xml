@@ -1,0 +1,12 @@
+<!-- Unused native NavigateThroughPoses server requires a default tree when
+     activating bt_navigator. The test sends no goals to this server. -->
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <PipelineSequence>
+      <RateController hz="1.0">
+        <ComputePathThroughPoses goals="{goals}" path="{path}" planner_id="GridBased" server_timeout="2000"/>
+      </RateController>
+      <FollowPath path="{path}" controller_id="FollowPath" server_timeout="2000"/>
+    </PipelineSequence>
+  </BehaviorTree>
+</root>

@@ -1,0 +1,1 @@
+{'goal': [3.236955819008617, -0.46507350400443115, -0.0017521812078768622], 'arrival_plan_valid': False, 'arrival_rejection': 'footprint_sweep_invalid', 'kind': 'Exact B63 terminal raw/cost rasters, recorded map pose, native CPP read-only query; no motion or whole acceptance', 'astar': 'false'}

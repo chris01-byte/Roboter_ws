@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/evidence/ap06-concept-20261008/replay_metric_select_c5.py", line 207, in <module>
+    if __name__=='__main__':main()
+  File "/evidence/ap06-concept-20261008/replay_metric_select_c5.py", line 147, in main
+    view=node._metric_observation_view()
+  File "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py", line 1725, in _metric_observation_view
+    raise ValueError('candidate_lidar_stamp_stale')
+ValueError: candidate_lidar_stamp_stale

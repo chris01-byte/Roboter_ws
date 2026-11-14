@@ -1,0 +1,34 @@
+F..............................................................F.....    [100%]
+=================================== FAILURES ===================================
+__________ test_straight_escape_then_later_turn_uses_actual_first_leg __________
+
+    def test_straight_escape_then_later_turn_uses_actual_first_leg():
+        node, inputs = fixture()
+        route = (inputs[2][:2], (1.3, .05), (1.3, .75))
+>       assert node._metric_waypoints_clear(inputs, route, math.pi/2) is not None
+E       assert None is not None
+E        +  where None = <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7fdd7d852560>>([nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...], ((0.05, 0.05), (1.3, 0.05), (1.3, 0.75)), (3.141592653589793 / 2))
+E        +    where <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7fdd7d852560>> = <explore.explore_node.ExploreNode object at 0x7fdd7d852560>._metric_waypoints_clear
+E        +    and   3.141592653589793 = math.pi
+
+evidence/ap06-repo/src/explore/test/test_metric_rpp_egress_turn.py:22: AssertionError
+___ test_egress_continues_past_nominal_exit_until_initial_turn_space_is_left ___
+
+    def test_egress_continues_past_nominal_exit_until_initial_turn_space_is_left():
+        from explore.metric_frontier import footprint_cells
+        n,inputs=egress_fixture();inputs[2]=(.15,.05,.01)
+        n._metric_prepare_egress(inputs)
+        r,c=footprint_cells(*inputs[2],inputs[0],n._world_to_grid,n._metric_bounds)
+        assert not np.any(n._metric_egress[0].unknown[r,c])
+        # A millimetre projection onto the real plan is not an in-place turn.
+        route=(inputs[2][:2],(.15,.051),(.75,.05))
+>       assert n._metric_waypoints_clear(inputs,route,0.) is not None
+E       assert None is not None
+E        +  where None = <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7fdd7d825b70>>([nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...], ((0.15, 0.05), (0.15, 0.051), (0.75, 0.05)), 0.0)
+E        +    where <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7fdd7d825b70>> = <explore.explore_node.ExploreNode object at 0x7fdd7d825b70>._metric_waypoints_clear
+
+evidence/ap06-repo/src/explore/test/test_metric_frontier.py:744: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_rpp_egress_turn.py::test_straight_escape_then_later_turn_uses_actual_first_leg
+FAILED evidence/ap06-repo/src/explore/test/test_metric_frontier.py::test_egress_continues_past_nominal_exit_until_initial_turn_space_is_left
+2 failed, 67 passed in 1.71s

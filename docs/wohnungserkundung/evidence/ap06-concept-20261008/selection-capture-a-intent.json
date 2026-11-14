@@ -1,0 +1,12 @@
+{
+  "created_utc": "2026-10-08T15:41:31.575840+00:00",
+  "candidate": "c5d2a9c00d146851799a907ba725ef0d0f30c815",
+  "case": "door68_start_a",
+  "profile": "finite-unmasked with bounded diagnostic selection snapshots and wall/process/thread timing",
+  "original_positive_qualification": false,
+  "hardware_qualified": false,
+  "original_budgets_preserved": true,
+  "purpose": "Capture actual selector entry objects and compare CPU time with elapsed time at any original 5-second rejection. No live truth map, goals or motion guard changes.",
+  "diagnostic_driver_sha256": "b5a53d12821743e30cb94c03c2e9a05a508b25d06ba09ead5d8bc3fb964b2625",
+  "original_driver_sha256": "22d080cd451449ec2a4cf732c0d5a1939fc0419133a69c09280ba9eda33b5086"
+}

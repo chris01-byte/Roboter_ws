@@ -1,0 +1,510 @@
+{
+  "kind": "Read-only independent outcome audit of finished finite-unmasked deferred-departure experiment",
+  "created_utc": "2026-10-08T05:46:34.424353+00:00",
+  "sources": {
+    "result.json": {
+      "path": "/workspace/scratch/ap06-concept-20261008/deferred-a/door68_start_a/result.json",
+      "sha256": "b26a2aa4b9587271daee9240abc0692b73c152fb621a7c4930d7c3d8adf57b31"
+    },
+    "departure_assessments.jsonl": {
+      "path": "/workspace/scratch/ap06-concept-20261008/deferred-a/door68_start_a/departure_assessments.jsonl",
+      "sha256": "4643a7bd474b21a8899e79a1f31dde154b1dd8c1e46305f9f8c23a8b60a4e14f"
+    },
+    "plant.jsonl": {
+      "path": "/workspace/scratch/ap06-concept-20261008/deferred-a/door68_start_a/plant.jsonl",
+      "sha256": "505245ebfcb1a62e18743fb4b540044b86c13d06789bbca7984c611b83c59abe"
+    },
+    "explorer.log": {
+      "path": "/workspace/scratch/ap06-concept-20261008/deferred-a/door68_start_a/explorer.log",
+      "sha256": "4cfb0c0820ba5703f76333bf611beb63aa5535579c93291f45892df12526c59b"
+    }
+  },
+  "trace": {
+    "path": "/workspace/scratch/ap06-concept-20261008/deferred-a/door68_start_a/events.jsonl.gz",
+    "uncompressed_bytes": 249345880,
+    "uncompressed_sha256": "a736090815de7a17fa71855cb06170427e7d38ce94b62147a0028e47b8bbce54",
+    "independently_verified": true
+  },
+  "observed_result": {
+    "passed": false,
+    "manifest_compatible": false,
+    "concept_deferred_departure": true,
+    "travel_m": 1.3165107930993978,
+    "minimum_padded_clearance_m": 0.0768869026052248,
+    "rear_cleared": false,
+    "map_oracle": {
+      "reference_free_cells": 128256,
+      "reference_observed_cells": 94867,
+      "reference_observed_fraction": 0.7396690993013972,
+      "maximum_occupied_wall_error_m": 0.01500002089887853
+    },
+    "action_active_at_terminal": {
+      "/explore_area/_action/status": [],
+      "/navigate_to_pose/_action/status": []
+    },
+    "command_values_at_terminal": {
+      "/cmd_vel_nav": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_smoothed": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_nav_raw": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "terminal": {
+    "state": "blocked",
+    "reason": "failure_budget_exhausted",
+    "outcome": "blocked_help_required",
+    "arrivals": 3,
+    "observations": 3,
+    "attempts": 10,
+    "failures": 3,
+    "route_rejection": "footprint_sweep_invalid",
+    "planning_route_rejection": "footprint_sweep_invalid",
+    "planning_stop_reason": "route_invalidated",
+    "nav2_plan_rejection": "nav2_plan_timeout_or_stop",
+    "departure_plan_rejection": "footprint_sweep_invalid"
+  },
+  "ablation": {
+    "original_predictions": 8,
+    "original_true": 7,
+    "actually_deferred": [
+      {
+        "controller_contract": true,
+        "deferred": true,
+        "departure_rejection_at_original_return": "footprint_sweep_invalid",
+        "entered_monotonic": 167599.528376934,
+        "experiment_decision": "future_departure_proof_deferred_to_actual_next_leg",
+        "finished_monotonic": 167605.300084484,
+        "kind": "hypothetical_departure_assessment",
+        "last_route_rejection_at_original_return": null,
+        "original_decision": false,
+        "original_qualification": false,
+        "original_returned_monotonic": 167605.021963232,
+        "pose": [
+          0.7849559299438809,
+          0.5550836638367245,
+          -0.30969458020291
+        ],
+        "prior_departure_rejection": null,
+        "prior_last_route_rejection": null,
+        "public_current_body": true,
+        "reason_scope": "Exact function return; last route rejection may describe a hypothetical query",
+        "returned": true,
+        "route_points": 340,
+        "route_sha256": "e0854e7ea9ad063a9617608f16b3da81f93d3a6009c2b610b4a34a173d9cbe96",
+        "schema": 1,
+        "sequence": 8,
+        "stop_after_checks": false,
+        "stop_after_prediction": false,
+        "target": {
+          "x": 2.4849999444559216,
+          "y": 0.48499998915940523,
+          "yaw": 0.0
+        },
+        "task_id": "metric-task-3"
+      }
+    ],
+    "subsequent_terminal_chain": {
+      "task": "metric-task-3",
+      "target": [
+        2.4849999444559216,
+        0.48499998915940523
+      ],
+      "result": "canceled",
+      "decision": "route_invalidated",
+      "terminal_child": true,
+      "stop_reason": "route_invalidated",
+      "child_dispatched": true,
+      "planning_rejection": null,
+      "snapshot": {
+        "time_monotonic": 167609.397324001,
+        "safe": true,
+        "first_rejecting_predicate": null,
+        "standstill": true,
+        "encoder_state": {
+          "dry_run": false,
+          "allow_rs485": true,
+          "timed_out": false,
+          "cmd_v_mps": 0.0,
+          "cmd_w_radps": 0.0,
+          "invalid_cmd_count": 0,
+          "v_left_mps": 0.0,
+          "v_right_mps": -0.0,
+          "rpm_left": 0.0,
+          "rpm_right": -0.0,
+          "motor_rpm_left": 0.0,
+          "motor_rpm_right": -0.0,
+          "gear_ratio": 10.0,
+          "x": 0.8447721780958444,
+          "y": 0.5311576823534018,
+          "yaw": -0.28700087094261495,
+          "odometry_source": "encoder_position",
+          "encoder_initialized": true,
+          "encoder_feedback_ok": true,
+          "encoder_stale": false,
+          "encoder_feedback_age_s": 0.03952036998816766,
+          "encoder_counts_per_motor_revolution": 1000.0,
+          "encoder_expected_segment": 1000,
+          "encoder_expected_resolution": 4000,
+          "encoder_connection_initialized": true,
+          "encoder_config_fault_latched": false,
+          "encoder_position_left_u32": 4172,
+          "encoder_position_right_u32": 4294904320,
+          "encoder_position_left_i32": 4172,
+          "encoder_position_right_i32": -62976,
+          "encoder_delta_left": 0,
+          "encoder_delta_right": 0,
+          "encoder_sample_dt_s": 0.06018309900537133,
+          "encoder_pair_read_duration_s": 0.0009770619799382985,
+          "encoder_maximum_pair_read_duration_s": 0.01782636798452586,
+          "encoder_pair_left_first": true,
+          "encoder_last_reason": "ok",
+          "encoder_consecutive_failures": 0,
+          "modbus_read_failures": 0,
+          "encoder_rejected_updates": 0,
+          "encoder_rebases": 0,
+          "encoder_word_order_left": true,
+          "encoder_word_order_right": true,
+          "encoder_segment_left": 1000,
+          "encoder_segment_right": 1000,
+          "encoder_resolution_left": 4000,
+          "encoder_resolution_right": 4000,
+          "feedback_ok": true,
+          "meas_motor_rpm_left": 0.0,
+          "meas_motor_rpm_right": 0.0,
+          "meas_v_mps": 0.0,
+          "meas_w_radps": 0.0,
+          "rs485_port": "/dev/ttyUSB_BASE",
+          "rs485_ready": true,
+          "left_motor_id": 1,
+          "right_motor_id": 2,
+          "stamp_sec": 1791437957.3996038,
+          "encoder_timing_recovery": {
+            "state": "ready",
+            "ready": true,
+            "timing_recovery_pending": false,
+            "timing_recovery_count": 0,
+            "timing_recovery_budget_s": 2.0,
+            "timing_recovery_attempt_limit": 2,
+            "timing_recovery_deadline_s": null,
+            "odometry_continuity_valid": true,
+            "first_timing_rejection": null,
+            "last_timing_rejection": null,
+            "current_reason": "ok",
+            "diagnostic_pair_count": 0,
+            "timing_recovered_count": 0,
+            "timing_recovery_valid_pairs": 0,
+            "continuity_max_gap_s": 0.18,
+            "source": "ess23_absolute_fc03",
+            "synthetic": false,
+            "command_derived": false,
+            "shadow_only": true,
+            "fusion_ready": false,
+            "read_only": false,
+            "modbus_function_code": 3,
+            "sensor_write_commands": false,
+            "actuator_output": true,
+            "cmd_vel_subscription": false,
+            "publishes_tf": false,
+            "connected": true,
+            "configuration_valid": true,
+            "fault_latched": false,
+            "fault_reason": null,
+            "port": "/dev/ttyUSB_BASE",
+            "resolved_port": "/dev/ttyUSB_BASE",
+            "left_motor_id": 1,
+            "right_motor_id": 2,
+            "complete_pair_count": 6423,
+            "rejected_pair_count": 0,
+            "published_count": 6422,
+            "baseline_count": 1,
+            "rejected": 0,
+            "successful_connections": 0,
+            "reconnects": 0,
+            "fc03_pair_error_count": 0,
+            "rebases": 0,
+            "x_m": 0.8447721780958444,
+            "y_m": 0.5311576823534018,
+            "yaw_rad": -0.28700087094261495,
+            "last_attempt_gap_s": 0.06018309900537133,
+            "last_pair_duration_s": 0.0009770619799382985,
+            "maximum_pair_duration_s": 0.01782636798452586,
+            "last_rejected_pair_duration_s": null,
+            "maximum_attempted_pair_duration_s": 0.01782636798452586,
+            "startup_overrun_retries": 0,
+            "last_feedback_age_s": 0.0395339599926956,
+            "max_feedback_age_s": 0.18,
+            "last_reason": "ok",
+            "sample_dt_s": 0.06018309900537133,
+            "linear_velocity_mps": 0.0,
+            "angular_velocity_radps": 0.0,
+            "left_delta_counts": 0,
+            "right_delta_counts": 0,
+            "left_position_u32": 4172,
+            "right_position_u32": 4294904320,
+            "left_speed_rpm": 0.0,
+            "right_speed_rpm": 0.0
+          }
+        },
+        "hwt_state": "HEALTHY"
+      },
+      "arrived": false,
+      "observed_cells": 0
+    }
+  },
+  "alignment_windows": [
+    {
+      "task_id": "metric-task-4",
+      "journal_sequence": 6,
+      "original_future_proof": true,
+      "start_after_prediction": 167514.427904316,
+      "end_decision_snapshot": 167534.021812078,
+      "base_samples": 980,
+      "all_encoder_samples_valid": true,
+      "base_command_zero_fraction": 0.7295918367346939,
+      "base_watchdog_timed_out_samples": 134,
+      "max_abs_arriving_base_command_radps": 0.0225,
+      "observed_interval_s": 19.57904988102382,
+      "encoder_yaw_delta_rad": 0.060875486504888277,
+      "mean_encoder_yaw_rate_radps": 0.0031092155582017954,
+      "pulse_start_intervals_min_median_max_s": [
+        0.8003766510228161,
+        0.9833493494952563,
+        1.4000975739909336
+      ],
+      "pulses": [
+        {
+          "start": 167517.114859092,
+          "end": 167517.433779227,
+          "observed_duration_s": 0.31892013500328176,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167518.116126416,
+          "end": 167518.435711926,
+          "observed_duration_s": 0.3195855100057088,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167519.05505341,
+          "end": 167519.393691736,
+          "observed_duration_s": 0.33863832600764,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167519.856140662,
+          "end": 167520.194769479,
+          "observed_duration_s": 0.33862881700042635,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167520.757641837,
+          "end": 167521.093702767,
+          "observed_duration_s": 0.3360609299852513,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167521.617813362,
+          "end": 167521.934187974,
+          "observed_duration_s": 0.3163746119826101,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167522.955242928,
+          "end": 167523.293807629,
+          "observed_duration_s": 0.3385647009999957,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167524.017144078,
+          "end": 167524.333831272,
+          "observed_duration_s": 0.3166871939902194,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167524.855682864,
+          "end": 167525.195056609,
+          "observed_duration_s": 0.3393737449951004,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167526.25518594,
+          "end": 167526.595773266,
+          "observed_duration_s": 0.3405873259762302,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167527.655283514,
+          "end": 167527.995797476,
+          "observed_duration_s": 0.3405139620008413,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167528.620714889,
+          "end": 167528.93824647,
+          "observed_duration_s": 0.31753158100764267,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167529.757276951,
+          "end": 167530.097109526,
+          "observed_duration_s": 0.33983257500221953,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167531.056640523,
+          "end": 167531.395822955,
+          "observed_duration_s": 0.339182432013331,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167531.857017174,
+          "end": 167532.193765296,
+          "observed_duration_s": 0.33674812197568826,
+          "max_command_radps": 0.0225
+        }
+      ]
+    },
+    {
+      "task_id": "metric-task-5",
+      "journal_sequence": 7,
+      "original_future_proof": true,
+      "start_after_prediction": 167574.049333016,
+      "end_decision_snapshot": 167593.66342975,
+      "base_samples": 981,
+      "all_encoder_samples_valid": true,
+      "base_command_zero_fraction": 0.7349643221202854,
+      "base_watchdog_timed_out_samples": 143,
+      "max_abs_arriving_base_command_radps": 0.075,
+      "observed_interval_s": 19.59871674599708,
+      "encoder_yaw_delta_rad": 0.0834106331005004,
+      "mean_encoder_yaw_rate_radps": 0.00425592319035564,
+      "pulse_start_intervals_min_median_max_s": [
+        0.8997503190184943,
+        1.0706552560004639,
+        1.3395922810013872
+      ],
+      "pulses": [
+        {
+          "start": 167576.919079284,
+          "end": 167577.235009517,
+          "observed_duration_s": 0.31593023298773915,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167577.915911361,
+          "end": 167578.234288751,
+          "observed_duration_s": 0.31837739000911824,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167578.81566168,
+          "end": 167579.134521076,
+          "observed_duration_s": 0.31885939597850665,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167580.155253961,
+          "end": 167580.494386757,
+          "observed_duration_s": 0.3391327959834598,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167581.255605298,
+          "end": 167581.59368246,
+          "observed_duration_s": 0.33807716198498383,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167582.156259353,
+          "end": 167582.49374932,
+          "observed_duration_s": 0.33748996700160205,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167583.214579552,
+          "end": 167583.534513683,
+          "observed_duration_s": 0.31993413099553436,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167584.315583413,
+          "end": 167584.640115284,
+          "observed_duration_s": 0.32453187101054937,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167585.275467477,
+          "end": 167585.596060269,
+          "observed_duration_s": 0.32059279197710566,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167586.356537025,
+          "end": 167586.694305239,
+          "observed_duration_s": 0.3377682139980607,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167587.354768238,
+          "end": 167587.693661236,
+          "observed_duration_s": 0.3388929979992099,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167588.415009202,
+          "end": 167588.734279498,
+          "observed_duration_s": 0.3192702959931921,
+          "max_command_radps": 0.0225
+        },
+        {
+          "start": 167589.516171366,
+          "end": 167589.836249945,
+          "observed_duration_s": 0.32007857898133807,
+          "max_command_radps": 0.075
+        },
+        {
+          "start": 167590.615988881,
+          "end": 167590.93377066,
+          "observed_duration_s": 0.3177817789837718,
+          "max_command_radps": 0.075
+        },
+        {
+          "start": 167591.715318602,
+          "end": 167592.035552745,
+          "observed_duration_s": 0.32023414300056174,
+          "max_command_radps": 0.075
+        }
+      ]
+    }
+  ],
+  "findings": [
+    "Two alignment failures follow original future-departure True (sequences6/7); ablation was not active for these two attempts.",
+    "Both alignment windows contain fifteen short pulses at the base with long zero-command periods and valid encoder feedback. Exact raw publisher timing and callback duration were not captured.",
+    "The internal prealignment return code is discarded at the runtime callsite and absent from explorer.log/status. too_slow is a plausible hypothesis, not an observed result.",
+    "Final actually deferred proposal dispatched a NavigateToPose child, then was canceled for route_invalidated; the retained actual-route rejection is footprint_sweep_invalid. The exact first violating grid cell/pose is not recorded.",
+    "Final nav2_plan_timeout_or_stop belongs to an earlier planning attempt and must not replace the final child cancellation cause.",
+    "Removing future proof did not yield a mission success and does not establish that proof is universally redundant."
+  ],
+  "next_system_issue": {
+    "problem": "External prealignment publishes each command only after synchronous stop callback, which currently revalidates the entire future translational Nav2 route.",
+    "safe_candidate": "Phase-specific fresh public in-place rotation hull during external prealignment, preserving source/context/pose/deadline/Cancel/HOLD checks; revalidate full actual route before NavigateToPose dispatch and during navigation.",
+    "binding_caution": "Existing _metric_public_prealignment_ready computes a newly chosen carrot arc, not a full360 hull. Actual prealign target is frozen per turn. Use a full current public360 hull or bind the exact active odometry-angle target across reference changes.",
+    "unproven": "No timed callback stack or raw-command publication journal proves the precise source of observed pulses yet."
+  },
+  "qualification": {
+    "original_ap06_accepted_missions": 0,
+    "hardware_qualified": false
+  }
+}

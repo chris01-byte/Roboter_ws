@@ -1,0 +1,29 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+__ test_current_heading_cost_orders_b76_tangent_inside_original_helper_window __
+
+    def test_current_heading_cost_orders_b76_tangent_inside_original_helper_window():
+        from dataclasses import replace
+        from explore.explore_node import Frontier
+        name='ap06_b76_before_third_view'
+        n,i,p=frozen(name,elapsed_s=31.)
+        meta=json.loads((Path(__file__).parent/'data'/(name+'.json')).read_text())
+        selected=MetricCandidate(**meta['original_third_target'])
+        selected=replace(selected,fingerprint=i[1].fingerprint)
+        frontier=Frontier(selected.frontier_xy,1.)
+        frontier.approach_direction=(-1.,0.)
+        before=copy.deepcopy(p.attempts);next_id=p.next_id
+        started=time.monotonic()
+        refined=n._metric_refine_observation(i,frontier,p,n._metric_scope_mask(i),
+            selected,selected.task_id,started+.5)
+>       assert len(refined.observation_points)>len(selected.observation_points)
+E       AssertionError: assert 4 > 4
+E        +  where 4 = len([[3.0149999326094985, -0.04499999899417162], [3.2549999272450805, -0.014999999664723873], [3.284999926574528, -0.014999999664723873], [3.4949999218806624, 0.014999999664723873]])
+E        +    where [[3.0149999326094985, -0.04499999899417162], [3.2549999272450805, -0.014999999664723873], [3.284999926574528, -0.014999999664723873], [3.4949999218806624, 0.014999999664723873]] = MetricCandidate(task_id='metric-task-2', x=0.532233448061989, y=-0.4659653773255745, yaw=0.16398347194968657, frontier...9999218806624, 0.014999999664723873]], evidence_key='3de076d9dbd632c5a99da6b0db1452938659fb75e83da12c51dcc3eb916986a3').observation_points
+E        +  and   4 = len([[3.0149999326094985, -0.04499999899417162], [3.2549999272450805, -0.014999999664723873], [3.284999926574528, -0.014999999664723873], [3.4949999218806624, 0.014999999664723873]])
+E        +    where [[3.0149999326094985, -0.04499999899417162], [3.2549999272450805, -0.014999999664723873], [3.284999926574528, -0.014999999664723873], [3.4949999218806624, 0.014999999664723873]] = MetricCandidate(task_id='metric-task-2', x=0.532233448061989, y=-0.4659653773255745, yaw=0.16398347194968657, frontier...9999218806624, 0.014999999664723873]], evidence_key='3de076d9dbd632c5a99da6b0db1452938659fb75e83da12c51dcc3eb916986a3').observation_points
+
+src/explore/test/test_metric_boundary_tangent_view.py:82: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_boundary_tangent_view.py::test_current_heading_cost_orders_b76_tangent_inside_original_helper_window
+1 failed, 5 deselected in 0.84s

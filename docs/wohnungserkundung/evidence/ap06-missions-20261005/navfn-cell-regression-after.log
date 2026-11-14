@@ -1,0 +1,25 @@
+[ERROR] [1791251621.481995729] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[INFO] [1791251621.482039874] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251621.482045232] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[INFO] [1791251621.482047766] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251621.482050129] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[INFO] [1791251621.482051721] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251621.482053514] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[INFO] [1791251621.482054786] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251621.482056819] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[INFO] [1791251621.482058271] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251621.482060044] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[INFO] [1791251621.482061466] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251621.482063158] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[INFO] [1791251621.482064530] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251621.482066243] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[INFO] [1791251621.482067645] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251621.482069408] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[INFO] [1791251621.482070629] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251621.482072512] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[INFO] [1791251621.482073944] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251621.482075687] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[INFO] [1791251621.482077059] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251621.482078922] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[INFO] [1791251621.482080304] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+492 real NavFn coordinate checks, 0 failures

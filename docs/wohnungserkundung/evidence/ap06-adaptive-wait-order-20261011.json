@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "checked_utc": "2026-10-11T04:53:59.294894+00:00",
+  "base_commit": "d2c6cfe018564b9bc59ff43dd49808e3293169c2",
+  "branch": "fix/ap06-adaptive-cooldown-order",
+  "scope": "Synthetic component ordering regression; actual policy, selection and adaptive decision; clock/input/health boundary is a unit fixture. No live health, mission or hardware receipt.",
+  "before": {
+    "totals": {
+      "tests": 2,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    "adaptive_selection_times": [
+      10.02,
+      10.27,
+      10.52
+    ],
+    "expected_selection_count": 1
+  },
+  "after": {
+    "totals": {
+      "tests": 214,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "effective_time_limits_changed": false,
+    "original_pause_expiry_reselection_proved": true
+  },
+  "hardware_access": false,
+  "new_common_build": false,
+  "new_original_ABC_acceptance": false,
+  "local_evidence_root": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction",
+  "evidence_sha256": {
+    "order-before/results.xml": "653ef1b9e2c69cb97d02e0970369ad38d64bc2161633452d0d9295db0005cc51",
+    "order-before/driver.log": "54d8dd717443dade8d0e7fcaa98dd84daca9aa78be921db55caf4a271b129a8a",
+    "order-complete/results.xml": "6c97933cbe174e0af37d01b3cf0827e98040da36d8acf7c7e77ffc7aa1417d34",
+    "order-complete/driver.log": "7867dcdf9e3f9932a6f159b9d225f6e4b16ab52f2c22ed826d16f03c341ff946"
+  },
+  "source_sha256": {
+    "src/explore/explore/metric_frontier_runtime.py": "a953b2302bfa532728fcf4301c351c66d841bcc4a7a72b9ce6f56be4dc6f1e15",
+    "src/explore/test/test_metric_private_cooldown.py": "35a8d77c8a83ac9603d3b93eac3fa6f179806ed5e06d0e4fa430d6263a47c783",
+    "src/explore/test/data/ap06_a_private_cooldown.json": "ae7dd9e7438ecfcb6e7d6d4544b181d4e4a2685adcd4cf36693b05d9c673feea",
+    "src/explore/test/data/ap06_a_private_cooldown.npz": "d9dd1041b65389b4dda65664030fcd742591ab6ae1697c35501607285c428ecd"
+  }
+}

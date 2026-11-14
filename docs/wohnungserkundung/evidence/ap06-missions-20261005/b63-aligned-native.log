@@ -1,0 +1,12 @@
+true angle -0.10143198437879397 turn True offset 0.0 entire_public_motion False rejection footprint_sweep_invalid
+true angle -0.10143198437879397 turn True offset -0.02 entire_public_motion False rejection footprint_sweep_invalid
+true angle -0.10143198437879397 turn True offset 0.02 entire_public_motion False rejection footprint_sweep_invalid
+false angle -0.057139258111035436 turn True offset 0.0 entire_public_motion False rejection footprint_sweep_invalid
+false angle -0.057139258111035436 turn True offset -0.02 entire_public_motion False rejection footprint_sweep_invalid
+false angle -0.057139258111035436 turn True offset 0.02 entire_public_motion False rejection footprint_sweep_invalid
+cell-centers-028 angle -0.012676219804346939 turn True offset 0.0 entire_public_motion True rejection None
+cell-centers-028 angle -0.012676219804346939 turn True offset -0.02 entire_public_motion True rejection None
+cell-centers-028 angle -0.012676219804346939 turn True offset 0.02 entire_public_motion True rejection None
+cell-centers-0325 angle -0.012676219804346939 turn True offset 0.0 entire_public_motion True rejection None
+cell-centers-0325 angle -0.012676219804346939 turn True offset -0.02 entire_public_motion True rejection None
+cell-centers-0325 angle -0.012676219804346939 turn True offset 0.02 entire_public_motion True rejection None

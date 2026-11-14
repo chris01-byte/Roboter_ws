@@ -26,6 +26,7 @@ setup(
         ),
     ],
     install_requires=["setuptools"],
+    tests_require=["pytest"],
     zip_safe=True,
     maintainer="QTG0900",
     maintainer_email="qtg0900@example.com",

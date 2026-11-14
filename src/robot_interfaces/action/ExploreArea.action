@@ -14,10 +14,10 @@ float32 min_frontier_size_m     # kleinste zu beachtende Frontier [m] (0 = Defau
 bool return_to_start            # nach Fertigstellung zur Startpose zurueckkehren?
 ---
 # --- Result ---
-bool success                    # true = vollstaendig erkundet oder sauber beendet
+bool success                    # true = Abschlussvertrag der gewaehlten Strategie erfuellt
 string message                  # Klartext-Ergebnis
 int32 frontiers_visited         # Anzahl angefahrener Frontier-Ziele
-float32 explored_area_m2        # grob geschaetzte erkundete Freiflaeche [m^2]
+float32 explored_area_m2        # Rohkarten-Freiflaeche [m^2]; kein Sichtgewinn/keine Fahrspur
 ---
 # --- Feedback ---
 float32 explored_percent        # 0.0 .. 100.0 (grobe Schaetzung des Fortschritts)

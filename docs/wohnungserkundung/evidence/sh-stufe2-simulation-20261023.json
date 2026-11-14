@@ -1,0 +1,1661 @@
+{
+ "zweck": "Stufe 2: vollständige v4-Abnahme mit den SLAM-Schwellen X7 im Produkt, kritisch ausgewertet; Korrektur Umsehen (ff05706) nachgeprüft; Messexperimente X11 (map->odom-Vorlauf) und X12 (SLAM-Raster 5 cm)",
+ "qualifikation": "nur Software, Cloud, ROS 2 Jazzy, 4 Kerne (Last bis ~8); ideale Odometrie; keine Jetson- oder Realabnahme",
+ "vorgaenger": "sh-stufe2-simulation-20261022-abends.json",
+ "hinweise": [
+  "ringschluss = Zahl der Ceres-Optimierungen (preprocessor.cc) im slam_toolbox-Log",
+  "abstand_cm gegen die gepolsterte Nav2-Kontur; das Chassis liegt etwa 2 cm innen",
+  "regler_abbrueche: letzter Grund vor jedem follow_path-Abbruch im controller_server-Log",
+  "slam_cpu_prozent_kern: /proc-Stichprobe alle 10 s, nur bb94311 und Experimente",
+  "Lauf 093be90 gesperrte_tuer ohne ERGEBNIS-Zeile im Batchlog (Schleife vor Durchgang 2 beendet), ergebnis.json vollständig"
+ ],
+ "tuer068_manifest": "Experiment-Manifest = sh_robustheit_szenarien_v4.json mit door_m 0,68 (sonst unverändert); x0_produkt = leeres Experiment, nur zur Kennzeichnung",
+ "laeufe": [
+  {
+   "lauf": "referenz_235850",
+   "stand": "093be90",
+   "durchgang": "1",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": false,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 3,
+   "heilungen": 20,
+   "umsehen": 1,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": true,
+   "hindernis_niedrig": false,
+   "abstand_cm": 0.0,
+   "engste_stelle": {
+    "t_s": 535.89,
+    "pose": [
+     1.773,
+     -0.693,
+     0.817
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.058
+    ],
+    "mitte_abstand_m": 0.3935,
+    "lokale_kostenkarte": {
+     "zellen": 78,
+     "im_fenster": true,
+     "toedlich": 21,
+     "eingeschrieben_oder_mehr": 51,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "abdeckung_erreichbar": 0.9771794291624916,
+   "kartenfehler_m": 0.04701571777599467,
+   "kartenfehler_orte": null,
+   "regler_abbrueche": {
+    "tf_zukunft": 74,
+    "geduld": 2
+   },
+   "nav_fehlschlaege": 20,
+   "slam_cpu_prozent_kern": null,
+   "plan_engste_stelle": {
+    "abstand_m": 0.3223,
+    "plaene": 493,
+    "plaene_unter_robot_radius": 0
+   },
+   "last_1min_max": 7.9892578125,
+   "dauer_s": 621.4,
+   "strecke_m": 5.37,
+   "kriterien_verfehlt": [
+    "keine_kollision"
+   ]
+  },
+  {
+   "lauf": "sensorluecke_000939",
+   "stand": "093be90",
+   "durchgang": "1",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": true,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 3,
+   "heilungen": 20,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": false,
+   "abstand_cm": 2.3,
+   "engste_stelle": {
+    "t_s": 411.21,
+    "pose": [
+     1.535,
+     -0.737,
+     2.184
+    ],
+    "geschwindigkeit": [
+     0.0,
+     -0.009
+    ],
+    "mitte_abstand_m": 0.4372,
+    "lokale_kostenkarte": {
+     "zellen": 78,
+     "im_fenster": true,
+     "toedlich": 20,
+     "eingeschrieben_oder_mehr": 58,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "abdeckung_erreichbar": 0.9802097811681805,
+   "kartenfehler_m": 0.058809499308500435,
+   "kartenfehler_orte": null,
+   "regler_abbrueche": {
+    "tf_zukunft": 77
+   },
+   "nav_fehlschlaege": 20,
+   "slam_cpu_prozent_kern": null,
+   "plan_engste_stelle": {
+    "abstand_m": 0.2961,
+    "plaene": 341,
+    "plaene_unter_robot_radius": 0
+   },
+   "last_1min_max": 9.76953125,
+   "dauer_s": 455.2,
+   "strecke_m": 4.95,
+   "kriterien_verfehlt": []
+  },
+  {
+   "lauf": "kartenrennen_001732",
+   "stand": "093be90",
+   "durchgang": "1",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": true,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 4,
+   "heilungen": 14,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": null,
+   "abstand_cm": 4.1,
+   "engste_stelle": {
+    "t_s": 326.7,
+    "pose": [
+     1.948,
+     -0.73,
+     2.551
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.043
+    ],
+    "mitte_abstand_m": 0.44,
+    "lokale_kostenkarte": null
+   },
+   "abdeckung_erreichbar": 0.9728399650903449,
+   "kartenfehler_m": 0.06420666879354853,
+   "kartenfehler_orte": null,
+   "regler_abbrueche": {
+    "tf_zukunft": 54
+   },
+   "nav_fehlschlaege": 14,
+   "slam_cpu_prozent_kern": null,
+   "plan_engste_stelle": {
+    "abstand_m": 0.3608,
+    "plaene": 260,
+    "plaene_unter_robot_radius": 0
+   },
+   "last_1min_max": 6.24169921875,
+   "dauer_s": 346.9,
+   "strecke_m": 5.44,
+   "kriterien_verfehlt": []
+  },
+  {
+   "lauf": "rechenlast_002340",
+   "stand": "093be90",
+   "durchgang": "1",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": true,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 3,
+   "heilungen": 16,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": null,
+   "abstand_cm": 3.4,
+   "engste_stelle": {
+    "t_s": 350.4,
+    "pose": [
+     1.99,
+     -0.706,
+     2.656
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.042
+    ],
+    "mitte_abstand_m": 0.4319,
+    "lokale_kostenkarte": null
+   },
+   "abdeckung_erreichbar": 0.9731955263923457,
+   "kartenfehler_m": 0.09396327538942773,
+   "kartenfehler_orte": null,
+   "regler_abbrueche": {
+    "tf_zukunft": 54
+   },
+   "nav_fehlschlaege": 16,
+   "slam_cpu_prozent_kern": null,
+   "plan_engste_stelle": {
+    "abstand_m": 0.361,
+    "plaene": 278,
+    "plaene_unter_robot_radius": 0
+   },
+   "last_1min_max": 8.09765625,
+   "dauer_s": 370.0,
+   "strecke_m": 5.46,
+   "kriterien_verfehlt": []
+  },
+  {
+   "lauf": "hindernis_im_weg_003010",
+   "stand": "093be90",
+   "durchgang": "1",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": false,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 2,
+   "heilungen": 17,
+   "umsehen": 1,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": true,
+   "hindernis_niedrig": true,
+   "abstand_cm": 0.0,
+   "engste_stelle": {
+    "t_s": 167.97,
+    "pose": [
+     -1.417,
+     -0.596,
+     0.473
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.016
+    ],
+    "mitte_abstand_m": 0.3568,
+    "lokale_kostenkarte": {
+     "zellen": 36,
+     "im_fenster": true,
+     "toedlich": 0,
+     "eingeschrieben_oder_mehr": 0,
+     "unbekannt": 0,
+     "max": 0
+    }
+   },
+   "abdeckung_erreichbar": 0.9723122406049235,
+   "kartenfehler_m": 0.06567007091642063,
+   "kartenfehler_orte": null,
+   "regler_abbrueche": {
+    "tf_zukunft": 80
+   },
+   "nav_fehlschlaege": 17,
+   "slam_cpu_prozent_kern": null,
+   "plan_engste_stelle": {
+    "abstand_m": 0.1012,
+    "plaene": 290,
+    "plaene_unter_robot_radius": 112
+   },
+   "last_1min_max": 7.51220703125,
+   "dauer_s": 421.4,
+   "strecke_m": 5.12,
+   "kriterien_verfehlt": [
+    "keine_kollision"
+   ]
+  },
+  {
+   "lauf": "gesperrte_tuer_003730",
+   "stand": "093be90",
+   "durchgang": "1",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": false,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 5,
+   "heilungen": 2,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": false,
+   "abstand_cm": 2.8,
+   "engste_stelle": {
+    "t_s": 225.41,
+    "pose": [
+     -0.179,
+     -0.015,
+     0.741
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.0
+    ],
+    "mitte_abstand_m": 0.4049,
+    "lokale_kostenkarte": {
+     "zellen": 50,
+     "im_fenster": true,
+     "toedlich": 25,
+     "eingeschrieben_oder_mehr": 50,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "abdeckung_erreichbar": 0.9754844803920122,
+   "kartenfehler_m": 0.1416900454456509,
+   "kartenfehler_orte": null,
+   "regler_abbrueche": {
+    "tf_zukunft": 5
+   },
+   "nav_fehlschlaege": 2,
+   "slam_cpu_prozent_kern": null,
+   "plan_engste_stelle": {
+    "abstand_m": 0.0,
+    "plaene": 201,
+    "plaene_unter_robot_radius": 6
+   },
+   "last_1min_max": 7.94677734375,
+   "dauer_s": 217.6,
+   "strecke_m": 2.47,
+   "kriterien_verfehlt": [
+    "karte_plausibel"
+   ]
+  },
+  {
+   "lauf": "referenz_005516",
+   "stand": "bb94311",
+   "durchgang": "A+B",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": true,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 5,
+   "heilungen": 15,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": null,
+   "abstand_cm": 4.3,
+   "engste_stelle": {
+    "t_s": 304.04,
+    "pose": [
+     1.096,
+     0.354,
+     -0.766
+    ],
+    "geschwindigkeit": [
+     0.0,
+     -0.037
+    ],
+    "mitte_abstand_m": 0.4569,
+    "lokale_kostenkarte": null
+   },
+   "abdeckung_erreichbar": 0.9735591686330284,
+   "kartenfehler_m": 0.07117247751310019,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 56
+   },
+   "nav_fehlschlaege": 15,
+   "slam_cpu_prozent_kern": {
+    "erste": 27,
+    "letzte": 79,
+    "max": 82,
+    "proben": 40,
+    "dauer_s": 476
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.351,
+    "plaene": 374,
+    "plaene_unter_robot_radius": 0
+   },
+   "last_1min_max": 7.76220703125,
+   "dauer_s": 461.0,
+   "strecke_m": 5.81,
+   "kriterien_verfehlt": []
+  },
+  {
+   "lauf": "sensorluecke_010318",
+   "stand": "bb94311",
+   "durchgang": "A+B",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": true,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 3,
+   "heilungen": 16,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": null,
+   "abstand_cm": 6.4,
+   "engste_stelle": {
+    "t_s": 373.52,
+    "pose": [
+     1.615,
+     -0.778,
+     0.923
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.043
+    ],
+    "mitte_abstand_m": 0.4783,
+    "lokale_kostenkarte": null
+   },
+   "abdeckung_erreichbar": 0.9779309564599024,
+   "kartenfehler_m": 0.04057249458381795,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 50
+   },
+   "nav_fehlschlaege": 16,
+   "slam_cpu_prozent_kern": {
+    "erste": 6,
+    "letzte": 69,
+    "max": 71,
+    "proben": 44,
+    "dauer_s": 445
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.3716,
+    "plaene": 327,
+    "plaene_unter_robot_radius": 0
+   },
+   "last_1min_max": 6.1435546875,
+   "dauer_s": 431.0,
+   "strecke_m": 4.84,
+   "kriterien_verfehlt": []
+  },
+  {
+   "lauf": "kartenrennen_011050",
+   "stand": "bb94311",
+   "durchgang": "A+B",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": true,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 5,
+   "heilungen": 7,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": null,
+   "abstand_cm": 4.8,
+   "engste_stelle": {
+    "t_s": 385.69,
+    "pose": [
+     1.706,
+     -0.762,
+     2.219
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.041
+    ],
+    "mitte_abstand_m": 0.4617,
+    "lokale_kostenkarte": null
+   },
+   "abdeckung_erreichbar": 0.9804845330833629,
+   "kartenfehler_m": 0.04657845000080929,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 26
+   },
+   "nav_fehlschlaege": 7,
+   "slam_cpu_prozent_kern": {
+    "erste": 6,
+    "letzte": 69,
+    "max": 73,
+    "proben": 42,
+    "dauer_s": 425
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.3683,
+    "plaene": 359,
+    "plaene_unter_robot_radius": 0
+   },
+   "last_1min_max": 7.6748046875,
+   "dauer_s": 412.8,
+   "strecke_m": 4.78,
+   "kriterien_verfehlt": []
+  },
+  {
+   "lauf": "rechenlast_011801",
+   "stand": "bb94311",
+   "durchgang": "A+B",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": true,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 5,
+   "heilungen": 9,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": null,
+   "abstand_cm": 6.3,
+   "engste_stelle": {
+    "t_s": 271.16,
+    "pose": [
+     1.649,
+     -0.778,
+     0.923
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.187
+    ],
+    "mitte_abstand_m": 0.4775,
+    "lokale_kostenkarte": null
+   },
+   "abdeckung_erreichbar": 0.9746016097229854,
+   "kartenfehler_m": 0.050889928966715736,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 36
+   },
+   "nav_fehlschlaege": 9,
+   "slam_cpu_prozent_kern": {
+    "erste": 6,
+    "letzte": 75,
+    "max": 75,
+    "proben": 34,
+    "dauer_s": 345
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.246,
+    "plaene": 278,
+    "plaene_unter_robot_radius": 18
+   },
+   "last_1min_max": 8.37451171875,
+   "dauer_s": 337.9,
+   "strecke_m": 5.36,
+   "kriterien_verfehlt": []
+  },
+  {
+   "lauf": "hindernis_im_weg_012357",
+   "stand": "bb94311",
+   "durchgang": "A+B",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": false,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "overall_budget_exhausted",
+   "ziele": 3,
+   "heilungen": 19,
+   "umsehen": 1,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": true,
+   "hindernis_niedrig": true,
+   "abstand_cm": 0.0,
+   "engste_stelle": {
+    "t_s": 88.8,
+    "pose": [
+     -1.437,
+     -0.293,
+     1.048
+    ],
+    "geschwindigkeit": [
+     0.0,
+     -0.2
+    ],
+    "mitte_abstand_m": 0.3812,
+    "lokale_kostenkarte": {
+     "zellen": 36,
+     "im_fenster": true,
+     "toedlich": 1,
+     "eingeschrieben_oder_mehr": 8,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "abdeckung_erreichbar": 0.9600155941619356,
+   "kartenfehler_m": 0.10993787087067064,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 24,
+    "orte": [
+     [
+      -2.599,
+      1.06,
+      0.11
+     ],
+     [
+      -2.589,
+      1.06,
+      0.11
+     ],
+     [
+      -2.579,
+      1.06,
+      0.11
+     ]
+    ]
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 65,
+    "kein_fortschritt": 7
+   },
+   "nav_fehlschlaege": 19,
+   "slam_cpu_prozent_kern": {
+    "erste": 7,
+    "letzte": 82,
+    "max": 84,
+    "proben": 91,
+    "dauer_s": 917
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.0,
+    "plaene": 742,
+    "plaene_unter_robot_radius": 176
+   },
+   "last_1min_max": 7.4482421875,
+   "dauer_s": 899.3,
+   "strecke_m": 5.16,
+   "kriterien_verfehlt": [
+    "karte_plausibel",
+    "keine_kollision"
+   ]
+  },
+  {
+   "lauf": "gesperrte_tuer_013915",
+   "stand": "bb94311",
+   "durchgang": "A+B",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": true,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 3,
+   "heilungen": 3,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": false,
+   "abstand_cm": 2.6,
+   "engste_stelle": {
+    "t_s": 207.69,
+    "pose": [
+     -0.213,
+     0.013,
+     -0.738
+    ],
+    "geschwindigkeit": [
+     0.0,
+     -0.0
+    ],
+    "mitte_abstand_m": 0.4066,
+    "lokale_kostenkarte": {
+     "zellen": 50,
+     "im_fenster": true,
+     "toedlich": 24,
+     "eingeschrieben_oder_mehr": 50,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "abdeckung_erreichbar": 0.9780378728617183,
+   "kartenfehler_m": 0.06615009922978077,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 20
+   },
+   "nav_fehlschlaege": 3,
+   "slam_cpu_prozent_kern": {
+    "erste": 11,
+    "letzte": 38,
+    "max": 52,
+    "proben": 20,
+    "dauer_s": 210
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.0,
+    "plaene": 173,
+    "plaene_unter_robot_radius": 4
+   },
+   "last_1min_max": 6.7880859375,
+   "dauer_s": 199.6,
+   "strecke_m": 2.52,
+   "kriterien_verfehlt": []
+  },
+  {
+   "lauf": "referenz_014300",
+   "stand": "bb94311",
+   "durchgang": "A+B",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": true,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 5,
+   "heilungen": 12,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": null,
+   "abstand_cm": 5.5,
+   "engste_stelle": {
+    "t_s": 345.45,
+    "pose": [
+     1.832,
+     -0.768,
+     2.287
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.043
+    ],
+    "mitte_abstand_m": 0.469,
+    "lokale_kostenkarte": null
+   },
+   "abdeckung_erreichbar": 0.9752238420014869,
+   "kartenfehler_m": 0.04558683638493033,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 39
+   },
+   "nav_fehlschlaege": 12,
+   "slam_cpu_prozent_kern": {
+    "erste": 7,
+    "letzte": 68,
+    "max": 69,
+    "proben": 36,
+    "dauer_s": 365
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.3198,
+    "plaene": 279,
+    "plaene_unter_robot_radius": 0
+   },
+   "last_1min_max": 7.662109375,
+   "dauer_s": 350.8,
+   "strecke_m": 4.93,
+   "kriterien_verfehlt": []
+  },
+  {
+   "lauf": "sensorluecke_014912",
+   "stand": "bb94311",
+   "durchgang": "A+B",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": true,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 4,
+   "heilungen": 11,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": null,
+   "abstand_cm": 6.5,
+   "engste_stelle": {
+    "t_s": 359.63,
+    "pose": [
+     1.606,
+     -0.779,
+     0.922
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.043
+    ],
+    "mitte_abstand_m": 0.4785,
+    "lokale_kostenkarte": null
+   },
+   "abdeckung_erreichbar": 0.9769612438180819,
+   "kartenfehler_m": 0.03499870497356161,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 38
+   },
+   "nav_fehlschlaege": 11,
+   "slam_cpu_prozent_kern": {
+    "erste": 6,
+    "letzte": 72,
+    "max": 72,
+    "proben": 42,
+    "dauer_s": 424
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.368,
+    "plaene": 342,
+    "plaene_unter_robot_radius": 0
+   },
+   "last_1min_max": 6.0751953125,
+   "dauer_s": 414.9,
+   "strecke_m": 4.75,
+   "kriterien_verfehlt": []
+  },
+  {
+   "lauf": "kartenrennen_015626",
+   "stand": "bb94311",
+   "durchgang": "A+B",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": true,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 4,
+   "heilungen": 16,
+   "umsehen": 0,
+   "rueckwege": 1,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": null,
+   "abstand_cm": 5.9,
+   "engste_stelle": {
+    "t_s": 280.83,
+    "pose": [
+     1.679,
+     -0.773,
+     0.922
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.177
+    ],
+    "mitte_abstand_m": 0.4728,
+    "lokale_kostenkarte": null
+   },
+   "abdeckung_erreichbar": 0.9755955651808514,
+   "kartenfehler_m": 0.05516584706491834,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 66
+   },
+   "nav_fehlschlaege": 16,
+   "slam_cpu_prozent_kern": {
+    "erste": 6,
+    "letzte": 109,
+    "max": 128,
+    "proben": 39,
+    "dauer_s": 393
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.3581,
+    "plaene": 280,
+    "plaene_unter_robot_radius": 0
+   },
+   "last_1min_max": 7.82421875,
+   "dauer_s": 384.9,
+   "strecke_m": 5.74,
+   "kriterien_verfehlt": []
+  },
+  {
+   "lauf": "rechenlast_020309",
+   "stand": "bb94311",
+   "durchgang": "A+B",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": true,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 3,
+   "heilungen": 15,
+   "umsehen": 0,
+   "rueckwege": 1,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": null,
+   "abstand_cm": 4.9,
+   "engste_stelle": {
+    "t_s": 340.87,
+    "pose": [
+     1.818,
+     -0.763,
+     2.259
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.042
+    ],
+    "mitte_abstand_m": 0.463,
+    "lokale_kostenkarte": null
+   },
+   "abdeckung_erreichbar": 0.967272198338559,
+   "kartenfehler_m": 0.08869379731636062,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 63
+   },
+   "nav_fehlschlaege": 15,
+   "slam_cpu_prozent_kern": {
+    "erste": 8,
+    "letzte": 102,
+    "max": 107,
+    "proben": 38,
+    "dauer_s": 386
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.3163,
+    "plaene": 284,
+    "plaene_unter_robot_radius": 0
+   },
+   "last_1min_max": 8.68994140625,
+   "dauer_s": 373.2,
+   "strecke_m": 5.56,
+   "kriterien_verfehlt": []
+  },
+  {
+   "lauf": "hindernis_im_weg_020940",
+   "stand": "bb94311",
+   "durchgang": "A+B",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": false,
+   "fehler": null,
+   "ende": "blocked_help_required",
+   "grund": "help_required:nav_aborted",
+   "ziele": 2,
+   "heilungen": 20,
+   "umsehen": 0,
+   "rueckwege": 1,
+   "ringschluss": 0,
+   "kollision": true,
+   "hindernis_niedrig": true,
+   "abstand_cm": 0.0,
+   "engste_stelle": {
+    "t_s": 94.21,
+    "pose": [
+     -1.522,
+     -0.032,
+     0.899
+    ],
+    "geschwindigkeit": [
+     0.0,
+     -0.2
+    ],
+    "mitte_abstand_m": 0.3777,
+    "lokale_kostenkarte": {
+     "zellen": 36,
+     "im_fenster": true,
+     "toedlich": 0,
+     "eingeschrieben_oder_mehr": 0,
+     "unbekannt": 0,
+     "max": 60
+    }
+   },
+   "abdeckung_erreichbar": 0.9761539273734395,
+   "kartenfehler_m": 0.07130456035789146,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 74
+   },
+   "nav_fehlschlaege": 20,
+   "slam_cpu_prozent_kern": {
+    "erste": 8,
+    "letzte": 81,
+    "max": 88,
+    "proben": 53,
+    "dauer_s": 537
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.0,
+    "plaene": 402,
+    "plaene_unter_robot_radius": 70
+   },
+   "last_1min_max": 7.4453125,
+   "dauer_s": 521.1,
+   "strecke_m": 6.68,
+   "kriterien_verfehlt": [
+    "sauberes_ende",
+    "keine_kollision"
+   ]
+  },
+  {
+   "lauf": "gesperrte_tuer_021840",
+   "stand": "bb94311",
+   "durchgang": "A+B",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": null,
+   "qualifikation": "nur_software_cloud_ros2_jazzy",
+   "bestanden": true,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 3,
+   "heilungen": 3,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": false,
+   "abstand_cm": 2.6,
+   "engste_stelle": {
+    "t_s": 205.95,
+    "pose": [
+     -0.224,
+     0.017,
+     -0.795
+    ],
+    "geschwindigkeit": [
+     0.0,
+     -0.0
+    ],
+    "mitte_abstand_m": 0.4031,
+    "lokale_kostenkarte": {
+     "zellen": 50,
+     "im_fenster": true,
+     "toedlich": 24,
+     "eingeschrieben_oder_mehr": 50,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "abdeckung_erreichbar": 0.9808421767301817,
+   "kartenfehler_m": 0.040624864353942636,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 16
+   },
+   "nav_fehlschlaege": 3,
+   "slam_cpu_prozent_kern": {
+    "erste": 10,
+    "letzte": 36,
+    "max": 50,
+    "proben": 20,
+    "dauer_s": 207
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.0,
+    "plaene": 172,
+    "plaene_unter_robot_radius": 3
+   },
+   "last_1min_max": 10.201171875,
+   "dauer_s": 197.1,
+   "strecke_m": 2.51,
+   "kriterien_verfehlt": []
+  },
+  {
+   "lauf": "referenz_022227",
+   "stand": "bb94311",
+   "durchgang": "Experiment",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": "x11_tf_vorlauf_05.yaml",
+   "qualifikation": "experiment_keine_abnahme",
+   "bestanden": false,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 7,
+   "heilungen": 6,
+   "umsehen": 0,
+   "rueckwege": 1,
+   "ringschluss": 0,
+   "kollision": true,
+   "hindernis_niedrig": false,
+   "abstand_cm": 0.0,
+   "engste_stelle": {
+    "t_s": 230.41,
+    "pose": [
+     1.211,
+     0.409,
+     0.467
+    ],
+    "geschwindigkeit": [
+     0.0,
+     -0.018
+    ],
+    "mitte_abstand_m": 0.3563,
+    "lokale_kostenkarte": {
+     "zellen": 78,
+     "im_fenster": true,
+     "toedlich": 26,
+     "eingeschrieben_oder_mehr": 58,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "abdeckung_erreichbar": 0.9765895206387174,
+   "kartenfehler_m": 0.04174890378542084,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 33
+   },
+   "nav_fehlschlaege": 6,
+   "slam_cpu_prozent_kern": {
+    "erste": 8,
+    "letzte": 92,
+    "max": 93,
+    "proben": 53,
+    "dauer_s": 537
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.2882,
+    "plaene": 470,
+    "plaene_unter_robot_radius": 0
+   },
+   "last_1min_max": 8.66162109375,
+   "dauer_s": 524.1,
+   "strecke_m": 7.73,
+   "kriterien_verfehlt": [
+    "keine_kollision"
+   ]
+  },
+  {
+   "lauf": "referenz_023130",
+   "stand": "bb94311",
+   "durchgang": "Experiment",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": "x12_slam_raster_5cm.yaml",
+   "qualifikation": "experiment_keine_abnahme",
+   "bestanden": false,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 6,
+   "heilungen": 14,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 2,
+   "kollision": false,
+   "hindernis_niedrig": null,
+   "abstand_cm": 5.1,
+   "engste_stelle": {
+    "t_s": 70.67,
+    "pose": [
+     -1.761,
+     -0.833,
+     0.162
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.095
+    ],
+    "mitte_abstand_m": 0.4648,
+    "lokale_kostenkarte": null
+   },
+   "abdeckung_erreichbar": 0.9456654456654456,
+   "kartenfehler_m": 0.07653223893479133,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 53
+   },
+   "nav_fehlschlaege": 14,
+   "slam_cpu_prozent_kern": {
+    "erste": 6,
+    "letzte": 62,
+    "max": 103,
+    "proben": 49,
+    "dauer_s": 496
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.2207,
+    "plaene": 409,
+    "plaene_unter_robot_radius": 2
+   },
+   "last_1min_max": 6.7333984375,
+   "dauer_s": 486.1,
+   "strecke_m": 7.24,
+   "kriterien_verfehlt": [
+    "abdeckung_erreichbar"
+   ]
+  },
+  {
+   "lauf": "rechenlast_023953",
+   "stand": "bb94311",
+   "durchgang": "Experiment",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": "x11_tf_vorlauf_05.yaml",
+   "qualifikation": "experiment_keine_abnahme",
+   "bestanden": true,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 6,
+   "heilungen": 8,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": null,
+   "abstand_cm": 9.7,
+   "engste_stelle": {
+    "t_s": 144.39,
+    "pose": [
+     -0.777,
+     -0.046,
+     0.358
+    ],
+    "geschwindigkeit": [
+     0.012,
+     -0.015
+    ],
+    "mitte_abstand_m": 0.3793,
+    "lokale_kostenkarte": null
+   },
+   "abdeckung_erreichbar": 0.9717005527362058,
+   "kartenfehler_m": 0.055136905336568454,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 37
+   },
+   "nav_fehlschlaege": 8,
+   "slam_cpu_prozent_kern": {
+    "erste": 5,
+    "letzte": 93,
+    "max": 111,
+    "proben": 45,
+    "dauer_s": 454
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.3616,
+    "plaene": 386,
+    "plaene_unter_robot_radius": 0
+   },
+   "last_1min_max": 9.466796875,
+   "dauer_s": 440.7,
+   "strecke_m": 6.72,
+   "kriterien_verfehlt": []
+  },
+  {
+   "lauf": "rechenlast_024734",
+   "stand": "bb94311",
+   "durchgang": "Experiment",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": "x12_slam_raster_5cm.yaml",
+   "qualifikation": "experiment_keine_abnahme",
+   "bestanden": false,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 8,
+   "heilungen": 0,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": null,
+   "abstand_cm": 8.5,
+   "engste_stelle": {
+    "t_s": 34.73,
+    "pose": [
+     -1.767,
+     -0.823,
+     -1.286
+    ],
+    "geschwindigkeit": [
+     0.009,
+     -0.01
+    ],
+    "mitte_abstand_m": 0.4747,
+    "lokale_kostenkarte": null
+   },
+   "abdeckung_erreichbar": 0.9332519332519332,
+   "kartenfehler_m": 0.09479904378049753,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {},
+   "nav_fehlschlaege": 0,
+   "slam_cpu_prozent_kern": {
+    "erste": 6,
+    "letzte": 28,
+    "max": 40,
+    "proben": 25,
+    "dauer_s": 255
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.3571,
+    "plaene": 239,
+    "plaene_unter_robot_radius": 0
+   },
+   "last_1min_max": 8.41943359375,
+   "dauer_s": 242.4,
+   "strecke_m": 6.62,
+   "kriterien_verfehlt": [
+    "abdeckung_erreichbar"
+   ]
+  },
+  {
+   "lauf": "referenz_025154",
+   "stand": "bb94311",
+   "durchgang": "Experiment",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": "x11_tf_vorlauf_05.yaml",
+   "qualifikation": "experiment_keine_abnahme",
+   "bestanden": true,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 6,
+   "heilungen": 7,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": null,
+   "abstand_cm": 6.8,
+   "engste_stelle": {
+    "t_s": 298.56,
+    "pose": [
+     1.658,
+     -0.782,
+     0.923
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.2
+    ],
+    "mitte_abstand_m": 0.4824,
+    "lokale_kostenkarte": null
+   },
+   "abdeckung_erreichbar": 0.9654297443191001,
+   "kartenfehler_m": 0.0919823215448532,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 28
+   },
+   "nav_fehlschlaege": 7,
+   "slam_cpu_prozent_kern": {
+    "erste": 9,
+    "letzte": 113,
+    "max": 125,
+    "proben": 27,
+    "dauer_s": 276
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.3399,
+    "plaene": 339,
+    "plaene_unter_robot_radius": 0
+   },
+   "last_1min_max": 7.99169921875,
+   "dauer_s": 385.8,
+   "strecke_m": 6.19,
+   "kriterien_verfehlt": []
+  },
+  {
+   "lauf": "referenz_025838",
+   "stand": "bb94311",
+   "durchgang": "Experiment",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": "x12_slam_raster_5cm.yaml",
+   "qualifikation": "experiment_keine_abnahme",
+   "bestanden": false,
+   "fehler": null,
+   "ende": "exploration_complete",
+   "grund": "exploration_complete",
+   "ziele": 5,
+   "heilungen": 0,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": null,
+   "abstand_cm": 5.0,
+   "engste_stelle": {
+    "t_s": 40.72,
+    "pose": [
+     -1.761,
+     -0.833,
+     -1.134
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.043
+    ],
+    "mitte_abstand_m": 0.4642,
+    "lokale_kostenkarte": null
+   },
+   "abdeckung_erreichbar": 0.9385429385429386,
+   "kartenfehler_m": 0.062328101986972584,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {},
+   "nav_fehlschlaege": 0,
+   "slam_cpu_prozent_kern": {
+    "erste": 13,
+    "letzte": 24,
+    "max": 31,
+    "proben": 18,
+    "dauer_s": 191
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.3367,
+    "plaene": 178,
+    "plaene_unter_robot_radius": 0
+   },
+   "last_1min_max": 7.1923828125,
+   "dauer_s": 180.2,
+   "strecke_m": 4.67,
+   "kriterien_verfehlt": [
+    "abdeckung_erreichbar"
+   ]
+  },
+  {
+   "lauf": "referenz_030246",
+   "stand": "bb94311",
+   "durchgang": "Experiment Tür 0,68 m",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": "x0_produkt.yaml",
+   "qualifikation": "experiment_keine_abnahme",
+   "bestanden": true,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 3,
+   "heilungen": 19,
+   "umsehen": 0,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": false,
+   "abstand_cm": 0.9,
+   "engste_stelle": {
+    "t_s": 497.23,
+    "pose": [
+     1.81,
+     -0.692,
+     0.875
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.0
+    ],
+    "mitte_abstand_m": 0.3923,
+    "lokale_kostenkarte": {
+     "zellen": 78,
+     "im_fenster": true,
+     "toedlich": 20,
+     "eingeschrieben_oder_mehr": 51,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "abdeckung_erreichbar": 0.9758328207452491,
+   "kartenfehler_m": 0.06502639585210046,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 73
+   },
+   "nav_fehlschlaege": 19,
+   "slam_cpu_prozent_kern": {
+    "erste": 7,
+    "letzte": 68,
+    "max": 103,
+    "proben": 50,
+    "dauer_s": 505
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.2317,
+    "plaene": 380,
+    "plaene_unter_robot_radius": 55
+   },
+   "last_1min_max": 7.0009765625,
+   "dauer_s": 489.0,
+   "strecke_m": 5.46,
+   "kriterien_verfehlt": []
+  },
+  {
+   "lauf": "referenz_031114",
+   "stand": "bb94311",
+   "durchgang": "Experiment Tür 0,68 m",
+   "manifest": 4,
+   "welt": "unsymmetrisch",
+   "experiment": "x12_slam_raster_5cm.yaml",
+   "qualifikation": "experiment_keine_abnahme",
+   "bestanden": false,
+   "fehler": null,
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 10,
+   "heilungen": 10,
+   "umsehen": 1,
+   "rueckwege": 0,
+   "ringschluss": 0,
+   "kollision": false,
+   "hindernis_niedrig": false,
+   "abstand_cm": 2.4,
+   "engste_stelle": {
+    "t_s": 185.73,
+    "pose": [
+     -1.074,
+     0.328,
+     0.799
+    ],
+    "geschwindigkeit": [
+     0.0,
+     -0.0
+    ],
+    "mitte_abstand_m": 0.4338,
+    "lokale_kostenkarte": {
+     "zellen": 44,
+     "im_fenster": true,
+     "toedlich": 22,
+     "eingeschrieben_oder_mehr": 44,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "abdeckung_erreichbar": 0.9394618834080718,
+   "kartenfehler_m": 0.08559055326484721,
+   "kartenfehler_orte": {
+    "ueber_schwelle": 0,
+    "orte": []
+   },
+   "regler_abbrueche": {
+    "tf_zukunft": 47,
+    "unbekannt": 1
+   },
+   "nav_fehlschlaege": 10,
+   "slam_cpu_prozent_kern": {
+    "erste": 11,
+    "letzte": 66,
+    "max": 125,
+    "proben": 77,
+    "dauer_s": 781
+   },
+   "plan_engste_stelle": {
+    "abstand_m": 0.0958,
+    "plaene": 642,
+    "plaene_unter_robot_radius": 115
+   },
+   "last_1min_max": 12.66357421875,
+   "dauer_s": 766.6,
+   "strecke_m": 9.82,
+   "kriterien_verfehlt": [
+    "abdeckung_erreichbar"
+   ]
+  }
+ ]
+}

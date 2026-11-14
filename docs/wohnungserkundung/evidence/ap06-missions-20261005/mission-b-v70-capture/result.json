@@ -1,0 +1,163 @@
+{
+  "case": {
+    "id": "door68_start_b",
+    "door_m": 0.68,
+    "start": [
+      -2.1,
+      0.45,
+      0.0
+    ]
+  },
+  "passed": false,
+  "hardware_qualified": false,
+  "manifest_compatible": false,
+  "actual_lidar_beams": 2160,
+  "sensor_profile": "native_mast_mask",
+  "reference_geometry_provided_to_product": false,
+  "truth_map_publisher": false,
+  "truth_tf_publisher": false,
+  "manual_navigation_goals": 0,
+  "cpu_allocation": {
+    "available": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "graph": [
+      0,
+      1,
+      2
+    ],
+    "source": 4,
+    "sensors": 3
+  },
+  "source_initialization_order": "independent_spawned_device_process",
+  "prefixes": {
+    "explore": "/evidence/ap06-old-product-install/explore",
+    "mission_manager": "/evidence/ap06-old-product-install/mission_manager",
+    "bt_orchestrator": "/evidence/ap06-old-product-install/bt_orchestrator",
+    "robot_navigation": "/evidence/ap06-old-product-install/robot_navigation",
+    "robot_state_estimation": "/evidence/ap06-old-product-install/robot_state_estimation",
+    "base_hardware": "/evidence/ap06-old-product-install/base_hardware",
+    "robot_map_manager": "/evidence/ap06-old-product-install/robot_map_manager",
+    "robot_localization": "/evidence/ap06-support-install/robot_localization",
+    "slam_toolbox": "/evidence/ap06-missions-20261005/slam-install/slam_toolbox",
+    "nav2_bt_navigator": "/evidence/ap06-support-install/nav2_bt_navigator",
+    "nav2_controller": "/evidence/ap03-nav2-install/nav2_controller",
+    "nav2_planner": "/evidence/ap03-nav2-install/nav2_planner",
+    "nav2_velocity_smoother": "/evidence/ap06-support-install/nav2_velocity_smoother",
+    "nav2_collision_monitor": "/evidence/ap06-support-install/nav2_collision_monitor",
+    "vl53_near_field": "/evidence/ap06-old-product-install/vl53_near_field",
+    "safety_monitor": "/evidence/ap06-old-product-install/safety_monitor",
+    "amadeus_lidar_bringup": "/evidence/ap06-old-product-install/amadeus_lidar_bringup"
+  },
+  "initial_map": {
+    "fingerprint": "de2d21aca8ba1997bffab53fe9e6e3b39e564a7ff8124d1ad3b3f31404faca4a",
+    "width": 189,
+    "height": 95
+  },
+  "lifecycle_states": {
+    "planner_server": [
+      {
+        "transition": 1,
+        "actual_state": 2,
+        "acknowledgement_received": true
+      },
+      {
+        "transition": 3,
+        "actual_state": 3,
+        "acknowledgement_received": true
+      }
+    ],
+    "controller_server": [
+      {
+        "transition": 1,
+        "actual_state": 2,
+        "acknowledgement_received": true
+      },
+      {
+        "transition": 3,
+        "actual_state": 3,
+        "acknowledgement_received": true
+      }
+    ],
+    "bt_navigator": [
+      {
+        "transition": 1,
+        "actual_state": 2,
+        "acknowledgement_received": true
+      },
+      {
+        "transition": 3,
+        "actual_state": 3,
+        "acknowledgement_received": true
+      }
+    ],
+    "velocity_smoother": [
+      {
+        "transition": 1,
+        "actual_state": 2,
+        "acknowledgement_received": true
+      },
+      {
+        "transition": 3,
+        "actual_state": 3,
+        "acknowledgement_received": true
+      }
+    ],
+    "collision_monitor": [
+      {
+        "transition": 1,
+        "actual_state": 2,
+        "acknowledgement_received": true
+      },
+      {
+        "transition": 3,
+        "actual_state": 3,
+        "acknowledgement_received": true
+      }
+    ]
+  },
+  "tf_owners": {
+    "odom->base_link": [
+      "hwt601_mapping_ekf"
+    ],
+    "map->odom": [
+      "slam_toolbox"
+    ]
+  },
+  "action_maximum_active": {
+    "/explore_area/_action/status": 1,
+    "/navigate_to_pose/_action/status": 1
+  },
+  "action_active_at_terminal": {
+    "/explore_area/_action/status": [],
+    "/navigate_to_pose/_action/status": []
+  },
+  "command_values_at_terminal": {
+    "/cmd_vel_nav": [
+      0.0,
+      0.0
+    ],
+    "/cmd_vel_smoothed": [
+      0.0,
+      0.0
+    ],
+    "/cmd_vel": [
+      0.0,
+      0.0
+    ],
+    "/cmd_vel_nav_raw": [
+      0.0,
+      0.0
+    ]
+  },
+  "map_save": {
+    "success": false,
+    "message": "Karte konnte nicht gespeichert werden: Konfigurierter Mindestfreiraum w\u00fcrde unterschritten (536870912 Bytes)."
+  },
+  "error": "actual map save rejected: Karte konnte nicht gespeichert werden: Konfigurierter Mindestfreiraum w\u00fcrde unterschritten (536870912 Bytes).",
+  "device_process_exitcode": 0
+}

@@ -1,0 +1,11 @@
+Starting >>> frontier_exploration_ros2
+--- stderr: frontier_exploration_ros2
+lto-wrapper: warning: using serial compilation of 4 LTRANS jobs
+lto-wrapper: warning: using serial compilation of 7 LTRANS jobs
+lto-wrapper: warning: using serial compilation of 9 LTRANS jobs
+---
+[Processing: frontier_exploration_ros2]
+Finished <<< frontier_exploration_ros2 [39.4s]
+
+Summary: 1 package finished [39.5s]
+  1 package had stderr output: frontier_exploration_ros2

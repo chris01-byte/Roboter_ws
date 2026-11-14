@@ -1,0 +1,319 @@
+{
+  "baseline_geometry_source": "dc84753a7ad2bbc87de543dc2a81714e1f5820af",
+  "actual_selector": true,
+  "actual_native_geometry": true,
+  "synthetic_inputs": true,
+  "before": {
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "after": {
+    "tests": 87,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "protection": {
+    "tests": 176,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "content_reads": {
+    "before": 1828,
+    "after": 16
+  },
+  "loaded_pairs": {
+    "pairs": [
+      {
+        "before": {
+          "started_at": 62263.590673135,
+          "wall_s": 3.882443993999914,
+          "thread_cpu_s": 2.407989184,
+          "error": null,
+          "selected": [
+            {
+              "goal": [
+                1.4849999668076634,
+                -0.48499998915940523,
+                0.0
+              ],
+              "points": 90,
+              "evidence": "5c36088224972a4448398e223180b698796d450a5eeffa3dcc02bc9e85478365"
+            }
+          ],
+          "full_content_grid_reads": 1828,
+          "mode": "before",
+          "ready_calls": 1416,
+          "ready_cpu_s": 1.2209938880000004,
+          "delivered_callbacks": 1272,
+          "geometry_only": true,
+          "hardware_qualified": false,
+          "synthetic_dds_load_hz": 320,
+          "message_latency_s": {
+            "max": 0.25779448699904606,
+            "p95": 0.12008390799746849
+          },
+          "worker_and_main_cpu": 3,
+          "publisher_cpu": 4,
+          "during_selection_message_latency_s": {
+            "count": 1192,
+            "max": 0.06843964399740798,
+            "p95": 0.0401569220048259
+          },
+          "result_sha256": "5fcaa7db3754e995eed1a2a7a0aad5c5e6754487636348fb8d8c6727bac972ed"
+        },
+        "after": {
+          "started_at": 62271.452231491,
+          "wall_s": 3.199023462002515,
+          "thread_cpu_s": 1.997461568,
+          "error": null,
+          "selected": [
+            {
+              "goal": [
+                1.4849999668076634,
+                -0.48499998915940523,
+                0.0
+              ],
+              "points": 90,
+              "evidence": "5c36088224972a4448398e223180b698796d450a5eeffa3dcc02bc9e85478365"
+            }
+          ],
+          "full_content_grid_reads": 16,
+          "mode": "after",
+          "ready_calls": 1168,
+          "ready_cpu_s": 1.0092412800000068,
+          "delivered_callbacks": 1048,
+          "geometry_only": true,
+          "hardware_qualified": false,
+          "synthetic_dds_load_hz": 320,
+          "message_latency_s": {
+            "max": 0.2475449129997287,
+            "p95": 0.11559918900456978
+          },
+          "worker_and_main_cpu": 3,
+          "publisher_cpu": 4,
+          "during_selection_message_latency_s": {
+            "count": 976,
+            "max": 0.06527282400202239,
+            "p95": 0.042880592998699285
+          },
+          "result_sha256": "1105c8596b487ff432056b6a982ae770a868f79a2711bec962803d805f09193f"
+        }
+      },
+      {
+        "before": {
+          "started_at": 62278.663012567,
+          "wall_s": 3.920878957003879,
+          "thread_cpu_s": 2.3825645119999996,
+          "error": null,
+          "selected": [
+            {
+              "goal": [
+                1.4849999668076634,
+                -0.48499998915940523,
+                0.0
+              ],
+              "points": 90,
+              "evidence": "5c36088224972a4448398e223180b698796d450a5eeffa3dcc02bc9e85478365"
+            }
+          ],
+          "full_content_grid_reads": 1828,
+          "mode": "before",
+          "ready_calls": 1421,
+          "ready_cpu_s": 1.2886534720000045,
+          "delivered_callbacks": 1272,
+          "geometry_only": true,
+          "hardware_qualified": false,
+          "synthetic_dds_load_hz": 320,
+          "message_latency_s": {
+            "max": 0.23422001099970657,
+            "p95": 0.0940884579977137
+          },
+          "worker_and_main_cpu": 3,
+          "publisher_cpu": 4,
+          "during_selection_message_latency_s": {
+            "count": 1200,
+            "max": 0.05268909700680524,
+            "p95": 0.03665066699613817
+          },
+          "result_sha256": "e4d64080a647f12621938f541c9678fb17a5fa0482f5fa381a2fac0660c8f29f"
+        },
+        "after": {
+          "started_at": 62286.542644808,
+          "wall_s": 3.264768600995012,
+          "thread_cpu_s": 2.023628384,
+          "error": null,
+          "selected": [
+            {
+              "goal": [
+                1.4849999668076634,
+                -0.48499998915940523,
+                0.0
+              ],
+              "points": 90,
+              "evidence": "5c36088224972a4448398e223180b698796d450a5eeffa3dcc02bc9e85478365"
+            }
+          ],
+          "full_content_grid_reads": 16,
+          "mode": "after",
+          "ready_calls": 1183,
+          "ready_cpu_s": 1.0416104959999988,
+          "delivered_callbacks": 1075,
+          "geometry_only": true,
+          "hardware_qualified": false,
+          "synthetic_dds_load_hz": 320,
+          "message_latency_s": {
+            "max": 0.2598104869975941,
+            "p95": 0.12556616200163262
+          },
+          "worker_and_main_cpu": 3,
+          "publisher_cpu": 4,
+          "during_selection_message_latency_s": {
+            "count": 1000,
+            "max": 0.059940527004073374,
+            "p95": 0.03420943799574161
+          },
+          "result_sha256": "5a8ec157586a1c16761a978c679d31ab71ed4b28e94b0c9bc86355f5d7d6a10c"
+        }
+      },
+      {
+        "before": {
+          "started_at": 62293.783138982,
+          "wall_s": 3.908910976999323,
+          "thread_cpu_s": 2.396170464,
+          "error": null,
+          "selected": [
+            {
+              "goal": [
+                1.4849999668076634,
+                -0.48499998915940523,
+                0.0
+              ],
+              "points": 90,
+              "evidence": "5c36088224972a4448398e223180b698796d450a5eeffa3dcc02bc9e85478365"
+            }
+          ],
+          "full_content_grid_reads": 1828,
+          "mode": "before",
+          "ready_calls": 1417,
+          "ready_cpu_s": 1.2655829119999973,
+          "delivered_callbacks": 1279,
+          "geometry_only": true,
+          "hardware_qualified": false,
+          "synthetic_dds_load_hz": 320,
+          "message_latency_s": {
+            "max": 0.24061445500410628,
+            "p95": 0.09739778000221122
+          },
+          "worker_and_main_cpu": 3,
+          "publisher_cpu": 4,
+          "during_selection_message_latency_s": {
+            "count": 1200,
+            "max": 0.05670275999727892,
+            "p95": 0.029664014000445604
+          },
+          "result_sha256": "c664c829ad662c57af9076e28e9e4ba54cd57fd041b39d1314eba6b6f03d3633"
+        },
+        "after": {
+          "started_at": 62301.66550094,
+          "wall_s": 3.2843585470036487,
+          "thread_cpu_s": 1.9663667519999999,
+          "error": null,
+          "selected": [
+            {
+              "goal": [
+                1.4849999668076634,
+                -0.48499998915940523,
+                0.0
+              ],
+              "points": 90,
+              "evidence": "5c36088224972a4448398e223180b698796d450a5eeffa3dcc02bc9e85478365"
+            }
+          ],
+          "full_content_grid_reads": 16,
+          "mode": "after",
+          "ready_calls": 1211,
+          "ready_cpu_s": 1.0590850880000076,
+          "delivered_callbacks": 1095,
+          "geometry_only": true,
+          "hardware_qualified": false,
+          "synthetic_dds_load_hz": 320,
+          "message_latency_s": {
+            "max": 0.2584729110021726,
+            "p95": 0.13612397000542842
+          },
+          "worker_and_main_cpu": 3,
+          "publisher_cpu": 4,
+          "during_selection_message_latency_s": {
+            "count": 1016,
+            "max": 0.1045893039990915,
+            "p95": 0.04011535400059074
+          },
+          "result_sha256": "5cee030da498d3355b9c8e46ab1855e5cc4f46be32f6439d494ce412089f35b8"
+        }
+      }
+    ],
+    "pure_geometry_only": true,
+    "qualification": false,
+    "synthetic_load_hz": 320,
+    "unchanged_source_limits": true
+  },
+  "median_wall_s": {
+    "before": 3.908910976999323,
+    "after": 3.264768600995012
+  },
+  "median_cpu_s": {
+    "before": 2.396170464,
+    "after": 1.997461568
+  },
+  "unchanged_candidate": true,
+  "mutation_guards": [
+    "raw",
+    "costmap",
+    "known",
+    "safe",
+    "cost_known",
+    "reference",
+    "physical_motion",
+    "egress",
+    "generation",
+    "body_expired",
+    "egress_expired",
+    "bounds",
+    "scope",
+    "path_validation",
+    "clearance"
+  ],
+  "exception_releases_binding": true,
+  "health_cached": false,
+  "motion_authority_cached": false,
+  "original_budgets_preserved": true,
+  "executor_dispatch_unchanged": true,
+  "mission_qualified": false,
+  "hardware_qualified": false,
+  "rejected_approaches": {
+    "one_ms_yield": "during-selection message p95 222.774 ms / max 243.039 ms; discarded",
+    "zero_yield": "no material processing-time gain; discarded"
+  },
+  "test_setup_error": {
+    "path": "candidate-pass-protection",
+    "reason": "wrong test filename before collection; no tests ran; original log retained; corrected v2 passed"
+  },
+  "rollback": "revert own candidate-pass binding commit or deselect private overlay",
+  "file_hashes": {
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/explore/metric_frontier_runtime.py": "810322b73348dacb84e8303a0236fb31acb8aad5fc7e77fe12e00c80875f732d",
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/test/test_metric_route_proof_group.py": "67cbeab3fac02ac96552c5dc73bd87e8e5e291dd6794722cb2f54619a00791ba",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/candidate-pass-before/results.xml": "f79a14a790796b6f340653c9e4eaad3c210c8c583301c32851d23b5e5cf2836e",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/candidate-pass-after/results.xml": "26f7e314fb5196def06c613317ea7041c1ff94c148ffe32d4882d9dca9de4c65",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/candidate-pass-protection-v2/results.xml": "2136ad86d99ff8570bdaad29d86950d38dee08b3b548faae5085a9509268883b",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/candidate-pass-executor-pair.py": "110f48dd30dc8899613327df998a79e983e0385a3d1d2a653358d2156b63e001",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/candidate-pass-baseline-runtime.py": "610705c13a6c4e8a78afd79836ce4e685d4586a4c09e7a54ffb5d0b874412b69",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/candidate-pass-dds-pairs.json": "18bd6cefba5d327e4d73ced3e01fe1c7846fcbb815ab1afa48105c8d3b514b88",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/executor-frozen-320-v3-baseline/result.json": "6b1f892cc185e1a9a8fbb0b8a9956e2d7233e3a3b738857fe7ecb1a5e718bb61",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/executor-frozen-320-v3-zero/result.json": "6638a62558c39d40f0d5c38d03d624e2167a9d486473c830adbfd642845ae357",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/executor-frozen-320-v3-yield/result.json": "b62edbff848dc1fadd36ae688dc6ee72c93085023b8f22b5f0e58f6c40dcdc25"
+  }
+}

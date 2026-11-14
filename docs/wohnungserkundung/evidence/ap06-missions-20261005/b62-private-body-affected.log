@@ -1,0 +1,33 @@
+........................................................................ [ 38%]
+.........................................F.............................. [ 77%]
+..........................................                               [100%]
+=================================== FAILURES ===================================
+_ test_first_body_space_stays_fixed_in_map_through_travel_and_localization_refinement _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fe6ede4cdf0>
+
+    def test_first_body_space_stays_fixed_in_map_through_travel_and_localization_refinement(monkeypatch):
+        from geometry_msgs.msg import TransformStamped
+        from explore.portal_source_adapter import raw_map_portal_source_from_values
+        n=body_input_fixture(monkeypatch,10.01);g=n._metric_raw[0]
+        transform=TransformStamped();transform.header.stamp.sec=100
+        transform.transform.rotation.w=1.
+        n._tf_buffer=SimpleNamespace(lookup_transform=lambda *_:transform)
+        def refresh():
+            source=raw_map_portal_source_from_values(**n._metric_grid_values(g))
+            n._metric_raw=(g,source,10.)
+            n._metric_correlation=replace(n._metric_correlation,fingerprint=source.fingerprint)
+        g.data[20*80+10]=-1;refresh()
+        assert n._metric_inputs()[3][20,10]
+        # Ordinary odometry travel preserves the measured FIRST physical space.
+        # Newly occupied robot space does not become a new private clearing mask.
+        n._robot_pose_sample=lambda:((.25,.05,0.),0.)
+        g.data[20*80+13]=-1;refresh()
+        known=n._metric_inputs()[3]
+>       assert known[20,10] and not known[20,13]
+E       assert (False)
+
+src/explore/test/test_metric_frontier.py:567: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_frontier.py::test_first_body_space_stays_fixed_in_map_through_travel_and_localization_refinement
+1 failed, 185 passed in 21.72s

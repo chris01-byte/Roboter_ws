@@ -1,0 +1,43 @@
+[INFO] [1791288478.320718936] [controller_server]: 
+	controller_server lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791288478.323382337] [controller_server]: Creating controller server
+[INFO] [1791288478.339315904] [local_costmap.local_costmap]: 
+	local_costmap lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791288478.339864320] [local_costmap.local_costmap]: Creating Costmap
+[INFO] [1791288480.153642466] [controller_server]: Configuring controller interface
+[INFO] [1791288480.153875918] [controller_server]: getting goal checker plugins..
+[INFO] [1791288480.153929168] [controller_server]: Controller frequency set to 20.0000Hz
+[INFO] [1791288480.153956749] [local_costmap.local_costmap]: Configuring
+[INFO] [1791288480.160037610] [local_costmap.local_costmap]: Using plugin "obstacle_layer"
+[INFO] [1791288480.165444946] [local_costmap.local_costmap]: Subscribed to Topics: vl53_left vl53_right vl53_left_mark vl53_right_mark oak
+[INFO] [1791288480.175346042] [local_costmap.local_costmap]: Initialized plugin "obstacle_layer"
+[INFO] [1791288480.175462187] [local_costmap.local_costmap]: Using plugin "inflation_layer"
+[INFO] [1791288480.176304726] [local_costmap.local_costmap]: Initialized plugin "inflation_layer"
+[INFO] [1791288480.185385656] [controller_server]: Created progress_checker : progress_checker of type nav2_controller::PoseProgressChecker
+[INFO] [1791288480.187376536] [controller_server]: Created goal checker : general_goal_checker of type nav2_controller::SimpleGoalChecker
+[INFO] [1791288480.188252075] [controller_server]: Controller Server has general_goal_checker  goal checkers available.
+[INFO] [1791288480.188904848] [controller_server]: Created controller : FollowPath of type nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791288480.193479630] [controller_server]: Controller Server has FollowPath  controllers available.
+[INFO] [1791288480.200305944] [controller_server]: Activating
+[INFO] [1791288480.200334186] [local_costmap.local_costmap]: Activating
+[INFO] [1791288480.200346335] [local_costmap.local_costmap]: Checking transform
+[INFO] [1791288480.200365363] [local_costmap.local_costmap]: Timed out waiting for transform from base_link to odom to become available, tf error: Invalid frame ID "odom" passed to canTransform argument target_frame - frame does not exist
+[INFO] [1791288480.700656297] [local_costmap.local_costmap]: start
+[INFO] [1791288480.752180267] [controller_server]: Activating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791288480.752257804] [controller_server]: Creating bond (controller_server) to lifecycle manager.
+[INFO] [1791288513.814653496] [rclcpp]: signal_handler(signum=2)
+[INFO] [1791288513.814775359] [controller_server]: Running Nav2 LifecycleNode rcl preshutdown (controller_server)
+[INFO] [1791288513.814899706] [controller_server]: Deactivating
+[INFO] [1791288513.814920838] [controller_server]: Deactivating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791288513.814994980] [local_costmap.local_costmap]: Deactivating
+[INFO] [1791288513.903089057] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[INFO] [1791288513.913329394] [controller_server]: Cleaning up
+[INFO] [1791288513.913367552] [controller_server]: Cleaning up controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791288513.913406761] [local_costmap.local_costmap]: Cleaning up
+[INFO] [1791288513.923252764] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[INFO] [1791288513.926867579] [local_costmap.local_costmap]: Destroying
+[INFO] [1791288513.932650982] [controller_server]: Destroying

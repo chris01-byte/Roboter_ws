@@ -1,0 +1,27 @@
+Starting >>> amadeus_map_identity
+Finished <<< amadeus_map_identity [0.63s]
+Starting >>> base_hardware
+Finished <<< base_hardware [2.12s]
+Starting >>> robot_interfaces
+Finished <<< robot_interfaces [0.03s]
+Starting >>> bt_orchestrator
+Finished <<< bt_orchestrator [0.42s]
+Starting >>> mission_manager
+Finished <<< mission_manager [1.08s]
+Starting >>> robot_state_estimation
+Finished <<< robot_state_estimation [2.84s]
+Starting >>> safety_monitor
+Finished <<< safety_monitor [0.78s]
+Starting >>> vl53_near_field
+Finished <<< vl53_near_field [0.90s]
+Starting >>> amadeus_lidar_bringup
+Finished <<< amadeus_lidar_bringup [0.64s]
+Starting >>> explore
+Finished <<< explore [1min 6s]	[ with test failures ]
+Starting >>> robot_navigation
+Finished <<< robot_navigation [6.16s]
+Starting >>> robot_map_manager
+Finished <<< robot_map_manager [1.45s]
+
+Summary: 12 packages finished [1min 23s]
+  1 package had test failures: explore

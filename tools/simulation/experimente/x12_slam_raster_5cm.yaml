@@ -1,0 +1,8 @@
+# Experiment X12: SLAM-Karte mit 5 cm statt 1 cm (slam_toolbox resolution).
+# Frage: Kommt die mit der Kartengröße steigende slam_toolbox-Last (ein Kern bis 100 %)
+# vom Kartenneuaufbau (map_update_interval 1 s, Kosten ~ Fläche/Auflösung²)? Der
+# Selbstheilungs-Explorer rechnet ohnehin auf 5 cm (work_resolution_m). Scan-Matcher-
+# Auflösungen bleiben unverändert. Nur Messung, keine Produktänderung.
+slam_toolbox:
+  ros__parameters:
+    resolution: 0.05

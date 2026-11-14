@@ -1,0 +1,189 @@
+{
+  "manual_room_data": "external_preserved",
+  "map_binding": {
+    "fingerprint": "d1c81386678af3a57c3f20d0293f0a5edaa610368cd35cb5c2570307cf1ca855",
+    "frame_id": "map",
+    "height": 96,
+    "name": "amadeus",
+    "resolution": 0.029999999329447746,
+    "version": "20261006T095216940473Z-d1c81386678a",
+    "width": 190
+  },
+  "schema_version": 1,
+  "sequence": 1,
+  "state": {
+    "arrivals": 3,
+    "attempts": 7,
+    "budget_limits": {
+      "completion_window_s": 3.0,
+      "goal_timeout_s": 150.0,
+      "max_failed_goals": 3,
+      "max_frontier_goals": 20
+    },
+    "context": {
+      "frame_id": "map",
+      "map_id": "map-de2d21aca8ba1997bffab53fe9e6e3b39e564a7ff8124d1ad3b3f31404faca4a",
+      "session_id": "ap06-door68_start_b"
+    },
+    "failures": 1,
+    "fingerprint": "d1c81386678af3a57c3f20d0293f0a5edaa610368cd35cb5c2570307cf1ca855",
+    "observations": 2,
+    "observed_area_m2": 0.011699999476969248,
+    "outcome": "error",
+    "policy": {
+      "cooldown_s": 30.0,
+      "next_id": 7,
+      "radius": 0.6,
+      "retry_limit": 2,
+      "tasks": {
+        "metric-task-1": {
+          "completed": true,
+          "evidence_key": "d6425722dcbfa634c2e8a5922c4a178ff87ed8fc696a1595e47e3e36dcb33c33",
+          "failures": 0,
+          "fingerprint": "69f388815584c3bca75b911d8d16b88cb960602b04cd29cf3f2177191952c92c",
+          "frontier_xy": [
+            1.304999970830977,
+            -1.424999968148768
+          ],
+          "reason": "observed",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            0.9123788601980904,
+            0.0028549507882270914
+          ],
+          "tries": 1
+        },
+        "metric-task-2": {
+          "completed": false,
+          "evidence_key": "c836c568b779fe0b2c47a78d4fbb3254f98d526d017f3107952091dd80eba9f8",
+          "failures": 1,
+          "fingerprint": "d1c81386678af3a57c3f20d0293f0a5edaa610368cd35cb5c2570307cf1ca855",
+          "frontier_xy": [
+            2.8949999352917075,
+            -0.6449999855831265
+          ],
+          "reason": "proposal_rejected",
+          "retry_remaining_s": 2.372719793000215,
+          "target_xy": [
+            2.5649999426677823,
+            -0.4349999902769923
+          ],
+          "tries": 2
+        },
+        "metric-task-3": {
+          "completed": false,
+          "evidence_key": "",
+          "failures": 0,
+          "fingerprint": "",
+          "frontier_xy": [
+            3.644999918527901,
+            -0.704999984242022
+          ],
+          "reason": "",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            3.644999918527901,
+            -0.704999984242022
+          ],
+          "tries": 0
+        },
+        "metric-task-4": {
+          "completed": true,
+          "evidence_key": "823ba7437fb0f3bbc9832b9d2cb11d5ea4f4febaf1dc59a38f0d8404ba79b242",
+          "failures": 0,
+          "fingerprint": "93997459f9b99ef337e16f327b74ce81fa2153e873b1dbf984cc849dd9f2a2c2",
+          "frontier_xy": [
+            1.5149999661371112,
+            -0.10499999765306711
+          ],
+          "reason": "observed",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            1.0104106520266025,
+            -0.12810447606426584
+          ],
+          "tries": 1
+        },
+        "metric-task-5": {
+          "completed": false,
+          "evidence_key": "",
+          "failures": 0,
+          "fingerprint": "",
+          "frontier_xy": [
+            1.3649999694898725,
+            0.9149999795481563
+          ],
+          "reason": "",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            1.3649999694898725,
+            0.9149999795481563
+          ],
+          "tries": 0
+        },
+        "metric-task-6": {
+          "completed": false,
+          "evidence_key": "8a7c7b581d8e99fffcbb424c06bfc44b709e9e4178ce5bde2db1116c0c4ea418",
+          "failures": 0,
+          "fingerprint": "d1c81386678af3a57c3f20d0293f0a5edaa610368cd35cb5c2570307cf1ca855",
+          "frontier_xy": [
+            3.764999915845692,
+            -1.304999970830977
+          ],
+          "reason": "proposal_rejected",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            3.1792359632895084,
+            -0.5518748889730266
+          ],
+          "tries": 2
+        },
+        "metric-task-7": {
+          "completed": false,
+          "evidence_key": "",
+          "failures": 0,
+          "fingerprint": "",
+          "frontier_xy": [
+            2.954999933950603,
+            -0.04499999899417162
+          ],
+          "reason": "",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            2.954999933950603,
+            -0.04499999899417162
+          ],
+          "tries": 0
+        }
+      }
+    },
+    "remaining_s": 604.4619642183134,
+    "resume_authorizes_motion": false,
+    "saved_map_id": "map-d1c81386678af3a57c3f20d0293f0a5edaa610368cd35cb5c2570307cf1ca855",
+    "saved_wall_time": 1791280336.9571185,
+    "schema_version": 1,
+    "scope": {
+      "scope_id": "ap06-two-rooms",
+      "vertices": [
+        [
+          -0.6999999999999997,
+          -1.8499999999999999
+        ],
+        [
+          4.9,
+          -1.8499999999999999
+        ],
+        [
+          4.9,
+          0.95
+        ],
+        [
+          -0.6999999999999997,
+          0.95
+        ]
+      ]
+    },
+    "strategy": "metric_frontier"
+  },
+  "state_sha256": "1a07374a3818f132333adcffa889afbd15b06c4234a7fbbc07165401aa17aee8"
+}

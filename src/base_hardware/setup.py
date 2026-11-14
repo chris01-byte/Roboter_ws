@@ -27,6 +27,7 @@ setup(
     entry_points={
         'console_scripts': [
             'base_hardware = base_hardware.base_hardware_node:main',
+            'encoder_shadow_reader = base_hardware.encoder_shadow_node:main',
         ],
     },
 )

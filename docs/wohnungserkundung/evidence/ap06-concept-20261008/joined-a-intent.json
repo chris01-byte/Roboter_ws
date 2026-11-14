@@ -1,0 +1,19 @@
+{
+  "created_utc": "2026-10-08T06:49:04.336938+00:00",
+  "candidate": "e9f4506c596a133de1374ee1388eb1e9f14c457a",
+  "case": "door68_start_a",
+  "profile": "finite-unmasked",
+  "purpose": "Test integrated phase and valid-empty start permit corrections. Exact join-stop receipts identify any remaining map/status failure. All original motion/source/budget limits retained.",
+  "cpu_affinity": [
+    0,
+    1,
+    3,
+    4
+  ],
+  "original_budgets_preserved": true,
+  "future_departure_deferred": false,
+  "original_qualification": false,
+  "hardware_qualified": false,
+  "source_identity_sha256": "19cf2d44790e9b36ad2f5545268c7ffefb0494e30cd988eabb2038c497a77e1e",
+  "native_identity_sha256": "a5c81c3382f42999a2de8904540bb295c71f3d49565d62672fd71d58deb078f5"
+}

@@ -1,0 +1,53 @@
+hwt601_shadow_reader:
+  ros__parameters:
+    # Dedicated, passive HWT601 Modbus source. The driver implements FC03
+    # reads only and refuses the motor adapter path.
+    port: /dev/ttyUSB_HWT601
+    baud: 115200
+    device_address: 80
+    poll_rate_hz: 100.0
+    response_timeout_s: 0.03
+    reconnect_interval_s: 1.0
+    errors_before_reconnect: 3
+    sensor_timeout_s: 0.20
+
+    frame_id: hwt601_link
+    imu_topic: /shadow/hwt601/imu/data_raw
+    status_topic: /shadow/hwt601/raw_status_json
+    diagnostics_topic: /shadow/hwt601/raw_diagnostics
+
+    acceleration_full_scale_g: 4.0
+    angular_velocity_full_scale_dps: 400.0
+    saturation_margin_counts: 8
+
+    # Conservative 100-Hz white-noise equivalent from the 600-s stationary
+    # recording. It lies above every observed coloured-noise point estimate
+    # through 100 s and both larger X/Y sample variances. With only five
+    # 100-s blocks it is not a confidence bound or production calibration.
+    angular_velocity_variance: 5.0e-7
+    # Acceleration is deliberately absent from the derived yaw-only output.
+    linear_acceleration_variance: 0.25
+
+hwt601_shadow:
+  ros__parameters:
+    imu_input: /shadow/hwt601/imu/data_raw
+    imu_output: /shadow/hwt601/imu/yaw_rate
+    status_topic: /shadow/hwt601/status_json
+    diagnostics_topic: /shadow/hwt601/diagnostics
+    expected_input_frame: hwt601_link
+    output_frame: base_link
+
+    # The launch file overrides this from its required explicit argument.
+    operator_stationary_confirmed: false
+    gyro_bias_initial_settle_s: 15.0
+    gyro_bias_calibration_s: 10.0
+    gyro_bias_minimum_samples: 800
+    gyro_bias_maximum_stddev_radps: 0.005
+    gyro_bias_maximum_sample_radps: 0.03
+    gyro_bias_maximum_sample_gap_s: 0.10
+    sensor_timeout_s: 0.35
+
+    # Only Z is a usable measurement. X/Y are deliberately assigned an
+    # effectively unobservable variance and never enter the shadow EKF.
+    angular_velocity_z_variance: 5.0e-7
+    unobserved_axis_variance: 1.0e6

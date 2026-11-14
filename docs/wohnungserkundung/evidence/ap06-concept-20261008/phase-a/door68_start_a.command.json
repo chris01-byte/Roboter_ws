@@ -1,0 +1,16 @@
+[
+  "/usr/bin/python3",
+  "/evidence/ap06-repo/tools/simulation/ap06_closed_product.py",
+  "--repo",
+  "/evidence/ap06-repo",
+  "--output",
+  "/evidence/ap06-concept-20261008/phase-a/door68_start_a",
+  "--case",
+  "door68_start_a",
+  "--tf-probe",
+  "/evidence/ap06-tf-probe-build/tf_ownership_probe",
+  "--manifest",
+  "/evidence/ap06-repo/tools/simulation/ap06_product_scenarios.json",
+  "--save-partial",
+  "--ideal-lidar"
+]

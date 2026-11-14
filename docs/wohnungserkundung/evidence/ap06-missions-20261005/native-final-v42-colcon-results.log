@@ -1,0 +1,14 @@
+/evidence/ap06-old-product-build/amadeus_lidar_bringup/pytest.xml: 7 tests, 0 errors, 0 failures, 0 skipped
+/evidence/ap06-old-product-build/amadeus_map_identity/pytest.xml: 36 tests, 0 errors, 0 failures, 0 skipped
+/evidence/ap06-old-product-build/base_hardware/pytest.xml: 121 tests, 0 errors, 0 failures, 0 skipped
+/evidence/ap06-old-product-build/bt_orchestrator/Testing/20261007-1805/Test.xml: 1 test, 0 errors, 0 failures, 0 skipped
+/evidence/ap06-old-product-build/bt_orchestrator/test_results/bt_orchestrator/bt_orchestrator_contract.xunit.xml: 2 tests, 0 errors, 0 failures, 0 skipped
+/evidence/ap06-old-product-build/explore/pytest.xml: 1660 tests, 0 errors, 0 failures, 0 skipped
+/evidence/ap06-old-product-build/mission_manager/pytest.xml: 52 tests, 0 errors, 0 failures, 0 skipped
+/evidence/ap06-old-product-build/robot_map_manager/pytest.xml: 53 tests, 0 errors, 0 failures, 0 skipped
+/evidence/ap06-old-product-build/robot_navigation/pytest.xml: 75 tests, 0 errors, 0 failures, 0 skipped
+/evidence/ap06-old-product-build/robot_state_estimation/pytest.xml: 267 tests, 0 errors, 0 failures, 0 skipped
+/evidence/ap06-old-product-build/safety_monitor/pytest.xml: 2 tests, 0 errors, 0 failures, 0 skipped
+/evidence/ap06-old-product-build/vl53_near_field/pytest.xml: 19 tests, 0 errors, 0 failures, 0 skipped
+
+Summary: 2295 tests, 0 errors, 0 failures, 0 skipped

@@ -1,0 +1,43 @@
+running egg_info
+creating ../../../ap06-old-product-build/semantic_map_manager/semantic_map_manager.egg-info
+writing ../../../ap06-old-product-build/semantic_map_manager/semantic_map_manager.egg-info/PKG-INFO
+writing dependency_links to ../../../ap06-old-product-build/semantic_map_manager/semantic_map_manager.egg-info/dependency_links.txt
+writing entry points to ../../../ap06-old-product-build/semantic_map_manager/semantic_map_manager.egg-info/entry_points.txt
+writing requirements to ../../../ap06-old-product-build/semantic_map_manager/semantic_map_manager.egg-info/requires.txt
+writing top-level names to ../../../ap06-old-product-build/semantic_map_manager/semantic_map_manager.egg-info/top_level.txt
+writing manifest file '../../../ap06-old-product-build/semantic_map_manager/semantic_map_manager.egg-info/SOURCES.txt'
+reading manifest file '../../../ap06-old-product-build/semantic_map_manager/semantic_map_manager.egg-info/SOURCES.txt'
+writing manifest file '../../../ap06-old-product-build/semantic_map_manager/semantic_map_manager.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /evidence/ap06-old-product-build/semantic_map_manager/build
+creating /evidence/ap06-old-product-build/semantic_map_manager/build/lib
+creating /evidence/ap06-old-product-build/semantic_map_manager/build/lib/semantic_map_manager
+copying semantic_map_manager/semantic_map_manager_node.py -> /evidence/ap06-old-product-build/semantic_map_manager/build/lib/semantic_map_manager
+copying semantic_map_manager/semantic_core.py -> /evidence/ap06-old-product-build/semantic_map_manager/build/lib/semantic_map_manager
+copying semantic_map_manager/__init__.py -> /evidence/ap06-old-product-build/semantic_map_manager/build/lib/semantic_map_manager
+running install
+running install_lib
+creating /evidence/ap06-old-product-install/semantic_map_manager/lib/python3.10/site-packages/semantic_map_manager
+copying /evidence/ap06-old-product-build/semantic_map_manager/build/lib/semantic_map_manager/semantic_map_manager_node.py -> /evidence/ap06-old-product-install/semantic_map_manager/lib/python3.10/site-packages/semantic_map_manager
+copying /evidence/ap06-old-product-build/semantic_map_manager/build/lib/semantic_map_manager/semantic_core.py -> /evidence/ap06-old-product-install/semantic_map_manager/lib/python3.10/site-packages/semantic_map_manager
+copying /evidence/ap06-old-product-build/semantic_map_manager/build/lib/semantic_map_manager/__init__.py -> /evidence/ap06-old-product-install/semantic_map_manager/lib/python3.10/site-packages/semantic_map_manager
+byte-compiling /evidence/ap06-old-product-install/semantic_map_manager/lib/python3.10/site-packages/semantic_map_manager/semantic_map_manager_node.py to semantic_map_manager_node.cpython-310.pyc
+byte-compiling /evidence/ap06-old-product-install/semantic_map_manager/lib/python3.10/site-packages/semantic_map_manager/semantic_core.py to semantic_core.cpython-310.pyc
+byte-compiling /evidence/ap06-old-product-install/semantic_map_manager/lib/python3.10/site-packages/semantic_map_manager/__init__.py to __init__.cpython-310.pyc
+running install_data
+creating /evidence/ap06-old-product-install/semantic_map_manager/share/ament_index
+creating /evidence/ap06-old-product-install/semantic_map_manager/share/ament_index/resource_index
+creating /evidence/ap06-old-product-install/semantic_map_manager/share/ament_index/resource_index/packages
+copying resource/semantic_map_manager -> /evidence/ap06-old-product-install/semantic_map_manager/share/ament_index/resource_index/packages
+copying package.xml -> /evidence/ap06-old-product-install/semantic_map_manager/share/semantic_map_manager
+copying README.md -> /evidence/ap06-old-product-install/semantic_map_manager/share/semantic_map_manager
+creating /evidence/ap06-old-product-install/semantic_map_manager/share/semantic_map_manager/launch
+copying launch/semantic_map_manager.launch.py -> /evidence/ap06-old-product-install/semantic_map_manager/share/semantic_map_manager/launch
+creating /evidence/ap06-old-product-install/semantic_map_manager/share/semantic_map_manager/config
+copying config/semantic_map_manager.yaml -> /evidence/ap06-old-product-install/semantic_map_manager/share/semantic_map_manager/config
+running install_egg_info
+Copying ../../../ap06-old-product-build/semantic_map_manager/semantic_map_manager.egg-info to /evidence/ap06-old-product-install/semantic_map_manager/lib/python3.10/site-packages/semantic_map_manager-0.1.0-py3.10.egg-info
+running install_scripts
+Installing semantic_map_manager script to /evidence/ap06-old-product-install/semantic_map_manager/lib/semantic_map_manager
+writing list of installed files to '/evidence/ap06-old-product-build/semantic_map_manager/install.log'

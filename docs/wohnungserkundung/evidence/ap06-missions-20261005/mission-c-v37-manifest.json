@@ -1,0 +1,132 @@
+{
+  "schema": 1,
+  "qualification": "software_only",
+  "plant": {
+    "integration_hz": 100,
+    "response_tau_s": 0.05,
+    "command_watchdog_s": 0.25
+  },
+  "sensor": {
+    "lidar_hz": 10,
+    "lidar_beams": 2160,
+    "range_max_m": 10.0,
+    "native_clockwise_mast_mask_deg": [
+      236,
+      304
+    ],
+    "ros_normalized_mast_mask_deg": [
+      56,
+      124
+    ],
+    "encoder_hz": 20,
+    "gyro_hz": 100
+  },
+  "budgets": {
+    "startup_s": 60,
+    "mission_s": 900,
+    "goal_s": 150,
+    "cancel_s": 3,
+    "stop_s": 1
+  },
+  "positive": [
+    {
+      "id": "door68_start_a",
+      "door_m": 0.68,
+      "start": [
+        -1.9,
+        -0.45,
+        0.0
+      ]
+    },
+    {
+      "id": "door68_start_b",
+      "door_m": 0.68,
+      "start": [
+        -2.1,
+        0.45,
+        0.0
+      ]
+    },
+    {
+      "id": "door80_start_c",
+      "door_m": 0.8,
+      "start": [
+        -1.6,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "negative": [
+    {
+      "id": "cancel",
+      "door_m": 0.8,
+      "start": [
+        -1.9,
+        -0.45,
+        0.0
+      ],
+      "inject": "cancel_after_first_motion"
+    },
+    {
+      "id": "gyro_hold",
+      "door_m": 0.8,
+      "start": [
+        -1.9,
+        -0.45,
+        0.0
+      ],
+      "inject": "gyro_gap_after_first_motion"
+    }
+  ],
+  "acceptance": {
+    "positive_requires": [
+      "actual_mission_success",
+      "three_autonomous_tasks",
+      "rear_cleared_both_doors",
+      "right_room_observed",
+      "map_growth_after_motion",
+      "no_ground_truth_collision",
+      "one_map_odom_owner",
+      "one_odom_base_owner",
+      "no_unresolved_tasks"
+    ],
+    "min_reference_observed_fraction": 0.95,
+    "max_map_truth_error_m": 0.1,
+    "note": "Manifest precedes runtime. A stopped, blocked or partial run is not positive completion. No hardware tracking claim."
+  },
+  "fixture_profile": "native_product_costmaps_and_finite_sensors",
+  "fixture_revision": 3,
+  "previous_fixture": "ap06_native_scenarios.json",
+  "change_reason": "Restore original static/obstacle/inflation and rolling-local Nav2 costmaps, actual VL53 decoder over finite 8x8 raw cone frames, and declared coarse finite OAK cloud. Earlier static-only fixtures are retained as incomplete diagnostics; no planner allow_unknown, pose, 2D world, contour, deadline or acceptance change.",
+  "nearfield_model": {
+    "grid": [
+      8,
+      8
+    ],
+    "fov_deg": 60,
+    "range_max_m": 4.0,
+    "raw_sigma_mm": 10.0
+  },
+  "camera_model": {
+    "grid": [
+      8,
+      16
+    ],
+    "horizontal_fov_deg": 69.4,
+    "vertical_fov_deg": 54.0,
+    "range_max_m": 4.0,
+    "mount_base_xyz": [
+      0.15,
+      0.0,
+      1.25
+    ],
+    "pitch_rad": 0.3306,
+    "noiseless": true
+  },
+  "vertical_world_model": {
+    "floor_base_z_m": -0.09,
+    "ceiling_base_z_m": 3.0,
+    "all_2d_obstacles_extend_floor_to_ceiling": true
+  }
+}

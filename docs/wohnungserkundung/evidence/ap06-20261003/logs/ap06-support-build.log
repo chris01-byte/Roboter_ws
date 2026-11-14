@@ -1,0 +1,219 @@
+Starting >>> behaviortree_cpp
+Finished <<< behaviortree_cpp [57.5s]
+Starting >>> btcpp_ros2_interfaces
+--- stderr: btcpp_ros2_interfaces
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    BTCPP_BUILD_TOOLS
+    BTCPP_EXAMPLES
+    BTCPP_UNIT_TESTS
+
+
+---
+Finished <<< btcpp_ros2_interfaces [9.27s]
+Starting >>> control_msgs
+--- stderr: control_msgs
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    BTCPP_BUILD_TOOLS
+    BTCPP_EXAMPLES
+    BTCPP_UNIT_TESTS
+
+
+---
+Finished <<< control_msgs [40.3s]
+Starting >>> generate_parameter_library_py
+Finished <<< generate_parameter_library_py [0.55s]
+Starting >>> geographic_msgs
+--- stderr: geographic_msgs
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    BTCPP_BUILD_TOOLS
+    BTCPP_EXAMPLES
+    BTCPP_UNIT_TESTS
+
+
+---
+Finished <<< geographic_msgs [25.0s]
+Starting >>> nav2_behavior_tree
+--- stderr: nav2_behavior_tree
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    BTCPP_BUILD_TOOLS
+    BTCPP_EXAMPLES
+    BTCPP_UNIT_TESTS
+
+
+---
+Finished <<< nav2_behavior_tree [2min 24s]
+Starting >>> nav2_collision_monitor
+--- stderr: nav2_collision_monitor
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    BTCPP_BUILD_TOOLS
+    BTCPP_EXAMPLES
+    BTCPP_UNIT_TESTS
+
+
+---
+Finished <<< nav2_collision_monitor [32.8s]
+Starting >>> nav2_velocity_smoother
+--- stderr: nav2_velocity_smoother
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    BTCPP_BUILD_TOOLS
+    BTCPP_EXAMPLES
+    BTCPP_UNIT_TESTS
+
+
+---
+Finished <<< nav2_velocity_smoother [14.5s]
+Starting >>> slam_toolbox
+--- stderr: slam_toolbox
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    BTCPP_BUILD_TOOLS
+    BTCPP_EXAMPLES
+    BTCPP_UNIT_TESTS
+
+
+---
+Finished <<< slam_toolbox [2min 51s]
+Starting >>> tcb_span
+--- stderr: tcb_span
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    BTCPP_BUILD_TOOLS
+    BTCPP_EXAMPLES
+    BTCPP_UNIT_TESTS
+
+
+---
+Finished <<< tcb_span [0.44s]
+Starting >>> tl_expected
+--- stderr: tl_expected
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    BTCPP_BUILD_TOOLS
+    BTCPP_EXAMPLES
+    BTCPP_UNIT_TESTS
+
+
+---
+Finished <<< tl_expected [0.41s]
+Starting >>> nav2_bt_navigator
+--- stderr: nav2_bt_navigator
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    BTCPP_BUILD_TOOLS
+    BTCPP_EXAMPLES
+    BTCPP_UNIT_TESTS
+
+
+---
+Finished <<< nav2_bt_navigator [29.2s]
+Starting >>> robot_localization
+--- stderr: robot_localization
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    BTCPP_BUILD_TOOLS
+    BTCPP_EXAMPLES
+    BTCPP_UNIT_TESTS
+
+
+---
+Finished <<< robot_localization [1min 13s]
+Starting >>> rsl
+--- stderr: rsl
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    BTCPP_BUILD_TOOLS
+    BTCPP_EXAMPLES
+    BTCPP_UNIT_TESTS
+    CATKIN_INSTALL_INTO_PREFIX_ROOT
+
+
+In file included from /evidence/ap06-dependencies/rsl/include/rsl/parameter_validators.hpp:10,
+                 from /evidence/ap06-dependencies/rsl/src/parameter_validators.cpp:1:
+/evidence/ap06-support-install/tl_expected/include/tl_expected/expected.hpp:19:167: note: ‘#pragma message: tl_expected/expected.hpp is deprecated. Use <tl/expected.hpp> from libexpected-dev, or <rcpputils/tl_expected/expected.hpp> if the system header is not available.’
+   19 |   "tl_expected/expected.hpp is deprecated. Use <tl/expected.hpp> from libexpected-dev, or <rcpputils/tl_expected/expected.hpp> if the system header is not available.") // NOLINT
+      |                                                                                                                                                                       ^
+---
+Finished <<< rsl [2.14s]
+Starting >>> parameter_traits
+--- stderr: parameter_traits
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    BTCPP_BUILD_TOOLS
+    BTCPP_EXAMPLES
+    BTCPP_UNIT_TESTS
+
+
+---
+Finished <<< parameter_traits [0.84s]
+Starting >>> generate_parameter_library
+--- stderr: generate_parameter_library
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    BTCPP_BUILD_TOOLS
+    BTCPP_EXAMPLES
+    BTCPP_UNIT_TESTS
+
+
+---
+Finished <<< generate_parameter_library [0.29s]
+Starting >>> behaviortree_ros2
+--- stderr: behaviortree_ros2
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    BTCPP_BUILD_TOOLS
+    BTCPP_EXAMPLES
+    BTCPP_UNIT_TESTS
+
+
+In file included from /evidence/ap06-support-install/parameter_traits/include/parameter_traits/parameter_traits/parameter_traits.hpp:33,
+                 from /evidence/ap06-support-build/behaviortree_ros2/include/behaviortree_ros2/bt_executor_parameters.hpp:24,
+                 from /evidence/ap06-dependencies/behaviortree_ros2/behaviortree_ros2/include/behaviortree_ros2/bt_utils.hpp:25,
+                 from /evidence/ap06-dependencies/behaviortree_ros2/behaviortree_ros2/src/bt_utils.cpp:14:
+/evidence/ap06-support-install/tl_expected/include/tl_expected/expected.hpp:19:167: note: ‘#pragma message: tl_expected/expected.hpp is deprecated. Use <tl/expected.hpp> from libexpected-dev, or <rcpputils/tl_expected/expected.hpp> if the system header is not available.’
+   19 |   "tl_expected/expected.hpp is deprecated. Use <tl/expected.hpp> from libexpected-dev, or <rcpputils/tl_expected/expected.hpp> if the system header is not available.") // NOLINT
+      |                                                                                                                                                                       ^
+In file included from /evidence/ap06-support-install/rsl/include/rsl/rsl/parameter_validators.hpp:10,
+                 from /evidence/ap06-support-build/behaviortree_ros2/include/behaviortree_ros2/bt_executor_parameters.hpp:28,
+                 from /evidence/ap06-dependencies/behaviortree_ros2/behaviortree_ros2/include/behaviortree_ros2/bt_utils.hpp:25,
+                 from /evidence/ap06-dependencies/behaviortree_ros2/behaviortree_ros2/src/bt_utils.cpp:14:
+/evidence/ap06-support-install/tl_expected/include/tl_expected/expected.hpp:19:167: note: ‘#pragma message: tl_expected/expected.hpp is deprecated. Use <tl/expected.hpp> from libexpected-dev, or <rcpputils/tl_expected/expected.hpp> if the system header is not available.’
+   19 |   "tl_expected/expected.hpp is deprecated. Use <tl/expected.hpp> from libexpected-dev, or <rcpputils/tl_expected/expected.hpp> if the system header is not available.") // NOLINT
+      |                                                                                                                                                                       ^
+In file included from /evidence/ap06-support-install/parameter_traits/include/parameter_traits/parameter_traits/parameter_traits.hpp:33,
+                 from /evidence/ap06-support-build/behaviortree_ros2/include/behaviortree_ros2/bt_executor_parameters.hpp:24,
+                 from /evidence/ap06-dependencies/behaviortree_ros2/behaviortree_ros2/src/tree_execution_server.cpp:24:
+/evidence/ap06-support-install/tl_expected/include/tl_expected/expected.hpp:19:167: note: ‘#pragma message: tl_expected/expected.hpp is deprecated. Use <tl/expected.hpp> from libexpected-dev, or <rcpputils/tl_expected/expected.hpp> if the system header is not available.’
+   19 |   "tl_expected/expected.hpp is deprecated. Use <tl/expected.hpp> from libexpected-dev, or <rcpputils/tl_expected/expected.hpp> if the system header is not available.") // NOLINT
+      |                                                                                                                                                                       ^
+In file included from /evidence/ap06-support-install/rsl/include/rsl/rsl/parameter_validators.hpp:10,
+                 from /evidence/ap06-support-build/behaviortree_ros2/include/behaviortree_ros2/bt_executor_parameters.hpp:28,
+                 from /evidence/ap06-dependencies/behaviortree_ros2/behaviortree_ros2/src/tree_execution_server.cpp:24:
+/evidence/ap06-support-install/tl_expected/include/tl_expected/expected.hpp:19:167: note: ‘#pragma message: tl_expected/expected.hpp is deprecated. Use <tl/expected.hpp> from libexpected-dev, or <rcpputils/tl_expected/expected.hpp> if the system header is not available.’
+   19 |   "tl_expected/expected.hpp is deprecated. Use <tl/expected.hpp> from libexpected-dev, or <rcpputils/tl_expected/expected.hpp> if the system header is not available.") // NOLINT
+      |                                                                                                                                                                       ^
+---
+Finished <<< behaviortree_ros2 [13.9s]
+
+Summary: 17 packages finished [10min 16s]
+  15 packages had stderr output: behaviortree_ros2 btcpp_ros2_interfaces control_msgs generate_parameter_library geographic_msgs nav2_behavior_tree nav2_bt_navigator nav2_collision_monitor nav2_velocity_smoother parameter_traits robot_localization rsl slam_toolbox tcb_span tl_expected

@@ -1052,7 +1052,12 @@ class NodeSourceContractTests(unittest.TestCase):
         function_start = source.index("def main(")
         function_end = source.index('\n\nif __name__ == "__main__":', function_start)
         function_source = source[function_start:function_end]
-        self.assertIn("except KeyboardInterrupt:", function_source)
+        self.assertIn(
+            "except (KeyboardInterrupt, ExternalShutdownException):",
+            function_source,
+        )
+        self.assertIn("except RuntimeError:", function_source)
+        self.assertIn("if rclpy.ok():\n            raise", function_source)
         self.assertIn("if rclpy.ok():", function_source)
 
 

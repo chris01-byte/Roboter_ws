@@ -1,0 +1,27 @@
+........................................................................ [ 26%]
+.....................................................................F.. [ 53%]
+........................................................................ [ 79%]
+.......................................................                  [100%]
+=================================== FAILURES ===================================
+____ test_live_task_selection_proves_one_goal_and_looks_past_served_history ____
+
+    def test_live_task_selection_proves_one_goal_and_looks_past_served_history():
+        from explore.metric_frontier import MetricTaskPolicy
+        node, inputs, _ = ordinary_departure_fixture()
+        policy = MetricTaskPolicy(.6, 30., 2)
+        first = node._metric_select(inputs, policy, .3)
+        assert first and not first[0].requires_nav2_plan
+>       assert (node._frontier_rank_stats.get('proof_search_stopped_on_eligible_task')
+                or node._frontier_rank_stats.get('bounded_start_observation'))
+E       AssertionError: assert (None or None)
+E        +  where None = <built-in method get of dict object at 0x7ff2f6745040>('proof_search_stopped_on_eligible_task')
+E        +    where <built-in method get of dict object at 0x7ff2f6745040> = {'accepted': 1, 'bounded_public_observation': True, 'deferred_or_served': 0, 'raw': 20, ...}.get
+E        +      where {'accepted': 1, 'bounded_public_observation': True, 'deferred_or_served': 0, 'raw': 20, ...} = <explore.explore_node.ExploreNode object at 0x7ff2f03ba9b0>._frontier_rank_stats
+E        +  and   None = <built-in method get of dict object at 0x7ff2f6745040>('bounded_start_observation')
+E        +    where <built-in method get of dict object at 0x7ff2f6745040> = {'accepted': 1, 'bounded_public_observation': True, 'deferred_or_served': 0, 'raw': 20, ...}.get
+E        +      where {'accepted': 1, 'bounded_public_observation': True, 'deferred_or_served': 0, 'raw': 20, ...} = <explore.explore_node.ExploreNode object at 0x7ff2f03ba9b0>._frontier_rank_stats
+
+src/explore/test/test_metric_start_observation.py:164: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_start_observation.py::test_live_task_selection_proves_one_goal_and_looks_past_served_history
+1 failed, 270 passed in 76.50s (0:01:16)

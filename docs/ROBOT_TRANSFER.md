@@ -1,5 +1,1872 @@
 # Übertragung auf den realen Roboter
 
+## 15.10.2026 – neue Startoption self_healing, kein Installwechsel
+
+Auf dem Jetson ist nichts installiert oder geändert. Neu im Repository
+(Branch `claude/blissful-pasteur-s1eivj`): Launch-Argument `self_healing`
+(Default `false`) in `nav_mapping.launch.py`. Nur mit `true` wirken:
+Explorer-Profil `self_healing_params.yaml`, Nav2-Baum
+`navigate_to_pose_self_healing.xml`, Nav2-Overlay `nav2_params_self_healing.yaml`
+(`allow_unknown: true`, Glätter `min_velocity` x −0,05 m/s) und
+Behavior-Server-Ausgang `cmd_vel_nav_raw` statt `cmd_vel_recovery_blocked`.
+Ohne das Argument startet der bisherige Stand unverändert. Erst motorlos prüfen,
+dann nach LAB-1 fahren.
+
+Nachtrag 15.10.2026, SH-1 v1 (lokaler Agent, 22:24–22:26): Auf dem Jetson
+entstanden nur der Worktree `~/roboter_worktrees/selbstheilung` (Commit
+`7493d9f`, unvollständiger Teilbuild von `explore`) und Ergebnisdateien unter
+`~/.local/share/amadeus/pruefungen/sh1_20261015_2225`. Kein Stack, keine
+Aktorwirkung; `~/roboter_ws` (`main` `23928d9`) und seine Installation blieben
+unverändert. Festgestellt: `~/roboter_ws/install` ist der August-Stand und kein
+tauglicher Unterbau; `git fetch` in `~/roboter_ws` scheitert an der defekten
+Referenz `refs/codex/turn-diffs/…` (nicht angefasst). SH-1 v2 baut deshalb aus
+einem frischen Klon `~/roboter_worktrees/selbstheilung-v2` in einen eigenen
+Release-Ordner `~/.local/share/amadeus/releases/selbstheilung-sh1-<Zeit>` mit
+der Unterbaukette von v17. `app_mapping.launch.py` reicht `self_healing` jetzt
+durch (Default `false`). Rückfall: diese Ordner nicht sourcen.
+
+Nachtrag 15.10.2026, SH-1 v2 (23:05–23:07): angelegt wurden der Klon
+`~/roboter_worktrees/selbstheilung-v2`, die Datei
+`~/roboter_worktrees/selbstheilung-v2.env` und der Release-Ordner
+`selbstheilung-sh1-20261015_2305` mit unvollständigem `product-install`
+(4 Pakete). Bestehende Releases, `~/roboter_ws` und dessen Installation blieben
+unverändert; kein Stack, keine Aktorwirkung. SH-1 v3 baut in einen neuen
+Release-Ordner, mit denselben `--cmake-args` wie das v17-`build.bash`
+(`-Dbehaviortree_cpp_DIR` auf native-install, `-DBUILD_TESTING=ON`).
+
+Nachtrag 16.10.2026, SH-1 v3 (15.10. 23:26 bis 16.10. 00:02): Release
+`~/.local/share/amadeus/releases/selbstheilung-sh1-20261015_2326` mit
+vollständigem 14-Paket-`product-install` aus `f295a85`, Unterbau wie v17. Kein
+Install in `~/roboter_ws`, kein Autostart, keine System- oder SDK-Änderung.
+Motorloser App-Stack lief rund 31 min (`dry_run=True`, `allow_rs485=False`,
+kein Fahrbefehl) und endete geordnet. Start nur durch Sourcen von
+`~/roboter_worktrees/selbstheilung-v2.env`. Rückfall: diese Datei nicht sourcen;
+bisherige Releases und `~/roboter_ws` sind unverändert.
+
+Nachtrag 16.10.2026, Entscheidung 7: Ab `5c285c0` setzen Overlays im
+Selbstheilungsbetrieb die VL53-Höhengrenze in beiden Kostenkarten und im
+`collision_monitor` auf −0,02 m über `base_link`. Ohne `self_healing` bleibt
+0,05 m. Auf dem Jetson ist das noch nicht gebaut; SH-2 baut es in einen eigenen
+Release-Ordner `selbstheilung-sh2-<Zeit>` und misst motorlos nach. Rückfall:
+SH-1-Release sourcen oder `self_healing:=false`.
+
+Nachtrag 22.10.2026, Robustheitssimulation (nur Cloud): Auf dem Jetson ist
+nichts geändert. Neu im Repository und nur mit `self_healing:=true` wirksam:
+Explorer-Zielwahl mit Erreichbarkeitsprüfung (`e085cac`, Frontiers hinter einer
+geschlossenen Tür enden als Teilkarte) und Zielpunkten mit Drehraum 0,45 m
+(`74486f8`, `cf81aa8`, `74afc78`). Neue Parameter in `self_healing_params.yaml`:
+`self_healing_reachability_*`, `self_healing_goal_clearance_m`,
+`self_healing_goal_shift_max_m`. Keine Änderung an Geschwindigkeit,
+Kostenkarten, `collision_monitor`, Fahrtor, Basis oder SLAM. SH-2 baut den
+Stand ab `74afc78` mit (158 gezielte Tests); die motorlose Messung ist davon
+unberührt, SH-3 fährt damit. Rückfall: die genannten Parameter auf 0 setzen
+oder einen früheren Release sourcen.
+
+Nachtrag 22.10.2026, Entscheidung A+B (`2f46799`, sicherheitsrelevant, nur
+`self_healing:=true`): Die lokale Kostenkarte bekommt den normierten LiDAR
+(`/scan_normiert`) als nur markierende Quelle; die VL53-Räumquellen beider
+Kostenkarten wirken erst ab 0,45 m vom Sensor. Das ändert die Hinderniskarte
+des Reglers, nicht Geschwindigkeit, `collision_monitor`, Fahrtor oder Basis.
+Folge im Betrieb: Was der LiDAR einmal im Nahbereich sah (auch Beine), bleibt
+eingetragen, bis der Roboter weiterfährt oder die Karte geleert wird; mehr
+Heilungen sind möglich. `/scan_normiert` gibt es im Standard- und im
+HWT601-Weg (`normalize_scan` Standard `true`); ohne ihn gilt das bisherige
+Verhalten. Auf dem Jetson noch nicht gebaut; SH-2 prüft motorlos (159 Tests,
+neue Zeilen in Prüfung B/C, Kostenkarte vor jeder VL53-Messung leeren).
+Rückfall: `self_healing:=false` oder einen Release vor `2f46799` sourcen.
+
+Nachtrag 22.10.2026, SLAM (`7d8ef37`, nur `self_healing:=true`): `slam_toolbox`
+lädt zusätzlich `slam_toolbox_self_healing.yaml` (Ringschluss erst ab Kette 20,
+Grob 0,55, Fein 0,65, Varianz 2,0). Neues Launch-Argument
+`slam_params_overlay` in `slam_lidar.launch.py` und
+`slam_lidar_hwt601.launch.py`, Standard = Basisdatei (keine Änderung). Ohne
+`self_healing` lädt SLAM wie bisher nur `slam_toolbox_amadeus.yaml`. Folge:
+weniger falsche, aber auch seltener echte Ringschlüsse. SH-2 prüft die Werte
+live (162 Tests). Rückfall: `self_healing:=false` oder Release vor `7d8ef37`.
+
+Nachtrag 23.10.2026, Explorer-Korrektur (`ff05706`, nur `self_healing:=true`):
+Die Heilungsstufe „Umsehen“ (Drehung auf der Stelle) prüft den freien
+Drehkreis jetzt an der frischen Pose **nach** dem gescheiterten Nav2-Versuch,
+nicht mehr an der Pose vom Beginn der Schleifenrunde; ist die Pose älter als
+`self_healing_pose_timeout_s`, entfällt das Umsehen. In der Simulation hatte
+die alte Prüfung eine Drehung 0,39 m neben einer Wand zugelassen (Kontakt).
+Folge im Betrieb: weniger Drehungen auf der Stelle nahe Hindernissen; keine
+Änderung an Parametern, Kostenkarten, `collision_monitor`, Fahrtor, Basis oder
+SLAM. SH-2 baut den Stand mit (164 gezielte Tests); die motorlose Messung ist
+davon unberührt, SH-3 fährt damit. Rückfall: Release vor `ff05706` sourcen
+oder `self_healing:=false`.
+
+Nachtrag 02.11.2026, tatsächliche Jetson-Wirkung SH-2 Lauf 1: neuer Release
+`~/.local/share/amadeus/releases/selbstheilung-sh2-20261102_1012` (14 Pakete,
+Stand `0e29125`), `selbstheilung-v2.env` zeigt mit `SH_REL` darauf. App-Stack
+einmal motorlos im HWT-Weg gestartet (`active_drive=false`, kein
+`base_hardware`, Encoder-Shadow nur lesend) und geordnet beendet. Keine
+Schreibbefehle, kein Kostenkarten-Leeren. `~/roboter_ws`, SH-1-Release, v1-
+Ordner und Codex-Referenz unverändert. Abbruch durch einen Prüfskriptfehler
+(D), behoben in `fe84eec` (nur Werkzeug, keine Produktwirkung). Rückfall:
+`SH_REL` in der Umgebungsdatei auf den SH-1-Release zurückstellen.
+
+Nachtrag 02.11.2026, tatsächliche Jetson-Wirkung SH-2 Lauf 2 (bestanden):
+neuer Release `~/.local/share/amadeus/releases/selbstheilung-sh2-20261102_1107`
+(14 Pakete, Stand `3a05e6b`, 168 Tests), `SH_REL` zeigt jetzt darauf; der
+Release aus Lauf 1 (`…_1012`) bleibt unverändert liegen. Stack einmal motorlos
+im HWT-Weg gestartet und geordnet beendet; einzige Schreibhandlung die 9
+erlaubten Leerungen der lokalen Kostenkarte (Softwarezustand). `~/roboter_ws`,
+frühere Releases, v1-Ordner und Codex-Referenz unverändert. Dieser Release ist
+die Istbasis von SH-3 (erste aktive Fahrten mit `active_drive:=true`).
+
+Nachtrag 02.11.2026 abends, tatsächliche Jetson-Wirkung SH-3 (bestanden):
+drei aktive Fahrten mit `active_drive:=true enable_auto_explore:=true` im
+Laborraum aus demselben Release (kein Build), Missionsstart je einmal per
+`topic pub` (App nicht verfügbar). Motoren bestromt, höchstens 0,10 m/s und
+0,20 rad/s, zusammen 18,7 m; kein Kontakt, kein Eingriff, kein Not-Aus.
+Je Fahrt Stack geordnet beendet; nach Fahrt 1 dabei einmal `slam_toolbox`
+mit `karto::Exception` abgestürzt (nach Kartensicherung). Lokal neu: Ordner
+`$SH_PR/sh3_run1…3` mit Logs, Protokollen und Karten. `~/roboter_ws`,
+frühere Releases und Codex-Referenz unverändert. Kein Installwechsel, kein
+Autostart. Derzeit kein Jetson-Auftrag.
+
+Nachtrag 04.11.2026, tatsächliche Jetson-Wirkung SH-4: neuer Release
+`~/.local/share/amadeus/releases/selbstheilung-sh4-20261103_1738` (14 Pakete,
+HEAD `61745d5`, 178 Tests), `SH_REL` in `selbstheilung-v2.env` zeigt jetzt
+darauf; frühere Releases unverändert. Vier aktive Starts mit `active_drive:=true`
+im Laborraum (drei gefahren, einer ohne Fahrbefehl wegen Encoder-Startfehler),
+Missionsstart je einmal per `topic pub` (App ohne Verbindung). Höchstens
+0,10 m/s und 0,25 rad/s; kein Kontakt, kein Eingriff, kein Not-Aus. Stack je
+Start geordnet beendet (28/28 sauber). Lokal neu: `$SH_PR/sh4_run1…4` und
+dauerhafte Hilfswerkzeuge unter `$SH_PR/werkzeug/`. `~/roboter_ws`, frühere
+Releases und Codex-Referenz unverändert, kein Autostart. Rückfall: `SH_REL`
+auf `…/selbstheilung-sh2-20261102_1107`. Aktiver Auftrag danach: SH-4N (nur
+lesend, ohne Stackstart).
+
+Nachtrag 04.11.2026 abends, tatsächliche Jetson-Wirkung SH-5: neuer Release
+`~/.local/share/amadeus/releases/selbstheilung-sh5-20261104_1627` (14 Pakete,
+HEAD `edb06c2`, `src/` = `c20436a`, 171 Tests), `SH_REL` zeigt jetzt darauf.
+SH-4N wurde nicht ausgeführt. Fünf scharfe Starts mit `active_drive:=true`
+im Laborraum: zwei ohne Mission abgebrochen (Vorprüfung „D Quellen“ FEHL,
+Motor-Stop-Schalter zu spät freigeschaltet), drei gefahren. Höchstens
+0,10 m/s und 0,19 rad/s; kein Kontakt, kein Eingriff, kein Not-Aus. Stack je
+Start geordnet beendet. Lokal neu: `$SH_PR/sh5_run1…3`, `sh5_run1b`,
+`sh5_run2b`. `~/roboter_ws`, frühere Releases und Codex-Referenz unverändert,
+kein Autostart. Aktiver Auftrag danach: SH-5N (nur lesend).
+
+Nachtrag 05.11.2026, tatsächliche Jetson-Wirkung SH-6: neuer Release
+`~/.local/share/amadeus/releases/selbstheilung-sh6-20261104_2140` (14 Pakete,
+HEAD `7aa7444`, 172 Tests), `SH_REL` zeigt jetzt darauf. Vier scharfe Starts
+mit `active_drive:=true` im Laborraum (04.11. abends und 05.11. morgens): einer
+ohne Mission abgebrochen (Vorprüfung „D Quellen“ FEHL, keine Bewegung), drei
+gefahren. Höchstens 0,10 m/s und 0,20 rad/s, Rückfahrten höchstens 0,05 m/s;
+kein Kontakt, kein Eingriff, kein Not-Aus. Stack je Start geordnet beendet
+(28/28 sauber). Lokal neu: `$SH_PR/sh6_run1…3`, `sh6_run2_dquellen`,
+`$SH_PR/werkzeug/sh6_rueckfahrten.py`. `~/roboter_ws`, frühere Releases und
+Codex-Referenz unverändert, kein Autostart. Aktiver Auftrag danach: SH-7.
+
+Nachtrag 08.11.2026, tatsächliche Jetson-Wirkung SH-7: neuer Release
+`~/.local/share/amadeus/releases/selbstheilung-sh7-20261108_1617` (14 Pakete,
+HEAD `4c25fb3`, 172 Tests), `SH_REL` zeigt jetzt darauf; Prototyp 1
+`selbstheilung-sh6-20261104_2140` unverändert. Drei scharfe Starts mit
+`active_drive:=true` und Mission, Laborraum plus Flur durch eine offene Tür.
+Höchstens 0,135 m/s und 0,215 rad/s, Rückfahrten höchstens 0,05 m/s; kein
+Kontakt, kein Eingriff, kein Not-Aus. Stack je Start geordnet beendet (28/28
+sauber). Lokal neu: `$SH_PR/sh7_run1…3` (inklusive voller lokaler
+Kostenkarte an jeder Hilfe-Stelle). `~/roboter_ws`, frühere Releases und
+Codex-Referenz unverändert, kein Autostart. Kein aktiver Auftrag danach.
+
+Nachtrag 13.11.2026, tatsächliche Jetson-Wirkung SH-8: neuer Release
+`~/.local/share/amadeus/releases/selbstheilung-sh8-20261113_2153` (14 Pakete,
+HEAD `49c013f`, 182 Tests), `SH_REL` zeigt jetzt darauf; Prototyp 1 und der
+SH-7-Release unverändert. Zehn Stackstarts, davon sechs scharf mit Mission
+(Stellprobe, Amadeus absichtlich 3–5 cm vor Mülleimern, Ecke und Garderobe),
+drei Fehlstarts ohne LiDAR-Daten und einer von „D Quellen“ abgefangen, alle
+ohne Bewegung. Höchstens 0,135 m/s vorwärts, Rückfahrten an der Basis
+höchstens 0,015 m/s; kein Kontakt, kein Eingriff, kein Not-Aus. Je Probe
+genau ein Missionsstart und ein Missionsstopp über
+`/mission_manager/command_json` (App nicht verfügbar). Stack je Start
+geordnet beendet. Lokal neu: `$SH_PR/sh8_*`, `$SH_PR/werkzeug/sh8_stelle.py`.
+`~/roboter_ws`, frühere Releases und Codex-Referenz unverändert, kein
+Autostart. Aktiver Auftrag danach: SH-8b (KM-1 B, dieselbe Stellprobe).
+
+## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
+
+AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit
+`09f866d` aktualisiert und GitHub-SHA geprüft; Dokumentation der Veröffentlichung
+folgt auf diesem Stand. Das aktualisiert das Repository, nicht die laufende
+oder bestehende Installation. Kein Hardwareprozess gestartet, kein Aktorbefehl,
+keine Autostart-/SDK-Änderung. Aktive Fehlbefunde und Korrekturplan im STATUS.
+Rückfall bei späterer Kandidatenausführung weiterhin: eigenen privaten Prozess
+geordnet stoppen und erhaltenen Install verwenden; Arbeitsstand gezielt revertieren.
+
+## 11.10.2026 – v10 gebaut und vollständig geprüft, kein realer Folgebeleg
+
+`2d93f2b`, 14 Pakete in 172,54 s, 2.867 Tests ohne Fehler/Skip; Original A/B/C
+0/3, alle am Auswahlbudget. v10-Skripte nur vorbereitet. Tatsächliche rein
+lesende FC03 um 02:49:47 UTC: unveränderte Zähler 35204/−35676, Null-RPM,
+RAM 100/400/5, Lesungen 4,966/4,464 ms. 1.048 Bestandsinstallhashes um 02:50:02
+UTC gleich, Main sauber. Keine neue reale Bewegung, kein OS-/SDK-/Autostart-
+wechsel. Eingefrorene Pause-/Geometriediagnose ist kein aktueller Sensorbeleg.
+Rückfall: eigene private Prozesse direkt geordnet stoppen, Bestandsinstall
+verwenden oder einzelne Diffs revertieren. Aktueller Gesamtbefund im STATUS.
+
+
+## 11.10.2026 – identische Weggeometrie nur im separaten Checkout
+
+Native Rückverfolgung und gemeinsame Zellprojektion mit 279 gezielten Fällen
+geprüft; eingefrorene A-Auswahl 4,69 s, weiterhin kein zulässiges Ziel. Noch kein
+neuer gemeinsamer Install oder Originalgesamtpositivlauf. Fristen und tatsächliche
+Hardware unverändert, keine neue reale Bewegung. Rückfall: eigener temporärer
+Kandidat geordnet stoppen, erhaltenen Install verwenden oder Wegdiff revertieren.
+Aktueller Gesamtbefund ausschließlich im STATUS.
+
+
+## 11.10.2026 – gemeinsamer v9-Build und reine Regionskorrektur
+
+Privater v9 `9fbf085`: 14 Pakete, 2.776 Fälle ohne Fehler/Skip, ursprüngliche
+A/B/C 0/3. Neue Regionskorrektur nur im separaten Quellcheckout mit gezielten
+Tests und eingefrorener Geometrie geprüft; privater Source-A weiterhin negativ.
+Keine neue reale Bewegung, keine Bestands-/SDK-/Autostartänderung. v9-Skripte
+nur vorbereitet, nie gestartet. Letzte tatsächliche FC03/Installprüfung bleibt
+02:11:47/48 UTC: unveränderte Zähler, Null-RPM, 1.048 Bestandsinstallhashes gleich.
+Simulationen sind kein frischer Hardwarebeleg. Rückfall: nur eigene private PIDs
+direkt geordnet stoppen, erhaltenen Install verwenden oder Regionsdiff revertieren.
+Aktueller vollständiger WE-Befund ausschließlich im STATUS.
+
+
+## 11.10.2026 – Rasterkorrektur nur im separaten Quellcheckout
+
+Ganzzahliger Egress-Pfad gezielt 76/76 geprüft; privater geschlossener A-Lauf
+0,293160 m / eine Beobachtung, weiterhin negatives Auswahlbudget. Gemeinsamer
+neuer Build/Originalqualifikation noch offen. Keine neue reale Bewegung.
+Tatsächliche FC03 am 02:11:47 UTC: 35204/−35676, beide RPM null,
+RAM 100/400/5, 4,836/4,735 ms; Geräteport vor Lesung frei.
+1.048 Dateien der Bestandsinstallation am 02:11:48 UTC unverändert.
+Main/Autostart/SDK unverändert. Rückfall: private Runtime geordnet stoppen
+und vorhandenen Install verwenden; neue Raster-/Kopplungsdiffs einzeln revertierbar.
+Aktueller vollständiger WE-Befund ausschließlich im STATUS.
+
+
+## 11.10.2026 – v8 gebaut und geprüft, gekoppelte Source-Nachprüfung vorbereitet
+
+Separater v8-Build `abeabd4`, 14 Pakete/155 Quelle-Installgleichheiten,
+2.735 Fälle positiv; ursprüngliche A/B/C 0/3, keine reale autonome Folge.
+Zusätzlicher Source-Kopplungsfix im Nachcheck mit 29 gezielten Fällen geprüft;
+noch kein gemeinsamer neuer Install dieses Diffs. Privater A-Vergleich ohne
+bisherigen Rad/TF-Fehler bleibt bei 0,109633 m an Frische und Auswahl negativ. Eigene anfängliche Test-/
+Diagnosepfadfehler erhalten, keine Kalibrierung geändert. Tatsächliche FC03
+01:34:06 UTC unveränderte Zähler 35204/−35676 und Null-RPM, RAM 100/400/5;
+1.048 Bestandsinstallhashes gleich. Reale v8-Startskripte lediglich vorbereitet.
+Keine Hardwarebewegung/Autostart-/OS-/SDK-Umstellung. Rückfall: eigene private
+PIDs direkt geordnet stoppen, bewahrten Install verwenden oder Kopplungsdiff
+gezielt revertieren. Reale Rohdatenlücke aus Punkt 1 weiterhin offen.
+
+## 11.10.2026 – Auswahlkosten gerätefrei reduziert
+
+Quellkandidat für nächsten separaten v8-Build reduziert ausschließlich
+Rechenarbeit an identischem Egress-/Connectorbeweis. Gefrorene Original-
+Geometrie und 121 gezielte Fälle positiv, finale Kopie zusätzlich geprüft.
+Kein geänderter realer Install oder Autostart, keine neue Bewegung; originaler
+v7-Gesamtvergleich bleibt 0/3. Rückfall: privates Overlay stoppen, erhaltenen
+Install wählen oder Auswahldiff gezielt zurücknehmen.
+
+## 11.10.2026 – v7 negativ beendet, TF-Fix nur gerätefrei geprüft
+
+Ursprüngliche v7-Gesamtmissionen A/B/C alle negativ am Auswahlbudget,
+B/C je eine neue Beobachtung, keine volle Passage. Separater begrenzter
+TF-Empfang über vorhandene originale Listener verbessert privaten A-Vergleich;
+25 gezielte Quellen-/TF-Fälle positiv. Noch kein gemeinsamer neuer Install
+oder Originalgesamtvergleich dieses Diffs. Keine reale Bewegung, keine
+Bestands-/Autostart-/SDK-Änderung. Letzter tatsächlicher FC03-Nachweis
+01:06:40 UTC bleibt unveränderte Positionen / Null-RPM, keine neue physische
+Beobachtung aus den Simulationen. Rückfall: eigene private Prozesse direkt
+geordnet beenden und erhaltenen Install verwenden; TF-Diff gezielt revertierbar.
+
+## 11.10.2026 – IMU-Ausgabe-Kandidat, noch keine zusätzliche Hardwarewirkung
+
+Separater Checkout: neuer optionaler Produktpfad `isolate_sensor_output`
+(Default false) trennt native DDS-Ausgabe von passiver IMU-Erfassung mit dem
+bestehenden Encoderhelper, ohne Sensor-/Aktorbus im Kind. Originalbytes/-zeiten,
+Sensor-QoS und alle Schutzfristen bleiben bestehen; Kindverlust verriegelt.
+350-ms-Schreibpausenvergleich rot/grün und 15 gezielte gerätefreie Fälle bestanden.
+Privater v7-Gesamtbuild `f8cedc1` abgeschlossen (14 Pakete, 154 Quelle/Install
+identisch, 755 Installhashes). 2.717 Fälle im Volllauf, eine negative native
+Cancel-Testbarriere; Erstnegativ erhalten, betroffene Datei 4/4 erneut positiv,
+reiner SDK-Wait-Set-Testnachtrag samt zusätzlichem erzwungenem Gegenfall 5/5.
+Alle 2.718 unterschiedlichen Produktfälle positiv nachgeprüft; kein erster
+grüner Volllauf behauptet. Original-A/B/C noch ausstehend. FC03 01:06:40 UTC
+unveränderte Positionen / Null-RPM / RAM 100/400/5, 1.048 Bestandsinstallhashes
+01:06:34 UTC gleich. Keine neue reale Fahrt,
+kein Install-/Autostart-/SDK-Wechsel; bekannte letzte Null-RPM-/Positionsbelege
+und alle 1.048 bewahrten Bestandsinstall-Dateien bleiben Referenz, keine neue
+physische Beobachtung daraus behaupten. Private Geometrieprozessversuche
+nicht übernommen. Rückfall: nur eigene Kandidatenprozesse direkt geordnet
+stoppen, Opt-in zurücknehmen und bewahrten Install nutzen. Aktueller Stand
+und nächste Reihenfolge ausschließlich im WE-STATUS.
+
+
+## 11.10.2026 – neuer originaler v6-Vergleich und reine CPU-/DDS-Diagnose
+
+Original-A/B/C mit sauberer Quelle `6c50cf5`, unveränderten Produktdateien des
+Builds `cdf95b6`: 0/3. A Bereitschaftsfehler, B/C je eine Ankunft und neue
+Beobachtung, später Auswahlbudget; keine volle Passage samt Heck. Zusätzliche
+private Ausgabe-/Dispatcherdiagnosen sind nicht qualifiziert und nicht in den
+Produktinstall übernommen. Kein neuer autonomer Realstart oder Kundenbeleg.
+Aktueller Gesamtbefund ausschließlich in `docs/wohnungserkundung/STATUS.md`.
+Rein lesende tatsächliche FC03-Nachprüfung am 11.10. um 00:31:31 UTC bestätigt
+identische Positionszähler / Null-RPM, RAM 100/400/5. Bestandsmain sauber;
+alle 1.048 ursprünglichen Installhashes erneut gleich. Kein OS-/SDK-/Autostart-
+Wechsel, kein dauerhafter Install. Private Originale unter
+`~/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/` erhalten.
+Rückfall: nur eigene private Prozesse geordnet direkt stoppen und bewahrten
+Bestandsinstall verwenden. Frühere Raw-Bag-Lücke bleibt ausdrücklich offen.
+
+## 11.10.2026 – kompletter privater v6-Build, keine autonome Folgefahrt
+
+14 Pakete separat gebaut, 154 geprüfte Quelle-/Install-Dateien identisch,
+755 Installhashes, 2.715 vollständige Produktfälle bestanden. Ursprüngliche
+Gesamtmissionen A/B/C weiterhin 0/3; daher keine reale autonome Stufe 3/4
+gestartet. Begrenzte reale Komponentenqualifikation aus Punkt 1 bleibt erhalten,
+einschließlich Raw-Bag-Sichtlücke während der Translation. Rein lesende
+Nachprüfung um 23:33:59 UTC: gleiche Encoderpositionen, null RPM, RAM 100/400/5.
+Alle 1.048 geprüften Bestandsinstall-Dateien unverändert, Main sauber.
+
+Reines Prüfstanddelta nutzt nun die vorhandene real qualifizierte getrennte
+DDS-Ausgabe. Gemessene native Writerpause, tatsächlicher Rot/Grün-Gegenfall
+und 28 betroffene Quellen-/Isolationstests; keine Änderung des realen
+Produktinstallationsstands, des SDKs oder der Sensor-/Stopfristen. Gesamtmission
+und weitere Geometrie-/Auswahlkorrektur bleiben offen. Reale Artefakte bleiben
+privat. Rückfall: eigene private Runtime geordnet beenden, erhaltenen
+Bestandsinstall nutzen; keine dauerhafte Startkonfiguration geändert.
+
+## 10.10.2026 – Folge 1–4: Encoderstart und Quellstatus, separate Komponentenprobe
+
+Bestandsinstall und Autostart bleiben erhalten. Neue private Overlays
+`ap06-serializer-startup-20261010` (Base) und `ap06-current-status-20261010`
+(Zustandsschätzung) initialisieren echte ROS-Serialisierer vor Baseline und
+empfangen tatsächlichen jüngsten Status vor metrischer Entscheidung. 128
+Source-Basefälle und 18 gezielte DDS-/Tor-Fälle bestanden. Lesender 180-s-
+Vorlauf ohne Encoderverwerfung, danach passive/aktive Stillstandsprüfungen.
+Erster aktiver Anlaufversuch blieb vor Bewegung wegen Status-Warteschlange
+negativ erhalten. Korrigierter begrenzter Drehversuch real abgeschlossen:
+−17,755° einschließlich Ausrollen, gültige Encoder und gemessener Stop.
+Explizite LAB-Rampeneinstellung 100, Bremsregister 400 unverändert; Defaults
+bleiben 2000. Private Prozessaufteilung seriell CPU5, DDS-Ausgabe CPU2,
+HWT CPU4, Tor CPU3; keine dauerhafte OS-Änderung. Reale Bags/Geometrie bleiben
+außerhalb Git. Rückfall: eigene Launch-PIDs direkt geordnet stoppen, private
+Runtime weglassen und erhaltene Bestandsinstallation verwenden.
+
+## 10.10.2026 – Separates Geometrieoverlay, ausschließlich passiv geprüft
+
+`ap06-geometry-20261010` baut Explore mit begrenztem Cache unveränderlicher
+Scope-Geometrie und identisches amadeus_map_identity für gebundene Laufzeit.
+Vorherige Overlays/CPU-Aufteilung bleiben erhalten; Bestandsinstallation nicht
+verändert. 240 gezielte Tests; passiver 180-s-Bag, sechs Geometrieprüfungen ohne
+Frischeabbruch. Keine Motion-/Sensorgrenzen gelockert, keine neue Mission.
+Startreferenz wegen hinterer Scopekante ungültig. Spätere Nutzerpräzisierung:
+50-cm-Nachfrage zurückgezogen; technische Startabdeckung bleibt nachzuweisen.
+Eigene Prozesse beendet, FC03-Stillstand bestätigt, 1.048 Bestandsdateien
+identisch. Rückfall durch vorherige Runtime oder gezieltes Rücknehmen des
+Scope-Cache-Diffs. Belege und Sensorzeiten im letzten AP-06-Vorlaufnachtrag.
+
+## 10.10.2026 – separater HWT-Guard-Build, echte Mission ohne Fahrbewegung
+
+Neues privates Overlay `ap06-current-imu-20261010` über R0/R1/R2; Quell-/Installhash
+identisch, 351 Tests und Build erfolgreich. Originalinstallation unverändert.
+HWT-Guard liest vor der Entscheidung auch aktuelle Original-IMU-Samples direkt
+aus DDS; keine Sensor-/Stopp-/Geometriefrist geändert. Laufzeitvariante ausschließlich
+für eigene Prozesse: Basis/Encoder CPU5, HWT CPU4, übrige ROS-Prozesse CPU0–3;
+ein Encoder-GC-Vorlauf. Keine dauerhafte OS-/Autostartänderung.
+
+Frischer 180-s-Vorlauf ohne Aktorprozess positiv. Im anschließenden aktiven
+300-s-Bag Encoder/HWT nach Einlauf gesund. Eine echte Explore-Mission wurde
+angenommen und nach Geometriefehler geordnet beendet; 0 m / 0 rad, kein Nav2-
+Fahrbefehl. Ursache: Scan nach 677 ms Geometriearbeit mit 771 ms zu alt;
+Startreferenz zudem `start_egress_obstacle_or_scope`. Keine Fahrt behaupten.
+Alle eigenen Prozesse beendet, je Motor 20 nachfolgende FC03-Proben null,
+Ports frei, 1.048 Bestandsinstall-Dateien unverändert. Rückfall: private
+Overlay-/Instrumentierungspräfixe weglassen. Details und nächster Schritt im
+[Bericht](wohnungserkundung/JETSON_VORLAUF_AP06_20261010.md) / [STATUS](wohnungserkundung/STATUS.md).
+
+## 10.10.2026 – aktive Basis im Stillstand geprüft, keine Fahrt
+
+Nach ausdrücklichem Fahrtestauftrag und frischem passivem Vorlauf zweimal
+`active_drive=true`, `enable_auto_explore=true`, `start_explorer=false` im
+separaten Release geprüft. Aktive Basis bestätigte Stop/Rampen/Feedback;
+kein paralleler Encoderleser. Kein Explore-/Navigate-Missionsauftrag gesendet.
+Originalstart: 239,018-ms-Paarfehler. Neues Overlay
+`~/.local/share/amadeus/releases/ap06-first-drive-20261010` verzögert auch die
+aktive erste Baseline um vorhandene 15 s; 181 betroffene Tests bestanden.
+Folgelauf 2.438 Ausgaben, später 181,212-ms-Lücke: keine technische Fahrfreigabe.
+
+Bereichswerkzeug empfängt TF separat; zwei frische Bindungen gelangen, spätere
+Frischeablehnung erhalten. Ein Explorer startete nach fehlender Profilerzeugung
+kurz im Leerlauf und wurde beendet; vorbereiteter Start prüft nun das Profil vor
+Launch. Alle aufgezeichneten Befehle/Encoder/RPM null. Abschließend 20 FC03-
+Proben je Motor null, alle Prozesse beendet und Ports frei. 1.048 bestehende
+Install-Dateien unverändert. Rückfall: neue Overlays nicht sourcen; kein
+Autostart-/Bestandswechsel. Vollständige Gegenbelege im
+[Vorlaufbericht](wohnungserkundung/JETSON_VORLAUF_AP06_20261010.md).
+
+## 10.10.2026 – begrenzte Sensorreparatur im zusätzlichen Overlay
+
+Folgeauftrag anhand historischer WE-Unterlagen: separater Branch
+`fix/ap06-passive-sensor-timing`, Basis `e14ca312`, noch uncommitted; Overlay
+`/home/p/.local/share/amadeus/releases/ap06-sensor-fix-20261010` ergänzt nur
+`base_hardware` über dem vorherigen separaten AP-06-Release. Installierte
+Readermodule per Hash an den Quellkandidaten gebunden. 170 betroffene Tests
+bestanden. DDS-Ausgabe in eigenem Prozess, Lese-/Frischegrenzen unverändert.
+VL53 bleibt unverändert; gesunde leere PARTIAL-Wolken sind vertragskonform.
+
+Zwei weitere passive 180-s-Läufe ohne Aktorprozess oder Explorer: zuerst
+169,8-ms-Paarzeitfehler, dann 3.200 Encoderpublikationen ohne Readerfehler und
+Quellen bereit. Recorderzustellung bis 329,1 ms bleibt ungeklärt. Kein
+Fahrnachweis, kein dauerhafter Installwechsel. Abschließend alles beendet,
+Ports frei, je Motor 20 FC03-Proben mit Position/Delta/RPM null. Erneut alle
+1.048 Bestandsinstall-Dateien unverändert, ursprünglicher Checkout sauber.
+Rückfall: neue Releaseumgebung verlassen, Bestandsinstallation weiter nutzen.
+Messungen/negative Gegenfälle im [Vorlaufbericht](wohnungserkundung/JETSON_VORLAUF_AP06_20261010.md).
+
+## 10.10.2026 – separater AP-06-ARM-Build und abgeschlossener passiver Vorlauf
+
+Auf diesem Jetson tatsächlich ausgeführt: Commit
+`e14ca31276b26be2d88397b310301dad3c4e9600`, neuer Clone
+`/home/p/roboter_worktrees/ap06-e14ca312-validation`, Release
+`/home/p/.local/share/amadeus/releases/ap06-20261010T070231Z`.
+31 native/14 Produktpakete, LiDAR und TF-Probe gebaut. Keine Systempakete,
+Shellprofile oder Autostarts geändert. `/home/p/roboter_ws` sauber auf
+`23928d9`; 1.048 Bestandsinstall-Dateien vorher/nachher bytegleich.
+
+Regulärer `app_mapping`-Start zweimal rein lesend: HWT-Odometrie,
+`active_drive=false`, `enable_auto_explore=false`, `start_explorer=false`,
+Entwicklungsvertrag, erklärter Stillstand, Web-GUI aus. Domain 166 nur für
+diese Prozesse. Je 180 Sekunden aufgenommen, anschließend geordnet beendet.
+Kein Aktorschreibprozess, keine Mission/Fahrt. Abschlussprobe: Encoder unverändert,
+0 rpm; Ports frei. Elektrische Motorsperre nicht behauptet.
+
+Negativer Integrationsbefund: Encoderkontinuitätslücken 334/371 ms,
+Scope-TF-Zeitbindung fehlgeschlagen. Leere gesunde PARTIAL-Nahwolken sind
+gemäß finalem Health-Vertrag kein eigener Sensorfehler; die 2,315-s-Lücke
+im ersten Lauf bleibt ein gesonderter Frischebefund. Erster HWT-Lauf
+mit seriellem Transportfehler; acht Regressionstestfälle bleiben negativ.
+Alle Grenzen/Messzeiten im
+[Vorlaufbericht](wohnungserkundung/JETSON_VORLAUF_AP06_20261010.md).
+Private Rohbelege unter `~/.local/share/amadeus/diagnostics/ap06-20261010T070231Z`.
+Rückfall: frische Shell ohne neues Release; bisherige Installation unverändert
+nutzbar. Kein dauerhafter Installwechsel, keine reale Abnahme/Kundenfreigabe.
+
+## 08.10.2026 – vorbereitete AP-06-Übergabe, noch keine Roboterinstallation
+
+Der Nutzer führt den Kandidaten später selbst auf dem Jetson aus. Geprüfter
+Produktstand `c5d2a9c`; Transport als Git-Bundle mit separatem Rohbelegarchiv,
+Prüfsummen und Verifikation aus einem frischen Clone. Die
+[Jetson-Anleitung](wohnungserkundung/JETSON_KONZEPTTEST_AP06.md) beschreibt
+separaten ARM-Build, tatsächliche Präfixe und den passiven lokalen Vorlauf
+mit zurückgestelltem Explorer sowie aktueller Scope-/Quellenbindung.
+
+Dies ist ein Entwicklungsstand: **ursprüngliche Gesamtmissionen 0/3**, kein
+Kundenrelease. Die Komponentenprüfungen sind dokumentiert, aktuelle Gesamt-
+und Zeitfehler im [Belegbericht](wohnungserkundung/evidence/ap06-concept-20261008/README.md).
+Keine Zielsystemdateien geändert, keine Hardware gefahren, kein ARM-Build
+oder Shutdown hier behauptet. Reale Karten/Bags/Manifeste bleiben außerhalb
+Git; bereits vorhandene Installationen werden durch die Übergabe nicht ersetzt.
+
+## 30.09.2026 – metrischer Realnachweis: lesender Vorlauf blockiert
+
+Exakter Softwarekandidat `deb075e3f1a51a46bc00c2235a3068cfbe45d769`,
+Branch `feature/hwt-hold-recovery-resume` / PR #105, LAB-1. Reale Domain 42.
+Isoliertes Sechspaketpräfix `metric-frontier-20260930/software-final/install`
+über vorhandener Runtime-Kette/Vollunderlay `hwt-child-scope-20260928-retry/install`;
+LD-LiDAR-Shutdownoverlay und vorhandener SLAM-Toolbox-Install aufgelöst.
+Tatsächliche Prozess-/Profil-/Modulhashes im privaten Runtime-Manifest.
+`~/roboter_ws` bleibt auf `23928d9`, kein dauerhafter Installwechsel/Merge.
+
+Passiver regulärer `app_mapping`-Start: `active_drive=false`, HWT-Odometrie,
+`enable_auto_explore=false`; kein Aktorschreibprozess. Anfänglich ungebundener
+Explorer erwartungsgemäß fail-closed; anschließend reale Karte/Pose und
+LAB-1-Scope lokal gebunden und alleiniger Explorer über bestehenden Overlay-
+Launch gestartet. Parameter und 324 Statusmeldungen: `metric_frontier`,
+alte WE-Policy/Navigation false. Keine Pflicht-Portale/Regionen.
+
+Erster Quellenblocker: Radsample 189,166 ms > passive 180-ms-Grenze.
+Einmaliger passiver Gate-Neustart nach Quellenstart; kurze Rohquellen-HOLD/
+Recovery separat. Später Encoderreader terminal: FC03-Paar 125,870 ms >
+120 ms, Einzelreads 91,760/33,809 ms. Keine Grenze gelockert; konkrete
+zeitliche Ursache nicht bewiesen, kein Hardwaredefekt behauptet.
+Unabhängiger Geometriesnapshot: Startzelle unbekannt, volle gepaddete Kontur
+in Rohkarte/Costmap unzulässig; Scan bereits erste Orientierung ungültig.
+25 Frontiercluster, 25 `no_known_free_route`, kein zulässiger Kandidat.
+
+Kein aktiver Wechsel und keine Mission/Fahrt; Realnachweis damit nicht
+erreicht. A/C nicht bestanden, B nicht aufgetreten, Stufe 3 weiterhin offen.
+Grenzen im Liveprofil 900 s/150 s/6 Versuche/3 Fehler, Scan 280 s/0,08 rad/s;
+keine Mission begann diese Budgets. Keine direkten Explore-/Nav2-Ziele.
+
+Recorder bis zum geordneten Ende aktiv; Datenbank erst nach Recorderende
+analysiert. Keine running-Mission/kein Nav2-Statuseintrag; alle erfassten
+Ausgangsbefehle null. Einzelne Launchwurzeln SIGINT, keine Prozessgruppe.
+Alle manifestierten Prozesse beendet, ttyUSB-Handles frei, keine Shutdown-
+fehler im Abschlusslog. Zwölf frische FC03-Paare nach Stackende: unveränderte
+Motorpositionen, 0 rpm. Keine elektrische Sperrstellung behauptet.
+
+Private Belege `~/.local/share/amadeus/tests/metric-frontier-real-20260930/`:
+`REPORT.md`, Manifest, Liveparameter/-status, Rohkarten-/Costmapsnapshot,
+Konturdarstellung, geschlossene Bag-Auswertung, FC03-Start/Endmessungen und
+Shutdownprüfung. Nur datensparsame Dokumentation veröffentlicht.
+Rückfall bereits wirksam: gestartete Prozesse beendet, keine Mission,
+permanenter Install unverändert. MASTERPLAN v1.2 unverändert.
+Genau nächster Schritt steht im STATUS: gezielter Vorlauf-Korrekturauftrag
+für Startkarten-/Kontur- und FC03-Paarzeitblocker mit getrennten Nachweisen,
+keine automatische neue Fahrt.
+
+## 30.09.2026 – metrischer Softwarekandidat, keine Roboterübertragung
+
+Separater Checkout: `/home/p/roboter_worktrees/metric-exploration-20260930`,
+Basis `1dbbdaacc18550f1c1912a9a36a765bda397b19f`, vereinbarter Branch
+`feature/hwt-hold-recovery-resume` / PR #105. Die laufende Arbeitskopie
+`~/roboter_ws` bleibt auf ihrem bisherigen Stand; kein dauerhafter Install,
+kein Merge, keine Hardware-/Sensorprozesse und keine reale Fahrt.
+
+Sechs Pakete gerätefrei gebaut unter
+`~/.local/share/amadeus/tests/metric-frontier-20260930/software-final/install`:
+explore, robot_navigation, robot_state_estimation, mission_manager,
+robot_map_manager, amadeus_map_identity. Source-Reihenfolge der Tests:
+ROS Humble → `hwt-child-scope-20260928-retry/install` → Kandidatenpräfix.
+BT stammt weiterhin aus dem Vollunderlay, kein neuer BT-Stack. Paketpfade
+stehen in jedem Graphlog; diese Auflösung ist ein lokaler Softwarebeleg,
+kein Jetson-Laufmanifest. Nach Umgebungsneustart verloren gegangene `/tmp`-
+Zwischenbuilds nicht als verwendbaren Install voraussetzen.
+
+Neuer Modus ausschließlich `exploration_strategy=metric_frontier` mit
+`src/explore/config/metric_frontier_params.yaml`, nach dem Basisprofil und
+vor Missionstart. Ausgeliefertes Overlay ist nicht fahrfertig: aktuelle
+Session, gemessener Startkarten-Fingerprint und explizit verifiziertes
+Scopepolygon fehlen absichtlich. Default bleibt `existing`. Metrischer
+Modus hat denselben Nav2-Client/Gate; keine Pflicht-Portal-/Regionsdaten.
+Keine Geschwindigkeits-, Hardware-, Sensorframe-, EKF- oder Collision-
+Monitor-Konfiguration geändert. Bei bewusstem späterem Einsatz können
+mehrere normale Nav2-Aufgaben aus aktuellen Rastern folgen; physische
+Wirkung daher erst nach realem technischen Vorlauf bewerten.
+
+Gerätefrei: 1.342 pytest-Regressionen, registrierte colcon-Tests und verbundene
+synthetische Produktfälle laut STATUS §4. localhost/Domain 224 bzw. 226,
+keine konfigurierten DDS-Peers und kein Gerätebus. Reale Domain 42 hat keine
+Testpublisher erhalten. Ergebnisse/Karten/Bags bleiben lokal außerhalb Git.
+
+Rückfall: Overlay nicht laden und ohne Mission geordnet `existing` starten;
+Betriebsrückfall `active_drive=false`, `enable_auto_explore=false`. Ein
+nicht nachgewiesen terminales Nav2-Kind sperrt auch neue Elternaufträge;
+bei unklarem Cancel kein Neustart zur ungeprüften Wiederanfahrt.
+Genau ein begrenzter Realnachweis ist in AGENTENAUFTRAG §7 vorbereitet,
+noch nicht ausgeführt. Stufe 3 und reale Durchfahrt bleiben offen.
+
+
+## 29.09.2026 – isolierter HOLD-Auftragserhalt-Kandidat
+
+Der aktive Produktlauf mit `08127c8` ist nach terminalem Recoveryabbruch
+geordnet beendet. Neues Explore-Paket separat unter
+`~/.local/share/amadeus/tests/stage3-core-20260929/hold-task-install`, nach
+`idle-gate-install` (Navigation) und `hwt-callback-order-install` (HWT) sourcen.
+Der Vollunderlay bleibt `hwt-child-scope-20260928-retry/install`. Kein
+dauerhafter Installwechsel. Gerätefreier Graph läuft ausschließlich localhost
+in Domain 200–230; reale Domain 42 übernimmt keine Testpublisher.
+Real aufgelöst und bytegleich geprüft im lokalen Lauf
+`stage3-core-20260929/autonomous-goal-after-hold-task-fix/`: aktiver Start,
+vollständiger Scan, sieben autonome Kinder, aber keine abgeschlossene Aufgabe.
+Nach 459,860 s kontrolliert beendet; alle Roboterprozesse und seriellen Handles
+frei. Kein HWT-first_fault, neuer Kartenquellennachweis-Blocker. Einzelwerte,
+Grenzen und genau nächster Auftrag ausschließlich im STATUS §7.
+
+
+## 28.09.2026 – gezielte Portal-/Explorer-Reparatur, noch keine neue Fahrt
+
+Explore und robot_state_estimation wurden unter
+`~/.local/share/amadeus/tests/hwt-portal-repair-20260928/install` isoliert gebaut.
+Underlay bleibt der vollständige `hwt-child-scope-20260928-retry/install` mit
+den dokumentierten SLAM-/LiDAR-Overlays. Aktiver Install und Hauptarbeitskopie
+bleiben unverändert. Das neue lokale No-Scan-Profil aktiviert den erforderlichen
+Portalfeed; Portalquerung, Initialscan, Coverage und Rückkehr bleiben aus.
+Vor Ort wurden Motorsperre, Stillstand und FC03-Erreichbarkeit ausdrücklich
+bestätigt; damit ist die unten noch historisch offene Sperrenrückmeldung geklärt.
+Die reale Karten-/Scopebindung muss im motorlosen Vorlauf neu gemessen werden.
+Aktueller verbindlicher Nachweisstand: STATUS Abschnitt 7.
+
+Der anschließende passive Start auf `e5b221b` ist beendet: Quellen, Karte/TF,
+VL53 und Stillstand waren gültig. Die echte Policy lieferte autonome Ziele,
+aber alle beobachteten Routen überschritten 0,45 m (Minimum 0,959117 m).
+Daher kein aktiver Start und keine Mission/Injektion. Neues Scope lokal aus
+Live-Pose erzeugt und dokumentiert, noch nicht als neues Laufprofil geladen.
+28/28 Launch-Kinder sauber beendet, Recorder beendet und Ports frei. Lokale
+Belege: `hwt-portal-repair-20260928/result.json`, Runtime-Manifest, Bag und
+Scopebindung. Nach Shutdown Bindung nicht mehr live; aktiver Install unverändert.
+
+
+## HWT-Kindziel, aktiver Einzelversuch ohne Ziel — 28.09.2026
+
+Der unveränderte PR-#105-Build unter
+`~/.local/share/amadeus/tests/hwt-child-scope-20260928-retry/install`
+wurde über `app_mapping.launch.py` mit `active_drive=true`,
+`use_hwt601_odometry=true`, `enable_auto_explore=true` und dem lokalen
+Einmalprofil ohne Initialscan (SHA256 `a5e6b1d0…`) gestartet. Das lokale
+`runtime-manifest-active-v2.json` unter
+`~/.local/share/amadeus/tests/hwt-child-active-20260928-once/` hält die
+aufgelösten Paketpfade fest; ein dauerhafter Installwechsel fand nicht statt.
+Nach SLAM-Neustart wurde Scope-ID `we1-hwt-child-noscan-20260928-once` an
+die neue Live-Karte `fb26a819…` und die Startpose gebunden (maximal
+0,0009 m Eckenversatz). Bei stillstehender Basis waren HWT-Fusion,
+Encoderfeedback und Sicherheitsstatus gesund. `base_hardware` besaß
+`/dev/ttyUSB_BASE` allein, der HWT-Leser `/dev/ttyUSB_HWT601` allein;
+kein paralleler Encoderleser. Die Vor-Ort-Bestätigung bezog sich auf den
+kontrolliert gelösten unabhängigen Motorhalt, anwesenden Beobachter und
+weiterhin freien Korridor.
+
+Recorder und 340-s-Cancel-Wächter liefen vor dem einzigen Explore-Auftrag
+über Mission Manager → BT → Explorer. In 247,97 s erzeugte der aktive
+Produktpfad kein Kindziel: 249/249 Statusbilder meldeten
+`stale_source:portal_memory`, kein Zielkandidat, keine Nav2-UUID und
+kein Plan. Der Explorer endete vor der 300-s-Suchgrenze unerwartet mit
+`hwt601_raw_missing_stale_or_invalid`. Es gab keine geplante HWT-Pause,
+keinen HOLD und keine Nichtnull-Fahrkommandos; `/odom` maß 0,000 m Weg.
+Der exakte Explorer-interne Erstwert ist nicht belegt; der getrennte
+Fusion-Wächter blieb um den Abbruch gesund. Der Recorder erfasste
+`/near_field/status` wegen fehlendem `robot_interfaces`-Overlay nicht.
+Stack und Bag sind sauber beendet, 28/28 Launch-Kinder beendet, Ports frei.
+Vor-Ort-Rückmeldung zur nach dem Lauf wieder wirksamen Motorsperre steht
+noch aus. Kein zweiter Versuch, keine Produktänderung und keine
+Kindziel-Recovery-Abnahme aus diesem Lauf.
+
+## HWT-Kindziel ohne erneuten Initialscan — motorlos nicht ausgelöst (28.09.2026)
+
+Das lokale Einmalprofil `hwt-child-no-initial-scan.yaml` unter
+`~/.local/share/amadeus/tests/hwt-child-noscan-20260928/` hat SHA256
+`a5e6b1d08041b3f63bb1fcd2b7730b709194fbe210426770f1ff759d2e70dcd6`.
+Es schaltet nur den bereits real bestandenen Initialscan aus, hält
+WE-Navigation an und begrenzt den Versuch auf ein Frontier-/Fehlziel ohne
+Portalquerung, Coverage oder Rückkehr. Produktcode und aktiver Install
+blieben unangetastet. Der korrigierte motorlose Start verwendete dieses
+Profil tatsächlich; FC03, HWT/Yaw, Karte/TF und VL53-Frames waren gesund.
+Der echte Mission-Manager-/BT-Auftrag scheiterte vor Kindziel-Dispatch an
+`hwt601_readonly_preflight_no_motion` (`active_drive=false`). 20 offene,
+zuletzt 5 geeignete Frontier-Aufgaben sind kein Nav2-Kind; Action-Status
+und -Feedback blieben leer. Kein Fahrkommando, keine Fahrt und keine
+HWT-Pause. Lokale Bag-/Statusnachweise unter demselben Testverzeichnis.
+Recorder und Stack sind beendet, 28/28 Kinder im zweiten Start sauber,
+Ports frei. Eine künftige Fahrt ist aus diesem Read-only-Ergebnis nicht
+freigegeben; die Reihenfolge zur Beobachtung eines echten Kindes muss
+ausdrücklich geklärt werden, ohne die Schutzsperre zu umgehen.
+
+## HWT-Kindziel-Abnahme — zweiter motorloser Vorlauf, keine Fahrt (28.09.2026)
+
+Der Nutzer bestätigte nach dem ersten fehlgeschlagenen Vorlauf nun eine
+FC03-erreichbare Controllerelektronik bei weiterhin unabhängig gesperrter
+Motorendstufe, Stillstand und Beobachtung vor Ort. Der funktional unveränderte
+PR-#105-Stand wurde isoliert unter
+`~/.local/share/amadeus/tests/hwt-child-scope-20260928-retry/install`
+neu gebaut und über das lokale `runtime-manifest-passive.json` aufgelöst.
+`app_mapping.launch.py` lief ausschließlich mit `active_drive=false`,
+`enable_auto_explore=false`; kein Motorprozess, keine Mission und kein
+Fahrkommando. FC03-Paare trafen ohne Latch ein, HWT-Roh-/Yaw und Fusion-
+Quellen waren gesund, Karte/TF frisch. Das neue lokale Einmal-Scope samt
+Fingerprint, Startpose, Polygon und Profilhash liegt nur im Testverzeichnis;
+das historische Scope wurde nicht verwendet. Eine motorlose Nav2-
+Planungsprobe blieb im Polygon, überschritt mit 0,494 m aber die für den
+späteren Test festgelegte 0,45-m-Routenobergrenze und ist kein autonomes
+Frontier-Kind. Der nötige rückwärtige Schwenkraum für den 360°-Initialscan
+ist vor Ort noch nicht bestätigt. Daher keine Fahrt oder HWT-Injektion.
+Der passive Stack endete mit 28/28 sauberen Kindern und freien Ports.
+Der aktive Install blieb unverändert; das Profil aus der beendeten
+SLAM-Session darf ohne erneute Kartenbindung nicht gefahren werden.
+
+## HWT-Roh-/Yaw-Recovery — ein begrenzter neuer Real-Teilnachweis
+
+Am 27.09.2026 wurde der PR-#105-Stand `6b666d97d7e11326c9f75dccbc4253112e99b578`
+einmal im ausdrücklich freigegebenen 40-s-/3-rad-Initialscan geprüft.
+Das Manifest unter
+`~/.local/share/amadeus/tests/hwt-recovery-real-20260927-fxU0To/`
+belegt das unveränderte Abnahmeprofil `hwt601_recovery_acceptance_params.yaml`
+(SHA256 `ee3b42eef682a830892e93f84093baf1547a84f76d6baa3e480a81dc1de393c4`),
+die Overlay-Reihenfolge und `robot_state_estimation` aus
+`/tmp/we1-hwt-yaw-install`. Schattennode, Core und Health sind bytegleich
+mit den Quellen. Der aktive Install wurde nicht gewechselt.
+
+Nach bestandenem motorlosem Preflight lief der Recorder vor dem aktiven
+Stack. Eine einmalige 0,251-s-Leserpause erzeugte 0,260533 s Rohdatenlücke.
+Gate-HOLD sperrte die Fahrt; das Encoderfeedback meldete während HOLD
+0/0 gemessene Motor-RPM. Der eingefrorene Bias blieb unverändert, frische
+Yaw-Daten kehrten zurück, Health/Gate bestätigten Sequenz 1, und derselbe
+Explore-Auftrag setzte den Rundblick fort. Der Controller cancelte nach
+14,928 s und 0,136 rad; es gab keine Translation und kein Nav2-Kindziel.
+Stack und Recorder wurden geordnet beendet; HWT- und Motorport sind frei.
+Bag, Zeitfolge und Analyse liegen ausschließlich lokal. Die anwesende Person
+bestätigte am 28.09.2026 für **diesen neuen Versuch** nachträglich den
+tatsächlichen physischen Halt beim HOLD, Stillstand nach Cancel und die
+danach wieder wirksame unabhängige Motorsperre. Damit ist der begrenzte
+Rundblick-Umfang real bestanden; es wurde kein zweiter Versuch gefahren.
+Ein aktives Nav2-Kindziel, eine Zielroute, Tür- oder Frontier-Recovery waren
+nicht Gegenstand dieses Laufs. Keine neue Fahrt aus diesem Befund;
+Stufe 3 bleibt offen.
+
+## HWT-Roh-/Yaw-Korrektur — ausschließlich isolierter Softwarestand
+
+Auf demselben PR-#105-Branch wurde nur `robot_state_estimation` für die
+reine postkalibrierte Rohdatenlücke geändert und isoliert unter
+`/tmp/we1-hwt-yaw-install` über dem bisherigen Recovery-Overlay gebaut.
+Das installierte Abnahmeprofil bleibt SHA256 `ee3b42eef…`. Der
+gerätefreie Produktgraph verwendete den echten Yaw-Schatten und bestand
+mit 0,260675 s gemessener Rohdatenlücke; Bias unverändert, HOLD und
+Fortsetzung nach Stillstands-/Pose-/Wegprüfung und Gate-ACK. Keine
+produktive Roboter-Runtime, kein Gerät oder Aktor wurde dafür gestartet;
+der aktive Install blieb unverändert. Details und Gegenfälle stehen in
+STATUS Abschnitt 5.
+
+Für einen später gesondert freizugebenden Einzeltest die Setup-Kette
+`/opt/ros/humble`, `amadeus_slam_toolbox_ws`,
+`we1-ldlidar-shutdown-overlay`, `we1-full-shim-install`,
+`we1-hwt-recovery-install` und **danach**
+`/tmp/we1-hwt-yaw-install` in einem frischen Prozess auflösen und mit dem
+Runtime-Manifest tatsächlich nachweisen. Der aktuelle Roboter-Install
+enthält diese Änderung nicht. Rückfall bleibt der gesicherte
+PR-#104-Latchkandidat. Der nächste Schritt ist nur die begrenzte
+Realtestvorlage in AGENTENAUFTRAG Abschnitt 5; keine Fahrt aus dieser
+Übergabe.
+
+## HWT-Recovery-Realversuch — HOLD ja, RESUME nein
+
+Am 27.09.2026 lief genau ein von der anwesenden Person freigegebener,
+begrenzter Initialscan auf dem isolierten Recovery-Overlay (Quell-HEAD
+`25ac0481ad8c79ffcaa34d22ee4082fa5d39a45b`, PR #105). Der Recorder
+startete vor dem Stack. Runtime-Manifest, Bag und Logs bleiben lokal unter
+`~/.local/share/amadeus/tests/hwt-recovery-real-20260927-3wLELq/`.
+Profil, Hash und Underlay-Reihenfolge entsprechen dem folgenden motorlosen
+Abschnitt; `active_drive=true`, `enable_auto_explore=true`,
+`use_hwt601_odometry=true`. Der Motorbus hatte nur `base_hardware` als
+Besitzer, der HWT-Port nur den HWT-Leser. Der aktive Install blieb unverändert.
+
+Eine einmalige 0,251-s-Pause des HWT-Lesers löste eine 0,261-s-Rohdatenlücke
+aus. Das Gate erkannte `raw_missing_stale_or_invalid` bei 0,220622 s
+Rohmessalter gegen 0,20 s, sperrte die Bewegung und der Explore-Auftrag
+blieb zunächst im HOLD. Der Yaw-Schatten verriegelte dieselbe Lücke wegen
+seiner bestehenden 0,10-s-Grenze als `imu_datenluecke_neustart_noetig`;
+danach folgte `yaw_missing_stale_or_invalid` als terminaler Fusion-Fehler.
+**Kein RESUME:** Der Testcontroller cancelte die Mission; das frische
+Encoderfeedback meldete danach 0/0 Motor-RPM. Die gemessene Drehung war
+höchstens 0,081 rad, ohne Translation. Die separate Bestätigung des
+Beobachters über physischen Halt und wieder wirksame Motorsperre wurde
+inzwischen für **diesen früheren** Versuch erteilt. Der Stack und Recorder
+sind aus, HWT-/Motorports frei. Beim
+SIGINT-Shutdown starb `slam_toolbox` mit Exit -6; kein Zusammenhang mit
+dem HWT-Fehler ist belegt. Keine Wiederholung und keine Fahrfreigabe.
+
+Rückfall: Das damals gefahrene Recovery-Overlay nicht als bestanden
+übernehmen; der gesicherte PR-#104-Kandidat behält den fail-closed
+Latch. Die spätere gerätefreie Korrektur steht oben und ersetzt keinen
+zweiten Realnachweis.
+
+## HWT-HOLD-/Recovery-Branch — motorloser Zielsystemcheck
+
+`feature/hwt-hold-recovery-resume` baut die vier Pakete
+`robot_state_estimation`, `robot_navigation`, `explore` und `mission_manager`
+isoliert in `/tmp/we1-hwt-recovery-install` über
+`/tmp/we1-full-shim-install`. Der aktive Roboter-Install und der
+PR-#104-Kandidat blieben unberührt. Am 27.09.2026 wurde dieser Kandidat nach
+aktueller motorloser Bestätigung **mit echten Sensoren, ohne Motoren und ohne
+Mission** gestartet: HWT-Bias/Rohdaten/Gierrate, read-only Encoder, LiDAR,
+VL53, TF und Gate-Nullausgabe wurden geprüft. Der erste Launch brach vor
+Knotenstart ab, weil der externe LiDAR-Underlay fehlte. Für den erfolgreichen
+Lauf wurden `/opt/ros/humble`,
+`/home/p/amadeus_slam_toolbox_ws/install`,
+`/home/p/.local/share/amadeus/releases/we1-ldlidar-shutdown-overlay/install`,
+`/tmp/we1-full-shim-install` und `/tmp/we1-hwt-recovery-install` in dieser
+Reihenfolge gesourct. Das installierte Abnahmeprofil hatte SHA256
+`ee3b42eef682a830892e93f84093baf1547a84f76d6baa3e480a81dc1de393c4`.
+Der motorlose Stack ist sauber beendet, HWT-/Motorports sind frei. Lokale
+Manifeste und Beobachtungen liegen unter
+`~/.local/share/amadeus/tests/hwt-recovery-real-20260927-3wLELq/`.
+Dieser motorlose Teilnachweis erteilte keine Fahrfreigabe; der später
+gesondert freigegebene begrenzte Realversuch steht oben.
+
+
+## HWT-TOR-1-Diagnosekandidat — vollständiger motorloser Lauf
+
+Auf der Integrationslinie PR #103 enthält `f1f6b74a5e5aea1ba43c50beb75f5f954218fb78`
+die additive Erstfehlerdiagnose. Sie wurde nur in
+`/tmp/we1-hwt-f1f6b74-install` gebaut, mit dem gesicherten Vollbuild
+`/tmp/we1-full-shim-install` als Underlay. Der aktive Roboter-Install wurde
+**nicht** gewechselt. Der Standard-BT-Build brauchte auf diesem Host den rein
+temporären Pfad `/tmp/we1-btcpp-compat`; die Laufzeitbibliothek des gebauten
+BT-Orchestrators löst nach
+`/opt/ros/humble/lib/aarch64-linux-gnu/libbehaviortree_cpp.so` auf.
+Der komplette Kandidaten- und Testnachweis steht im aktuellen
+`docs/wohnungserkundung/STATUS.md`.
+
+**Ausgeführt am 27.09.2026, aber nicht vollständig aufgezeichnet:** Die
+anwesende Person bestätigte unabhängige Motorsperre, Stillstand und den
+konkreten motorlosen Lauf. Quell-HEAD `fc6ac5e56f78898666d7c9e8b3785bdab74ab0f2`,
+ein HWT-Leser, ein passiver Encoderleser, `active_drive=false`, keine
+Explore-Mission und kein `base_hardware`-Antriebsknoten. Das vorab bestimmte
+120-s-Fenster nach Bias-Readiness wurde nicht erreicht: `ros2 bag record`
+brach nach 23,9 s wegen `SQLite error (5): database is locked` ab. Die
+gespeicherten Daten enden während `gyro_bias_warmup`; kein `first_fault`.
+Nach SIGINT endeten alle Launch-Kinder sauber. Der aktive Install blieb
+unverändert. Einzelheiten und lokale Evidenzpfade stehen im aktuellen STATUS.
+Eine Kopie des abgebrochenen Bags unter dem lokalen `recovered-copy/` wurde
+nach Recorderende mit `ros2 bag reindex` um Metadaten ergänzt; sie enthält
+weiterhin nur 23,91 s und 3755 Nachrichten.
+
+`tools/kartierung/hwt_diagnose_record.py` wurde anschließend ohne Geräte auf
+separaten ROS-Domains mit künstlichen Publishern geprüft: vollständige sieben
+Themen über ein begrenztes Fenster, sauberes Recorderende und lesbare Metadaten;
+ohne Readiness endet es begrenzt als unvollständig. Das Werkzeug verwendet
+rosbag2 `--storage-preset-profile resilient` (SQLite-WAL) und liest die aktive
+SQLite-Datei nicht. Ein dritter Laborlauf mit parallel offenem SQLite-Leser
+endete ebenfalls vollständig. In dieser Laborphase wurde kein HWT-Gerät
+gestartet. Die
+konkrete Ursache der früheren SQLite-Sperre ist nicht belegt.
+
+**Erneuter Lauf am 27.09.2026: Ergebnis B.** Nach ausdrücklicher Bestätigung
+von unabhängiger Motorsperre, Stillstand und genau diesem motorlosen Lauf
+startete der reparierte Recorder vor dem Stack. Quellstand
+`c4295fcdacf817b33b53f17e38ac106bf01ae9e2`, Diagnosepakete aus
+`/tmp/we1-hwt-f1f6b74-install` über dem dokumentierten Vollbuild, externes
+LiDAR-Overlay und ROS Humble. Das lokale Manifest unter
+`~/.local/share/amadeus/tests/hwt-tor1-20260927-run-nDR2Re/` belegt
+Setup-Reihenfolge, Paketpräfixe, Modul-/Executable-Hashes, Profil-SHA und
+Launchargumente. `active_drive=false`, `enable_auto_explore=false`, keine
+Mission, kein Antriebsknoten; nur der FC03-Encoderleser am Motorbus.
+Bias-Readiness um 14:24:09,788 UTC, danach 120 s vollständig mit sieben
+Themen aufgezeichnet. Roh-HWT, Yaw, Encoder und Wächter blieben bereit,
+`first_fault=null`, kein Latch; 0 RPM und keine Aktorausgabe. Der Recorder
+endete mit Exit 0 und gültigen Metadaten, der Stack danach per einmaligem
+SIGINT; alle Kinder endeten sauber und beide Ports sind frei. **Unter diesen
+Bedingungen nicht reproduziert.** Der alte Fahrfehler bleibt ohne
+Rohstatus-Originalwert; kein TOR 2 oder Fahrnachweis. Der aktive Install
+blieb unverändert. Einzelheiten und Themenzähler stehen im STATUS.
+
+Jeder weitere Lauf braucht eine neue aktuelle Freigabe der anwesenden Person.
+Vor Ort unabhängige Motorsperre und Stillstand erneut bestätigen, vorhandene
+Prozesse und Portbesitzer prüfen, dann genau einen Stack verwenden. Keine
+zweite HWT- oder Motorbusverbindung öffnen. Die echte Stationärbestätigung
+für die HWT-Biasphase darf erst danach als Launchargument gesetzt werden.
+Keine Explore-Mission, kein `active_drive=true`.
+Sind die `/tmp`-Präfixe nicht mehr vorhanden, zuerst aus dem festgelegten
+Quellcommit isoliert neu bauen und ihre Auflösung prüfen; keine ältere
+Installation stillschweigend substituieren.
+
+Für den späteren Lauf das **tatsächlich gesourcte** Setup in jeder beteiligten
+Shell in dieser Reihenfolge festhalten: `/opt/ros/humble/setup.bash`,
+`/home/p/.local/share/amadeus/releases/we1-ldlidar-shutdown-overlay/install/local_setup.bash`,
+`/tmp/we1-full-shim-install/local_setup.bash`,
+`/tmp/we1-hwt-f1f6b74-install/local_setup.bash`. Das rein lesende Werkzeug
+`tools/kartierung/hwt_diagnose_manifest.py` vor dem Start mit lokalem
+`--output`, `--profile src/explore/config/hwt601_parity_params.yaml`,
+`--launch-file robot_bringup/app_mapping.launch.py`, den tatsächlich
+gewählten `--launch-arg KEY=VALUE` und den vier `--sourced-setup`-Argumenten
+aufrufen. Es hält Paketpräfixe, installierte Dateihashes, BT-Linkpfad,
+HWT-Serial-/VL53-/DKMS-Versionen, Profil-SHA und die effektive
+`AMENT_PREFIX_PATH`-Reihenfolge lokal fest. Das Manifest ist kein Ersatz für
+den abgeglichenen Startbefehl und beweist allein keinen laufenden Knoten.
+
+Die gerätefreie Recorderprüfung ist für den unveränderten Werkzeugstand
+erledigt. Für einen später gesondert beauftragten Lauf vor dem Stackstart
+das Werkzeug auf ein **neues** lokales
+Bag-Verzeichnis unter `~/.local/share/amadeus/tests/` starten, mit
+`--warmup-limit-s 120 --window-s 120`; es erfasst nur diese Topics:
+`/shadow/hwt601/imu/data_raw`, `/shadow/hwt601/imu/yaw_rate`,
+`/shadow/hwt601/raw_status_json`, `/shadow/hwt601/status_json`,
+`/fusion/hwt601/wheel_odom_raw`, `/shadow/hwt601/wheel_status_json` und
+`/fusion/hwt601/status_json`. Es wartet höchstens 120 s auf kalibrierte
+Readiness, zeichnet danach höchstens 120 s auf und beendet nur seinen eigenen
+Recorderprozess mit SIGINT. Die laufende SQLite-Datei nicht anderweitig
+öffnen; `*-summary.json`, Metadaten und `*-info.txt` erst nach Recorderende
+auswerten. Bei `incomplete` den Stack sauber beenden und nicht erneut starten.
+Startprofil: `active_drive:=false`, `use_hwt601_odometry:=true`,
+`enable_auto_explore:=false`, `start_web_gui:=false`,
+`explore_params_overlay:=<absoluter Pfad zum Parity-Profil>`;
+`operator_stationary_confirmed:=true` nur nach echter Bestätigung.
+Ergebnis einschließlich Lastbedingungen, Laufdauer, Nullbewegung und
+`first_fault` oder „nicht reproduziert“ im STATUS berichten. Die alte
+Fahrtursache wird dadurch nicht rückwirkend festgestellt. Kein Tor 2,
+kein Deployment und keine Fahrt aus diesem Erfassungslauf ableiten.
+
+## Integrationsbasis 27.09.2026 — keine Aktivierung
+
+Der dokumentierte WE-Integrationsbranch `docs/we1-integrationsbasis-audit`
+enthält die aus dem letzten lokalen Parity-Kandidaten gesicherten
+Quelländerungen, das Profil `src/explore/config/hwt601_parity_params.yaml`
+und die Dokumentation auf Masterplan v1.0. Ein neuer isolierter Build liegt
+ausschließlich unter `/tmp/we1-*`; er wurde weder als Underlay noch als
+Overlay des Roboterprozesses aktiviert. Der zuletzt berichtete Realtest nutzte
+`~/roboter_ws-parity-reset/install_parity_real`; seine vollständige
+Paket-SHA-/Präfixauflösung ist nicht protokolliert. Die Integrationsbasis ist
+daher eine reproduzierbare Softwarezusammenstellung, noch kein bestätigter
+aktiver Roboter-Install. Startparameter, Rückfall und Nachweise stehen im
+aktuellen `docs/wohnungserkundung/STATUS.md`. Keine weitere Fahrt aus dieser
+Zuordnung ableiten.
+
+## Parity-Kandidat: VL53-Recovery und Realtest 27.09.2026
+
+Nur das isolierte Overlay `~/roboter_ws-parity-reset/install_parity_real`
+enthält die neue kanalgetrennte, begrenzte VL53-Runtime-Recovery. Das aktive
+`~/roboter_ws/install` blieb unverändert. Der motorlose VL53-Lauf war über
+125,1 s mit 508 beidseitig gesunden Statusmeldungen stabil; 989 betroffene
+Softwaretests und der Paketbuild bestanden. Rückfall: die Änderungen in den
+beiden Dateien unter `src/vl53_near_field/` im isolierten Branch zurücknehmen
+und das VL53-Paket neu bauen.
+
+Der einmalig aktive Parity-Lauf startete über Mission-Manager/BT und erreichte
+einen autonomen Rundblick von 361,7°. Danach verriegelte die HWT-Rohquellen-
+Prüfung `raw_driver_not_ready` (1790492567,566); das Fahrtor stoppte und die
+Frontier-Vorausrichtungen scheiterten. Keine Türdurchfahrt. Beide VL53 und
+LiDAR blieben frisch. Das Bag liegt ausschließlich lokal unter
+`~/.local/share/amadeus/tests/parity-real-20260927-vl53-recovery`.
+Der konkrete HWT-Rohstatuswert hinter der Verriegelung wurde nicht
+aufgezeichnet. Vor weiterer Fahrt muss dieser Fehler getrennt geklärt werden.
+Der STL-27L-Overflow trat nur nach SIGINT beim Shutdown auf.
+
+## Motorloser HWT/Encoder-Preflight 26.09.2026: zweimal bestanden
+
+Der Nutzer gab zwei motorlose Vollstack-Zyklen frei und bestätigte unabhängig
+gesperrte Motor-Endstufen. Isolierter Kandidat aus PR #101 in ROS-Domain 217,
+`active_drive=false`, HWT-Opt-in und ohne automatische Erkundungsmission;
+der aktive `~/roboter_ws/install` blieb unverändert. Motorbusbesitzer war
+ausschließlich der read-only FC03-Shadow-Knoten. Kein Nichtnull-Fahrwert.
+
+Im Shadow-Profil sind Paar- und Sample-Grenze 0,12/0,18 s. Ein einzelnes
+verspätetes, aber gültiges Paar vor der Baseline wird verworfen und neu
+gelesen. Eine zweite aufeinanderfolgende Überschreitung und jede nach der
+Baseline verriegeln; Antwort- und Konfigurationsfehler bleiben sofort
+fail-closed. Aktive Base-Hardware-Encodergrenze 0,30 s, Motorparameter,
+Modbus-Timeout, HWT/VL53/LiDAR, Scope, Footprint, Collision Monitor und
+Navigation wurden nicht geändert.
+
+Je 180 s nach Biasphase: 3.604 akzeptierte Paare und keine Fehler oder
+Reconnects pro Fenster. Zyklus 1 Paarzeiten min/Median/p95/max
+9,95/13,57/20,26/44,66 ms; Zyklus 2 10,08/13,77/20,74/45,32 ms.
+Einzelread-Statistik pro Motor und Quellenalter stehen in
+`/home/p/.local/share/amadeus/tests/stage3-hwt-cycle{1,2}.json`. HWT-Bias,
+Fusion, VL53, LiDAR, Map/TF und sechs Nav2-Lifecycles waren frisch. Im zweiten
+SIGINT-Shutdown wurde eine laufende Probe mit 124,547 ms fail-closed verworfen
+und nicht publiziert. Alle Kinder beendeten sauber mit Exit 0, sämtliche
+seriellen Handles wurden frei; keine SIGTERM-Eskalation.
+
+Für die anschließende Freigabevorlage ist das lokale Profil
+`stage3-real-20260925-after-r2-scope.yaml` mit Scope-ID
+`stage3-local-scope-20260925-after-r2` und Session
+`stage3-20260925-after-r2` bestimmt. Aktuelle Live-Karte in Frame `map`:
+Fingerprint beginnt `c6c949`; beim Neustart erzeugt der bestehende
+Map-Status-Korrelator eine neue Bindung zum aktuellen Fingerprint. Vor einer
+Fahrt müssen aktuelle Startpose und Scope sichtbar abgeglichen werden. Es gab
+keine Fahrt. Der begrenzte 0,25-m-/±15°-Test wird separat zur ausdrücklichen
+Fahrfreigabe vorgelegt; Stufe 3 insgesamt bleibt bis zum Umfahrnachweis GELB.
+
+## Aktuell: isolierter HWT601-WE-Kandidat, Geräteprüfung noch offen (26.09.2026)
+
+**Softwareintegration lokal BESTANDEN; motorlose Prüfung OFFEN; reale
+Bewegungsprüfung OFFEN.** Dieser Auftrag hat keine Geräte angesprochen und
+keinen Roboter-Stack gestartet. Die alten Hardwarefreigaben werden nicht auf
+die neue Integration übertragen. Keine Umstellung von `~/roboter_ws/install`.
+
+### Exakter Quell- und Installstand
+
+Branch `codex/we1-hwt601-fusion`, Basis PR #100 / `113014e`, HWT-Referenz
+`1d91229`; Wiederverwendung `b3b6370`, funktionale Integration `f61e3e7`.
+Arbeitskopie `/home/p/roboter_worktrees/we1-hwt601-fusion`; fremde Änderungen
+in `/home/p/roboter_ws` nicht übernommen oder verändert. Nichtsymlink-Build:
+`/home/p/.local/share/amadeus/releases/we1-hwt601-IC2SLr/{build,install,log}`.
+
+Alle folgenden Pakete lösen nach Sourcen dieses Isolats tatsächlich aus
+`we1-hwt601-IC2SLr/install/<paket>` auf:
+`robot_state_estimation`, `base_hardware`, `amadeus_lidar_bringup`,
+`robot_bringup`, `robot_navigation`, `explore`, `robot_map_manager`,
+`mission_manager`, `bt_orchestrator`, `safety_monitor`, `vl53_near_field`,
+`robot_interfaces`, `semantic_map_manager`, `amadeus_map_identity`.
+Nav2 und `robot_localization` kommen aus `/opt/ros/humble`, `slam_toolbox`
+aus `/home/p/amadeus_slam_toolbox_ws/install/slam_toolbox`, der korrigierte
+LiDAR-Treiber aus `we1-ldlidar-shutdown-overlay/install/ldlidar_stl_ros2`.
+
+Die gespeicherte Setup-Kette (unten nach oben; Release-Namen jeweils unter
+`/home/p/.local/share/amadeus/releases/`, jeweils mit `/install`) ist:
+
+```text
+/opt/ros/humble
+/home/p/amadeus_slam_toolbox_ws/install
+we1-ldlidar-shutdown-overlay
+we1-10e1858074e7-r1
+we1-stage1-5e3fe0a-20260923
+we1-stage2-6fd36d5-20260923
+we1-stage3-bypass-s8QMY8
+we1-stage3-complete-1kI6en
+we1-stage3-vl53-mark-bwVxEL
+we1-stage3-explorer-shutdown-dnrGyH
+we1-stage3-health-CVhWvH
+we1-stage3-frame-gap-r2
+we1-stage3-cancel-latch-r1
+we1-stage3-vl53-boot-r1
+we1-hwt601-IC2SLr
+```
+
+Nicht neu gebaute App-Pakete bleiben in den alten Unterlagen. Der neue
+Kandidat überlagert dagegen sämtliche oben genannten 14 WE-Pakete.
+Quelle/Install paarweise SHA-256-identisch: `hwt601_fusion_health.py`
+`9297699e...`, `hwt601_fusion_guard.py` `f144f6cc...`,
+`cmd_vel_mission_gate.py` `fa5a6b60...`, HWT-SLAM-Launch `d11b6418...`,
+VL53-Knoten `98d2b42e...`, Nav-Runtime `715b2a41...`.
+Letztere und VL53/Interfaces/Nav-Sicherheitskonfiguration/Basisparameter
+sind gegenüber PR #100 unverändert.
+
+Buildbesonderheit: Der systemweite BehaviorTree-CMake-Export sucht eine
+nicht vorhandene nicht-multiarch Bibliothek. Wie im bestehenden WE-Build
+wurde **nur beim Bauen** der vorhandene Export unter
+`we1-10e1858074e7-r1/underlay/behaviortree_cpp/share/behaviortree_cpp/cmake`
+per `-Dbehaviortree_cpp_DIR` verwendet. Keine Systembibliothek verändert.
+Runtime löst `libbehaviortree_cpp.so` aus
+`/opt/ros/humble/lib/aarch64-linux-gnu/` auf; SHA-256
+`c87409e5c2853a723537bbfc3d05be055c649ce3823e8027962a477eb97a7b15`
+identisch zum vorhandenen Unterlagenartefakt. Keine fehlende Laufzeitbibliothek.
+
+### Motorloser nächster Vorlauf — vorbereitet, NICHT ausgeführt
+
+Vorher einmal gebündelt aktuell bestätigen lassen: Gerätezugriff auf HWT,
+FC03-Encoder, VL53/LiDAR und ROS; kein paralleler Stack; Roboter ab Start
+mindestens 30 s tatsächlich unbewegt; unabhängig deaktivierte Motorendstufe
+bei weiterhin FC03-antwortender Controllerelektronik; Hardware-Halt erreichbar.
+Bekannten dedizierten HWT-Adapter/Montage nur auf zwischenzeitliche Änderung
+prüfen, nicht neu kalibrieren. Falls die getrennte Versorgung nicht möglich
+ist, ist dieser FC03-Aufbau **nicht motorlos prüfbar**; keine Dry-run-Werte
+unterschieben und keine Motoren für den Vorlauf aktivieren.
+
+Danach in einer frischen Shell ausschließlich obigen Kandidaten sourcen.
+Bestehendes begrenzendes WE-Profil aus
+`/home/p/.local/share/amadeus/profiles/stage3-real-20260925-after-r2-scope.yaml`
+vor Verwendung auf Kartenidentität und aktuelle Pose prüfen; nicht als
+erneute physische Bereichsfreigabe behandeln oder automatisch ausweiten.
+Bestehende `app_mapping.launch.py` mit `use_hwt601_odometry:=true`,
+`operator_stationary_confirmed:=true` **erst nach der Bestätigung**,
+`active_drive:=false`, `enable_auto_explore:=false`, `start_web_gui:=false`
+und genau diesem lokal verifizierten `explore_params_overlay` verwenden.
+
+In zwei getrennten Start-/Stopp-Zyklen protokollieren:
+
+1. Ausschließlich `hwt601_encoder_shadow_reader` am Motorbus, kein
+   `base_hardware`-Prozess; FC03-only, echte Zähler, kein Command-Abonnent.
+   HWT eigener `/dev/ttyUSB_HWT601`, keine Sensorregister-Schreibbefehle.
+2. Roh-HWT frisch, reale Stillstandswerte/Achsen plausibel, Bias nach
+   unverändertem 15+10-s-Fenster stabil/kalibriert/eingefroren; Encoder-vx
+   im tatsächlichen Stillstand plausibel. Kein künstliches Stillstandsflag
+   aus Encoder-Dry-run. Keine Grenzwertänderung bei Fehlschlag.
+3. Genau ein `/odom`-Publisher und dynamisches `odom->base_link` vom EKF,
+   genau ein `/map`/`map->odom` vom SLAM; TF-Frische und Rohquellen gesondert.
+4. Beide VL53 nach aktuellem Frame/Target/UNKNOWN-Vertrag, LiDAR,
+   Kartenmanager-Frische, Karten-/Scope-Bindung, Safety und Nav2 prüfen.
+   `/fusion/hwt601/status_json`: `sources_ready=true`, aber
+   `hwt_motion_ready=false` / `readonly_preflight_no_motion`.
+   Das ist keine vollständige Fahrtfreigabe; alle bisherigen Tore bleiben.
+   Keine Mission senden, keine Nichtnull-Fahrbefehle, keine Motoraktivierung.
+5. SIGINT nur an die protokollierte Launch-PID, nie an die Prozessgruppe.
+   Alle Kinder, Logs und Gerätehandles prüfen. Zwei saubere reale Shutdowns
+   erforderlich; gerätefreie Prozess-Shutdowns ersetzen diese nicht.
+
+### Danach separat freizugebende Bewegungsdiagnose
+
+#### Diagnosepfad lokal implementiert, Zielsystem noch nicht aktualisiert
+
+Auf Branch `codex/we1-hwt601-fusion` ist der Diagnosemodus jetzt standardmäßig
+deaktiviert (`enable_stage3_motion_diagnostic:=false`). Bei explizitem Opt-in
+startet ein einzelner `/stage3_motion_test/start`-Trigger genau diese Sequenz:
+0,25 m vorwärts, bestätigter Stillstand, +15°, Stillstand, −15° relativ zur
+gemessenen Pose nach der positiven Drehung, Endstillstand. Es gibt keine
+anderen Ziele, keine Wiederholung, Rückwärtsfahrt oder Recovery. Der
+Diagnoseknoten publiziert ausschließlich `/cmd_vel_stage3_diagnostic_raw`;
+`cmd_vel_mission_gate` gibt nur bei frischen normalen Sicherheitsquellen,
+aktivem Diagnose-Opt-in, nicht laufender Mission, E-Stop-Freigabe, HWT und TF
+nach `/cmd_vel_nav` frei. Danach bleiben Velocity Smoother, Collision Monitor,
+`/cmd_vel` und `base_hardware` die vorhandene Kette. Produktgrenzen und
+Parameter sind unverändert. Gate-Ausgang, Smoother, Collision Monitor,
+Basis-Soll-/Ist-RPM und Encoderzähler, Encoder-/HWT-/fusions-Odom, LiDAR,
+TF, Safety und beide VL53 werden mit Empfangs- und Nachrichtenzeit privat als
+JSONL protokolliert.
+
+Vor Triggern verlangt der Knoten das bereits bestimmte Scope-Profil und die
+exakte Scope-ID `stage3-local-scope-20260925-after-r2`, einen frischen
+Map-Fingerprint im bestehenden SLAM-Session-Kontext, Map-Frame-Pose und den
+unveränderten gepaddeten Footprint vollständig innerhalb des Polygons. Die
+Startkarte wird gebunden; nachfolgende Kartenrevisionen derselben SLAM-Session
+werden toleriert, aber veraltete oder verlorene Bindung stoppt den Lauf. Jeder
+Phasentick stoppt fail-closed bei fehlender/veralteter HWT-/Encoder-, VL53-,
+LiDAR-, TF-, Karten-, Scope- oder Safety-Quelle. Nullkommando und deaktiviertes
+Diagnose-Active folgen bei Ende oder Abbruch.
+
+Gerätefreie Verifikation: alle 46 Tests aus `robot_navigation` bestanden;
+`robot_navigation` und `robot_bringup` erfolgreich in einen separaten
+temporären Build/Install unter `/tmp/amadeus-stage3-motion-build.N6Ninf`
+gebaut. Der frühere 180-s-Motorlosnachweis wurde nicht wiederholt. Der
+temporäre Overlay-Build wurde einmal für einen Live-Stackstart gesourct; der
+Diagnosemodus blieb aus, es wurde kein Missionsauftrag gesendet. `base_hardware`
+meldete währenddessen nur Nullsollwerte und 0 RPM; keine Bewegung. Der
+Safety-Monitor meldete `use_gpio_estop=false` und „Kein Hardware-Not-Aus
+angebunden“. Der Nutzer hat klargestellt und manuell bestätigt, dass der
+unabhängige Hardware-Halt außerhalb GPIO/ROS verdrahtet und erreichbar ist;
+diese Warnung ist nur die fehlende Jetson-GPIO-Rückmeldung. Der erste Lauf
+wurde wegen einer Fehlinterpretation beendet, nicht wegen eines gemessenen
+Sensor-/Safety-Fehlers. Für den einmaligen Diagnoselauf ist jetzt
+`lab_external_hardware_halt_attested:=true` als standardmäßig falsches Opt-in
+implementiert und im Diagnosestatus sichtbar; `/safety/estop`, Collision Monitor, Quellen-, TF- und
+Scope-Prüfungen bleiben aktiv.
+Der erste Triggerlauf scheiterte vor jeder Bewegung mit `veraltete Quellen:
+near_status`. `ros2 node info` belegte, dass der Prüfknoten
+`/near_field/status` fälschlich als `std_msgs/String` abonniert hatte; der
+aktive `/vl53_near_field`-Knoten publiziert
+`robot_interfaces/msg/NearFieldStatus`. Die Subscription wurde im Kandidaten
+korrigiert und die Regression ergänzt. Erneut bestanden 46 Tests, isolierter
+Build und `git diff --check`.
+
+Mit dem korrigierten Kandidaten wurde der gebundene Bewegungstest einmal
+vollständig ausgeführt. Ergebnis `complete`, mit drei bestätigten Stillständen;
+`/odom` meldete 0,270 m Translation, Motor-Ist-RPM erreichten maximal ±122,
+HWT-Gyro/Encoder/LiDAR/TF/Safety und 140 VL53-Statusframes wurden synchron
+aufgezeichnet. Modbusfehler, verworfene Encoderupdates und Reconnects: 0.
+Private Evidenz liegt unter
+`/home/p/.local/share/amadeus/tests/stage3-hwt601-motion-20260926T105410Z.jsonl`.
+
+Direkt danach schlug die automatisch gestartete Explore-Mission während ihres
+Initialscans mit `initial_scan_no_progress` fehl. Status: 0/3 qualifizierende
+Beobachtungen, 0 Frontierziele, `navigation_dispatched=false`; daher kein
+Nav2-Ziel, keine Hindernisinteraktion und kein Umfahrnachweis. Ein vorheriger
+Versuch war während desselben Initialscans kontrolliert storniert worden.
+Stack wurde mit SIGINT am Launch-PID beendet; Motoren standen auf 0 RPM und
+keine Roboterprozesse/seriellen Handles blieben zurück. Der Diagnoseprozess
+warf beim Shutdown einen `RuntimeError` im rclpy-Nachrichten-Decoding. Dieser
+Shutdown-Befund ist ungeklärt und muss vor einem weiteren Hardwarelauf
+untersucht werden. Aktiver `~/roboter_ws/install` unverändert; kein Merge.
+Stufe 3 bleibt GELB.
+
+**Rückfall:** Vollständig stoppen, Shutdown/Handles bestätigen, neue Shell
+mit bisheriger PR-#100-Installkette bis `we1-stage3-vl53-boot-r1`,
+`use_hwt601_odometry=false`. Vor Neustart genau einen Topic-/TF-Eigentümer
+sicherstellen. Kein Live-Umschalten, kein automatischer Merge. Softwaretests
+und offene Altbefunde sind im [WE-STATUS](wohnungserkundung/STATUS.md) belegt.
+
+## Historisch: isolierter Korrekturstand, reale Umfahrung noch offen (25.09.2026)
+
+PR #100, Branch `fix/we1-stage3-vl53-regression`. Aktiver
+`~/roboter_ws/install` unveraendert. Fuer motorlose Verifikation:
+`/opt/ros/humble`, bestehende WE-Overlays,
+`we1-stage3-frame-gap-r2/install` (VL53),
+`we1-stage3-cancel-latch-r1/install` (Explorer); `robot_navigation`
+weiter aus `we1-stage3-health-CVhWvH/install`. Das lokale, nach dem letzten
+Odometrie-Endpunkt transformierte Scope-Profil ist
+`/home/p/.local/share/amadeus/profiles/stage3-real-20260925-after-r2-scope.yaml`.
+Nicht als neue physische Bereichsfreigabe oder als produktiven Install
+uebernehmen.
+
+Veraendert wurden nur Frame-Read-/Raster-Plausibilitaet und die
+asynchrone Cancel-Ursachenbindung. 971 Tests bestanden; motorlos 44/44
+gesunde Sensortripel, TF maximal 0,053 s, null Fahrbefehle, danach
+korrekter Einzel-PID-Shutdown 24/24 sauber. Der vorangegangene
+Terminal-Gruppenabbruch hatte KeyboardInterrupt-Tracebacks und zaehlt
+nicht. Reale Testspur: sechs Quellen-Cancels, nur 0,1445 m Bewegung,
+kein Vorbeifahren an der Barriere. `child_navigation_canceled`-Race ist
+softwareseitig korrigiert, nicht real belegt. Bei `w=-0,12 rad/s` meldete
+die Encoder-Odometrie zeitweise nur `-0,005...-0,04 rad/s` trotz etwa 34
+Motor-rpm: Antrieb/Encoder/Schlupf vor weiterer Fahrt gezielt pruefen.
+Keine Kalibrier- oder Sicherheitswerte auf Verdacht aendern. Stack aus,
+keine offenen Geraetehandles. Evidenz im [WE-STATUS](wohnungserkundung/STATUS.md).
+Nach einem rein formatierenden Rebuild des Explorer-Overlays versagte ein
+weiterer voller motorloser Start durch VL53-Exit 1 vor ersten Topics;
+Ursache nicht gesichert. Zwei isolierte VL53-Starts und ein weiterer voller
+Start gelangen, aber kein vollstaendiger Preflight des letzten Builds.
+Der genaue Fehler wurde danach im vollen Stack erfasst: rechter
+VL53-MCU-Boot-Poll, `VL53L5CXException: 0`. Separates oberstes Overlay
+`we1-stage3-vl53-boot-r1/install` wiederholt ausschliesslich diesen
+Initialisierungsversuch einmalig und raeumt bei erneutem Fehlschlag auf.
+974 Tests; zwei vollstaendige motorlose Preflights des exakten neuen
+Installstands (58/58 und 57/57 gesunde Tripel, null Fahrbefehle) und je
+24/24 saubere Shutdowns. Die Retry-Verzweigung wurde real nicht getroffen.
+Finaler geraetefreier Prozesspruefer: `frontier_replan`, `local_blocked`,
+echter Nav2-`explorer_bypass` und `stopped_bypass` bestanden, mit
+fortgesetzter Elternmission und maximal einem aktiven Nav2-Kind.
+**Keine Fahrt**, bis die im vorherigen Realversuch gemessene deutliche
+Motor-RPM-/Encoder-Odometrie-Abweichung geklaert und die A/B-Geometrie
+erneut passend vorbereitet ist; die Startkorrektur allein ist kein
+Umfahrnachweis.
+
+## Aktuell: realer Rundblick wegen VL53-Frame-Health beendet (25.09.2026)
+
+Der Nutzer korrigierte die folgende historische Aussage und bestätigte
+Abschaltung und Prüfung vor Ort sowie die Fahrfreigabe. Diese Auskunft ist
+kein ferntechnischer Hardwarebeweis. Exakt derselbe isolierte Health-Install
+und dasselbe Scope-Profil wurden verwendet; kein aktiver Install und keine
+Produktparameter geändert (Repository `3913079`, PR #100).
+
+Vorlauf bestanden: 57 gesunde VL53-Tripel je Seite, TF frisch, alle sechs
+Lifecycles aktiv, gemessene RPM null. Ein autonomer Explorerauftrag startete.
+Nach 13,267 s im Rundblick beide `frame_healthy=false`, Fahrtor `blocked`,
+Wächter-Cancel. Bei 16,082 s gemessene RPM mindestens zwei Sekunden null;
+Shutdown 24/24 sauber. Keine Umfahrung und keine Tests C/D. Ursache des
+beidseitigen Health-Abfalls noch offen; nicht durch gelockerte Grenzwerte
+oder wiederholte Fahrversuche umgehen. Stack bleibt aus. Details/Evidenz:
+[WE-STATUS](wohnungserkundung/STATUS.md).
+
+## Historisch: Sicherheitsstopp nach gegenteiliger Nutzeraussage (25.09.2026)
+
+**Keine weitere reale Fahrt oder Motoraktivierung.** Der Nutzer erklärte
+nach dem unten dokumentierten Teilversuch, am Roboter existiere überhaupt
+kein hardwired Not-Aus und die Motorversorgung könne nicht ausgeschaltet
+werden. Die frühere Vor-Ort-Bestätigung eines erreichbaren Not-Aus ist
+damit widersprüchlich und darf nicht mehr als Sicherheitsnachweis gelten.
+Die 0,18-m-Kurzfahrt bleibt eine technische Beobachtung, **keine gültige
+reale Sicherheitsabnahme**. Software-Cancel und ROS-Shutdown sind kein
+Ersatz für eine unabhängige Abschaltmöglichkeit. Der Stack ist gestoppt;
+kein RS485-Handle ist offen.
+
+Nach dieser Offenlegung nur passive Starts mit `dry_run=true`, RS485 aus,
+null Motorsollwerten. Eine neue 0,75 m hohe, 0,55 m breite Barriere etwa
+0,55 m vor dem Roboter wurde vom LiDAR frontal ab ca. 0,81 m Achsabstand
+gesehen; Nav2 berechnete im geladenen Scope rechts einen Diagnosepfad mit
+106 Posen. 59 gesunde VL53-Teilframes je Seite im Preflight, frische
+TF-/Karten-/LiDAR-Daten und aktive Safety/Nav2. Das ist **keine** reale
+Umfahrung und kein autonomes Explorerziel. Beide Starts endeten mit
+24/24 sauberen Kindern. Keine Produkt-/Sicherheitsparameter und kein
+aktiver Install wurden geändert. Weitere Fahrt erst nach Herstellung
+und Vor-Ort-Nachweis einer unabhängig wirksamen Hardware-Not-Aus- oder
+Motorstromtrennung; neue ausdrückliche Freigabe erst danach relevant.
+Siehe [WE-STATUS](wohnungserkundung/STATUS.md).
+
+## WE-1 Stufe 3: reale Kurzfahrt A, B ohne Route beendet (25.09.2026)
+
+PR #100, Quellstand `a710fe3`, ausschließlich isolierter Install
+`we1-stage3-health-CVhWvH/install`; der aktive Install blieb unverändert.
+Vor Ort wurden Not-Aus, menschen-/tierfreier Bereich und Motorstrom
+bestätigt. Ein lokales Scope-Profil band die frische Startkarte
+(`map`-Pose `(0,0,0)`) an `x=[-0,5;2,6]`, `y=[-0,8;0,8]`. Der
+motorisierte Vorlauf hatte 59 frische gesunde VL53-Tripel je Seite,
+frische LiDAR-/Karten-/TF-/Odom-Quellen, Nav2 und Collision Monitor aktiv,
+Safety frei, RS485 bereit und vor Auftrag 0 Fahr-/Motorwerte.
+
+Test A: Nach autonomer Zielwahl fuhr der Roboter 0,18 m laut Odometrie;
+Test-Cancel, Mission `canceled`, beide Motor-RPM 0 für mindestens 2 s.
+Test B: 0 m Translation, kein Nav2-Pfad. Die Explorer-Policy hatte nach
+Rundblick 10 offene, aber 0 zulässige Aufgaben (`no_current_raw_map_route`
+oder auf aktueller Revision nicht beobachtet). Der separate Wächter
+meldete später `guard_lost`; der Einzelgrund ist nicht gemessen.
+Die reale Barriere war nur 0,40 m hoch und 0,38 m breit, etwa 1 m leicht
+links vor der Ausgangspose: unter der 0,66-m-LiDAR-Ebene und damit kein
+gültiger Aufbau für den vorgesehenen frühen LiDAR-/Nav2-Umfahrnachweis.
+Keine Umfahrung oder Missionsfortsetzung nach Hindernis behaupten.
+C/D nicht gestartet. Kein Produktparameter und keine Sicherheitsgrenze
+geändert, kein Merge. Logs/Wächterbericht lokal unter
+`~/.local/share/amadeus/tests/stage3-real-*`, Scope-Profil unter
+`~/.local/share/amadeus/profiles/stage3-real-20260925-scope.yaml`.
+
+Der Stack ist mit SIGINT **nur an Launch-PID** beendet: 24/24 Kinder
+sauber, kein Traceback, Prozessrest oder offener I²C-/LiDAR-/RS485-Handle.
+**Motorversorgung wird nicht softwareseitig getrennt; nach der späteren
+Nutzeraussage ist physisches Ausschalten derzeit nicht möglich.** Erst die
+oben genannte Hardware-Sicherheitslücke schließen; danach Route/Policy und Wächtergrund
+motorlos diagnostizieren sowie eine mindestens 0,80 m hohe matte
+bleibende Barriere mit gemessenen Passagen vorbereiten. Danach erneuter
+motorloser Check und separate aktuelle Fahrfreigabe; B vor C/D.
+Stufe 3 bleibt GELB. Details im [WE-STATUS](wohnungserkundung/STATUS.md).
+
+## WE-1 Stufe 3: finaler Health-Kandidat motorlos bestanden (25.09.2026)
+
+PR #100, Produktcommit `e18a267`, finaler Gerätefrei-Prüfstand `b692c28`.
+Die aktuelle Produktvorgabe trennt technische Framegesundheit von
+Target-/Spaltenabdeckung. Die unten beschriebenen früheren
+Fahrvertragsblocker sind Historie, nicht der aktuelle Health-Vertrag.
+Gesunde vollständige Teilframes sperren nicht global; unbekannte Zonen
+bleiben ohne Clearingstrahlen. Reale gültige Nahpunkte, Juli-Filter,
+FLIPX, Sensorfrische und sämtliche Fahr-/Kollisionsgrenzen unverändert.
+
+**Ausschließlich isolierter Install, kein aktiver Install überschrieben:**
+`/home/p/.local/share/amadeus/releases/we1-stage3-health-CVhWvH/install`.
+Enthält gemeinsam neu gebaut `robot_interfaces`, `vl53_near_field`,
+`robot_navigation`, `explore`, `safety_monitor`; Quell-/Install-SHA und
+VL53-/Nav2-Konfiguration stimmen überein. Statusformat enthält nun
+`left_frame_healthy`/`right_frame_healthy`; keine alten Consumer mischen.
+Die reale Prozessauflösung bestätigte diese fünf Pakete, Stage-3-complete
+für Basis/Manager und Stufe 1 für Bring-up. Vollständige Overlaykette im
+maßgeblichen [WE-STATUS](wohnungserkundung/STATUS.md).
+
+Mit unverändert physisch getrennter Motorversorgung zweimal gestartet:
+
+```bash
+source /home/p/.local/share/amadeus/releases/we1-stage3-health-CVhWvH/install/setup.bash
+export ROS_DOMAIN_ID=217
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI=file:///home/p/.local/share/amadeus/releases/we1-10e1858074e7-r1/cyclonedds-local.xml
+unset ROS_LOCALHOST_ONLY
+ros2 launch robot_bringup app_mapping.launch.py active_drive:=false enable_auto_explore:=false start_web_gui:=false
+```
+
+Keine Action gesendet, kein Nichtnull-Fahrbefehl. Je ca. 15 s: 59/56
+stempelgleiche frische VL53-Tripel, beide Health true/PARTIAL/Maske 0;
+installierte Health-Prüfung auf realen Daten positiv. Kartenmanager ok,
+LiDAR/Karte/Odom/TF frisch (maximales TF-Alter 0,034 s), alle fünf
+Nav2-Lifecycles und Collision Monitor active, Safety false. Basis
+`dry_run=true`, `allow_rs485=false`, `rs485_ready=false`, alle Sollwerte 0.
+Jeweils 24/24 Kinder sauber nach SIGINT **nur an Launch-PID**, kein
+Traceback/Restprozess/offener Gerätehandle. Prüfberichte nur lokal unter
+`~/.local/share/amadeus/tests/stage3-health-hardware-cycle{1,2}.{json,log}`.
+
+Dieser passive Test ließ Explore-Opt-in und Scope-Verifikation bewusst
+aus; der alte R9-Scope ist nach Kartenneustart nicht gültig. Vor Fahrt
+vermessenen markierten Bereich/Startpose an aktuelle Karte binden und
+gesonderte aktuelle Fahrfreigabe einholen. Konkreter Vorschlag im
+WE-STATUS: 4,70 × 2,50 m, hohe unbelebte bleibende Barriere, separate
+Stopp-/Wand-/Eckaufstellung, begrenzte Mission und klare Abbruchbedingungen.
+Noch **keine reale Umfahr-/Stoppbefreiungsabnahme**, Stufe 3 insgesamt GELB.
+Motorloser Check bestanden; weitere Softwareentwicklung hier beendet.
+Rückfall: komplettes neues Overlay nicht sourcen; vorheriger Stand sperrt
+weiter streng. Das verworfene `we1-stage3-vl53-partial-PiRlgn` nicht nutzen.
+
+## Historie: realer VL53-A/B-Test, passive Zielsystemwiederholung (25.09.2026)
+
+Die echte matte Platte (~1 × 1 m, ~0,40 m vor beiden VL53) ergab links und
+rechts je 30/30 vollständige Rohframes mit 64/64 gültigen Targets,
+`target_status=5`, `nb_target_detected=1`, kleinen Sigma-Werten und je
+64 Original- sowie 8 Costmap-Punkten. Nach Entfernen der Platte lieferten
+dieselben Sensoren/Konfigurationen je 30 vollständige Frames, aber nur
+2–6 gültige Fernreturns pro Frame in der untersten Sensorzeile, 0 volle
+Spalten, `QUALITY_PARTIAL` und leere Nahwolken. Die Hardware ist damit
+plausibel; die neue globale 64/64-Forderung ist für freie Szenen nicht
+praktikabel und nicht real fahrabgenommen. Einzelne fehlende Targets
+bleiben **unbekannt**, niemals pauschal 0,60 m frei. Rohframes und
+Auswertung sind nur lokal unter
+`/home/p/.local/share/amadeus/tests/we-stage3-vl53-ab-20260925.json`.
+
+Das ausschließlich isolierte Präfix
+`/home/p/.local/share/amadeus/releases/we1-stage3-vl53-partial-PiRlgn/install`
+enthält eine **verworfene** pauschale `PARTIAL`-Freigabe im Explorer/Fahrtor.
+Sie bestand gerätefreie Prozessfälle, besitzt aber keinen positiven
+Bewegungsraumbeleg; **nicht für Fahrt oder künftige Freigabe sourcen**.
+Der Quellbranch/PR #100 enthält diese Änderung nicht. Sein marking-only-
+ObstacleLayer-Fix ist davon unabhängig. Der aktive Roboter-Install und alle
+Fahr-/Sensorgrenzen blieben unangetastet.
+
+Mit physisch getrennter Motorversorgung wurden zwei vollständige passive
+Starts über das isolierte Präfix geprüft: beide VL53, LiDAR, TF, Rohkarte,
+Kartenmanager, Safety, Collision Monitor und Nav2 waren frisch/aktiv;
+`active_drive=false`, Explore-Opt-in aus, `dry_run=true`, RS485 aus,
+alle Fahr- und Motorsollwerte null. Je Start 24/24 saubere Kinder beim
+Einzel-PID-SIGINT, keine Tracebacks, Restprozesse oder Gerätehandles.
+Danach bestanden auch **zwei Starts ohne das verworfene Präfix** auf dem
+strengen PR-#100-Stand mit Explorer-Shutdown- und marking-only-Overlay:
+beide VL53 `PARTIAL`/Maske 0, Safety aus, Collision Monitor/Nav2 aktiv,
+acht Fahrbefehlskanäle ohne Nichtnullwert, Basis Dry-run/RS485 aus und
+jeweils 24/24 saubere Kinder ohne Rest-Handle. Der normale freie Raum
+bleibt mit diesem Stand am Fahrtor gesperrt, wie beabsichtigt.
+Der vorhandene R9-Scope ist nach SLAM-Neustart nicht mehr gültig und wurde
+deshalb nicht geladen; der Explorer meldete `scope_verified=false`.
+Der vollständige motorlose *Fahrbereitschafts*-Nachweis bleibt offen:
+Vor Fahrplanung sind aktueller Kartenframe/Startpose/enger Scope und ein
+positiver Beleg für den tatsächlich nötigen niedrigen und seitlichen
+Fahrraum erforderlich. LiDAR bei 0,66 m und im WE-Launch deaktivierte OAK
+ersetzen die unbekannten VL53-Zonen nicht. Keine reale Fahrt ohne gesonderte
+Vor-Ort-Fahrfreigabe. Rückfall für das Testpräfix: nicht sourcen.
+
+## WE-1 Stufe 3: VL53-Regression, Teilframe-Markierung (24.09.2026)
+
+Der neue, ausschließlich motorlose Direktlauf las je 20 vollständige
+Rohframes aus beiden echten VL53. Derselbe lokale Frame-Satz ergab mit dem
+historischen Nahfilter 0 Hindernispunkte im freien Nahbereich; die heutige
+Qualitätsauswertung fand je 220 gültige Fern-Zonen, aber 0 volle Spalten.
+Eine komplette Rohdatennachricht ist somit nicht gleich 64 gültigen
+Target-Returns. Die überwiegend unbeobachteten Zonen dürfen nicht als frei
+gelten. Eine große, matte unbelebte Testfläche im Sichtfeld beider Sensoren
+wurde noch nicht vermessen; die Hindernis-A/B-Prüfung fehlt.
+
+Ein separater Kandidatenbranch ergänzt die bestehende VL53-Originalwolke
+als **marking-only**-Quelle in beiden Nav2-ObstacleLayern. Dadurch kann ein
+gültiger Nahpunkt aus einem Teilframe ein Hindernis markieren; er kann keine
+unbekannten Zellen räumen. `robot_navigation` liegt nur im isolierten Overlay
+`/home/p/.local/share/amadeus/releases/we1-stage3-vl53-mark-bwVxEL/install`;
+der aktive Roboter-Install blieb unberührt. 969 Vertragstests und vier
+gerätefreie echte Nav2-Stage-3-Prozessfälle bestanden, darunter dauerhafte
+Umfahrung mit Explorer-Folgefortschritt und Stopp/Befreiung. Das Fahrtor
+bleibt wegen der nicht belegten Bewegungsraumabdeckung gesperrt. Rückfall:
+dieses letzte Overlay nicht sourcen. Keine reale Fahrt freigeben, bevor
+Sensorabdeckung, aktueller Scope und vollständiger motorloser Preflight
+positiv nachgewiesen sind.
+
+## WE-1 Stufe 3: motorloser Zielsystembefund, Fahrt gesperrt (24.09.2026)
+
+Nach ausdrücklicher Vor-Ort-Freigabe wurde der vorhandene Stufe-3-Kandidat
+mit realen Sensoren, aber `active_drive=false`, `enable_auto_explore=false`
+und physisch getrennter Motorversorgung gestartet. Die Stufe-3-Pakete lösten
+aus `we1-stage3-complete-1kI6en` auf, LiDAR-Bring-up und `robot_bringup` aus
+Stufe 1. Nach einem nachgewiesenen Explorer-SIGINT-Race wurde **nur** das
+separate `explore`-Overlay
+`/home/p/.local/share/amadeus/releases/we1-stage3-explorer-shutdown-dnrGyH/install`
+zuletzt gesourct (Quellcommit `0fe9245`, gleiche Quell-/Install-SHA). Zwei
+vollständige Wiederholungsstarts endeten mit je 24/24 sauberen Kindern,
+ohne Restprozess oder Gerätehandle. Der aktive Robot-Install blieb unberührt.
+
+**Fahrblocker:** Beide realen VL53 sind zwar frisch (~3,6 Hz), aber im
+aktuellen freien Raum in sämtlichen Stichproben nur `QUALITY_PARTIAL` mit
+Spaltenmaske `0/255`. Der separate Rohdatenlauf ergab links 223/1280 und
+rechts 233/1280 gültige Zonen, beidseits 0/160 volle Spalten, vorwiegend
+Status 255/kein Ziel. Der 64/64-Vertrag und damit das Fahrtor sind nicht
+erfüllt; das ist keine Erlaubnis, ihn oder andere Sicherheitsgrenzen zu
+lockern. LiDAR, Karte, TF, Kartenmanager und Nav2 waren passiv frisch,
+Fahrkanäle und Motor-Sollwerte null. Das geladene R9-Profil trägt noch das
+alte `scope_verified=true`, hat aber keine neue physische Bindung an den
+aktuellen SLAM-Frame. Kein Realversuch und keine Fahrfreigabe. Für eine
+erneute Prüfung eine motorlose, vor Ort kontrollierte VL53-Szene mit
+nachgewiesenen Rückgaben beider 8×8-Raster sowie die aktuelle Startpose und
+Scope-Grenze im neuen Kartenframe messen; erst danach einen eng begrenzten
+Umfahr-/Stoppbefreiungsaufbau festlegen und gesondert zur Fahrt freigeben
+lassen. Keine reale Wohnungsgeometrie ins Repository übernehmen.
+
+**Rückfall:** Das neue `explore`-Overlay weglassen, aber das ältere
+Kandidatenpräfix wegen seines Egg-Links nicht als eingefrorenen Rollback
+ansehen. Der vor `0fe9245` geprüfte Quellstand hatte den dokumentierten
+Shutdown-Race; die reale Sensorqualität sperrt beide Varianten für Fahrten.
+
+## WE-1 Stufe 3: neuer isolierter Softwarekandidat, nicht deployt (24.09.2026)
+
+Ausgangsstand PR #99, Branch `feature/we1-stufe3-local-recovery`,
+`2914279`; Softwarecommits `785b825`, `e3d7352`, `aa699b0`.
+Der neu gebaute Kandidat liegt nur unter
+`/home/p/.local/share/amadeus/releases/we1-stage3-complete-1kI6en/install`.
+Reihenfolge: `/opt/ros/humble` →
+`/home/p/amadeus_slam_toolbox_ws/install` →
+`we1-ldlidar-shutdown-overlay` → `we1-10e1858074e7-r1` →
+`we1-stage1-5e3fe0a-20260923` → `we1-stage2-6fd36d5-20260923` →
+`we1-stage3-bypass-s8QMY8` → diesen Kandidaten. Die neun Pakete
+`robot_interfaces`, `vl53_near_field`, `robot_navigation`, `explore`,
+`robot_map_manager`, `safety_monitor`, `mission_manager`, `bt_orchestrator`
+und `base_hardware` wurden neu gebaut und lösen aus diesem Präfix auf.
+Die Python-Pakete `explore` und `robot_navigation` sind in diesem isolierten
+Kandidaten per Egg-Link auf den zugehörigen Build gebunden; Source-/Build-
+Hashes stimmen überein. Dieses Entwicklungspräfix nicht blind als
+unabhängig kopierbares Deployment-Image behandeln.
+`bt_orchestrator` benötigte für den Build den vorhandenen separaten
+`behaviortree_cpp`-CMake-Underlay unter
+`we1-10e1858074e7-r1/underlay/behaviortree_cpp`; der erste Lauf ohne
+diesen Pfad scheiterte. Das ist kein Robot-Deployment.
+
+**Jetson-Wirkung bei einer künftigen bewussten Übernahme:** Die additive
+`NearFieldStatus`-Schnittstelle verlangt kohärenten Neubau/Start von
+Produzent und sämtlichen Verbrauchern. Ein alter Publisher meldet Qualität
+0 und sperrt Fahrtor/Explorer; bei aktiviertem optionalem VL53-Safety-Notstopp
+bleibt auch dieser gesetzt. Gültige Fernmessung kann eine leere Originalwolke
+haben, aber nur mit gemessenem Status 5, Zielanzahl, Sigma, plausiblem
+Messwert, Vollabdeckung und gleichem Stempel. Die Costmap bekommt keine
+Räumstrahlen aus unbeobachteten Spalten. Safety-Timeout 0,8 s ist neu
+streng, nicht gelockert. Nav2 `nav2_params_real.yaml` verfolgt im Kandidaten
+0,40 m statt 0,80 m voraus und dreht ab 0,35 rad statt des RPP-Defaults;
+Footprint, Padding, Collision Monitor und Geschwindigkeiten sind unverändert.
+Das Fahrtor verlangt nun zusätzlich `/safety/estop=false` mit Empfangsalter
+höchstens 1,0 s und frisches Basis-/Karten-TF (0,2/0,8 s). Ein allein
+gestartetes `nav_real.launch.py` ohne Safety-Publisher bleibt daher bewusst
+gesperrt. Der normale `robot.launch.py`- und WE-Mapping-Start enthält den
+Safety-Monitor; trotzdem sind tatsächliche TF- und Statusfrequenzen motorlos
+zu messen, bevor dieser Kandidat die aktive Hardwarekette ersetzen dürfte.
+
+Der gerätefreie frühe **und** späte dauerhafte Umfahrfall A→B bestanden
+auf dem finalen Kandidaten mit echter Nav2-Kette, automatischer Explorerwahl,
+nachgewiesenem Kartenfortschritt und weiterlaufender Elternmission. Im
+späten Fall wurde ein notwendiger Controller-Stopp vor der unverändert
+stehenden Barriere gemessen; die frühere B-Stornierung wurde als Folge von
+Frische-/Karten-Duplikat-Races getrennt behoben. Sensor-, Software-Not-Aus-
+und TF-Ausfälle endeten gerätefrei hart ohne Wiederanfahrt. Ein Software-
+Not-Aus-Diagnoselauf überschritt die anfängliche 25-mm-Prüfergrenze mit
+26,3 mm; die nachgelagerte unveränderte Velocity-Smoother-Rampe erklärte
+den Restweg. Der korrigierte gerätefreie Prüfer misst Gate-/Ausgangs-
+Nullzeit und einen aus der bestehenden Verzögerung abgeleiteten 40-mm-
+Diagnoserahmen; er ist **kein** Hardware-Not-Aus- oder Bremswegbeleg.
+Die ungeprüfte
+reale Sensor-/TF-Verfügbarkeit hält Stufe 3 **insgesamt** offen. Zwei
+Einzel-PID-SIGINTs während eines Karten-Saves endeten sauber mit erhaltenen
+Dateien; der historische `take_message()`-Zeitpunkt wurde nicht gezielt
+getroffen. Kein Zielgerät, kein Gerät, kein Motor und keine echte Karte wurden
+hierfür berührt. Details/Evidenzpfade stehen im maßgeblichen WE-STATUS.
+
+**Vor Ort noch erforderlich:** Startpose und aktueller Kartenframe/Scope,
+Hinderniskontur, lichte Umfahrbreiten, freier Schwenkraum, Auslauf,
+Hardware-Not-Aus, passive VL53-Qualitätsverteilung beider Seiten,
+motorloser Gesamtstart/-stopp. Insbesondere die reale VL53-64/64-Qualität
+und die `map→odom`-/`odom→base_link`-Publikationsrate gegen die neuen
+Gate-Grenzen prüfen. Erst danach und mit neuer konkreter
+Vor-Ort-Freigabe ein begrenzter Realversuch. Der frühere enge Scope ohne
+Frontierziel darf nicht zum Umfahrtest erweitert oder geraten werden.
+
+**Rückfall:** Dieses Präfix in einer frischen Shell weglassen. Aktiver
+Jetson-Install, bisherige Overlays und Wohnungsdaten bleiben unverändert.
+
+## WE-1 Stufe 3: permanente Umfahrung softwaregeprüft, reale Übernahme offen (23.09.2026)
+
+Produktionsquellstand `90379d9`, Prozessprüfer `d13a6c9` auf
+`feature/we1-stufe3-local-recovery`, PR #99 weiterhin
+offen. Das neue **nur gerätefrei verwendete** Install liegt unter
+`/home/p/.local/share/amadeus/releases/we1-stage3-bypass-s8QMY8/install`.
+Sourcereihenfolge: ROS Humble → bestätigte Stufe-1-Kette → Stufe 2 → dieses
+Präfix. `ros2 pkg prefix explore` und Dateivergleich belegen das neue Paket;
+Quell-/Install-SHA von `explore_node.py` jeweils
+`485435a0effe6c32efd74da4995a92584d6b01dff255f2010c6e003327fb8fe0`.
+Alle übrigen Pakete kommen aus den bisherigen Underlays; Nav2- und
+Collision-Monitor-Konfiguration wurden bytegleich mit Stufe 1 verglichen.
+Keine Roboterinstallation, kein reales Profil und kein Gerät wurden geändert.
+
+Die echte Nav2-Kette in DDS 219 umfuhr eine stehenbleibende synthetische
+Barriere mit automatisch gewähltem Explorerziel. Danach bestätigte eine neue
+Rohkarte den Frontierabschluss, ein anderer automatisch gewählter Auftrag
+wurde erfolgreich abgearbeitet und dieselbe Elternmission blieb aktiv.
+Live-Footprint, geplante/virtuell gefahrene Kontur, Ausgänge der Schutzkette,
+maximal ein Kindziel und 0 m Rückwärtsfahrt wurden überprüft. Das ist ein
+Softwarebeleg, keine physische Probefahrt. Der unlösbare Gegenfall blieb ohne
+Kindziel/Bewegung und endete mit erklärtem Teilstand.
+
+**Vor realer Übernahme weiterhin offen:**
+
+- Notwendiger Stopp mit anschließender Befreiung: frischer NavFn-Umweg
+  vorhanden, Regler stoppt aber wegen vorausberechneter Costmap-Kollision.
+  Keine Regler-/Sicherheitsgrenze versuchsweise ändern.
+- Leere VL53-Originalwolken belegen Empfang, aber keine Messgesundheit.
+  Gültige Fernmessung und ungültige Messung sind im heutigen Statusvertrag
+  ununterscheidbar. Der Explorer sperrt dann lokale Recovery. Ein eindeutiger
+  Sensorstempel-/Gültigkeitsvertrag mit den Verbrauchern ist gesondert nötig;
+  insbesondere ist der bisherige Fahrtor-Heartbeat kein Qualitätsnachweis.
+- Den bekannten Kartenmanager-SIGINT-Race klären und anschließend einen
+  geeigneten motorlosen Gesamtstart/-stopp nachweisen. Dieser Folgeauftrag
+  enthält keine Erlaubnis für Hardwarezugriff.
+- Aktuelle Startpose/Orientierung, Barrierenkontur, lichte Alternativbreiten,
+  freier Schwenkbereich und Auslauf vor Ort messen und an den aktuellen
+  Kartenframe/Scope binden. Keine synthetischen Maße als reale Freigabe nutzen.
+  Eine reale Fahrt braucht danach die aktuelle ausdrückliche Vor-Ort-Freigabe.
+
+Details, feste Diagnosegeometrie und konkrete Testgrenzen stehen ausschließlich
+im laufenden WE-STATUS. **Rückfall:** Neues Präfix weglassen; das vorherige
+isolierte Install und der aktive Roboterstand sind unverändert vorhanden.
+
+## WE-1 Stufe 3: neues gerätefreies Nav2-Overlay, nicht auf Antrieb übernehmen (23.09.2026)
+
+Das zusätzliche Stage-3-`explore`-Install
+`/home/p/.local/share/amadeus/releases/we1-stage3-routeblock-20260923/install`
+liegt **nur isoliert** vor und wurde nicht in den aktiven Roboterstart
+übernommen. Quell- und Installdatei `explore_node.py` wurden per SHA-256
+verglichen (beide
+`be6c8f7da787fa51a57a9bebf87cf0ee1e440a049be57f3eef7af897b6c9c6ef`).
+Die Reihenfolge ist ROS Humble → bestätigte Stufe-1-Kette →
+Stufe 2 → dieses Stage-3-Overlay; die Nav2-/Collision-Konfiguration kommt
+unverändert aus Stufe 1. Der neue Prüfer in DDS-Domain 219 startet keinen
+Hardwaretreiber und sendet keine Motorregister. Er belegte zweimal mit
+echtem Nav2, Fahrtor und Collision Monitor: Hindernis → Stopp → freie
+Sensorstrecke → weitere virtuelle Fahrt → Zielerfolg → Rohkartenfortschritt
+→ nächstes Frontierziel. Bei dauerhaftem Hindernis verhinderte die neue
+enge Nahkorridor-Klassifikation den zuvor beobachteten sofortigen
+`SYSTEM_FAILURE` nach einem zweiten Nav2-Abbruch. Ein echter sicherer
+Umweg blieb in zwei synthetischen Positionen aus. Eine zurückgestellte
+Aufgabe bleibt bei weiter belegtem Zielkorridor auch nach neuer Costmap
+gesperrt; der gerätefreie Gegenlauf blieb nach drei begrenzten Kindzielen
+ohne Bewegung stehen und wartete auf eine sichere Alternative.
+
+**Keine reale Fahrt daraus ableiten:** Der letzte motorlose reale WE-Vorlauf
+hatte kein gültiges Ziel im engen Scope; das links stehende Hindernis löste
+nur Slowdown, keinen Stopp aus. Der einmal beobachtete Kartenmanager-
+Shutdown-Race ist weiterhin offen. Vor einem Fahrversuch müssen diese drei
+Punkte motorlos geklärt sein; das Fahrtor und die Sicherheitsgrenzen bleiben
+unverändert. Rückfallweg: neues Stage-3-Präfix nicht sourcen, stattdessen
+das vorherige isolierte Stage-3-Kandidatenpräfix verwenden; kein automatischer
+Merge oder Deploy.
+
+## WE-1 Stufe 3: lokale Hindernisbehandlung nur teilweise belegt (23.09.2026)
+
+**Neues physisches Hindernis links (23.09. abends), nur motorlos:** Der linke
+VL53 erkannte wiederholt ~0,24–0,25 m, der rechte keinen Nahpunkt. Bei
+`dry_run=true`/`allow_rs485=false` ließ der bestehende WE-Collision-Monitor
+einen synthetischen Vorwärtswunsch von 0,08 m/s nur mit höchstens 0,024 m/s
+durch (SlowZone), nicht mit null. Das Mapping-Profil besitzt eine
+bewegungsabhängige Footprint-Approach-Zone; die ältere starre StopZone darf
+hier nicht unterstellt werden. Kein Motorstrom, keine reale Bewegung und kein
+Recovery-Nachweis. Den aus Dry-run resultierenden Odometrie-/Kartenstand nicht
+für eine Fahrt weiterverwenden.
+
+Der anschließende Einzel-SIGINT erzeugte bei `robot_map_manager` einen
+`take_message()`-RuntimeError und Exit 1; alle anderen Kinder stoppten sauber,
+alle Gerätehandles waren danach frei. Dieser Shutdown ist **nicht** als
+Stufe-1-artig sauber abzunehmen. Vor einer realen Fahrt den Race klären,
+frischen motorlosen Preflight mit überprüftem Fahrziel durchführen und das
+Hindernis nur in einer nachweislich sicheren Testanordnung verwenden. Keine
+Schwellen, Footprints oder Fahrtore abschwächen.
+Ein unmittelbar folgender motorloser Wiederholungslauf ohne synthetischen
+Fahrwunsch sah denselben linken Nahpunkt und stoppte alle 24 Kinder sauber,
+ohne Traceback oder offene Gerätehandles. Der erste Race bleibt ungeklärt;
+der zweite Lauf beweist nur, dass er nicht bei jedem Stopp auftritt.
+
+**Nachtrag nach Vor-Ort-Freigabe (23.09.):** Auf dem Jetson bestand ein erneuter
+passiver WE-Preflight mit Stufe-3-Explorer aus dem isolierten Präfix und allen
+anderen WE-Paketen aus der bestätigten Stufe-1/2-Kette. Der Stack lief mit
+`active_drive:=false`, realen LiDAR-/VL53-Daten, aktivem Collision Monitor und
+Nav2, frischer Rohkarte/TF/Safety und Basiswerten durchgehend null. Ein
+einziger SIGINT beendete 24 Kinder sauber; Gerätehandles waren danach frei.
+Es wurde kein Fahrbefehl gesendet. Für einen Hindernisversuch sind Startpose,
+unbelebte Barriere und sicherer Auslauf noch nicht benannt. Eine gewünschte
+freie Kurzfahrt ohne Barriere ist nur ein Basis-/Fahrkettencheck, kein
+Stufe-3-Nachweis und braucht eine eigene enge Bewegungsgrenze.
+Für den später gewünschten freien Kurztest kam ein weiterer Blocker hinzu:
+Das lokale R9-WE-Profil untersagt selbst die Wiederverwendung seiner
+Scope-Koordinaten nach SLAM-Neustart. Der passive Vorlauf startete SLAM neu;
+Profil-Hashgleichheit ist daher keine gültige physische Scope-Bindung. Vor
+einer WE-Fahrt den begrenzten Raum im aktuellen Kartenframe neu messen und
+von der anwesenden Person bestätigen lassen. Bis dahin Motoren auslassen;
+keine Sicherheitsschwelle ändern oder das Fahrtor umgehen.
+
+Nach Vor-Ort-Bestätigung des einzelnen Raums und geschlossener Ausgänge wurde
+ein neues lokales Einmalprofil für einen eng begrenzten, vorwärtsgerichteten
+Ein-Ziel-Test im neuen Kartenframe erstellt (Profilpfad und Hash stehen im
+WE-Status). Der echte WE-/Nav2-Gesamtprozess wurde damit **nur motorlos**
+gestartet: Karte/TF/LiDAR/VL53/Safety waren frisch, Basis `dry_run=true`,
+`allow_rs485=false`; der Explorer fand bis zum 75-s-Gesamtbudget kein gültiges
+Ziel. Kein Nav2-Fahrkommando, keine Odometriebewegung, danach sauberer Stopp
+und freie Gerätehandles. Der Versuch darf nicht scharf wiederholt werden, nur
+um ein Ziel zu erzwingen. Erst eine neu vor Ort vermessene Kurzroute und ihr
+motorloser Scope-/Nav2-Nachweis erlauben eine reale Probefahrt.
+
+**Ausgangsstand:** bestätigter Stufe-2-Branch bei `3fa3ce6` auf der
+Stufe-1-Overlaykette mit Stufe-2-`explore` als letztem Präfix. Der neue
+Themenbranch `feature/we1-stufe3-local-recovery` bei Produktionscommit
+`d6c6fa9` (Review-PR #99, nicht gemergt) ändert nur Explorer-Code, sein
+Profil, Tests und den vorhandenen Prozessprüfer. Der produktive
+Roboterstand und die lokale Standardinstallation wurden nicht verändert.
+Der einzige neue Build ist das isolierte Präfix
+`~/.local/share/amadeus/releases/we1-stage3-candidate-20260923/install`;
+es wurde testweise **nach** dem Stage-2-Präfix gesourct.
+`ros2 pkg prefix explore`, Python-Import und Quell-/Install-Hash ordneten den
+Explorer diesem Präfix zu.
+
+Der Explorer stuft ein terminales Frontier-`ABORTED` nur bei frischer
+Costmap-Hindernisevidenz, gestoppter Odometrie, frischem map-TF, LiDAR, beiden
+VL53-Streams und freiem Not-Aus als `LOCAL_BLOCKED` ein. Andernfalls bleibt
+es ein Systemfehler. Eine blockierte Aufgabe wird begrenzt zurückgestellt;
+ein anderes geprüftes Ziel kann übernommen werden, das erste erst nach
+frischer, unprojiziert freier Costmap erneut. Nav2-/Collision-Monitor-
+Parameter, Footprint, Padding und Scope wurden nicht geändert; Spin und
+BackUp bleiben vom Fahrpfad getrennt.
+
+902 Explorer-Pytests und der achtteilige gerätefreie Gesamtprozessprüfer aus
+dem Quellbaum sowie gegen das isolierte Install bestanden. Der Prüfer mit
+Fake-Nav2 belegt Elternfortsetzung nach lokalem Kindabbruch und kontrolliertes
+Warten ohne Ausweg, **nicht** die
+sichere Bewegung des realen Controllers. Sein DDS-Bereich ist vom Roboterdomain
+getrennt; alle synthetischen Sensoren haben eigene Testtopics. Beim damaligen
+Prüflauf war der R9-Befund links (~0,24 m) noch offen; eine Motorfreigabe,
+Gerätezugriff oder Fahrbefehl fand dabei nicht statt. Die inzwischen
+vorliegende Vor-Ort-Bestätigung und der passive Vorlauf oben ersetzen keinen
+produktionsnahen Hindernis-/Collision-Monitor-Nachweis. Bis der begrenzte
+Testaufbau festgelegt und motorlos überprüft ist, darf die Stage-3-Installation
+nicht als Fahrprofil verwendet werden.
+
+**Rückfall:** Stufe-3-Präfix in einer neuen Shell auslassen; die bestätigte
+Stufe-1/2-Kette bleibt unverändert. Es ist nichts auf dem Jetson zu entfernen
+oder zurückzukopieren.
+
+---
+
+## WE-1 Stufe 2: gerätefreie Frontierfortsetzung (23.09.2026)
+
+**Basis:** bestätigter Stufe-1-Stand `5e3fe0a` mit dessen unveränderter
+Overlaykette. Der Stufe-2-Branch `feature/we1-stufe2-replan-fortsetzung`
+ergänzt nur `explore` aus Produktionscommit `6fd36d5`. Isoliertes Install:
+`~/.local/share/amadeus/releases/we1-stage2-6fd36d5-20260923/install`.
+Es wird **nach** dem Stufe-1-Präfix gesourct; alle anderen Pakete bleiben auf
+ihrem in Stufe 1 bestimmten Präfix. `ros2 pkg prefix explore`, Python-Import
+und Dateihash bestätigten genau dieses neue Install. Weder die Standardkopie
+`/home/p/roboter_ws/install` noch ein aktiver Roboterdienst wurden ersetzt.
+
+Die neue gerätefreie Prozessprüfung hält Ziel A auf einer sicheren neuen
+Kartenrevision und auf einem reinen Zeitstempelduplikat aktiv. Wenn A durch
+eine echte belegte Zelle ungültig wird, folgt auf bestätigten Kindziel-Cancel
+automatisch Ziel B. B wird erfolgreich verarbeitet und seine Frontieraufgabe
+auf einer folgenden Karte abgeschlossen. Maximal ein Nav2-Kindziel war aktiv;
+`max_frontier_goals=1` im Test beweist, dass der A-Quellenstopp das
+Navigationsbudget nicht verbraucht. Ohne neue gültige Quelle erfolgt kein
+zweiter Versand und das Elternzeitbudget beendet den Auftrag kontrolliert.
+Der bestehende Sechs-Szenarien-Gesamtprozessprüfer bestand sowohl aus der
+Quelle als auch gegen das installierte Overlay; 893 Explorer-Pytests bestanden
+ebenfalls. Ein erster Install-Gesamtlauf hatte einen einmaligen Timeout im
+älteren Wiederaufnahmefall, der isoliert und im vollständigen Wiederholungslauf
+bestand. Die Ursache dieser Test-Zeitstreuung ist offen. Alle Prüfungen liefen
+ohne Gerätezugriff, Motorfreigabe oder Fahrbefehl.
+
+**Keine Fahrfreigabe:** Das ist kein realer Sensor-, Nav2- oder
+Hindernis-Recovery-Test. Der linke VL53-Nahbereichsbefund aus R9 bleibt
+ungeklärt. Vor einer neuen Fahrt sind Sichtprüfung oder unbestromtes
+Zurücksetzen auf eine vermessene freie Pose, erreichbarer hardwired Not-Aus,
+vollständiger neuer Preflight und eine neue ausdrückliche Freigabe nötig.
+Weder Scope noch Collision-, Footprint-, Frische- oder Sensorgrenzen wurden
+gelockert. Stufe 3 wurde nicht begonnen.
+
+**Rückfall:** Frische Shell öffnen und das Stufe-2-Präfix nicht sourcen.
+Stufe 1 bleibt unverändert; keine Geräte- oder Installationsdatei muss
+zurückkopiert werden. Den älteren Explorer wegen der dokumentierten
+Wiedervergabe eines erreichten Frontierziels nicht als Fahrkandidaten nutzen.
+
+---
+
+## WE-1 Stufe 1: reproduzierbarer motorloser Zielstand (23.09.2026)
+
+**Geprüfter Runtime-Code:**
+`5e3fe0a084b9b46809e25715d8bdca4c7bd408a4` aus PR #96 auf dem
+Stufe-1-Themenbranch `fix/we1-stufe1-runtimeinventur`; dessen Dokumentation
+steht als PR #97 zur Review. Der neue isolierte
+Merge-Install liegt unter
+`~/.local/share/amadeus/releases/we1-stage1-5e3fe0a-20260923/install`.
+Weder `/home/p/roboter_ws/install` noch die dortige schmutzige Arbeitskopie
+wurden verändert oder als gleichwertig behauptet.
+
+Die geprüfte Shell-Reihenfolge ist:
+
+```bash
+source /opt/ros/humble/setup.bash
+source /home/p/amadeus_slam_toolbox_ws/install/setup.bash
+source ~/.local/share/amadeus/releases/we1-ldlidar-shutdown-overlay/install/local_setup.bash
+source ~/.local/share/amadeus/releases/we1-10e1858074e7-r1/install/local_setup.bash
+source ~/.local/share/amadeus/releases/we1-stage1-5e3fe0a-20260923/install/local_setup.bash
+```
+
+Danach lösen `amadeus_lidar_bringup`, `base_hardware`, `explore`,
+`mission_manager`, `robot_bringup`, `robot_map_manager`, `robot_navigation`,
+`safety_monitor`, `semantic_map_manager` und `vl53_near_field` aus dem neuen
+Stufe-1-Präfix auf. Das sind genau alle unter `src/` seit dem Vollrelease
+`10e1858` geänderten Pakete. Unveränderte Projektabhängigkeiten kommen aus dem
+commitgebundenen Vollrelease; der LiDAR-Treiber kommt aus dem gepatchten
+Close-after-join-Overlay, `slam_toolbox` aus seinem vorhandenen gepatchten
+Arbeitspräfix. Das alte `we1-r8-scope-overlay` nicht für Stufe 1 sourcen: Es ist
+ein historischer Mischstand und enthält insbesondere kein neu gebautes
+`robot_navigation`.
+
+Das verwendete lokale Profil ist
+`~/.local/share/amadeus/profiles/we1-two-rooms-hall-r9-20260922.yaml`, SHA-256
+`e03495cebfc22dc7d9858cb8893660b83134cf4b6121db64ee49673d0688083f`.
+Seine reale Geometrie bleibt lokal. Die beiden Abnahmezyklen wurden mit
+`active_drive:=false`, Domain 217 und der Loopback-CycloneDDS-Konfiguration des
+Vollreleases gestartet. Keine Missions- oder Navigationsaction wurde gesendet.
+
+Beide Zyklen bestätigten aktive Nav2- und Collision-Lifecycles, vollständige
+TF-Ketten, etwa 10 Hz LiDAR, 1 Hz frische Rohkarte, je etwa 4 Hz für beide
+VL53, frischen Kartenmanager- und Explorerstatus sowie Safety `false`.
+`base_hardware` meldete durchgehend `dry_run=true`, `allow_rs485=false`,
+`rs485_ready=false` und null Motorwerte. In den Beobachtungsfenstern gab es
+null Nav2-Ziele und null nichtnullige Fahrbefehle. Beide Einzel-SIGINT-Stopps
+beendeten alle Prozesse sauber; `/dev/amadeus_lidar`, `/dev/ttyUSB_BASE` und
+die sichtbaren I²C-Gerätepfade blieben danach ohne Handle. Die Zykluslogs
+enthalten keine Tracebacks oder Prozessabbrüche.
+
+**Keine Fahrfreigabe:** Der frühere reale R9-Befund links vor der Endpose ist
+durch diesen motorlosen Lauf weder widerlegt noch beseitigt. Vor jeder späteren
+Bewegung sind Sichtprüfung oder unbestromtes Zurücksetzen auf eine vermessene
+freie Pose, erreichbarer hardwired Not-Aus, kompletter neuer Preflight und eine
+neue ausdrückliche Freigabe erforderlich. Sicherheits- und Frischegrenzen
+bleiben unverändert. Nächster erlaubter Schritt ist nur Review des
+Stufe-1-PRs; Stufe 2 wurde nicht gestartet.
+
+**Rückfall:** Neue Shell öffnen und das Stufe-1-Präfix nicht sourcen. Es wurde
+nichts in die Standardinstallation deployt, daher ist keine Roboterdatei
+zurückzukopieren.
+
+---
+
+## WE-1: erster Realversuch sicher beendet, Scope-Fortsetzung gesperrt (21.09.2026)
+
+Christopher bestätigte Not-Aus, freie Türen und zwei Zimmer plus Flur; Treppen,
+Außenbereiche, Personen und Tiere waren ausgeschlossen. Der freigegebene Lauf
+bewegte Amadeus etwa 0,466 m und endete ohne Safety-, Encoder- oder Busfehler,
+aber nur mit einem Teilstand: Kartenrevisionen ersetzten fortlaufend den
+Frontierkandidaten und lösten zwölf sichere Cancel/Replans aus. Es wurde kein
+Portal überquert und kein natürlicher Mehrraumabschluss erreicht.
+
+Der Explorer hält nun das gesendete Frontierziel fest und prüft genau dieses
+Ziel auf jeder neuen Rohkarte erneut gegen Kartenidentität, Pose,
+Hindernisabstand, Scope und Erreichbarkeit. Der motorlose Produktionslauf hielt
+es von Revision 55 bis 119 aktuell; Basis blieb im Dry-run und alle
+Fahrbefehle waren null. Diese Softwareevidenz ist noch keine fahrende Abnahme
+der Korrektur.
+
+Amadeus steht nach dem ersten Lauf nicht mehr an der ursprünglichen Startpose.
+Ein aus der aufgezeichneten Endpose abgeleitetes lokales Profil lieferte im
+motorlosen Exaktkartentest null sicher erreichbare Frontierziele innerhalb des
+Scopes, obwohl sechs Ziele ohne Scope erreichbar wären. Beim zweiten aktiven
+Vorlauf wurde deshalb kein Auftrag gesendet. Danach wurden alle Prozesse sauber
+beendet; `/dev/ttyUSB_BASE` war frei. Der Fahrzustand war null, eine elektrische
+Motorstromfreiheit wurde dabei nicht separat gemessen.
+
+Vor dem nächsten Start ist genau eine der folgenden Vor-Ort-Aktionen nötig:
+
+1. Roboter zur ursprünglichen markierten Startpose einschließlich Orientierung
+   zurückstellen; oder
+2. einen neuen zusammenhängenden Scope ab der aktuellen Pose vermessen und
+   dessen Ausschluss von Treppen und Außenbereichen bestätigen.
+
+Das Profil liegt ausschließlich unter
+`~/.local/share/amadeus/profiles/we1-first-realtest-20260921.yaml`, der
+vollständige Fahrbag unter
+`~/.local/share/amadeus/bags/we1-real-full-20260921-2101`. Diese reale Geometrie
+nicht committen. Bis zur Vor-Ort-Aktion keine weitere WE-Fahrt auslösen und den
+Scope nicht aus bloßem Kartenfreiraum automatisch vergrößern. Der isolierte
+Overlaystand ist nicht in die laufende Roboter-Arbeitskopie deployt.
+
+---
+
+## WE-1: motorloser Zielsystemcheck bestanden (21.09.2026)
+
+**Geprüfter Stand:** PR #95, Commit
+`10e1858074e738df739077aea27078d6bbef7156`, plus ausschließlich die
+Footprint-Test- und Shutdownkorrekturen auf `fix/we1-target-check-blockers`.
+
+Der WE-Releasekandidat wurde auf diesem Jetson ohne Motorfreigabe in getrennten
+Installationspräfixen unter
+`~/.local/share/amadeus/releases/we1-target-blockers-20260921` gebaut und
+geprüft. Die
+laufende, lokal geänderte Arbeitskopie `/home/p/roboter_ws` und ihr Install
+wurden weder gewechselt noch ersetzt. Das LiDAR-Overlay baut den gepinnten
+Vendor-Commit mit der engen seriellen Shutdownkorrektur; der Roboter-Workspace
+verwendet weiterhin ein lokales BehaviorTree.CPP-Kompatibilitätspräfix für die
+vorhandene ARM64-apt-Bibliothek. Rückfall: eine frische Shell verwenden und die
+isolierten Overlays nicht sourcen.
+
+Der gemeinsame Lauf mit LiDAR, beiden VL53, SLAM, Nav2, Explorer,
+Kartenmanager, `collision_monitor` und Safety war unter Last stabil. Typische
+Raten waren etwa 10 Hz LiDAR, je 4 Hz VL53, 1 Hz Karte, 50 Hz Odometrie und
+100 Hz TF. Nav2 und `collision_monitor` waren aktiv, das Laufzeit-Footprint war
+das vermessene Polygon über `/local_costmap/published_footprint`.
+`base_hardware` lief ausschließlich mit `dry_run=true`; `/dev/ttyUSB_BASE`
+blieb frei, Drehzahlen und Geschwindigkeiten blieben null.
+
+Der veraltete VL53-Test prüft nun ausschließlich den bereits real abgenommenen
+Polygonvertrag; Produktionskonfiguration und Footprint-Architektur blieben
+unverändert. Der gepinnte LiDAR-Treiber schließt seinen seriellen Deskriptor
+erst nach dem Empfangsthread-Join. VL53 und Basis behandeln einen bereits durch
+SIGINT beendeten rclpy-Kontext idempotent; Fahrtor und Kartenmanager lassen
+echte RuntimeErrors weiter sichtbar und ignorieren nur den Humble-
+`take_message`-Fehler bei bereits beendetem Kontext.
+
+Der vollständige Build umfasste 23 Pakete. Direkt bestanden 1.206 Tests und
+registriert 1.016 Tests, jeweils ohne Fehler, Fehlschlag oder Skip. Der
+Produktionsprozessprüfer bestand positiv, Fehlerpfad, Mehrraum-Rückkehr und
+Speichern/Neustart/Fortsetzung mit natürlichem Abschluss und jeweils null
+Fahrbefehlen.
+
+Der echte Kartenmanager-Save unter `we1_target_recheck_20260921` sowie der
+daran gebundene WE-Save bestanden ohne Durability-Warnung. Während 30 Sekunden
+gemeinsamer Last entstanden null Nav2-Ziele und null Nichtnull-Befehle. Zwei
+aufeinanderfolgende vollständige SIGINT-Stopps endeten danach ohne Traceback
+oder Prozessabbruch; LiDAR, beide VL53, Basis und Kartenmanager wurden sauber
+freigegeben. `/dev/ttyUSB_BASE`, `/dev/amadeus_lidar` und `/dev/i2c-9` waren
+frei.
+
+**MOTORLOSER WE-1-ZIELSYSTEMCHECK: BESTANDEN.** Das lokale Profil
+`~/.local/share/amadeus/profiles/we1-first-realtest-20260921.yaml` ist auf
+Startraum, bekannte offene Tür und einen begrenzten ersten Flurabschnitt
+zugeschnitten. Reale Wohnungsgeometrie und Zustände bleiben ausschließlich
+lokal. WE-Navigation, Scope-Freigabe und Portalmonitor stehen weiter auf
+`false`, bis Christopher den Ausschluss von Treppen, Außenbereichen und anderen
+Gefahren vor Ort bestätigt und ausdrücklich die Fahrt freigibt.
+
+Es wurde kein Deployment vorgenommen. Keine Hardware- oder Fahrfreigabe aus
+diesem Abschnitt ableiten; die nächste Aktion ist ausschließlich Christophers
+Scope- und Fahrbestätigung bei erreichbarem Not-Aus.
+
+---
+
 ## OAK-RGB-D-Transport dauerstabil und selbstheilend (26.08.2026)
 
 **Branch:** `codex/fix-oak-semantic-stream`
@@ -1187,3 +3054,593 @@ ros2 pkg prefix slam_toolbox
 
 Das Präfix muss wieder `/opt/ros/humble` sein. Der Overlay-Ordner bleibt zur
 Analyse erhalten; keine Datenlöschung ist erforderlich.
+
+## 2026-09-26 — Parity-Reset / WE-Realtest-Kandidat
+
+Auf dem Jetson wurde in dieser Arbeit nichts gestartet und kein Aktor bestromt.
+Es erfolgte kein Wohnungserkundungslauf. Die vorbereitete Software liegt in der
+separaten Arbeitskopie `/home/p/roboter_ws-parity-reset`, Branch
+`feature/parity-reset`; sie ist nicht automatisch der maßgebliche Baum
+`~/roboter_ws` und wurde nicht übertragen.
+
+Vor einem beaufsichtigten Test den vollständigen Diff und den tatsächlich
+freigegebenen Arbeitsbaum prüfen. Danach die bestehenden Live-Prüfungen dieses
+Protokolls ausführen: keine Altprozesse, Start bei 0 rpm, HWT-/Encoder- und
+beide VL53-Daten frisch, Karten-/Scope-Bindung korrekt, Collision-Monitor-
+Kette aktiv, Türbereich frei und Not-Aus erreichbar. Bewegung nur nach
+separater ausdrücklicher Freigabe der anwesenden Person. Der Kandidat begrenzt
+auf 900 s, höchstens einen Portalwechsel und sechs Abdeckungsziele; die aktive
+WE-Ziel-/Cancel-/Fahrhierarchie bleibt gesperrt.
+
+Rückfall: den vorherigen PR-#101-Head
+`40b5b49c9a92600484a0dc85c466930bc1680c60` wiederherstellen. Nicht pauschal auf
+`1d91229` zurückgehen, da dadurch spätere Hardware- und Sicherheitskorrekturen
+verloren gehen könnten. Siehe `docs/WE_PARITY_RESET.md`.
+
+## 2026-09-27 — Recovery-Abnahmeprofil nur im isolierten Software-Overlay
+
+`hwt601_recovery_acceptance_params.yaml` liegt derzeit allein im temporären
+Overlay `/tmp/we1-hwt-recovery-install/share/explore/config/`. Das aktive
+Jetson-Install wurde nicht gewechselt. `hwt601_parity_params.yaml` bleibt
+WE-Navigation-aus; erst das explizite Abnahmeprofil erreicht den neuen
+HWT-HOLD-/Recovery-/Resume-Zweig. Ein isolierter Softwarestart über Mission
+Manager, echten BT und Explorer gelang; dabei wurde weder ein Motor- noch
+ein Hardware-Sensorprozess gestartet. Anschließend bestand ein isolierter
+ROS-Graph-Test mit synthetischen Sensoren, TF, Costmap und Nav2-Gegenstelle:
+HWT-HOLD, terminales Kind, Stillstand, Gate-ACK und neues Kind für denselben
+Test-Task sowie getrennter Rundblick-HOLD ohne Kind. Die Karten-Task-Auswahl
+war ein Testadapter; die gesonderte reale Abnahme fehlt. Keine Fahr- oder
+Deploymentfreigabe.
+
+Vor einem späteren Realtest Quell-Commit, installierte Paketpräfixe,
+Profilpfad/Hash, Underlay-Reihenfolge und einzigen Hardwarebesitzer mit dem
+Runtime-Manifest festhalten. Rückfall bleibt der fail-closed PR-#104-Kandidat;
+kein aktiver Installwechsel folgt aus dieser Übergabe.
+
+
+## 28.09.2026 – PR #105: lokaler WE-Vorwärtskandidat und beendete Vorläufe
+
+Software `6429bd6`: ausschließlich Explore zusätzlich unter
+`~/.local/share/amadeus/tests/hwt-child-route150-20260928/forward-install/`
+gebaut. Temporäre Shellreihenfolge: bisheriges `hwt-portal-repair-20260928/`
+`runtime-env.sh`, danach dieses `forward-install/local_setup.bash`.
+Kein dauerhaftes Setup oder aktiver Install gewechselt. HWT-Schatten/Core/Health/
+Guard weiter aus dem korrigierten `hwt-portal-repair-20260928/install`.
+`forward-loaded-modules.json` und die Laufmanifeste dokumentieren Auflösung/Hashes.
+Für den aktiven MM→BT→WE-Pfad sind `active_drive=true` UND
+`enable_auto_explore=true` erforderlich; letzteres startet noch keine Mission.
+Der motorlose Sensorpfad verwendet `active_drive=false`. Lokale Scope-/Profil-
+Daten und alle Bags bleiben unter dem Testverzeichnis. Das Repo-Produktprofil
+ist unverändert. Letzte motorlose Vorläufe nach separater Bestätigung gesperrter
+Motorendstufe bei erreichbaren FC03-Encodern; aktueller Ergebnisstand und offene
+Bedingungen stehen ausschließlich in WE-STATUS Abschnitt 7.
+
+Recorder-Zusatz: `ros2 bag record --include-hidden-topics` ist für die explizit
+aufgelisteten Nav2-Action-Themen notwendig (isolierte Gegenprobe 0 vs 73
+Statusnachrichten). Vergangene Goal-UUID/Terminalfolge liegt im Controllerlog,
+nicht im Real-Bag. Abschaltfaults und tatsächlichen Vorlauf-FC03-Zeitüberlauf
+getrennt behandeln, siehe WE-STATUS. Zum Abschluss keine Roboterknoten oder
+Portbesitzer mehr; alle sieben Aufzeichnungen ohne Fahrkommando/Translation.
+
+
+## 29.09.2026 – Schritt-3-Produktprofil motorlos geprüft
+
+Aktueller Auftrag gemäß WE-STATUS: normale A/B/C-Kernabnahme, keine
+HWT-Fault-Injection und keine lokalen Kindziel-Sonderlimits. Dieselbe temporäre
+Overlayreihenfolge wie am 28.09.; kein Installwechsel. Byteidentische lokale
+Kopie des Repository-Recoveryprofils, SHA `ee3b42ee…`; Quellen-/Karten-/TF-
+Vorlauf mit `active_drive=false` bestanden. Belege unter
+`~/.local/share/amadeus/tests/stage3-core-20260929/`. Alle Prozesse danach
+geordnet beendet; kein Fahrbefehl. Aktuelle Fahrt noch nicht durchgeführt.
+Das Profil aktiviert WE und Portalwahl, aber nicht den separaten WE-
+Portalmonitor; dessen Zuordnung und Live-Scope müssen für Phase C belegt sein.
+
+
+## 29.09.2026 – reale Starts A1–A3 und temporärer korrigierter Explore-Install
+
+Aktueller funktionaler Commit `872f6a8`: im betroffenen Drehpfad zuerst
+Odometrie-Snapshot, dann Prüfzeit; abgelaufene Scan-/Prealignment-Pausen
+auf null Restwartezeit begrenzt. Keine Parameter- oder Schutzlockerung.
+Temporäre Shell: bisheriges `stage3-core-20260929/runtime-env.sh`, danach
+`stage3-core-20260929/pause-install/local_setup.bash`. Bytegleichheit
+Quelle/geladenes Modul und Runtime-Manifest geprüft. Kein aktiver Installwechsel.
+161 gezielte Tests, Build und motorlose Vorläufe bestanden. A3 endete sicher
+an `initial_scan_too_slow`, kein Nav2-Kind; alle Prozesse beendet. Letzte
+explizite Motorsperrenstellung vor den Fahrten: vom Nutzer kontrolliert gelöst
+(„erledigt“). Erneutes Sperren nach A3 angefordert, noch unbestätigt. Keine
+Stellung aus Software-Nullkommando ableiten. Nächster Auftrag im WE-STATUS.
+
+
+## 29.09.2026 – A-Produktlauf und temporäres HWT-Callback-Overlay
+
+Nach bestätigter aktueller Motorsperrenstellung „kontrolliert frei“ bestanden
+passiver und aktiver Preflight mit realen Quellen, Karte/TF und Stillstand.
+Produktstart über Mission Manager → BT → WE → Nav2: Initialscan fertig,
+autonome Kindziele angenommen, ca. 0,088 m zusätzliche kumulierte Odometrie-
+Translation in der Kindzielphase. Vor Zielerreichung trat ein terminaler
+HWT-Health-Erstfehler auf; Originalwerte und Auswertung im WE-STATUS Abschnitt 7
+und lokal unter `stage3-core-20260929/autonomous-goal-run-resumed/`.
+Nav2-Kinder wurden gecancelt, Endkommando null; Stack und Recorder beendet,
+keine Roboterknoten mehr. A/B/C noch offen.
+
+Fix `513af02`: überholten gültigen Callback nicht über eine bereits neuere
+gültige Roh-/Yaw-/Radprobe schreiben. Später eintretende Zeitrückläufe und
+ungültige Proben bleiben terminal. Keine Frische-, HWT-, Motor- oder
+Kollisionsgrenzen verändert. 157 Pakettests bestanden; isolierter Install
+`~/.local/share/amadeus/tests/stage3-core-20260929/hwt-callback-order-install/`
+enthält den zur Quelle bytegleichen Health-Code, SHA-256 `8055fa44…`.
+Für einen späteren Test nur als letztes Overlay nach
+`autonomous-goal-run-resumed/runtime-env.sh` sourcen; aktiver Install nicht
+gewechselt. Nach Codeänderung zuerst mit unabhängiger Motorsperre motorlos
+prüfen. Die aktuelle Schalterstellung nach diesem Lauf wurde eigens angefragt
+und darf nicht aus dem Endkommando abgeleitet werden.
+
+
+### 29.09.2026 – gezielte aktive Kartenübergabe
+
+PR #105: aktiver fester Frontierpunkt wird nach exaktem Rohkarten-/Statusjoin
+unabhängig vom mehrsekündigen Aufgabenworker erneut geprüft. Fristen und
+Schutzparameter unverändert. Vor/nach-Produktgraph bestätigt Bestandserhalt
+des einen autonomen Kindes; 244 gezielte Tests und isolierter Explore-Build.
+Neues temporäres Overlay lokal unter
+`~/.local/share/amadeus/tests/stage3-map-handoff-20260929/install`.
+Kein Wechsel von `~/roboter_ws/install`; Rückfall durch Weglassen dieses
+letzten Overlays. Reale Quellen-, Profil- und Scopebindung vor Fahrt erforderlich.
+Laufender Ergebnisstand ausschließlich im WE-STATUS Abschnitt 7.
+
+
+29.09.2026, tatsächlicher Folgelauf `492ef20`: temporäres `join-install`
+als letztes Overlay, aktive Installation unverändert. Quellen-/Profilmanifest
+und geladene Modulhashes unter `stage3-map-handoff-20260929/real-repeat`.
+Ein autonomes Kind ohne Kartenquellen-/HWT-Abbruch, aber Zieltimeout bei
+belegter SlowZone-Verlangsamung. Kein Raumübergang. Abschließend RPM null,
+Odometrie still, Kind terminal, alle Prozesse und seriellen Ports frei.
+SLAM-Shutdown Exit -6 gesondert dokumentiert, Bag vollständig. Nächster
+begrenzter Befundabgleich in WE-STATUS §7; keine weitere Fahrt gestartet.
+
+
+## 01.10.2026 – temporärer Mast-/Encoder-Kandidat, gemeinsamer Vorlauf negativ
+
+Unabhängiger Checkout `~/roboter_worktrees/metric-exploration-20260930`, bestehender
+Branch/PR #105. Funktionaler Kandidat `8be0709`; Hauptkopie `~/roboter_ws`
+unverändert sauber auf `23928d92f411473ed2644692a04aebdff0ffe803`.
+Kein dauerhafter Install-/Autostartwechsel. Privates temporäres Achtpaketpräfix:
+`~/.local/share/amadeus/tests/metric-start-encoder-20260930/install`.
+Runtime sourced ausschließlich über dortiges `runtime-env.sh`: dokumentierte
+bisherige HWT-/Nav-/SLAM-/LiDAR-Unterlage, danach dieses lokale Overlay.
+Module und tatsächliche Parameter-/Launchdateien gehasht und bytegleich geprüft.
+Aktiver Basistreiber/Encoderodometrie unverändert zur Unterlage; kein aktiver
+Busbesitzer im Vorlauf. Passiver Reader allein auf Basisbus; native Mastmaske
+und Montage-TF erhalten. Reader startet im passiven HWT-Launch 15 s später,
+Gate verarbeitet passive Quellen in eigener Callbackgruppe mit zweitem Thread.
+
+Letzter Launch: `app_mapping.launch.py active_drive:=false
+use_hwt601_odometry:=true operator_stationary_confirmed:=true
+enable_auto_explore:=false start_web_gui:=false` mit zunächst ungebundenem
+metrischem Bootstrapprofil. Nach aktueller LAB-1-Karten-/Posebindung eigener
+metrischer Explorer, keine Mission. Kein elektrischer Motorstromzustand aus
+Software behauptet. Reale Scans/TF belegen bestehende Mastmaske; tatsächlicher
+SLAM-Präfix gepatchtes `~/amadeus_slam_toolbox_ws/install/slam_toolbox`,
+`check_min_dist_and_heading_precisely=true` live. Historische Buildanweisungen
+wurden nicht zur Installation ausgeführt.
+
+Gemeinsamer Vorlauf weiterhin negativ: rohe/gepaddete Start-/Drehkontur
+unzulässig und Gate später `wheel_missing_stale_or_invalid` terminal, obwohl
+Reader ready/fehlerfrei. Keine Grenzlockerung oder Fault-Löschung. 0 Missionen,
+0 Nav2-Kinder, Befehle null. Alle manifestierten Prozesse geordnet durch
+SIGINT ausschließlich an Launchwurzeln beendet; Gerätebesitzer frei,
+anschließend 12 frische FC03-Paare je 0 rpm / Position 0. Keine Shutdownfehler;
+Bootstrap-Scope-Exit separat. Privat: `metric-start-encoder-20260930/common-gatefix`
+mit geschlossener Bag, Manifest/Modulhashes/Scan- und Zellklassennachweis,
+Zeitverteilungen und Shutdownprüfung. Originalfehlerläufe bleiben erhalten.
+
+Rückfall: ohne Mission geordnet stoppen und letztes temporäres Overlay weglassen;
+`active_drive=false`, `enable_auto_explore=false`. Bei langer Kontinuitätslücke
+neue belegte stationäre Initialisierung mit neuem Karten-/Odometriebezug statt
+Latch-Reset. Reale Erkundung erst nach gleichzeitig gültigem gemeinsamen
+Startnachweis laut einzigem WE-STATUS, keine automatische Wiederanfahrt.
+
+
+## 01.10.2026 – temporärer Entscheider-/Startgeometriekandidat, keine reale Mission
+
+Funktionsstand `8f5eeb4`, unabhängiger Checkout im bestehenden Branch/PR #105.
+`~/roboter_ws` sauber/unverändert `23928d92f411473ed2644692a04aebdff0ffe803`.
+Exakte finale Runtime über
+`~/.local/share/amadeus/tests/metric-gate-start-20261001/final-runtime-env.sh`:
+dokumentierte vorherige Unterlage, Vierpaketpräfix dort `install/`, danach
+Zweipaketpräfix `decision-take-overlay/install/` nur für robot_navigation und
+robot_state_estimation. Explore/base_hardware aus Vierpaketpräfix;
+mission_manager/robot_map_manager/amadeus_lidar_bringup aus
+`metric-start-encoder-20260930/install`, BT aus `hwt-child-scope-20260928-retry`,
+SLAM aus `~/amadeus_slam_toolbox_ws/install/slam_toolbox`, LiDAR aus
+`releases/we1-ldlidar-shutdown-overlay/install`. Aufgelöste Präfixe, geladene
+Parameterdateien, Prozesse und Modulhashes im finalen `decision-take-common/`.
+Alle geänderten Modulbytes mit tatsächlich aufgelöster Installation abgeglichen.
+Kein permanenter Install-/Autostartwechsel, keine Montage-/Kalibrierungsänderung.
+
+Real nur `app_mapping.launch.py active_drive=false use_hwt601_odometry=true
+operator_stationary_confirmed=true enable_auto_explore=false start_web_gui=false`
+mit metrischem Bootstrapprofil; im selben Start neue lokale LAB-1-Kartenbindung,
+vorhandene `explore.launch.py` mit metrischem Produktprofil und passivem HWT.
+Ein passiver Reader am Basisbus, kein aktiver Basistreiber, keine Mission.
+Passive Quelle eigene Radgruppe/dritter Thread und geschützter echter DDS-Take
+vor Entscheidung; Befehl/ESTOP seriell, aktive Quellenscheduling unverändert.
+120-ms-Paar-/180-ms-Lückengrenze und Mast-NaN/CCW/TF erhalten; SLAM-Patch live true.
+
+Finales 720-s-Fenster negativ: zwei echte HWT-Recoveries, dann echte
+120,874-ms-Paarverletzung, Gate 212,127 ms alte letzte zulässige Radprobe.
+Echte Stale-Sperre erhalten. Gleichzeitig voller initialerSweep 211 unbekannte
+Zellen / 0,188420 m² außerhalb Körper, Costmap 139 Zellen vollständig darin. Keine
+künstliche Freigabe, keine weiteren Starts/Fahrten. Software: 1.469 Regressionen
+bestanden; voller synthetischer2π-Dauerlauf separat negativ, keine Abnahme.
+Ende: alle manifestierten Wurzeln einzeln SIGINT, keine Prozessgruppensignale;
+Gerätehandles frei,12 frische FC03-Endpaare je 0 rpm / Position 0. Elektrischen
+Motorstromzustand nicht aus Software behaupten. Private ClosedBag-/Timing- und
+Endzustandsnachweise lokal, keine privaten Berichts-Vorfahren veröffentlicht.
+
+Rückfall: geordnet ohne Mission stoppen und Zweipaket-/Vierpaketoverlay weglassen,
+`active_drive=false`, `enable_auto_explore=false`. Echter Kontinuitätsverlust
+benötigt neue belegte stationäre Initialisierung/Karte-Posezuordnung, kein
+Latch-Reset. Reale Startfähigkeit nicht vollständig geschlossen: vorhandenen
+FC03-Pfad innerhalb 120/180 ms absichern und exakt fehlende Außenfläche durch
+separat hergestellte stationäre LiDAR-Sicht belegen; notwendiges manuelles
+Umsetzen bei deaktivierten Antrieben liegt außerhalb Softwarepakets. Kein Merge
+oder automatische Weiterfahrt, Stufe 3 offen.
+
+## 01.10.2026 – adaptiver/Encoder-Kandidat isoliert geprüft, System bleibt an
+
+Ausgang `d9894d2`, funktional `fd883fd`, bestehende PR #105. Kein permanenter
+Install-, Autostart- oder Kalibrierungswechsel. Hauptkopie sauber/unverändert
+`23928d92f411473ed2644692a04aebdff0ffe803`. Gemeinsame Encoderlogik betrifft
+passiven FC03-Reader und aktive Basis ausschließlich im HWT-Pfad; dessen
+unveränderlicher Startparameter `encoder_timing_recovery_enabled=true`,
+Stale-/Kontinuitätsgrenze 180 ms. Außerhalb HWT bleibt dieser Parameter false.
+Messwertgrenze 120 ms, Readerdiagnose 2 s / zwei Versuche, Consumer-HOLD 5 s /
+zwei Recoveries je Quellenklasse. Hardfault/ESTOP/Cancel unverändert hart.
+Aktiven Basisadapter gerätefrei geprüft; im jetzigen Realfenster lief er nicht.
+
+Finale temporäre Runtime:
+`~/.local/share/amadeus/tests/metric-adaptive-start-20261001/runtime-env.sh`
+sourct bisheriges `metric-gate-start-20261001/final-runtime-env.sh`, dann
+neuen kopierten Fünfpaketinstall `metric-adaptive-start-20261001/install/`:
+base_hardware, explore, robot_navigation, robot_state_estimation,
+amadeus_lidar_bringup. Mission-/Kartenpakete weiterhin aus
+`metric-start-encoder-20260930/install`, BT aus `hwt-child-scope-20260928-retry`,
+SLAM aus `~/amadeus_slam_toolbox_ws/install/slam_toolbox`, LiDAR aus
+`releases/we1-ldlidar-shutdown-overlay/install`. Zehn geänderte Laufzeitartefakte
+bytegleich zu den tatsächlichen aufgelösten Präfixen (`build-identity.json`).
+1.493 Regressionen und Fünfpaketbuild erfolgreich; vollständige synthetische
+2π-Dauerprobe separat negativ, nicht aus positiven kurzen Fällen abgenommen.
+Nachträglich ausschließlich Testsammlung für Offline-CI ohne ROS korrigiert:
+118 Offlinefälle/63 Subtests und zwölf Werkzeugtests bestanden, zwei echte
+ROS-Abhängigkeitsskips; drei betroffene Fälle unter ROS erneut bestanden.
+Keine Produktbytes nach dem Realfenster geändert, kein erneuter Stackstart.
+
+Realer Start ausschließlich `app_mapping.launch.py active_drive=false
+use_hwt601_odometry=true operator_stationary_confirmed=true
+enable_auto_explore=false start_web_gui=false` mit privatem metrischem
+Bootstrapprofil; Scope-/Sessionbindung aus aktueller LAB-1-Karte/Pose, dann
+alleiniger gebundener Explorer über vorhandenes `explore.launch.py` im selben
+Stack. Produktprofil live `metric_frontier`/`adaptive`, Scan true, 900/150 s,
+6 Versuche/3 Fehler. Nav2-RPP genau FollowPath mit Rotation 0,35 rad, festem
+Lookahead 0,40 m, Interpolation/Kollisionsprüfung true und ohne Rückwärtsfahrt;
+SimpleGoalChecker 0,15 m / 0,40 rad. Insgesamt 13 Typ-/Wert-/Pluginparameter
+bestätigt. Native Bibliothek/aufgelöste Module/geladene Paramfiles und Prozesse
+in `common/` manifestiert. Montage-TF/Mast-NaN unverändert, SLAM-Patch live true.
+
+720,016-s-Messfenster negativ: zwei echte HWT-Recoveries, dritte Rawstörung
+bei 583,261 s `hwt_recovery_attempt_limit`; Readerfehlertext
+`Zeitueberschreitung nach 0/14 Bytes`, kein bewiesener Geräte-/Kabeldefekt.
+Encoderreader zum Fensterende 13.921 gültige Paare, keine Timing-Recovery,
+größtes Paar 108,118 ms, Baseline eins/Rebase null. Unabhängig davon 33
+unbekannte Startkonturzellen / 0,021089 m² Außenanteil, null zulässige adaptive
+Kandidaten. Keine unbenutzte Vollsweepfläche als Bewegungsbedingung und keine
+manuelle Vorbereitung als Bootstrap. **Keine Mission/kein aktiver Buswechsel.**
+
+Messprobe stoppt bei 720 s; rein lesende Sensorprozesse liefen für abschließenden
+Snapshot/geordneten Stopp 185,994 s weiter. Kein zweiter Start; dieser Nachlauf
+gehört nicht zum 720-s-Erfolgsnachweis. Geschlossene Bag erst nach Recorderende
+analysiert: keine running-Mission, keine Navigate-Statuseinträge, alle Befehle
+null. Wurzeln einzeln SIGINT, keine Prozessgruppe; sämtliche manifestierten
+Kinder beendet, `/dev/ttyUSB_BASE` und `/dev/ttyUSB_HWT601` ohne Besitzer.
+Anschließend zwölf frische FC03-Paare Position 0 / 0 RPM; elektrische
+Motorstromstellung nicht aus diesen Werten behauptet. `end-state-proof.json`
+mit Originalsourcen/Endzustand und `end-encoder.json` (JSONL) privat.
+
+Rückfall: ohne Mission geordnet stoppen und neues Fünfpaketoverlay weglassen;
+voriger Kandidat hat seine dokumentierten Quellen-/Geometriegrenzen weiterhin.
+Sicherer Betriebsstart `active_drive=false`, `enable_auto_explore=false`.
+Kein Latch-Reset/automatischer Rebase bei echter Kontinuitätslücke; neue echte
+stationäre Initialisierung/Karte-Posezuordnung nötig. Keine weitere Startserie,
+kein Merge/Force-Push/private Daten oder private Berichts-Vorfahren. Details
+im einzigen aktuellen WE-STATUS und AGENTENAUFTRAG §10. **Stufe 3 offen;
+System eingeschaltet, keine geplante Abschaltung.**
+
+## 01.10.2026 – isolierter HWT-Entwicklungsvertrag/Start-Egress, Realstart blockiert
+
+Ausgang `2a0e19d`, Funktionsstand `a6f31bf`, PR #105/LAB-1. Isolierter
+Sechspaket-Copybuild `metric-egress-hwt-20261001/install` außerhalb Git,
+kein permanenter Install-/Autostartwechsel. Letzter state/explore-Build 8,58 s;
+100 Quell-/Install-Dateien identisch. Reale Domain 42, eigene Prozesswurzeln/
+Argumente/temporäre Parameterdateien/Präfixe und Modulhashes aufgezeichnet.
+MM/MapManager/BT, native SLAM-Toolbox und LD-LiDAR-Shutdownunderlay unverändert
+aufgelöst. Live Rawreader Entwicklungsvertrag true, 50/300 ms; Encoder
+FC03-only, 120/180 ms; 13 native Controller-/Goalcheckerparameter gelesen.
+Live-Explorer-Parameterabfrage während verzögerter Initialisierung nicht
+verfügbar; tatsächlicher Launchprofilhash und vier metric_frontier-Statuses
+belegt. Keine vollständige Parameterantwort behaupten.
+
+Passiv regulär app_mapping mit HWT-Odometrie, `active_drive=false`,
+`enable_auto_explore=false`; aktuelle Karte/Pose/LAB-Scope gebunden und
+alleiniger Explorer über vorhandenen Launch gestartet. Keine Aktorschreib-
+prozesse und keine reale Mission. Schlussfenster 60,008 s: HEALTHY bei
+36,379 s, harte hostseitige Messzeitprüfung bei 54,880 s. Zwei Pollfehler
+davor nur TRANSPORT_DEGRADED, null HWT-Recoveryversuche. Kein Sensor-/USB-
+Hardwaredefekt daraus abgeleitet. Initialer kurzer Entwicklungsstart vor
+Portprüfungsoptimierung separat unkalibriert; keine weitere Startserie.
+
+Aktuelle Geometrie offline unverändert: 42 unbekannte Roh-Startkonturzellen,
+zwei Costmap-Konturzellen, 22 autonome Kandidaten sämtlich unzulässig.
+Kein manuelles Ziel/Bootstrap und kein künstliches Gesundsetzen. Kein
+realer Zielerfolg/Kartierungsfortschritt/Passagen-/HOLD-Resume-Nachweis.
+Softwaregraph mit drei erreichten Zielen und separatem HOLD/Resume bestanden.
+
+Messfenster von kompletter Orchestrierung 83,709 s/Bag-Spanne 76,646 s
+unterscheiden. Encoder 824 Paare am Fensterende, 1.133 im Gesamtdatensatz,
+maximal 114,879 ms, keine Reject/Recovery/Rebase/Reconnect. Geschlossene
+Bag mit erfolgreicher Integritätsprüfung, keine laufende Mission/Nav2-Statuseinträge, vier Befehlsströme
+ausschließlich null. Eigene Launchwurzeln einzeln SIGINT, Recorder danach;
+manifestierte Prozesse und beide Gerätehandles frei. Zwölf neue FC03-Paare
+Position 0/0 RPM; keine elektrische Motorstromstellung behauptet.
+
+Private Karten/Bags/Plots/Profile/Zellkoordinaten unter
+`~/.local/share/amadeus/tests/metric-egress-hwt-20261001/`, insbesondere
+`runtime-byte-manifest-release.json`, `short-final/`, `end-state-proof.json`,
+`end-encoder.json`. Hauptkopie sauber auf `23928d92f411473ed2644692a04aebdff0ffe803`.
+Rückfall: dieses temporäre Overlay weglassen oder Entwicklungs-/Egress-Opt-ins
+beim gestoppten Neustart deaktivieren; `active_drive=false`,
+`enable_auto_explore=false`. Kein Merge/Force-Push/private Vorfahren.
+Stufe 3 offen, konkrete Quellenzeit-/Trajektoriegrenzen siehe STATUS §4.
+**ROS beendet; Rechner laut Nutzerklärung eingeschaltet lassen.**
+
+## 06.10.2026 – AP-06 Gesamtmissionsreparatur nur im isolierten Softwareprüfstand
+
+Aktueller Reparaturstand `d9ade6e` mit Testkorrektur `b51fb0a` verändert Kandidaten-/Stoppsichtprüfung und begrenzte öffentliche Beobachtungswahl. Vorgängerkorrektur `2074efa` umfasst zusätzlich gepinnte NavFn-Zellmittenabbildung als separates Planner-Overlay; Explorer und tatsächliches Plugin müssen bei späterer Zielprüfung gemeinsam zum qualifizierten Quellstand passen. Native Controllerparameter/Kontur-/Fristreserven unverändert. Keine neue Software auf dem Jetson installiert, keine Hardwarefahrt oder Autostartänderung. Vollständige Abnahmestufe und nächster Schritt ausschließlich in Wohnungserkundung/STATUS. Autorisierter Jetson-Shutdown wartet auf Arbeitsabschluss und tatsächlichen technisch verifizierten Jetson-Befehlszugang; Cloud-Host bleibt unangetastet. Rückfall: eigene Reparaturcommits gezielt zurücknehmen bzw. separates temporäres NavFn-Overlay weglassen; keine pauschale Rückkehr alter Checkouts.
+
+Zusatzstand `7a2b09e`/`b8189a9`: HWT-Sampledispatch bei tatsächlich reentranten Verbrauchern je Quelle serialisiert, bestehende serielle Fahrtor-/Statusbesitzer erhalten. Keine Timestamp-/Frist-/QoS-/Hardwareänderung; geordnete Native-DDS-Gegenproben und alte Gate-/HOLD-Fälle softwareseitig geprüft. Weiterhin ausschließlich isolierter Prüfstand, keine neue Jetson-Installation.
+
+Zusatzstand `17fba88`: nachweislich partielle Frontierbeobachtung bleibt als begrenzte Restarbeit erhalten; ursprüngliche Sicherheits-, Zeit-, Try- und Quellenregeln gelten weiter. Verlustfreie Ereigniskompression betrifft ausschließlich den Softwareprüfstand. Noch keine Zielsysteminstallation oder physische Wirkung ausgeführt. Vor einer späteren Zielprüfung qualifizierten vollständigen Explorer-/NavFn-Stand gemeinsam übertragen; maßgebliche Gesamtqualifikation ausschließlich STATUS.
+
+Zusatzstand `ea63493`: bessere endliche Sichtpunkte einer schon zulässigen Aufgabe unter derselben bestehenden ID und ursprünglichen Budgets; keine Sicherheits-/Controllerparameter geändert. Nur isolierter x86-Softwareprüfstand gebaut und geprüft, keine Installation auf dem Jetson oder Hardwarefahrt. Vollständige Missionsqualifikation bleibt gesondert im STATUS.
+
+
+## 06.10.2026 – AP-06 Tangentenreihenfolge, keine Zielsystemübertragung
+
+Neue isolierte AP-06-Korrektur sortiert vorhandene Nahzielrichtungen nach originalen Lenkkosten; tatsächliche Native-An-/Abfahrt und alle Quellen-/Kontur-/Haltprüfungen bleiben Pflicht. Ubuntu/Humble/x86-Modelltests sind kein Jetson-Nachweis. Kein dauerhafter Install-/Profil-/Autostartwechsel und keine Hardwarefahrt. Rückfall ausschließlich der eigene Reihenfolge-Commit. Bestehende Shutdown-Autorisierung gilt weiter nur für den tatsächlich verifizierten Jetson; mangels ausführbarem Jetson-Kanal nicht ausgeführt. Aktuelles Software-/Gesamtresultat ausschließlich im STATUS.
+
+## 07.10.2026 – AP-06 reine Softwarekorrekturen, kein Deployment
+
+7fabf80/4497d0c/8e6cbbe/972ef6c/60e23a8 korrigieren Quellenbindung,
+Restarbeits-/Beobachtungsreihenfolge und äquivalente Auswahlrechnung.
+a2180ed/3c66cbe ergänzen reine native Zellabstände/Clipping mit vollständigem
+NumPy-Rückfall. Compilerflags bleiben ohne Fast-Math/FMA. Eigenen Kern beim
+späteren Zielsystembuild neu kompilieren; x86-Artefakt niemals auf Jetson kopieren.
+Keine Hardware bewegt, nichts deployed. Jetson-Last und reale Sensorlatenz
+bleiben separat unqualifiziert. Rückfall nur der genannten neuen eigenen
+Diffs zu 7934a28, unter Erhalt vorheriger AP-Korrekturen und sämtlicher Evidenz;
+kein pauschaler Branch-/Karten-/Checkpointreset. Aktueller Softwarebeweis im STATUS.
+
+5612878 priorisiert die vorhandene vollständig geprüfte private Nahbeobachtung
+vor Fernabfragen. Rückfall nur dieses Diffs stellt frühere Reihenfolge wieder
+her. V45 grün, aber keine Gesamt-/Hardwarefreigabe: A/B-Startfläche und C-
+Quellen-/TF-Kette bleiben offen. Das vorbereitete Abdeckungspaket beschreibt
+nur Anforderungen und Abnahme, keine freigegebene Sensormontage. Alle gestarteten
+Softwarefälle terminal mit vier Nullbefehlsketten; kein Jetson-Kanal genutzt.
+
+2e5e1fd ergänzt begrenzte gestoppte Neuprüfung einer vorübergehenden Encoder-/TF-
+Abweichung und genaue Ablehnungsdiagnostik. 2 cm/.05 rad, 180 ms, Task-/Try-/
+Zeitbudgets bleiben unverändert. V46-Test-/Nativeprüfung grün; C248 endet trotzdem
+negativ an unveränderter 900-s-Grenze, Cancel249/Gyro250 bestehen. Keine Gesamt-/
+Hardwarefreigabe. Rückfall ausschließlich dieses Diffs zu 5612878. Alle Fälle
+beendet; kein tatsächlicher Jetson-Kanal verfügbar, daher weder Deployment noch
+der früher gewünschte Jetson-Shutdown ausgeführt.
+
+
+## 10.10.2026 – separates Start-Sweep-Overlay, keine Aktoraktivierung
+
+`~/.local/share/amadeus/releases/ap06-start-sweep-20261010` baut `explore` und
+unverändertes `amadeus_map_identity` separat. Neuer kontinuierlicher
+Geradenprüfer wird ausschließlich vom Offline-Diagnosewerkzeug verwendet;
+keine aktive Startprüfung ersetzt, kein Roboterprozess gestartet. 47 gezielte
+Tests grün, gespeicherte Realproben ideal positiv und mit Abweichung negativ.
+Kein Realfahr- oder Kundennachweis daraus. Private Daten/Quellenhashes unter
+`~/.local/share/amadeus/diagnostics/ap06-start-sweep-20261010`.
+Rückfall: dieses temporäre Overlay nicht laden; bisheriges Geometrieoverlay
+und alle vorigen eigenen Fehlerkorrekturen bleiben bestehen. Bestandsinstall
+und Originalcheckout unverändert; keine Autostart-/Remoteänderung.
+
+
+## 10.10.2026 – passiver Vorlauf für vorbereiteten Realversuch
+
+Private Vorbereitung unter
+`~/.local/share/amadeus/diagnostics/ap06-drive-preparation-20261010T1308Z`,
+Runtime R5. Aktive Skripte vorbereitet, nicht ausgeführt. Neuer 180,070-s-
+Vorlauf ohne Encoderverriegelung, 675/675 Nahstatus gesund; aktuelle Scope-
+TF-Bindung und sechs passive Geometrieproben durchgeführt. Startnachweis
+weiter negativ. Neues Monitor-Stillstandsverfahren prüft gemessene RPM; zwölf
+Gegenproben grün. Alle eigenen Prozesse direkt geordnet beendet, abschließend
+20 FC03-Proben/Motor null RPM, keine Gerätebesitzer. 1.048 Bestandsinstall-
+Dateien identisch, Originalcheckout sauber. Rückfall private Abläufe und
+R5-Overlay weglassen; kein dauerhafter Install-/Autostart-/Remotewechsel.
+
+
+## 10.10.2026 – LAB-Diagnose- und aktive Feedback-Overlays (lokal)
+
+Separater Checkout `~/roboter_worktrees/ap06-e14ca312-validation`, Basiscommit
+`e14ca31276b26be2d88397b310301dad3c4e9600`; vorhandene Installation wird nicht
+überschrieben. Ergänzende Release-Verzeichnisse R6–R10 unter
+`~/.local/share/amadeus/releases/ap06-lab-{contour,reception,startup,output,feedback}-20261010`.
+Aktuelles R10 `runtime.bash` sourct die belegte Kette der separaten Vorgänger.
+Kein Autostart, keine globale CPU-/Netzwerk-/Betriebssystemumstellung.
+
+Nur im expliziten HWT-Pfad veröffentlicht `/base_hardware_feedback_output` die
+originalen Base-Messungen auf `/fusion/hwt601/wheel_odom_raw` und
+`/base_hardware/state_json`. `/base_hardware` bleibt einziger Bus-/Motorbesitzer;
+der Ausgabekindprozess erhält per `spawn` keinen offenen seriellen Deskriptor.
+Kein Base-TF; bestehender EKF bleibt `/odom`-/TF-Besitzer. Ausgabeverlust hält
+Motoren an und sperrt Bewegung. Frische 180 ms, Paarfenster 120 ms, Watchdog
+250 ms, Bremsrampe 400 ms unverändert. Freie Queue-Plätze sind kein Sensorbeweis.
+Im privaten Testprofil Basis/Fahrtor CPU 5, HWT-Quellen CPU 4, übrige eigene
+Vorbereitungsprozesse CPU 0–3; zeitlich begrenzt durch diese Prozesse.
+
+Diagnose kann separat nach neuer Scope-/Quellenbindung gestartet werden. Sie
+publiziert nur an den bestehenden Diagnose-Eingang des Tores. Eigener Stop-
+Trigger setzt Null und deaktiviert den Diagnosemodus; kein zweiter Aktorbesitzer.
+Aufräumen durch SIGINT an jeweils belegte direkte Launch-/Node-PIDs, niemals
+an Prozessgruppen. Echtkarten, Bags, Raumprofile und Rohmessungen nur privat.
+Nach dem unabhängigen Rechnerneustart wurden frische Quellenbindungen verwendet.
+
+Rückfall: eigene Diagnose deaktivieren, frischen gemessenen Stillstand prüfen,
+eigene gestartete Prozesse einzeln geordnet beenden und R10-Umgebung verlassen.
+Der unveränderte Original-Checkout/Installationspfad bleibt verfügbar; frühere
+negative Overlays sind nur Belege und werden nicht als Fahrfreigabe genutzt.
+Aktueller realer Endbefund wird im AP-06-Vorlaufprotokoll ergänzt.
+
+## 10.10.2026 – einzelne LAB-Korrekturen R11–R16
+
+Navigation separat gebaut unter `ap06-lab-{map-binding,idle-stop,ack,tf,routing,epoch}-20261010`.
+R14 wurde gebaut, aber nicht aktiviert; dessen TF-Korrektur ist in R15/R16.
+Im letzten zusammenhängenden `active-5`-Stack bleibt Base aus R10, das einzeln
+ersetzte Fahrtor aus R15 und die Diagnose aus R16. Kein zweiter Busbesitzer,
+kein Wechsel des EKF-/SLAM-TF-Besitzers. R16-Navigationsbuild 6,57 s, 86 Tests
+bestanden; installierte relevante Python-Dateien bytegleich mit dem Checkout.
+Private Laufmanifeste binden diese tatsächlichen Pfade und den unveränderten
+ursprünglichen Scope-/Radanker. Die Releasekette überschreibt keinen Bestandsinstall.
+
+Beim Torwechsel bleiben tatsächliche Recoveryzählung, Journal und begonnene
+Diagnosehistorie erhalten. Neue Instanz beginnt ohne Samples/Status und mit
+Fortsetzungssperre; echte neue Sensorproben und der streng geprüfte explizite
+Recovery-Trigger sind notwendig. Quittierung selbst sendet keinen Fahrbefehl.
+Der private Testmonitor zählt zusätzlich zur bewahrten rohen Winkelvariation
+die vollständigen Winkelspannen je Diagnosephase; Weglimit 0,5 m je Versuch,
+Winkelspannenlimit 0,6 rad und Zeitlimit 90 s bleiben bestehen. Der reale LAB-
+Bereich wird zwischen Wiederholungen nicht verschoben oder vergrößert.
+
+Rückfall unverändert: Diagnose stoppen, tatsächlichen Stillstand prüfen,
+eigene direkte Prozesse geordnet beenden, separate Releaseumgebung verlassen.
+Keine ältere negative Zwischenversion als gültige Fahrqualifikation einsetzen.
+Der abschließende Realbefund und die Bestandsprüfung stehen im Vorlaufprotokoll.
+
+R17 `ap06-lab-current-sources-20261010` ergänzt ausschließlich den tatsächlichen
+Quellenempfang vor Diagnoseentscheidungen. Build 6,58 s; 87 verschiedene gezielte
+Regressionen bestanden, neue echte DDS-Probe separat nachgeprüft. Letzte reale
+Kombination: Base R10, Fahrtor R15, Diagnose R17, gleiche laufende HWT-/EKF-/
+SLAM-Quellen und gleicher physischer Scope seit Beginn von `active-5`.
+Vorherige R12-/R13-/R16-/R16b-Abbruchbelege bleiben unverändert erhalten.
+R17 schloss die feste 25-cm-/±15°-Sequenz und drei Stillstände vollständig ab,
+mit 0,275685 m Encoderweg einschließlich Ausrollen/Drehanteilen, ohne Modbus-
+Lesefehler oder Encoderverriegelung. Kein autonomer AP-06-Gesamtpositivlauf.
+
+## 11.10.2026 – AP-06: ARM-Auswahlpfad vor neuem Gesamtlauf
+
+Gerätefreie Werkzeuge nutzen freien Kern 3 ausschließlich für Explorer; Graph 0–2, Quellen 5 und Sensoren 4 bleiben unverändert. Produktänderung bündelt exakt die bisherige Zellprojektion der Suchmaske, ohne Frische-/Kontinuitäts-/Geometriegrenzen anzuheben. 79 gezielte Tests bestanden. Keine Änderung am Bestandsinstall, Autostart oder ROS-SDK. Wirkungsprüfung am einheitlich separat neu gebauten Kandidaten noch erforderlich; Offline-Timing ist kein neuer Realbeleg. Rückfall durch gezielten Revert bzw. erhaltenen Bestandsinstall.
+
+## 11.10.2026 – AP-06: Auswahl- und Beobachtungsrechnung vor neuem Kandidat
+
+Erstbesuchs-Policy spart unbenutzte Hashes nur ohne jegliche echte Historie; endgültige Kandidaten binden immer vollständige gemessene Hashes. Tatsächlich identische endliche LiDAR-Strahlen werden gebündelt ausgewertet. Zweites Beobachtungsfenster bleibt 2 s, Quellen-/Anhaltefristen unverändert; unknown und diagonale Hindernisse nicht gelockert. 175 gezielte plus 24 Quellen-/Verdeckungsfälle bestanden. Wirkung betrifft Explorer-Arbeit und Messauswertung, keine neue Aktoransteuerung oder Originalinstallation. Gesamt-/Hardwarequalifikation nicht vorwegnehmen. Aktueller Stand/Rückfall im STATUS; eigene Prozesse direkt stoppen und privaten Kandidaten abwählen.
+
+## 11.10.2026 – AP-06: v5-Gesamtstand und nächste Auswahlkorrektur
+
+v5-Produktbuild 205c2c4, reine Testwrapperkorrektur 94ba58e, 14 private Pakete und 154 Quellen-/Installgleiche Dateien. 2.714 eindeutige Fälle bestanden, erster negativer Volllauf erhalten. Original A/B/C weiterhin 0/3 trotz erstmals gemessener 174-Zellen-Beobachtung in A; keine autonome reale Mission oder Kundenabnahme. Simulation greift auf keine reale Geräteadresse zu. Zweiter Explorer-Kern ohne Gesamterfolg zurückgenommen. 22:56:56 UTC FC03: reale Positionen unverändert, null RPM, RAM 100/400/5; Bestandsinstall 1.048 Dateien unverändert. Folgende kurze Auswahlkorrektur verändert Zielpriorität innerhalb des bestehenden vollständig geprüften lokalen Intervalls, keine Motorregister oder Sensorgrenzen. Vor realem Wechsel neuer Kandidat/Originalgesamtprüfung, frische Quellen/TF/Scope unter Berücksichtigung tatsächlicher bisheriger Bewegung. Rückfall unveränderter Bestandsinstall, keine Autostartänderung; Details im STATUS.
+
+## 11.10.2026 – AP-06-Korrektur, temporärer Jetson-Kandidat v11
+
+Quellstand `b58b257` im separaten Checkout auf dem ARM64-Jetson separat gebaut: `/home/p/.local/share/amadeus/releases/ap06-correction-v11-20261011/{build,install,log}`. 14 Pakete, tatsächliche Paketpräfixe und Nativ-/Dateihashes im lokalen `candidate-manifest.json`; 157 Quelle-Installgleichheiten. Kein Bestandsinstall-, SDK-, Autostart- oder Geräteprofilwechsel; alle 1.048 Bestandsinstallhashes und sauberer Main `23928d9` unverändert. Vollregression 2.933 positiv, originale gerätefreie A/B/C 0/3; ausdrücklich kein neuer Hardware-/Kundenbeleg. Kein realer Aktorprozess aus dieser Umsetzung. Reale Sensor-, Stillstands-, Scope- und Recorderbindung vor einem später qualifizierten Lauf erneut erforderlich. Rückfall temporäres Overlay nicht sourcen, eigene Änderungen gezielt revertieren.
+
+## 11.10.2026 – AP-06 v12 ausschließlich privat qualifiziert
+
+14-Paketbuild f7138cf unter
+`/home/p/.local/share/amadeus/releases/ap06-correction-v12-20261011`, eigene
+Build-/Install-/Logverzeichnisse; 157 Produktdateien quellgleich, 756 Hashes.
+2.936 Produktprüfungen positiv, ursprüngliche autonome Gesamtfälle 0/3.
+Keine echte Bewegung, kein Install-/Autostartwechsel. Main 23928d9 sauber,
+alle 1.048 ursprünglichen Installhashes weiter identisch. Remote-Featurebranch
+auf f7138cf bestätigt; kein Main-Merge. Realprüfung erst nach vollständiger
+Softwarequalifikation, privates Overlay bleibt abwählbarer Rückfall.
+
+## 11.10.2026 – AP-06 v13 privat gebaut, reale Folge noch offen
+
+ARM64-Produktquelle a4b4e35 separat unter
+`/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/{build,install,log}`
+gebaut: 14 Pakete/157 Quellgleichheiten/756 Installhashes. Vollregression 2.946
+positiv, gerätefreie ursprüngliche Gesamtfälle 0/3, Cancel/HOLD 2/2. Zusätzliche
+negative Budgetdiagnose und reine eingefrorene Profile greifen ausschließlich
+auf eigene synthetische Eingaben zu. Kein Aktorprozess, Install-/Autostart-/
+SDKwechsel oder Shutdown aus dieser Umsetzung. Nach Build alle 1.048 ursprünglichen
+Installhashes gleich, Main 23928d9 sauber. Reale autonome Folge samt 180-s-
+Vorlauf erst nach vollständiger Softwarequalifikation; dann aktuelle echte
+Quellen, feste physische Scopebindung und Recorderempfang erneut messen.
+Privates Overlay bleibt abwählbarer Rückfall; aktueller Stand im WE-STATUS.
+
+## 11.10.2026 – AP-06 weitere reine Auswahlkorrektur, v14 vorbereitet
+
+Unbeteiligte Historie erzeugt keine ungenutzten Preselection-Hashes mehr;
+endgültige Kandidaten und relevante Historie erhalten unveränderte Evidenz.
+151 eindeutige gezielte Prüfungen und reine eingefrorene B-Geometrie positiv.
+Der gemeinsame neue private v14-Build/-Test folgt; keine Hardwareabnahme aus
+diesen Komponenten. Kein Bestandsinstall-/Autostartwechsel oder Aktorstart.
+Rückfall eigenes privates Overlay abwählen/Performancecommit revertieren;
+aktuelle Qualifikation ausschließlich im WE-STATUS.
+
+## 11.10.2026 – AP-06 v14 separat geprüft, v15 vorbereitet
+
+Privater v14-Build a6d5bbd unter releases/ap06-correction-v14-20261011, 14 Pakete,
+157 Quelle-Installgleichheiten/756 Installhashes. 2.954 Regressionen grün,
+Originalmissionen 0/3, Cancel/HOLD 2/2; keine reale autonome Abnahme. Alle
+1.048 ursprünglichen Installhashes unverändert, Main 23928d9 sauber. Neue
+reine Routen-Inhaltsbindung gezielt geprüft/vermessen; gemeinsamer v15-Build
+folgt. Kein Aktorstart, Bestandsinstall-/Autostartwechsel oder Shutdown.
+Rückfall privates Overlay abwählen bzw. eigene begrenzte Änderungen revertieren.
+
+## 11.10.2026 – AP-06 v15 und Stoprotationskorrektur
+
+Privater v15/1d03a1f unter releases/ap06-correction-v15-20261011: 14 Pakete,
+157 Gleichheiten/756 Hashes, 2.965 volle Tests grün, Originalmissionen 0/3,
+Cancel positiv/HOLD vor Einspeisung negativ. Keine Realfahrt oder dauerhafte
+Installation. Alle 1.048 Bestandsinstallhashes unverändert/Main sauber.
+Native Drehgeometrie unverändert; read-only Ablehnung im Elternablauf nun
+begrenzter Vorschlag statt harter Terminalgrund, 281 Tests. Gemeinsamer v16
+folgt. Kein Aktorstart/Autostartwechsel/Shutdown. Rückfall eigener Commit
+revertieren/private Overlay-Abwahl. Exakte Belege im aktuellen STATUS.
+
+## 11.10.2026 – AP-06 v16 privat geprüft
+
+dc84753 unter releases/ap06-correction-v16-20261011 separat gebaut, 14 Pakete,
+157 Quellgleichheiten/756 Installhashes. 2.969 Regressionen grün, Originale
+0/3, Cancel/HOLD 2/2; kein vollständiger Wiederaufnahme- oder Realbeleg.
+Alle 1.048 Bestandsinstallhashes gleich, Main 23928d9 sauber. Reiner nativer
+Queryfehler bleibt geometrisch abgelehnt, nun begrenzter Vorschlag; 193 Tests.
+Keine Aktoraktivierung/Install-/Autostart-/SDKänderung oder Shutdown. Privates
+Overlay bleibt Rückfall; neue gemeinsame Prüfung nach Rechenarbeitskorrektur.
+
+## 11.10.2026 – AP-06 v17 für gemeinsame Prüfung vorbereitet
+
+Nur reine Inhaltsbindungsarbeit im Explorer reduziert, auf diesem ARM64-
+Jetson mit echtem unverändertem Nativkern und künstlicher DDS-Last vermessen.
+176 betroffene Fälle positiv; gemeinsame Build-/Originalprüfung noch offen.
+Kein Aktorstart/Bestandsinstall-/Autostart-/SDKwechsel oder Shutdown. Keine
+Produktfrische aus künstlicher Last behauptet; Realsensoren vor der späteren
+qualifizierten Folge frisch binden. Rückfall eigener begrenzter Commit oder
+privates Overlay abwählen. Aktueller gemeinsamer Stand weiterhin v16/0 von 3.
+
+## 11.10.2026 – AP-06 v17 Buildreview und Veröffentlichung
+
+ARM64-Quelle 60e894c separat unter releases/ap06-correction-v17-20261011
+gebaut und mit vollständiger Regression geprüft: 2.976 grün, Originalmissionen
+0/3. Paketpräfixe/Quell-, Modul-, Kernel- und Skripthashes gebunden; Unterbauten
+explizit weiterverwendet, kein hermetischer Zweitmaschinenbeleg. Aktuelle
+Bestandsprüfung: Main 23928d9 sauber, 1.048 Installhashes unverändert. Eigene
+simulierte Prozesse terminal/Kommandos null; keine Aktor-/Install-/Autostart-/
+SDKänderung oder Shutdown. Reale Folge, vollständige Wiederaufnahme und
+lückenlose Bewegungsaufzeichnung bleiben offen. Quellen/Geometrie vor später
+qualifizierter Realfahrt neu messen. Rückfall privates Overlay abwählen.

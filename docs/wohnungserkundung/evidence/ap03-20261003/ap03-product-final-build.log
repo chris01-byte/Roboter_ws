@@ -1,0 +1,18 @@
+Starting >>> base_hardware
+Starting >>> robot_interfaces
+Starting >>> amadeus_map_identity
+Finished <<< robot_interfaces [0.48s]
+Starting >>> mission_manager
+Finished <<< base_hardware [0.81s]
+Starting >>> robot_state_estimation
+Finished <<< amadeus_map_identity [0.81s]
+Finished <<< mission_manager [0.65s]
+Finished <<< robot_state_estimation [0.53s]
+Starting >>> explore
+Finished <<< explore [0.52s]
+Starting >>> robot_navigation
+Finished <<< robot_navigation [0.57s]
+Starting >>> robot_map_manager
+Finished <<< robot_map_manager [0.63s]
+
+Summary: 8 packages finished [3.24s]

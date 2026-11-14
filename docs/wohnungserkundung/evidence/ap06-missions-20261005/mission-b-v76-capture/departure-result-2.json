@@ -1,0 +1,13 @@
+{
+  "result": true,
+  "rejection": null,
+  "native_sight": {
+    "predicted_pose": [
+      0.9004628550423942,
+      0.003788403958137566,
+      -0.01771856367981655
+    ],
+    "original_points": 13,
+    "potential_points": 13
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "baseline_source": "dc84753a7ad2bbc87de543dc2a81714e1f5820af",
+  "actual_adaptive_selection": true,
+  "actual_native_path_validation": true,
+  "actual_rejection": "start_egress_in_place_turn",
+  "before": {
+    "failed": 1,
+    "terminal_reason": "nav2_plan_start_egress_in_place_turn"
+  },
+  "after": {
+    "passed": 1,
+    "terminal_reason": "budget_exhausted",
+    "proposal_rejected": true,
+    "child_dispatched": false,
+    "failures": 0,
+    "attempts": 1
+  },
+  "targeted": {
+    "passed": 193,
+    "failed": 0
+  },
+  "limits_unchanged": true,
+  "geometry_guard_unchanged": true,
+  "hardware_qualified": false,
+  "rollback": "revert only own private-query classification commit; disable private overlay",
+  "file_hashes": {
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/test/test_metric_private_query_recovery.py": "8ec3a127b2af2a4258500d03694501e44ae880b1ab19061a34d6ffd171af816a",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/private-start-query-before/results.xml": "d94d2888743fc49b1804882b4fa73ce195e790c62dfd9e87c94159951930cb01",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/private-start-query-after/results.xml": "49180ac3fadf467a51585c854e34a9d6d30ef0c87547da7b4a4ca844a3b8d28f"
+  }
+}

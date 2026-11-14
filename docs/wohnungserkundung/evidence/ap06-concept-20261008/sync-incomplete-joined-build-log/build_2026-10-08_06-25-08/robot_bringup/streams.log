@@ -1,0 +1,57 @@
+[0.458s] Invoking command in '/evidence/ap06-repo/src/robot_bringup': AMENT_PREFIX_PATH=/evidence/ap06-old-product-install/robot_map_manager:/evidence/ap06-old-product-install/robot_navigation:/evidence/ap06-old-product-install/explore:/evidence/ap06-old-product-install/amadeus_lidar_bringup:/evidence/ap06-old-product-install/vl53_near_field:/evidence/ap06-old-product-install/safety_monitor:/evidence/ap06-old-product-install/robot_state_estimation:/evidence/ap06-old-product-install/mission_manager:/evidence/ap06-old-product-install/bt_orchestrator:/evidence/ap06-old-product-install/semantic_map_manager:/evidence/ap06-old-product-install/robot_interfaces:/evidence/ap06-old-product-install/base_hardware:/evidence/ap06-old-product-install/amadeus_map_identity:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/evidence/ap06-old-product-install/bt_orchestrator:/evidence/ap06-old-product-install/robot_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/evidence/ap06-old-product-install/robot_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/evidence/ap06-old-product-build/robot_bringup/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap06-old-product-install/robot_bringup/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_map_manager/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages:/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages:/evidence/ap06-old-product-install/amadeus_lidar_bringup/lib/python3.10/site-packages:/evidence/ap06-old-product-install/vl53_near_field/lib/python3.10/site-packages:/evidence/ap06-old-product-install/safety_monitor/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages:/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages:/evidence/ap06-old-product-install/semantic_map_manager/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_interfaces/local/lib/python3.10/dist-packages:/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages:/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap06-old-product-build/robot_bringup build --build-base /evidence/ap06-old-product-build/robot_bringup/build install --record /evidence/ap06-old-product-build/robot_bringup/install.log --single-version-externally-managed install_data
+[0.614s] running egg_info
+[0.614s] creating ../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info
+[0.614s] writing ../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info/PKG-INFO
+[0.614s] writing dependency_links to ../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info/dependency_links.txt
+[0.614s] writing entry points to ../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info/entry_points.txt
+[0.614s] writing requirements to ../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info/requires.txt
+[0.614s] writing top-level names to ../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info/top_level.txt
+[0.614s] writing manifest file '../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info/SOURCES.txt'
+[0.615s] reading manifest file '../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info/SOURCES.txt'
+[0.616s] writing manifest file '../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info/SOURCES.txt'
+[0.616s] running build
+[0.616s] running build_py
+[0.616s] creating /evidence/ap06-old-product-build/robot_bringup/build
+[0.616s] creating /evidence/ap06-old-product-build/robot_bringup/build/lib
+[0.616s] creating /evidence/ap06-old-product-build/robot_bringup/build/lib/robot_bringup
+[0.616s] copying robot_bringup/oak_rectifier_node.py -> /evidence/ap06-old-product-build/robot_bringup/build/lib/robot_bringup
+[0.616s] copying robot_bringup/link_monitor_node.py -> /evidence/ap06-old-product-build/robot_bringup/build/lib/robot_bringup
+[0.616s] copying robot_bringup/__init__.py -> /evidence/ap06-old-product-build/robot_bringup/build/lib/robot_bringup
+[0.617s] running install
+[0.617s] running install_lib
+[0.618s] creating /evidence/ap06-old-product-install/robot_bringup/lib/python3.10/site-packages/robot_bringup
+[0.620s] copying /evidence/ap06-old-product-build/robot_bringup/build/lib/robot_bringup/oak_rectifier_node.py -> /evidence/ap06-old-product-install/robot_bringup/lib/python3.10/site-packages/robot_bringup
+[0.620s] copying /evidence/ap06-old-product-build/robot_bringup/build/lib/robot_bringup/link_monitor_node.py -> /evidence/ap06-old-product-install/robot_bringup/lib/python3.10/site-packages/robot_bringup
+[0.620s] copying /evidence/ap06-old-product-build/robot_bringup/build/lib/robot_bringup/__init__.py -> /evidence/ap06-old-product-install/robot_bringup/lib/python3.10/site-packages/robot_bringup
+[0.620s] byte-compiling /evidence/ap06-old-product-install/robot_bringup/lib/python3.10/site-packages/robot_bringup/oak_rectifier_node.py to oak_rectifier_node.cpython-310.pyc
+[0.620s] byte-compiling /evidence/ap06-old-product-install/robot_bringup/lib/python3.10/site-packages/robot_bringup/link_monitor_node.py to link_monitor_node.cpython-310.pyc
+[0.620s] byte-compiling /evidence/ap06-old-product-install/robot_bringup/lib/python3.10/site-packages/robot_bringup/__init__.py to __init__.cpython-310.pyc
+[0.620s] running install_data
+[0.620s] creating /evidence/ap06-old-product-install/robot_bringup/share/ament_index
+[0.620s] creating /evidence/ap06-old-product-install/robot_bringup/share/ament_index/resource_index
+[0.620s] creating /evidence/ap06-old-product-install/robot_bringup/share/ament_index/resource_index/packages
+[0.621s] copying resource/robot_bringup -> /evidence/ap06-old-product-install/robot_bringup/share/ament_index/resource_index/packages
+[0.621s] copying package.xml -> /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup
+[0.621s] copying README.md -> /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup
+[0.621s] creating /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup/launch
+[0.621s] copying launch/teleop_joy.launch.py -> /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup/launch
+[0.621s] copying launch/robot.launch.py -> /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup/launch
+[0.621s] copying launch/server.launch.py -> /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup/launch
+[0.621s] copying launch/slam.launch.py -> /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup/launch
+[0.621s] copying launch/oak.launch.py -> /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup/launch
+[0.621s] copying launch/app_mapping.launch.py -> /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup/launch
+[0.621s] creating /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup/config
+[0.621s] copying config/cyclonedds_profile.xml -> /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup/config
+[0.621s] copying config/oak_params.yaml -> /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup/config
+[0.621s] copying config/link_monitor_params.yaml -> /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup/config
+[0.621s] copying config/teleop_joy.yaml -> /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup/config
+[0.622s] copying config/offboard_pixi.toml -> /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup/config
+[0.622s] copying config/teleop_joy_befreien.yaml -> /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup/config
+[0.622s] copying config/oak_params_slam.yaml -> /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup/config
+[0.622s] running install_egg_info
+[0.624s] Copying ../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info to /evidence/ap06-old-product-install/robot_bringup/lib/python3.10/site-packages/robot_bringup-0.1.0-py3.10.egg-info
+[0.624s] running install_scripts
+[0.640s] Installing link_monitor script to /evidence/ap06-old-product-install/robot_bringup/lib/robot_bringup
+[0.640s] Installing oak_rectifier script to /evidence/ap06-old-product-install/robot_bringup/lib/robot_bringup
+[0.640s] writing list of installed files to '/evidence/ap06-old-product-build/robot_bringup/install.log'
+[0.660s] Invoked command in '/evidence/ap06-repo/src/robot_bringup' returned '0': AMENT_PREFIX_PATH=/evidence/ap06-old-product-install/robot_map_manager:/evidence/ap06-old-product-install/robot_navigation:/evidence/ap06-old-product-install/explore:/evidence/ap06-old-product-install/amadeus_lidar_bringup:/evidence/ap06-old-product-install/vl53_near_field:/evidence/ap06-old-product-install/safety_monitor:/evidence/ap06-old-product-install/robot_state_estimation:/evidence/ap06-old-product-install/mission_manager:/evidence/ap06-old-product-install/bt_orchestrator:/evidence/ap06-old-product-install/semantic_map_manager:/evidence/ap06-old-product-install/robot_interfaces:/evidence/ap06-old-product-install/base_hardware:/evidence/ap06-old-product-install/amadeus_map_identity:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/evidence/ap06-old-product-install/bt_orchestrator:/evidence/ap06-old-product-install/robot_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/evidence/ap06-old-product-install/robot_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/evidence/ap06-old-product-build/robot_bringup/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap06-old-product-install/robot_bringup/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_map_manager/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages:/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages:/evidence/ap06-old-product-install/amadeus_lidar_bringup/lib/python3.10/site-packages:/evidence/ap06-old-product-install/vl53_near_field/lib/python3.10/site-packages:/evidence/ap06-old-product-install/safety_monitor/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages:/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages:/evidence/ap06-old-product-install/semantic_map_manager/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_interfaces/local/lib/python3.10/dist-packages:/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages:/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap06-old-product-build/robot_bringup build --build-base /evidence/ap06-old-product-build/robot_bringup/build install --record /evidence/ap06-old-product-build/robot_bringup/install.log --single-version-externally-managed install_data

@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.16)
+project(ap06_goal_checker_regression)
+find_package(ament_cmake REQUIRED)
+find_package(nav2_controller REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
+add_executable(goal_checker_regression main.cpp)
+target_compile_features(goal_checker_regression PRIVATE cxx_std_17)
+ament_target_dependencies(goal_checker_regression nav2_controller rclcpp_lifecycle)

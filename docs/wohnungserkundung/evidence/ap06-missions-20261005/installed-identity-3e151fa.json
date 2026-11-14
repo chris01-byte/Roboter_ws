@@ -1,0 +1,35 @@
+{
+  "python": "3.10.12 (main, Aug 15 2025, 14:32:43) [GCC 11.4.0]",
+  "modules": {
+    "explore.metric_frontier": {
+      "actual_file": "/evidence/ap06-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+      "sha256": "9fb6f1ffa1bd8ebb8e34f3b40681c6503d9e62d88777a9f73c088ccbf71c3d98",
+      "execution_source": "/evidence/ap06-repo/src/explore/explore/metric_frontier.py",
+      "byte_equal": true
+    },
+    "explore.metric_frontier_runtime": {
+      "actual_file": "/evidence/ap06-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+      "sha256": "7983947a0e902566a4beb7ee2eef1d30efbd90035b1aabc5db1d1fe349912f58",
+      "execution_source": "/evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py",
+      "byte_equal": true
+    },
+    "explore.metric_egress_reference": {
+      "actual_file": "/evidence/ap06-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py",
+      "sha256": "88231dbc6e02dd5a1b62de0d818e850299855db577e5dde57fd3520246976258",
+      "execution_source": "/evidence/ap06-repo/src/explore/explore/metric_egress_reference.py",
+      "byte_equal": true
+    },
+    "robot_navigation.cmd_vel_mission_gate": {
+      "actual_file": "/evidence/ap06-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/cmd_vel_mission_gate.py",
+      "sha256": "9367c46bbd2569964dd6a3068723188de0832bb076315a80101079d942a8310c",
+      "execution_source": "/evidence/ap06-repo/src/robot_navigation/robot_navigation/cmd_vel_mission_gate.py",
+      "byte_equal": true
+    },
+    "robot_state_estimation.hwt601_fusion_guard": {
+      "actual_file": "/evidence/ap06-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_fusion_guard.py",
+      "sha256": "31eef320935918fd8ad6dfcd595b0b7212370e01ca063fa8653d9875d228a602",
+      "execution_source": "/evidence/ap06-repo/src/robot_state_estimation/robot_state_estimation/hwt601_fusion_guard.py",
+      "byte_equal": true
+    }
+  }
+}

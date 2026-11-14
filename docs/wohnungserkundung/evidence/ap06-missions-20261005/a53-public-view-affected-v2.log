@@ -1,0 +1,50 @@
+................F...............F....................................... [ 42%]
+........................................................................ [ 84%]
+...........................                                              [100%]
+=================================== FAILURES ===================================
+______________ test_original_exhausted_a47_policy_stays_exhausted ______________
+
+    def test_original_exhausted_a47_policy_stays_exhausted():
+        node, inputs, metadata = fixture()
+        state = metadata['checkpoint']
+        policy, _ = restore_policy(state, time.monotonic(), state['saved_wall_time'])
+        assert policy.attempts['metric-task-2'].tries == 3
+>       assert node._metric_select(inputs, policy, .3) == []
+E       AssertionError: assert [MetricCandid...45d9c2bc006')] == []
+E         Left contains one more item: MetricCandidate(task_id='metric-task-6', x=0.665776805479028, y=0.10811856496223321, yaw=0.08737571480335948, frontier...049999373033643, 0.2849999936297536)), evidence_key='25ed39635e6b7b0c2e47233a367dc7510f7ced36e1409a278e56145d9c2bc006')
+E         Full diff:
+E           [
+E         -  ,
+E         +  MetricCandidate(task_id='metric-task-6',
+E         +                  x=0.665776805479028,
+E         +                  y=0.10811856496223321,...
+E         
+E         ...Full output truncated (23 lines hidden), use '-vv' to show
+
+src/explore/test/test_metric_robot_side_observation.py:68: AssertionError
+____ test_actual_a48_served_boundaries_keep_a_bounded_different_observation ____
+
+    def test_actual_a48_served_boundaries_keep_a_bounded_different_observation():
+        node, inputs, metadata = recorded_fixture('ap06_a48_selection')
+        state = metadata['checkpoint']
+        policy, _ = restore_policy(state, time.monotonic(), state['saved_wall_time'])
+        assert policy.attempts['metric-task-4'].completed
+        assert policy.attempts['metric-task-5'].completed
+        assert policy.attempts['metric-task-2'].tries == 3
+>       assert node._metric_select(inputs, policy, .3) == []  # original actual cap
+E       AssertionError: assert [MetricCandid...c644d1c543a')] == []
+E         Left contains one more item: MetricCandidate(task_id='metric-task-6', x=0.6645422231520892, y=0.10917569098641966, yaw=0.08810492251966726, frontie...74999931268394, 0.31499999295920134)), evidence_key='7d7a7efc4978d3023c19ce3724e189371e62fc542f98083e1695bc644d1c543a')
+E         Full diff:
+E           [
+E         -  ,
+E         +  MetricCandidate(task_id='metric-task-6',
+E         +                  x=0.6645422231520892,
+E         +                  y=0.10917569098641966,...
+E         
+E         ...Full output truncated (25 lines hidden), use '-vv' to show
+
+src/explore/test/test_metric_observation_neighbourhood.py:73: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_robot_side_observation.py::test_original_exhausted_a47_policy_stays_exhausted
+FAILED src/explore/test/test_metric_observation_neighbourhood.py::test_actual_a48_served_boundaries_keep_a_bounded_different_observation
+2 failed, 169 passed in 34.13s

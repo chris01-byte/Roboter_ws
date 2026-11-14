@@ -74,6 +74,9 @@ def generate_launch_description():
     # verarbeiteten Scans abweicht. Der STL-27L schwankt zwischen 2146 und
     # 2176 Strahlen, deshalb laeuft normalerweise der Vereinheitlicher davor.
     normalize_scan = LaunchConfiguration('normalize_scan')
+    # Optionales zweites Parameterfile (Default: Basisdatei erneut = wirkungslos);
+    # nav_mapping setzt es nur mit self_healing:=true.
+    slam_params_overlay = LaunchConfiguration('slam_params_overlay')
     scan_topic = ParameterValue(
         PythonExpression(
             ["'/scan_normiert' if '", normalize_scan, "' == 'true' "
@@ -85,6 +88,10 @@ def generate_launch_description():
             'active_drive', default_value='false',
             description='true = base_hardware SCHARF. Nur dann liefert es die '
                         'gemessene Odometrie, die slam_toolbox braucht.'),
+        DeclareLaunchArgument(
+            'slam_params_overlay', default_value=slam_params,
+            description='Zusaetzliches slam_toolbox-Parameterfile nach der Basis; '
+                        'Default die Basis selbst (keine Aenderung).'),
         DeclareLaunchArgument(
             'normalize_scan', default_value='true',
             description='true = /scan wird auf eine feste Strahlenzahl '
@@ -136,5 +143,5 @@ def generate_launch_description():
         # sourcen; sonst werden reine Drehungen weiterhin vor Karto verworfen.
         Node(package='slam_toolbox', executable='async_slam_toolbox_node',
              name='slam_toolbox', output='screen',
-             parameters=[slam_params, {'scan_topic': scan_topic}]),
+             parameters=[slam_params, slam_params_overlay, {'scan_topic': scan_topic}]),
     ])

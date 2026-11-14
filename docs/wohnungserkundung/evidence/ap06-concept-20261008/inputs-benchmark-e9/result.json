@@ -1,0 +1,442 @@
+{
+  "schema": 1,
+  "diagnostic_only": true,
+  "hardware_qualified": false,
+  "mission_qualified": false,
+  "source_reason": "self_body_scan_stale_after_processing",
+  "original_inputs": {
+    "result.json": {
+      "path": "/evidence/ap06-concept-20261008/joined-a/door68_start_a/result.json",
+      "sha256": "5e2d5f189cc52fc2be1494f8677ead9787f60954fb0279af34d7d2672b59a5fa"
+    },
+    "final_raw_map.cdr": {
+      "path": "/evidence/ap06-concept-20261008/joined-a/door68_start_a/final_raw_map.cdr",
+      "sha256": "fdcacbe78ace3340d6951e2bd748e054f88cda5f9b9a35d0ea18c3b295323033"
+    },
+    "final_costmap.cdr": {
+      "path": "/evidence/ap06-concept-20261008/joined-a/door68_start_a/final_costmap.cdr",
+      "sha256": "f4447b8cd64d7fd6798ec94d6d61983e184d7b3e504b2225e84de6648dead583"
+    },
+    "final_scan.cdr": {
+      "path": "/evidence/ap06-concept-20261008/joined-a/door68_start_a/final_scan.cdr",
+      "sha256": "c842258cbe5c9996da5bbbd14449f4847899e4915d94b6e3d140fe0e490273b6"
+    },
+    "events.jsonl.gz": {
+      "path": "/evidence/ap06-concept-20261008/joined-a/door68_start_a/events.jsonl.gz",
+      "sha256": "692e217c112ceb30dfba0910cce43fe857f337b71e0e6bcd030721a8bb27899e"
+    }
+  },
+  "installed_modules": {
+    "explore.explore_node": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py",
+      "sha256": "07e27f603cb857a77b6e6ff0da9c6f1f715735a1f428594c510f6c20f94676cb"
+    },
+    "explore.metric_frontier_runtime": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+      "sha256": "aa5f18db87891793a749d59e2940542d4336e12b3864727e0059d238332ba8ca"
+    },
+    "explore.metric_frontier": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+      "sha256": "47d770a122116390415a598642d016830d0cb0b3947edd6f4d4ac9471537592b"
+    },
+    "explore.metric_egress_reference": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py",
+      "sha256": "4786b1623247bff4d2c3896c87dfe7bd6939beed4c0c79f987ba11e14feae605"
+    },
+    "explore.frontier_task_evidence": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/frontier_task_evidence.py",
+      "sha256": "0861d7035ad6ce247353c99488a7ca66de8490b33eb909b672254ea296a033a6"
+    },
+    "explore.exploration_scope": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_scope.py",
+      "sha256": "74d1031a5b5a0145bfceea80c34a556ce21f9b6543782cc09891783f7b8d143e"
+    },
+    "amadeus_map_identity.fingerprint": {
+      "path": "/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py",
+      "sha256": "61c2ee882e3e25dbc8d6b1b25573152d3c271b817b4d81f074333c99a1ed0759"
+    }
+  },
+  "benchmark": {
+    "path": "/evidence/ap06-concept-20261008/benchmark_metric_inputs.py",
+    "sha256": "693ef5670b07a1c401a31f3c77c9b5d9595d199b40bd8007f9869e9aa91bc090"
+  },
+  "evaluation_clock": "Existing test fixture: fixed monotonic 10.0; ROS time max original stamps + 1ms. No stamps modified.",
+  "fixture_ros_now_ns": 1791442491152792218,
+  "affinity": [
+    0,
+    1
+  ],
+  "limitations": [
+    "No concurrent ROS/DDS/process load: compute microbenchmark only.",
+    "Exact saved final CDR grids; final composed common-time TF pose, not the discarded failing input object.",
+    "Original start ledger was not captured: reconstruct and assert the reported empty private inventory.",
+    "Steady case keeps real geometry memo; cold case invalidates only its projection memo, not evidence.",
+    "cProfile overhead changes wall time; use unprofiled values for elapsed-cost comparisons."
+  ],
+  "raw_shape": [
+    284,
+    564
+  ],
+  "cost_shape": [
+    284,
+    564
+  ],
+  "original_stamps_ns": {
+    "raw": 1791442486352345853,
+    "cost": 1791442487181668528,
+    "tf": 1791442491151792218,
+    "scan": 1791442487252117845
+  },
+  "scope_vertices": [
+    [
+      -0.8999999999999999,
+      -0.95
+    ],
+    [
+      4.699999999999999,
+      -0.95
+    ],
+    [
+      4.699999999999999,
+      1.8499999999999999
+    ],
+    [
+      -0.8999999999999999,
+      1.8499999999999999
+    ]
+  ],
+  "timings": {
+    "steady": {
+      "seconds": [
+        0.022585618018638343,
+        0.02252156098256819,
+        0.02245358901564032,
+        0.022294519003480673,
+        0.023093775002053007
+      ],
+      "mean_s": 0.022589812404476106,
+      "median_s": 0.02252156098256819,
+      "maximum_s": 0.023093775002053007,
+      "minimum_s": 0.022294519003480673
+    },
+    "cold_projection": {
+      "seconds": [
+        0.024131240003043786,
+        0.024546236993046477,
+        0.022396582004148513,
+        0.02352584700565785,
+        0.023021374974632636
+      ],
+      "mean_s": 0.023524256196105854,
+      "median_s": 0.02352584700565785,
+      "maximum_s": 0.024546236993046477,
+      "minimum_s": 0.022396582004148513
+    }
+  },
+  "profiles": {
+    "steady": {
+      "iterations": 4,
+      "wall_s": 0.09810940097668208,
+      "profile_total_s": 0.09787308000000002,
+      "stages": [
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 561,
+          "function": "_metric_inputs_locked",
+          "calls": 4,
+          "own_s": 0.0040767120000000006,
+          "cumulative_s": 0.09799906400000001,
+          "cumulative_fraction": 1.0012872180991954
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 259,
+          "function": "known_safe_mask",
+          "calls": 4,
+          "own_s": 0.001004375,
+          "cumulative_s": 0.038318378,
+          "cumulative_fraction": 0.391510903713258
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_scope.py",
+          "line": 133,
+          "function": "rasterize_scope",
+          "calls": 8,
+          "own_s": 0.034251552000000005,
+          "cumulative_s": 0.035008934000000005,
+          "cumulative_fraction": 0.35769727487885333
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 846,
+          "function": "_metric_prepare_egress",
+          "calls": 4,
+          "own_s": 0.00019524400000000002,
+          "cumulative_s": 0.034519775,
+          "cumulative_fraction": 0.3526993837324829
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py",
+          "line": 333,
+          "function": "check_trajectory",
+          "calls": 8,
+          "own_s": 0.0008882860000000001,
+          "cumulative_s": 0.011691178,
+          "cumulative_fraction": 0.11945243778983963
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 662,
+          "function": "check_trajectory",
+          "calls": 16,
+          "own_s": 0.002344482,
+          "cumulative_s": 0.009079058000000001,
+          "cumulative_fraction": 0.0927635872908056
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 222,
+          "function": "self_body_unknown_mask",
+          "calls": 4,
+          "own_s": 0.00539622,
+          "cumulative_s": 0.006226535,
+          "cumulative_fraction": 0.06361846383091244
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 517,
+          "function": "_metric_motion_binding_for_geometry",
+          "calls": 4,
+          "own_s": 1.98e-05,
+          "cumulative_s": 0.005118043,
+          "cumulative_fraction": 0.05229265289290987
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 308,
+          "function": "footprint_clear",
+          "calls": 8,
+          "own_s": 0.000235994,
+          "cumulative_s": 0.005049489,
+          "cumulative_fraction": 0.0515922151423047
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 277,
+          "function": "footprint_cells",
+          "calls": 8,
+          "own_s": 0.003420812,
+          "cumulative_s": 0.004721935,
+          "cumulative_fraction": 0.048245493040578666
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/frontier_task_evidence.py",
+          "line": 135,
+          "function": "_validated_snapshot",
+          "calls": 8,
+          "own_s": 0.000651325,
+          "cumulative_s": 0.004083181,
+          "cumulative_fraction": 0.04171914279186881
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py",
+          "line": 113,
+          "function": "map_snapshot_fingerprint",
+          "calls": 12,
+          "own_s": 0.000152022,
+          "cumulative_s": 0.002910802,
+          "cumulative_fraction": 0.029740578308151737
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py",
+          "line": 18,
+          "function": "compact_occupancy_cells",
+          "calls": 12,
+          "own_s": 7.869800000000001e-05,
+          "cumulative_s": 0.001308785,
+          "cumulative_fraction": 0.013372267430431328
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py",
+          "line": 206,
+          "function": "refresh",
+          "calls": 8,
+          "own_s": 0.000457656,
+          "cumulative_s": 0.0008544920000000001,
+          "cumulative_fraction": 0.008730613157366663
+        }
+      ],
+      "note": "Nested cumulative times overlap and must not be added."
+    },
+    "cold_projection": {
+      "iterations": 4,
+      "wall_s": 0.10085282099316828,
+      "profile_total_s": 0.100656619,
+      "stages": [
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 561,
+          "function": "_metric_inputs_locked",
+          "calls": 4,
+          "own_s": 0.00492683,
+          "cumulative_s": 0.10077312000000001,
+          "cumulative_fraction": 1.0011574102245577
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 259,
+          "function": "known_safe_mask",
+          "calls": 4,
+          "own_s": 0.000955682,
+          "cumulative_s": 0.037451109,
+          "cumulative_fraction": 0.3720680206832697
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 846,
+          "function": "_metric_prepare_egress",
+          "calls": 4,
+          "own_s": 0.00019833600000000002,
+          "cumulative_s": 0.037099667,
+          "cumulative_fraction": 0.3685765264974775
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_scope.py",
+          "line": 133,
+          "function": "rasterize_scope",
+          "calls": 8,
+          "own_s": 0.03328716,
+          "cumulative_s": 0.034089105,
+          "cumulative_fraction": 0.33866729618645347
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py",
+          "line": 333,
+          "function": "check_trajectory",
+          "calls": 8,
+          "own_s": 0.000678897,
+          "cumulative_s": 0.011417848000000001,
+          "cumulative_fraction": 0.11343365308147298
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 662,
+          "function": "check_trajectory",
+          "calls": 16,
+          "own_s": 0.0024166500000000002,
+          "cumulative_s": 0.009282185,
+          "cumulative_fraction": 0.09221633999051766
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 222,
+          "function": "self_body_unknown_mask",
+          "calls": 4,
+          "own_s": 0.0059055110000000004,
+          "cumulative_s": 0.0067345420000000005,
+          "cumulative_fraction": 0.06690610182326907
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 517,
+          "function": "_metric_motion_binding_for_geometry",
+          "calls": 4,
+          "own_s": 2.0239e-05,
+          "cumulative_s": 0.005210861000000001,
+          "cumulative_fraction": 0.05176868696533509
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 308,
+          "function": "footprint_clear",
+          "calls": 8,
+          "own_s": 0.000246641,
+          "cumulative_s": 0.0051395930000000005,
+          "cumulative_fraction": 0.05106065603097597
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py",
+          "line": 206,
+          "function": "refresh",
+          "calls": 8,
+          "own_s": 0.0009100200000000001,
+          "cumulative_s": 0.005077352,
+          "cumulative_fraction": 0.050442306233234396
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 277,
+          "function": "footprint_cells",
+          "calls": 8,
+          "own_s": 0.0034926220000000003,
+          "cumulative_s": 0.0047986800000000005,
+          "cumulative_fraction": 0.04767376500098817
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/frontier_task_evidence.py",
+          "line": 135,
+          "function": "_validated_snapshot",
+          "calls": 8,
+          "own_s": 0.0006007300000000001,
+          "cumulative_s": 0.003991324,
+          "cumulative_fraction": 0.039652871710304516
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py",
+          "line": 113,
+          "function": "map_snapshot_fingerprint",
+          "calls": 12,
+          "own_s": 0.000150025,
+          "cumulative_s": 0.002940138,
+          "cumulative_fraction": 0.0292095843195369
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py",
+          "line": 18,
+          "function": "compact_occupancy_cells",
+          "calls": 12,
+          "own_s": 7.3569e-05,
+          "cumulative_s": 0.0013024050000000002,
+          "cumulative_fraction": 0.012939089480047012
+        }
+      ],
+      "note": "Nested cumulative times overlap and must not be added."
+    }
+  },
+  "pose": [
+    0.7915008905170503,
+    0.17156164714159938,
+    1.4427990471864347
+  ],
+  "reference": [
+    0.00021995845119476506,
+    -0.007391176525522041,
+    0.0069799999999971786
+  ],
+  "bound_physical_motion": null,
+  "mask_cells": {
+    "known": 88786,
+    "safe": 38957,
+    "cost_known": 108292
+  },
+  "steady_state": {
+    "retained": [
+      0,
+      0
+    ],
+    "projected": [
+      0,
+      0
+    ],
+    "valid": [
+      true,
+      true
+    ]
+  },
+  "call_count": {
+    "warmup": 2,
+    "unprofiled": 10,
+    "profiled": 8,
+    "total": 20
+  }
+}

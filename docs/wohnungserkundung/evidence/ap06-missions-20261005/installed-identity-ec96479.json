@@ -1,0 +1,35 @@
+{
+  "software_commit": "ec964794f4cb1f566dbb5e81e0f5b649d600f0a1",
+  "modules": {
+    "explore.metric_frontier": {
+      "actual_file": "/evidence/ap06-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+      "source_file": "/workspace/Roboter_ws-ap06/src/explore/explore/metric_frontier.py",
+      "sha256": "433d45f0e89d2665831b6d6de161bdf8ffe99f73f3d127c49ba12719139a4a84",
+      "all_three_byte_equal": true
+    },
+    "explore.metric_frontier_runtime": {
+      "actual_file": "/evidence/ap06-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+      "source_file": "/workspace/Roboter_ws-ap06/src/explore/explore/metric_frontier_runtime.py",
+      "sha256": "a2978a53d2fe659f9b61df94ceeaea90ac71e2f479aaeb77df6bb1d9fa92f93b",
+      "all_three_byte_equal": true
+    },
+    "explore.metric_egress_reference": {
+      "actual_file": "/evidence/ap06-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py",
+      "source_file": "/workspace/Roboter_ws-ap06/src/explore/explore/metric_egress_reference.py",
+      "sha256": "88231dbc6e02dd5a1b62de0d818e850299855db577e5dde57fd3520246976258",
+      "all_three_byte_equal": true
+    },
+    "robot_navigation.cmd_vel_mission_gate": {
+      "actual_file": "/evidence/ap06-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/cmd_vel_mission_gate.py",
+      "source_file": "/workspace/Roboter_ws-ap06/src/robot_navigation/robot_navigation/cmd_vel_mission_gate.py",
+      "sha256": "9367c46bbd2569964dd6a3068723188de0832bb076315a80101079d942a8310c",
+      "all_three_byte_equal": true
+    },
+    "robot_state_estimation.hwt601_fusion_guard": {
+      "actual_file": "/evidence/ap06-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_fusion_guard.py",
+      "source_file": "/workspace/Roboter_ws-ap06/src/robot_state_estimation/robot_state_estimation/hwt601_fusion_guard.py",
+      "sha256": "31eef320935918fd8ad6dfcd595b0b7212370e01ca063fa8653d9875d228a602",
+      "all_three_byte_equal": true
+    }
+  }
+}

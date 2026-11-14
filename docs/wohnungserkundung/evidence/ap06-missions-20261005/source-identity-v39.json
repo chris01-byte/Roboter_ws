@@ -1,0 +1,2222 @@
+{
+  "candidate": "4497d0c9139481d644715ee613d127fb1db90e23",
+  "qualification": "v39 current source/build/test binding; whole matrix pending; original failed logs retained",
+  "native_plugins": [
+    {
+      "path": "/evidence/ap06-missions-20261005/navfn-install/nav2_navfn_planner/lib/libnav2_navfn_planner.so",
+      "sha256": "29254174388353b255571a5c2e609b63a96abfa070fd4e4e6d1a2125dfd93515",
+      "patched_source_sha256": "c9b5dc0ccd14f831a36f2c825ec39aa72b26192a3f1951823f90b596d8d1a087"
+    }
+  ],
+  "files": {
+    "src/amadeus_lidar_bringup/amadeus_lidar_bringup/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/amadeus_lidar_bringup/lib/python3.10/site-packages/amadeus_lidar_bringup/__init__.py",
+      "source_execution_installed_equal": true
+    },
+    "src/amadeus_lidar_bringup/amadeus_lidar_bringup/scan_gitter.py": {
+      "sha256": "04a917945c9ab6b96df06275096250b95f5f0159552fd1419ca5816620867ee7",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/amadeus_lidar_bringup/lib/python3.10/site-packages/amadeus_lidar_bringup/scan_gitter.py",
+      "source_execution_installed_equal": true
+    },
+    "src/amadeus_lidar_bringup/amadeus_lidar_bringup/scan_vereinheitlichen.py": {
+      "sha256": "39e651ca29e44317a858b80688328ea80d819127740792c9d2566c65ff840736",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/amadeus_lidar_bringup/lib/python3.10/site-packages/amadeus_lidar_bringup/scan_vereinheitlichen.py",
+      "source_execution_installed_equal": true
+    },
+    "src/amadeus_lidar_bringup/config/slam_toolbox_amadeus.yaml": {
+      "sha256": "5b0b8f7bcf09aa8d0d66364177825df01914491c01ade35b5292ae531b9d427c",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/amadeus_lidar_bringup/share/amadeus_lidar_bringup/config/slam_toolbox_amadeus.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/amadeus_lidar_bringup/config/stl27l.yaml": {
+      "sha256": "d3b5a914a21b57033a3ef5379ce5788d051630b0818785408fe05bf2ef5cb00b",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/amadeus_lidar_bringup/share/amadeus_lidar_bringup/config/stl27l.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/amadeus_lidar_bringup/launch/slam_lidar.launch.py": {
+      "sha256": "b4eeac51d307fc600f6258ce7c22a779f1916eab0439310e06e02a000328354f",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/amadeus_lidar_bringup/share/amadeus_lidar_bringup/launch/slam_lidar.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/amadeus_lidar_bringup/launch/slam_lidar_hwt601.launch.py": {
+      "sha256": "5e52200ffaa033fddf1f1d203a2a23ce748847b075818d6145c9c33be5eb2317",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/amadeus_lidar_bringup/share/amadeus_lidar_bringup/launch/slam_lidar_hwt601.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/amadeus_lidar_bringup/launch/stl27l.launch.py": {
+      "sha256": "f5a74f9aeee35fabb9fc93dfb1f5c7d03269b6fd35f3a74528d876fd3719a6c4",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/amadeus_lidar_bringup/share/amadeus_lidar_bringup/launch/stl27l.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/amadeus_lidar_bringup/package.xml": {
+      "sha256": "70725633445269b56596b2d6f49aca5b10ae6eb418fc55d27bef4826aca39371",
+      "source_execution_equal": true
+    },
+    "src/amadeus_lidar_bringup/setup.py": {
+      "sha256": "019e96f4cbc9430f2254e0a895167209b5a69f334605dae4ecce9a3de1a078ae",
+      "source_execution_equal": true
+    },
+    "src/amadeus_lidar_bringup/test/test_scan_gitter.py": {
+      "sha256": "7f9c4401aa4dbde607d4dc7275b480fee46d32df158c5067aefc12aaff974d27",
+      "source_execution_equal": true
+    },
+    "src/amadeus_map_identity/amadeus_map_identity/__init__.py": {
+      "sha256": "7192c47502fa71d6cdef32f04dc461f84f1bf9e8865ba1b9d8bedcecd381e9d3",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/__init__.py",
+      "source_execution_installed_equal": true
+    },
+    "src/amadeus_map_identity/amadeus_map_identity/fingerprint.py": {
+      "sha256": "61c2ee882e3e25dbc8d6b1b25573152d3c271b817b4d81f074333c99a1ed0759",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py",
+      "source_execution_installed_equal": true
+    },
+    "src/amadeus_map_identity/package.xml": {
+      "sha256": "57b7901ef166764d4f5136bda1370a359bcc3b1d6b3761f44b13983f81e73412",
+      "source_execution_equal": true
+    },
+    "src/amadeus_map_identity/setup.py": {
+      "sha256": "df2754f48561174b2c2377ff62b174ca6314d87ac7e7a319a485bb9244fad407",
+      "source_execution_equal": true
+    },
+    "src/amadeus_map_identity/test/test_fingerprint.py": {
+      "sha256": "8d6aa42a04e1aec1cfcad1be417695cc73901d7863ba61112b7adf4eb3246839",
+      "source_execution_equal": true
+    },
+    "src/base_hardware/base_hardware/__init__.py": {
+      "sha256": "ac7bdc4a8a2fd7854700fc0029124403a6d3114e27ad0a9148d18a6476fe834c",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages/base_hardware/__init__.py",
+      "source_execution_installed_equal": true
+    },
+    "src/base_hardware/base_hardware/base_hardware_node.py": {
+      "sha256": "f85904676be9765c2a932cf338a258e100c9cf1684958a39eb25c5bb097ac1f3",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages/base_hardware/base_hardware_node.py",
+      "source_execution_installed_equal": true
+    },
+    "src/base_hardware/base_hardware/encoder_odometry.py": {
+      "sha256": "a49b82dfd937c40259b13bc16b1e42945c0f2a50017a6f7395476b4a972aeb94",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages/base_hardware/encoder_odometry.py",
+      "source_execution_installed_equal": true
+    },
+    "src/base_hardware/base_hardware/encoder_shadow_node.py": {
+      "sha256": "b05c21fc74d8f742da40fdd718900810c197265e50c0594843d42a13952c0988",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages/base_hardware/encoder_shadow_node.py",
+      "source_execution_installed_equal": true
+    },
+    "src/base_hardware/base_hardware/encoder_shadow_reader.py": {
+      "sha256": "282e5652153fb203866220653fdd9efac6dea3d9733555c9f80f73d8bd803a46",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages/base_hardware/encoder_shadow_reader.py",
+      "source_execution_installed_equal": true
+    },
+    "src/base_hardware/config/base_hardware_params.yaml": {
+      "sha256": "e91cbff0657789ca5b7b2406ea3320171267f433fee69c051aa632d92d3ade97",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/base_hardware/share/base_hardware/config/base_hardware_params.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/base_hardware/config/encoder_shadow.yaml": {
+      "sha256": "7229298fb2631561befae755bb6bce10b8c5b1ce8823e0e3bdc89b9a5121145c",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/base_hardware/share/base_hardware/config/encoder_shadow.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/base_hardware/launch/base_hardware.launch.py": {
+      "sha256": "f46046afb71800d2777ae16b01752e570c361a2877a89e9c9fce7fceb5d8621f",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/base_hardware/share/base_hardware/launch/base_hardware.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/base_hardware/launch/encoder_shadow.launch.py": {
+      "sha256": "02043d61df51d290b4d6de1eced718fa74b42881fb6aa2d14d68f13c95b5e84c",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/base_hardware/share/base_hardware/launch/encoder_shadow.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/base_hardware/package.xml": {
+      "sha256": "b61189510e0e675a63f5ff98f17b8c8cf592ea1d2e17e7daf216bf5f9efa35af",
+      "source_execution_equal": true
+    },
+    "src/base_hardware/requirements-modbus.txt": {
+      "sha256": "36565649e9a2c3e41dd54c1b7cd4828dc1b01acf72376c9104e28ed9406d4f8e",
+      "source_execution_equal": true
+    },
+    "src/base_hardware/setup.py": {
+      "sha256": "2fcdfccdc26931c7a81aa59926d3e4541293fd5814416aea985af3825e4b82a6",
+      "source_execution_equal": true
+    },
+    "src/base_hardware/test/test_base_hardware_node_contract.py": {
+      "sha256": "0a2ec0f8883bcbba48cfd82d80ab96981b6289b11418e58edf8daedef0d61747",
+      "source_execution_equal": true
+    },
+    "src/base_hardware/test/test_encoder_active_recovery.py": {
+      "sha256": "fbab29b45c16884efd7d12d0f16a8b7aa5c356c0ca0fb302116c8bba27116eea",
+      "source_execution_equal": true
+    },
+    "src/base_hardware/test/test_encoder_odometry.py": {
+      "sha256": "7386cce30ff45a0912a4dd7978eef629ea55aabb237846ab5de29aad44178512",
+      "source_execution_equal": true
+    },
+    "src/base_hardware/test/test_encoder_shadow_contract.py": {
+      "sha256": "63e25898c4cad10ac7c0a1f7aaa9440d44bef41dba15532c2dc088e0e767af74",
+      "source_execution_equal": true
+    },
+    "src/base_hardware/test/test_encoder_shadow_reader.py": {
+      "sha256": "05aa5b10de4de11c6d23764b09d5a391ee32f1d6eef2c747387b096067b678d2",
+      "source_execution_equal": true
+    },
+    "src/bt_orchestrator/CMakeLists.txt": {
+      "sha256": "7ab5a13b1d75b30bcd4c4c3cece574e1d7f043626a32ceb86e608efcd7f6d8eb",
+      "source_execution_equal": true
+    },
+    "src/bt_orchestrator/bt_xml/explore.xml": {
+      "sha256": "b2ea025cda8c6483fbf0dfefadcca5b2862d4c8dabc0dff72c1a8791679e0e74",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/bt_orchestrator/share/bt_orchestrator/bt_xml/explore.xml",
+      "source_execution_installed_equal": true
+    },
+    "src/bt_orchestrator/bt_xml/pick_and_place.xml": {
+      "sha256": "50f2b6e42c95dd70905d85cbf2cc455937954ab7a1c4c01861e5cadd1e8f05bd",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/bt_orchestrator/share/bt_orchestrator/bt_xml/pick_and_place.xml",
+      "source_execution_installed_equal": true
+    },
+    "src/bt_orchestrator/config/bt_params.yaml": {
+      "sha256": "31faf7a4ce3a9302fcba9a62d86289cc0b7aec0eb651994478907f3a24fa8713",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/bt_orchestrator/share/bt_orchestrator/config/bt_params.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/bt_orchestrator/include/bt_orchestrator/nodes/condition_nodes.hpp": {
+      "sha256": "637d45ae1dc0722b5f4ba23b3bd9a2411c5edf23254c48bb6aa37bd10c4beaf3",
+      "source_execution_equal": true
+    },
+    "src/bt_orchestrator/include/bt_orchestrator/nodes/exploration_nodes.hpp": {
+      "sha256": "de135edcb433020b077acd940340cdb82fcd5461b0a08ebc9b852781b06430c0",
+      "source_execution_equal": true
+    },
+    "src/bt_orchestrator/include/bt_orchestrator/nodes/manipulation_nodes.hpp": {
+      "sha256": "38b6b3dc5a09b90fde6f9840a195592208e2842b652d5e47026b1dd76358f946",
+      "source_execution_equal": true
+    },
+    "src/bt_orchestrator/include/bt_orchestrator/nodes/navigation_nodes.hpp": {
+      "sha256": "9b1a8d7ed00fa2a0fc0266f78af9adef8ce8593f93db6898fa45815b5efb3f1b",
+      "source_execution_equal": true
+    },
+    "src/bt_orchestrator/include/bt_orchestrator/nodes/perception_nodes.hpp": {
+      "sha256": "8c8c73a7d33fbc4d0ed50ecc9cbede1254be1a9d31ce97d2e02ef49001e6785c",
+      "source_execution_equal": true
+    },
+    "src/bt_orchestrator/launch/bt_orchestrator.launch.py": {
+      "sha256": "f482c08f0fc3b57ac1700e7d7589627eb9a6742cbe6b58a3f9593ce850159b87",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/bt_orchestrator/share/bt_orchestrator/launch/bt_orchestrator.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/bt_orchestrator/package.xml": {
+      "sha256": "9a581d6e485825f28819ffa3b10af696cdaa1968c09ec54957c345ba4aca9842",
+      "source_execution_equal": true
+    },
+    "src/bt_orchestrator/src/bt_orchestrator_main.cpp": {
+      "sha256": "acfe9f75cc5d39169a712b7c1f49d9d22b12d5daa4e316ccc71bad8f17c1bdd0",
+      "source_execution_equal": true
+    },
+    "src/bt_orchestrator/test/test_bt_orchestrator_contract.py": {
+      "sha256": "f6ef7c7c741a17231533b47a6c42a55359980c3f2fb54bb4b5f323695555f64d",
+      "source_execution_equal": true
+    },
+    "src/explore/behavior_trees/navigate_to_pose_no_recovery.xml": {
+      "sha256": "d194907603cfa332c839985c005e7eb39f13198e857aca32bedc93da410fc3c8",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/behavior_trees/navigate_to_pose_no_recovery.xml",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/config/door_test_params.yaml": {
+      "sha256": "00618957cf7906e800cf8785228f18c98440a589ee01e417c5b8b4bc0931cfc0",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/door_test_params.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/config/explore_params.yaml": {
+      "sha256": "83ba002c74421513ee849a1a5728b13f79acdbb1cba298650a5d277ee409109c",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/explore_params.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/config/hwt601_parity_params.yaml": {
+      "sha256": "6097dae5aaee6bb6964d78b474f13768e70af298915fd986920c20a6cf2e3506",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/hwt601_parity_params.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/config/hwt601_recovery_acceptance_params.yaml": {
+      "sha256": "ee3b42eef682a830892e93f84093baf1547a84f76d6baa3e480a81dc1de393c4",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/hwt601_recovery_acceptance_params.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/config/metric_frontier_params.yaml": {
+      "sha256": "8a88ca2117983b09b1234f9e8c2a38159223fafc997d4bc28b89dd338d7ffe51",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/metric_frontier_params.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/config/metric_frontier_simulation_params.yaml": {
+      "sha256": "0ec8c361f7d2e3b721d3eb53c2ef40464315c02f5c208bb0958140d4dca28d41",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/metric_frontier_simulation_params.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/__init__.py": {
+      "sha256": "22d8dce4ae41aedd40c815b0fdf3e622a396bbf86553ae36867d0b4cee02c140",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/__init__.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/child_result_policy.py": {
+      "sha256": "8509ebaa241cdd94d64cf60bc7a63f15b6d58c93a5768dd15b271edc4f147733",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/child_result_policy.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/exploration_child_goal.py": {
+      "sha256": "02ff587c82d6e1d105080455cf0f0b2e7495edcc4e42ae96e8b41456881d65e5",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_child_goal.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/exploration_completion.py": {
+      "sha256": "c724103298e5a7eb7854e939f8bc148bbf87015f304ea9b3ba4f4414a4b6f33f",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_completion.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/exploration_migration.py": {
+      "sha256": "22fd8f9ceca29ba72dc67ada3faa6d0302c98765cc81c4e52c896e3db96a5a73",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_migration.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/exploration_nav_runtime.py": {
+      "sha256": "306040e03c96c280df91a8ec9b1314baf2dcd57721bf34b8985620fc5268ec2b",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_nav_runtime.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/exploration_persistence.py": {
+      "sha256": "62f11a33998766fe5fac65b08f3b624f531198a1314b0df2eb191336fd173adc",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_persistence.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/exploration_policy.py": {
+      "sha256": "12945ceb5980f4d59c9ef422793425b73b4c99c4847e67f81d8e902467ff48f8",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_policy.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/exploration_scope.py": {
+      "sha256": "74d1031a5b5a0145bfceea80c34a556ce21f9b6543782cc09891783f7b8d143e",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_scope.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/explore_node.py": {
+      "sha256": "8ed5b85681326d08a0ffcb2c6c8f0af4e7f6af95f980f1ec7bc2000a1272f99f",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/frontier_goal_candidate.py": {
+      "sha256": "2ded4faadb059f9e3208195780b61ae8856825f44392de10e11fce94e8931d51",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/frontier_goal_candidate.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/frontier_task_evidence.py": {
+      "sha256": "0861d7035ad6ce247353c99488a7ca66de8490b33eb909b672254ea296a033a6",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/frontier_task_evidence.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/frontier_task_feed.py": {
+      "sha256": "a8cf07522b94fea0364076f8ab1f6ae197087649d4208cf025c40cabfe4b6ae9",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/frontier_task_feed.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/frontier_task_resolution.py": {
+      "sha256": "618be60ef7f7604c9b7042e971af152cc6ecdf607217b414d264e00afb065c1c",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/frontier_task_resolution.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/lidar_motion.py": {
+      "sha256": "e7507b3d75547b9daed7410eb4bff5b7d1d806b69425440de82671229bf673d6",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/lidar_motion.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/map_status_adapter.py": {
+      "sha256": "0a688ac8587761393e1c233335a585f00ba49a5ec983ac51a318a7a54706d421",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/map_status_adapter.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/metric_checkpoint.py": {
+      "sha256": "e750cd7a6b1faf49d95395d3289e2c43902db3212ac03984a8b72d50a2ef852b",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_checkpoint.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/metric_egress_reference.py": {
+      "sha256": "4786b1623247bff4d2c3896c87dfe7bd6939beed4c0c79f987ba11e14feae605",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/metric_frontier.py": {
+      "sha256": "6eba5aae73a7b9d15252e5d2fd1b117356c6437dcdb62a840d37fb657645f4c5",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/metric_frontier_candidates.py": {
+      "sha256": "f852901d67655d4fa8f9dda372ae51b40f5b34e658af2a82c0f1a0b96e9ee951",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_candidates.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/metric_frontier_runtime.py": {
+      "sha256": "37adf279a85e208613779a7ab703f78a3bbc0287442d0a9520a53b6ee5922b6e",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/metric_progress.py": {
+      "sha256": "e520db67ae8136bb9ad3adf27f76debf3092133a75456bade94d1c56b938b544",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_progress.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/portal_frozen_scan_runtime.py": {
+      "sha256": "b2ca8cf34fe3ec841c03dcc2954fe153864c802a62a8acac1c3f3ac1e35aa419",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_frozen_scan_runtime.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/portal_memory.py": {
+      "sha256": "d1e2a59848883f675354b07e10c8cce94d2387b5ba1f8193a7b633e7f2787051",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_memory.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/portal_plan_adapter.py": {
+      "sha256": "1bbdf256f681ebe1d15239c29e2ed8b0d79fda5edd31996cd2224830cf2271cf",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_plan_adapter.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/portal_planning.py": {
+      "sha256": "344eb10a4ca67342f83a1e4bec521779113675ed8810da201ac867f35766ccd6",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_planning.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/portal_source_adapter.py": {
+      "sha256": "bc6ac8e767d9c05c1b24e3a10e5e99681755e68f14b882e6d1d9017877943475",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_source_adapter.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/portal_task_evidence.py": {
+      "sha256": "6f8bdb126eaa9dcfce1aecf8c5c1b22b1ad271688ba0071ef52ef89f01821eaa",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_task_evidence.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/portal_traversal_evidence.py": {
+      "sha256": "922809756a5fc4200aee605f08d2d7ef72666694ad14709a479a7d9e0e120e99",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_traversal_evidence.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/portal_traversal_runtime.py": {
+      "sha256": "f6dec7b4c4defcc92a1989860dd65fb829bd28f0d59012fd2d699769d4b9d0db",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_traversal_runtime.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/raw_map_portal_adapter.py": {
+      "sha256": "2326cb21f60b15cc08faeaa996c74fadc47f8312d677f98145aeab950e4e2fb7",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/raw_map_portal_adapter.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/region_graph.py": {
+      "sha256": "29cc1b50c7382cf9911926f46bf3670e572745c9c75e6b98ecf541fcd42a3a05",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/region_graph.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/region_graph_shadow.py": {
+      "sha256": "fa8e5b8480eda0a4074b639dbeb49c7478a4d0fcef31538b1aaf08eda8fc17ef",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/region_graph_shadow.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/region_graph_shadow_lifecycle.py": {
+      "sha256": "e67a6ab6715f1fde46662f89b6180bfedb1f9126ada2bcb18f06265c14ae9772",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/region_graph_shadow_lifecycle.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/explore/region_graph_status.py": {
+      "sha256": "6184f8b9e20bf82517ef3aee494eb95c7271d9c97b52931d824adde5155eac32",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/region_graph_status.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/launch/explore.launch.py": {
+      "sha256": "031a616072a334ce82cc51f151f1aebaafeb8272c07dfbb797b6db5c2cbb0626",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/launch/explore.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/explore/package.xml": {
+      "sha256": "d179d21582bb3208c06e08732e92418fd3f17a0fe6c26999995233a184e37176",
+      "source_execution_equal": true
+    },
+    "src/explore/requirements-geometry.txt": {
+      "sha256": "31cc2e5981e25167dbb29f794a3d26264c145dc023a87e17380a1db65df54408",
+      "source_execution_equal": true
+    },
+    "src/explore/setup.py": {
+      "sha256": "23d3da3158482b75c691068993a6b1f22b59a09d6aad145f1db2db2e1c7145ab",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_a47_selection.json": {
+      "sha256": "bd752daeb373a8d439f9b04c364ddc74506233f5b961b75828c28e429548a4ed",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_a47_selection.npz": {
+      "sha256": "52e3f221d2f60c35c923f2e61293e4430b86bc0a938543df59b339da72b607b5",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_a48_selection.json": {
+      "sha256": "482d40c75e20572b5b60c9a029bdcc1714984712a028ee70859a57460751714b",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_a48_selection.npz": {
+      "sha256": "74624d0062ae56e4e2839bf08e0a808b990b96c0c514e66b09523a5dd091a1e4",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_a51_selection.json": {
+      "sha256": "1a9e540899daafcc532c1b55aceeaf7ed7e709d1a23244fc6ccf198baec9bbdf",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_a51_selection.npz": {
+      "sha256": "4e3d922dbbd619c2000ccfa209f9d765860d3e64de1f76059b3f26a55781b943",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_a52_selection.json": {
+      "sha256": "4fb605fa7a26cd44d7fbecf2f1cb4a3c607c13fc99e3fbd3f2f833ca949ccc4f",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_a52_selection.npz": {
+      "sha256": "90b534c2bb030ed1be78d0219c91967c57353baff495145e01006e2f28cc3255",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_a53_selection.json": {
+      "sha256": "c7fc054ea00f24dc71771cfd738e73dc0a19139c40d0dc06c9fa696a17c7dfcb",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_a53_selection.npz": {
+      "sha256": "d99bdbadc4e572344b3739358014f2ccb44316b90cc6755429e74c7de63842a4",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_a54_selection.json": {
+      "sha256": "c2ac9bc8037c3b5e00038a08610cef1c725a840e26b80356adea473f6f587b1c",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_a54_selection.npz": {
+      "sha256": "16e0a1a40a14c2e09b1bfc41052a440e09d8c2bee20f2ff4b8c475c08407d26f",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_a55_selection.json": {
+      "sha256": "09963f9eb463d3ac026aabbaf8f63bca9105726ccfa5dc496bf93a58a128a4b7",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_a55_selection.npz": {
+      "sha256": "ec906a6f7fa7c18670b5d56baab812b2026bd901b676c0887ee3a2f95821ebd9",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b60_selection.json": {
+      "sha256": "e647aba2ded3b0d07410fc3486b03f1679da83bf26041c3ee9fdf3a4fdbd462e",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b60_selection.npz": {
+      "sha256": "a08113f490a9dab4d994c3631429ba927315b48c70a9bc54f58a173bb5f8645a",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b63_public_alignment.json": {
+      "sha256": "8e6d88e52e9f6b544d3345a1a9df52f88d20bd69c865dca3f0a59883b21b1183",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b63_public_alignment.npz": {
+      "sha256": "9f1e6cc44634fc97842ea23b60da2764d6b9d2785cbe8fcc7835124d531976a9",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b65_selection_exact.json": {
+      "sha256": "07ed49408eef57f00b0cca59ee3fc4d4b38c9bace3ac454dac2b13e3cdc73ff9",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b65_selection_exact.npz": {
+      "sha256": "e3454b71589beec39d05d8b6d762428cd2d56503593a581d61c1d9e4d67c0b47",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b65_stop_observation.json": {
+      "sha256": "621243672fe104a64bae6c79670f03caf6bf4698136a89595536dcd73fd48ba6",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b65_stop_observation.npz": {
+      "sha256": "cdfccf02370f2ac4511c15485ce55003a8f25012dfa2c74658d88dddc68ceaf7",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b68_public_refuge.json": {
+      "sha256": "4ba9466b2b7edf7b491e2f8375a822a9350bbd5cb14b72de93e4a388f88ddec8",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b68_public_refuge.npz": {
+      "sha256": "29a806470eb3b1e2e16551ef575de31f9fb4361bbeae363eddb31aed3a10dba2",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b70_after_observation.json": {
+      "sha256": "a4ff06d5c49d03ee494976828f407831f82ab458d7b594659dc549da63298577",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b70_after_observation.npz": {
+      "sha256": "cff5a2bb8cd7c08bc68f294a124bd5cfbd04425084422833437f5366187fc1f9",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b73_before_last_view.json": {
+      "sha256": "0e98127525272a08bcbcfef01a394228fcd7f0e37e445ece607b4c8d8a16cd44",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b73_before_last_view.npz": {
+      "sha256": "add67cb647c46b981f9045b98d343115fa5f7fa0972dba2be524358dfa996ac3",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_c33_native_detour.json": {
+      "sha256": "6868ec8b724c5d345e3a04a4d390b301480e552a15336ed066a49ee592844e6c",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_c33_native_detour.npz": {
+      "sha256": "7d85063e997f9a5d62d333f4bdf2acd280e9bd12bd303721ac33f4c334caa607",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_c36_selection.json": {
+      "sha256": "11ff4d48841414e62e8cd7bd9da3868e4fbd5ee4eed8ecb31069ad2acd2f3d07",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_c36_selection.npz": {
+      "sha256": "dfde8a9813b36bb35caab99626c8c4c009922f76362d00dd63e9dc51f81bf750",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_c38_departure.json": {
+      "sha256": "d710d1858676742cd583c130b6267b6cbf6b29e549c9c4280493f001cab5188f",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_c38_departure.npz": {
+      "sha256": "a072173ceb2704c4593e211f9809cdebdf5cd49af9979c43cea4312b41a1c841",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_c40_native_detour.json": {
+      "sha256": "43138fe1e09c5390c257675a5460c06c1bdf0c0ebe2f3a56f700e1fbaca039ed",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_c40_native_detour.npz": {
+      "sha256": "0f37bb3db0af60dcde031520119aef5e789a5da4bad39b37d90e9870d554ad21",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_c44_selection.json": {
+      "sha256": "7fe488c33231865882367ef698e07a91a9b6e182baeee66c121ddd9ccfcbdcb2",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_c44_selection.npz": {
+      "sha256": "8829dda60210bbba42a1b03f4bad8f82f9ac67f6af0552f004d15e0c11fdfe03",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_corridor_departure.json": {
+      "sha256": "03257ec5f8c6b255b2d4c63b138e84b66ca6bb8a2b8084fb0e1220811f25825d",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_corridor_departure.npz": {
+      "sha256": "fc0d9c3786ccfcaa94a26536cb49fb515f453f312857e4579988672fc53f1635",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_dead_end.json": {
+      "sha256": "b43236d72464463bf7153107c969cd742174741cfc878d6473b9543fcdbff0e2",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_dead_end.npz": {
+      "sha256": "7d85063e997f9a5d62d333f4bdf2acd280e9bd12bd303721ac33f4c334caa607",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_native_departure_path.json": {
+      "sha256": "e5e6ec77698510ee1566dd28299a908e7ee13d01779711cedb9b3af8f2063dbd",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_ordinary_departure.json": {
+      "sha256": "3db64498eeea765488b41751d5f9a12834c603b5401cbb2bc798dd6b9b3fc4f1",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_ordinary_departure.npz": {
+      "sha256": "3eb2fdb9ecfaa91773097d2f971d80c7b80a4a5ba60588e3957917e6d075fb4c",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_ordinary_departure_initial.npz": {
+      "sha256": "54ff81bb961d3e50edada0b1989d7b949c260b124eb310eaf459433a39fa1f84",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_reference_partial_cells.json": {
+      "sha256": "5644d5e6a067cb7d3346fd547a20dfb5a3b4dbd678cf20640525cb160f4e23a4",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_reference_partial_cells.npz": {
+      "sha256": "22e3c15afea668d0323b127a91b7fd9e6824e6d1cd316bbcdb4162afba8062e3",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_remaining_frontier.json": {
+      "sha256": "37d3ffb2b37645272c6a66d24ff0fcc2d984c67703cb94813bd9cba11ffd0331",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_remaining_frontier.npz": {
+      "sha256": "f188a78f5729bd4f0fd1008807932bdc03971e16a7a9cf881e9e57ce94e35ec4",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_start_c.json": {
+      "sha256": "d81660a1f26bd3e6d230148cb909257d231119b964481c8882d3d44408baa551",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_start_c.npz": {
+      "sha256": "4e1f0ea531527e0bb0ceb9c525c2c823950fa555327ca1ff69dac8660a23eacb",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_visibility_reference.py": {
+      "sha256": "95197a7c2ce24444324bf0849ccd28d81c7922ec2f8641016672d196d2d1081c",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_child_result_policy.py": {
+      "sha256": "3b5ff1d266ab2f121ff368e2098a717fd33aa9cc152d480ab93dc6c51d11369d",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_exploration_child_goal.py": {
+      "sha256": "8d85d75a8d64e964327ece63eac51d02f1a8c8c301e5f5f0a7125afdec2c5043",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_exploration_migration.py": {
+      "sha256": "edfddd0fede8d8079e5f425c6069fc19c077567acd802e9a67a5e399e6b80a3a",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_exploration_nav_runtime.py": {
+      "sha256": "60e7d60384c26f4d72514583446b3be52513b85a53122984c733a49f4f8fc4f6",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_exploration_persistence.py": {
+      "sha256": "5b952ad6281266221d9dd12da62240076b47ee0206453086dca410862bbcdae1",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_exploration_policy.py": {
+      "sha256": "4f44ba72fa355aeeefa209d44061230f201e013e69ab2669b1d05a9c42f3225d",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_exploration_scope.py": {
+      "sha256": "6b50363ff851b84ef221a80abb84dade1a9b62c436197c69742d24a78bf9e2e9",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_explore_contract.py": {
+      "sha256": "aa8a47767f9888cd079564a6a64735288abceee9b2194f3403fa47a1063a4592",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_frontier_goal_candidate.py": {
+      "sha256": "3a81214b2925fbabc30531aa18a7a56b792b931c8ba0c706d3068aa0f276623f",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_frontier_task_evidence.py": {
+      "sha256": "5057b07409699ac5eae3071c8c6252158da411288fc8ca678341a9275eda6a18",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_frontier_task_feed.py": {
+      "sha256": "0ab1bc8b203f6817a7302e42e0aedb0bd49bd152b5b8f1ddeaa53af64cebad76",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_frontier_task_resolution.py": {
+      "sha256": "b4701bc5c281a95fc183f9a55836c5ab652e76c3af69b43748fddda9521986b3",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_hwt601_recovery_integration.py": {
+      "sha256": "951d73e3f4c700faf9428e3031e08d640b9a6d023cb3fb00d147895d398e9682",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_lidar_motion.py": {
+      "sha256": "46cc43536c40e0f48f60a2fe33f37581b84282642e2f976ae7357d2977e9dd38",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_map_status_adapter.py": {
+      "sha256": "3a414417039a6f760b4c2dcfc25747bce8a4dc41e3635890271e6a685a4f4166",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_alternative_pose.py": {
+      "sha256": "ec43b965215c8ce8e860f844bd83b3ce9050432af885fbe6692b713a10302bdf",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_arrival_revalidation.py": {
+      "sha256": "d899013bc49fcc1328660c3f95981acb43cc60a5e714dafc94b796debdcc697e",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_body_reference_tf.py": {
+      "sha256": "cf8bd3fa1aa21f5c89b21193c2bb6ae2ce44fd0da78ea0edfb0810fe871f7ac4",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_boundary_tangent_view.py": {
+      "sha256": "e65c71bee3a9ce2eb2a9cac8696e0d9d520d104f0756705b348f58721e6c315c",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_departure.py": {
+      "sha256": "3884af99f9b5cdb223a19f1d2b03f06ec5e46b7e32d24fe2c23baaafd22f2f46",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_egress_reference.py": {
+      "sha256": "483d7a91acdf2d308be80119c2b12aa91f119c2e3e19ebe801da6f07a37afcf2",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_frontier.py": {
+      "sha256": "361c5ab67654c83dfe6539a57ed45304994b7e4a390a65f023577c462df8056c",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_frontier_candidates.py": {
+      "sha256": "6d33f1d8363cc0d0fa5e0031fbe063e0e27bad49dc539668c82093264f69d98f",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_goalchecker_refuge.py": {
+      "sha256": "e43e237e57bbe16a81b42c2b2be73645b088c7ecf96475d0262540b3100e92f6",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_initial_body_inventory.py": {
+      "sha256": "59208837b200b7177252a4143e9a25b26455aee3f6984d790202c198a3cf0644",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_join_replan.py": {
+      "sha256": "5e52b44b4fcb89f67d2dac2b17366f8eed04b01588181be210ad86481c9d894b",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_map_lifecycle.py": {
+      "sha256": "1a20893684b9acc69cd0484aa7458857c66408b5f6b1981c5c2ded4eda31bdeb",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_measured_motion.py": {
+      "sha256": "046cda32628026c559fb2bbd454ef8bd65566e2dfaf9a3fbe16dbe3337563fbe",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_motion_geometry.py": {
+      "sha256": "4e4618f69f9785b6bd877ea005fafa6d541459f524e38c9ccffd86568083bdac",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_observation_neighbourhood.py": {
+      "sha256": "3a8aefa28add6eb5959b535a9d5507b158b0243db2e3e113371654deb4ec2fa3",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_observation_sources.py": {
+      "sha256": "b22b9aa1e2511b0bb99046bf143a61177931bc5cecb04918de522dec1a735399",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_partial_reference.py": {
+      "sha256": "6bb0a5be7c9b4bfc20c81f9e00fdc87494ebd5a3069d2306796abc8e66ac6ed0",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_pending_withdrawal.py": {
+      "sha256": "722c4778e69522a6f1573a61bc63cd6452ff1b0146286cc07cae02ae7ace4359",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_planner_abort.py": {
+      "sha256": "16a1dad5014983ce97f7762c6c51a948d4e6c3b3943058880bae734ec2c1f431",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_planning_stop_reason.py": {
+      "sha256": "67964b0deda93a24900fe33893591dd1a822d4c39356580f83cd776b6ee8f4fa",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_progress.py": {
+      "sha256": "ec07251424aa1d0ee5139356b5134d2a7f4729c35e5e0c53812b187955ba9f7f",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_proposal_accounting.py": {
+      "sha256": "af5b13f80287029697f15bab20fdfb8d7b798d4ddbc5308541116ee5824cb5e0",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_proposal_alternatives.py": {
+      "sha256": "d9c1a175edfd8402c72442728a4ecc0659908c2b583808690ca662a51fbe33ae",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_public_alignment.py": {
+      "sha256": "bb8b608c61f854f648b550b2327603ab3986c889b6df0e013c370aecfd5b5ac7",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_public_body_authority.py": {
+      "sha256": "e50555807c629c6666da4b52cade2f6edbf9d63ad43beeca80538fb064b5e50b",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_public_cooldown.py": {
+      "sha256": "17da4c25b7f9858bec2fefae7397f278ce9dd939bc6a1931ea7b5b454e65498f",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_public_observation.py": {
+      "sha256": "c78ab30ea106e3dbf9d3b0817941c5a0dab08f0c52c0cbafdc0f1b0d25825aca",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_query_selection_budget.py": {
+      "sha256": "d2cd0ed6af0392f00098dc3dd90544fd352b51637ec897179431179fb675262e",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_result_action.py": {
+      "sha256": "f6c5c28a69522c1c57a49d93c915eb4881a9a2f8ef4d2dd084e122b244326b83",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_retained_observation.py": {
+      "sha256": "47324f73e0fbf8fc16d7fc7f2a1680b23d888cda6ee83cca7598b3d31d0522d4",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_robot_side_observation.py": {
+      "sha256": "15116eedee41a320ae1da4a2a05ae6e1d64116f8ae361872c2eb5310d5a8bd14",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_route_distances.py": {
+      "sha256": "a684ea36bf90fd463197b759f2e3a7abe674da930e6ec841bad8e7f2d5360375",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_rpp_egress_goal.py": {
+      "sha256": "5c002bb624d35863376d61c17af51de99b861ac67162d9afede65e2dcd5d60e7",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_rpp_egress_turn.py": {
+      "sha256": "b6f874fa969d5cf1541979955cbaabe9dba5b982a4d663cdf2371157433d72e3",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_scan_before_queries.py": {
+      "sha256": "a046e261c838d9dd238f9951252498594ad77df7126a79b5eca49accc4826735",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_scan_join.py": {
+      "sha256": "1bb5ea930c514459b0b070f8380a92ff967150a849f01a46376530db0b86f6c7",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_selection_pass.py": {
+      "sha256": "c2c4e30bfb35b60be9ef7cc5d68b8eddaf5f9d1cf3c9b634dc2165b029e9a71e",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_side_before_rejection.py": {
+      "sha256": "b0006e99deea1d71207223ffc4ab794fc927a1dfbfffd0438896eb54d7536397",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_side_work_budget.py": {
+      "sha256": "2be4b077a0d4625dfad63f9802db4cf843ea43435c582a353f6d36a7f2d32dd4",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_snapshot_replan.py": {
+      "sha256": "5a0caaef83d92f3e5b1ae7ef15fcd27bf44d99938fb2c941f858dffe5edf4318",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_source_delivery.py": {
+      "sha256": "ee90d1f8b9056f147f84fd325999d85433b1f83a8fd5cdbdf70330daa58cb85d",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_start_observation.py": {
+      "sha256": "1f27615b7e33480b15ded6e0da5507f3964081b8328c48e6d13d5b1777b3404b",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_stop_observation.py": {
+      "sha256": "70c625d5d3ad1e1eaea98e070626e04cab39890f5041c0ee9073e09b0f526149",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_sweep_batch.py": {
+      "sha256": "5ca765625c75800cadd0bd3756ac4defbbb1f2105efc4c0dc644e0eeac56a716",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_visibility_blocks.py": {
+      "sha256": "269f87a74d94433df68ddeeabb53bd6cf5668450170fc3f0465e8ece9be1f7dd",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_portal_exploration_pipeline.py": {
+      "sha256": "de053b4d053e1a28edb878fe68a0e171671eb8c634aebd0f10079cde6d526ed9",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_portal_frozen_scan_runtime.py": {
+      "sha256": "1c7ca6f733cdeda7abe12d8ebceb2ed6ff3696892caa9f426b59ee3bf7245d92",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_portal_memory.py": {
+      "sha256": "997dfc26ac7fe3fea26c94a04d1d4597a4b0902cf58a787dc90212f1bc4d35d2",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_portal_plan_adapter.py": {
+      "sha256": "5a138d7e1ed7f1c6deec0f1946bd603f9ceb822e77553083856023800142d60a",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_portal_planning.py": {
+      "sha256": "f83a93730e0c9b5ee617310bf3e9cd078631525cc3503e153b74e2c2a5baef45",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_portal_source_adapter.py": {
+      "sha256": "2081609194d05561e61bdbfa00bf543d83dbdb7e79246a1d99bb03f385ecec19",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_portal_task_evidence.py": {
+      "sha256": "97df42c655053b3f2e038e22334c2ec90820c269d5faceeaea3b22914f8a047d",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_portal_traversal_evidence.py": {
+      "sha256": "5ec0208903482e1e44aaf8cc5955b849d6d8b4bccd1c8286bd999b05e5c92d12",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_portal_traversal_runtime.py": {
+      "sha256": "745753ec9443041ce9f41180a65f6c0e79ee75626213728441fa13eefbafc1ab",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_raw_map_portal_adapter.py": {
+      "sha256": "11dce065db68286c425cea104c286f2972c7ca00634b2d0e5059986049ff08d9",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_region_graph.py": {
+      "sha256": "23a5dea5f0d8cc958c45847deacc84d72606aba910f73ba6007de7d941ced88b",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_region_graph_shadow.py": {
+      "sha256": "9a2638a4cf9209157a77efaefb3058b25e49f23651ec80bd453d4e953fc954ec",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_region_graph_shadow_lifecycle.py": {
+      "sha256": "af8091834003b8266972ae804f055b849061c6728abb6dacd1db8db3d2588b5f",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_region_graph_status.py": {
+      "sha256": "a7cdf479373b1bff40db2709fc380bbf6c87660d2228319d468abb40bcf15901",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_region_scenarios.py": {
+      "sha256": "a17cb25d500c154feddb566e0c7a82bb1b318d86019768d8196574262e6af529",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_shutdown_contract.py": {
+      "sha256": "0289129d741c5682ad6e169045eb289ad0e9029ba679b4bee98b4b0e16455f5f",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_we_multiroom_resume.py": {
+      "sha256": "6e61a9fd9882d0fe0ae1ccb9ee59a41f34810ca3967ffe734a3cdb1ecfe7a48a",
+      "source_execution_equal": true
+    },
+    "src/handeye_calibration/config/handeye_params.yaml": {
+      "sha256": "499f1aa2af84035fa936def495a8fc12641fae2cbc75875efd5a0b5d2f210e37",
+      "source_execution_equal": true
+    },
+    "src/handeye_calibration/handeye_calibration/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_execution_equal": true
+    },
+    "src/handeye_calibration/handeye_calibration/handeye_recorder_node.py": {
+      "sha256": "48524c613f8dc425bea11ae175d9f697aa96ad13dc7eea123afbc286443aa3e2",
+      "source_execution_equal": true
+    },
+    "src/handeye_calibration/handeye_calibration/handeye_solve.py": {
+      "sha256": "97f4c04dca188008823ab08ccb754fa6dcc5ff7a0dac6ba535c9d1c600e7448c",
+      "source_execution_equal": true
+    },
+    "src/handeye_calibration/handeye_calibration/se3.py": {
+      "sha256": "69ae00875d0a08ed4b2e87f4a83031196dfb45ea4b44d9bec0542a2437094689",
+      "source_execution_equal": true
+    },
+    "src/handeye_calibration/launch/handeye_recorder.launch.py": {
+      "sha256": "538fc254263f0c70ff6aa9349328f680f909a1b5252e3b4db49d3905084ebad4",
+      "source_execution_equal": true
+    },
+    "src/handeye_calibration/package.xml": {
+      "sha256": "0adc19f16902bd69b3af10bdf3c556a1d34af7a75b396bd4d68e5871ab694b13",
+      "source_execution_equal": true
+    },
+    "src/handeye_calibration/setup.py": {
+      "sha256": "0921885382cdd31fc5c04278f2bf1e30084d4c8c70ba28946f091a8da52a7c34",
+      "source_execution_equal": true
+    },
+    "src/llm_planner/config/llm_planner_params.yaml": {
+      "sha256": "558c3159ea35577e99f7e96f3303579af15733e3dd6542600cc3f6000d9fbf95",
+      "source_execution_equal": true
+    },
+    "src/llm_planner/launch/llm_planner.launch.py": {
+      "sha256": "0e00033db2031ae721931ce73e0d90c09482eba84c71ffe0aac9d78991b8bc11",
+      "source_execution_equal": true
+    },
+    "src/llm_planner/llm_planner/__init__.py": {
+      "sha256": "fb07513a033e3df46a3db6f429be11327371b39a7973955af613c91981214cc5",
+      "source_execution_equal": true
+    },
+    "src/llm_planner/llm_planner/catalog.py": {
+      "sha256": "4f3fb8b774e39e99fb350fbcf93ad693ad81fec8839a3efb121255bd302590a8",
+      "source_execution_equal": true
+    },
+    "src/llm_planner/llm_planner/llm_planner_node.py": {
+      "sha256": "68e87919f77d2720dead7736fccd960b8b4ca7f8b891c99cc83f1f5dc671baa9",
+      "source_execution_equal": true
+    },
+    "src/llm_planner/package.xml": {
+      "sha256": "f58b92367d356daf5ec64ef02cd1c01126e451b34e155838633da09b2266da6f",
+      "source_execution_equal": true
+    },
+    "src/llm_planner/setup.py": {
+      "sha256": "33bc7349d3de699921ad71d141302953d706b0b4a59d9d8b3f41e8e341f89947",
+      "source_execution_equal": true
+    },
+    "src/llm_planner/test/test_catalog.py": {
+      "sha256": "c5e309fa291323fee8b919cb0e0b138eab763656d2b1498e31947b7900d04b33",
+      "source_execution_equal": true
+    },
+    "src/mission_manager/behavior_trees/navigate_to_pose_no_recovery.xml": {
+      "sha256": "79e8fb62a1546b7c9aefbb4d7d1314f837f715c2c5096d6185a3614ac9ef90a5",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/mission_manager/share/mission_manager/behavior_trees/navigate_to_pose_no_recovery.xml",
+      "source_execution_installed_equal": true
+    },
+    "src/mission_manager/config/mission_catalog.yaml": {
+      "sha256": "365f54610570d87645436aeb64cdb6cff6e954078e039023087a0a16a2b013f8",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/mission_manager/share/mission_manager/config/mission_catalog.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/mission_manager/launch/mission_manager.launch.py": {
+      "sha256": "9714f8534efb095fcc14421fafd11f22241c1c1cd9586a8c3818dc6f368bc40a",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/mission_manager/share/mission_manager/launch/mission_manager.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/mission_manager/mission_manager/__init__.py": {
+      "sha256": "63f3621a9516ea3f549e6c777159d4465feebf02d2701f7307ffb8999a936281",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages/mission_manager/__init__.py",
+      "source_execution_installed_equal": true
+    },
+    "src/mission_manager/mission_manager/action_outcome.py": {
+      "sha256": "b68f2ed9287a9d1cb02ecec6c8eb74a73151428954641c1d4cac5a5b515889fa",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages/mission_manager/action_outcome.py",
+      "source_execution_installed_equal": true
+    },
+    "src/mission_manager/mission_manager/command_payload.py": {
+      "sha256": "d5b8f50671508a8f4664f0ce7647e6113b7b60ef453e90232dfd49befa6bd1b5",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages/mission_manager/command_payload.py",
+      "source_execution_installed_equal": true
+    },
+    "src/mission_manager/mission_manager/execution_policy.py": {
+      "sha256": "0a9dfc41a2940f628e1afc679d0572d819bde5b967d48ea971468ca5a4e221ad",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages/mission_manager/execution_policy.py",
+      "source_execution_installed_equal": true
+    },
+    "src/mission_manager/mission_manager/mission_manager_node.py": {
+      "sha256": "7e002b3d19daeb2706e9267eefb20b85b8386133f46de76a86af4d546ea921ba",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages/mission_manager/mission_manager_node.py",
+      "source_execution_installed_equal": true
+    },
+    "src/mission_manager/mission_manager/semantic_catalog.py": {
+      "sha256": "e92e13570465a8fb40531e99147e6bcd6dcd89252bd2ba391ce6a8437b3e022e",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages/mission_manager/semantic_catalog.py",
+      "source_execution_installed_equal": true
+    },
+    "src/mission_manager/mission_manager/semantic_room_goal.py": {
+      "sha256": "89ed6fb6fec48eb8b14377ae37d3be90760bd7aa57cfddd4ed7836fe14b73644",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages/mission_manager/semantic_room_goal.py",
+      "source_execution_installed_equal": true
+    },
+    "src/mission_manager/package.xml": {
+      "sha256": "a581dcd5320d22b878c0570d90efcc34014e2c82093e4b21c549d97a5af38a25",
+      "source_execution_equal": true
+    },
+    "src/mission_manager/setup.py": {
+      "sha256": "f739a1e500d86be4f2f73116ff0ac9ffe5115405a2da6219cf0647aea2ae40fc",
+      "source_execution_equal": true
+    },
+    "src/mission_manager/test/test_action_outcome.py": {
+      "sha256": "50bb6c68342a89b6296bc7adf98ba740c9dd14f6a574eb07bbbf50f800c5ecba",
+      "source_execution_equal": true
+    },
+    "src/mission_manager/test/test_command_payload.py": {
+      "sha256": "ecd9d724ececc174aa6e663b114c59c27aa7865406c9dd1302c07e0bcaced3a0",
+      "source_execution_equal": true
+    },
+    "src/mission_manager/test/test_execution_policy.py": {
+      "sha256": "9206bcf90b14344f375767dd137c5b71a91f60929cf8038a63b4d3192239732c",
+      "source_execution_equal": true
+    },
+    "src/mission_manager/test/test_hwt_recovery_mission.py": {
+      "sha256": "9338770223cfecac26ffae7210e4884edab148c912f7a09d583810f02e330b4d",
+      "source_execution_equal": true
+    },
+    "src/mission_manager/test/test_metric_exploration_result.py": {
+      "sha256": "8032eb1fc1c85bd6d11262a7d84f932350e67c0462c02cfb249927004b17f8be",
+      "source_execution_equal": true
+    },
+    "src/mission_manager/test/test_semantic_catalog.py": {
+      "sha256": "36b541b1694bf0c9f1659c00d409e3c2f284ed3cf4324304ddf711d8227d77d9",
+      "source_execution_equal": true
+    },
+    "src/mission_manager/test/test_semantic_cross_contract.py": {
+      "sha256": "c909ef21eaf21b7be9d656500d342a350c2bb26a9d93c9f56867cb18570ea634",
+      "source_execution_equal": true
+    },
+    "src/mission_manager/test/test_semantic_room_goal.py": {
+      "sha256": "65102174991f48c1b9d4cfce7323e9ed45e1d4dd393c57a21bb84a3236bf4cfe",
+      "source_execution_equal": true
+    },
+    "src/mock_servers/config/mock_params.yaml": {
+      "sha256": "f43c415cabc8c46d1bf9a64ea78d573e7030740010530031282099b021090640",
+      "source_execution_equal": true
+    },
+    "src/mock_servers/launch/dry_run.launch.py": {
+      "sha256": "f4d40af04a6f54b1d5f25b85b5e1cc23524d8d88d98f21cf172aa352b840faad",
+      "source_execution_equal": true
+    },
+    "src/mock_servers/launch/dry_run_mission.launch.py": {
+      "sha256": "3fdfd0f16cab952f8309b6a4b3f705ea7a98304bba91ab2fb62ac2d364caaf6f",
+      "source_execution_equal": true
+    },
+    "src/mock_servers/launch/dry_run_nav_mission.launch.py": {
+      "sha256": "db39c5cecc617210dbde785c5489c3fac350d4816292c5d363c96cc7086d652f",
+      "source_execution_equal": true
+    },
+    "src/mock_servers/launch/dry_run_safety.launch.py": {
+      "sha256": "bfc397fbbdeb9bf3e5de6fc021ec2eac225ff41309acd600db5fab9b6c38a0d1",
+      "source_execution_equal": true
+    },
+    "src/mock_servers/launch/mock_servers.launch.py": {
+      "sha256": "1df5a22d2775520edecea4d22b2b7e844f1ef3de89efe3738646d37eb855a633",
+      "source_execution_equal": true
+    },
+    "src/mock_servers/mock_servers/__init__.py": {
+      "sha256": "e7589db889c7ed8e79d5ec864a0d5274cc81b872a5f11358cd33dc373b8b2d9a",
+      "source_execution_equal": true
+    },
+    "src/mock_servers/mock_servers/mock_servers_node.py": {
+      "sha256": "db7a85f8a5adfadc03a1e40a0b827e645907597bf4a3fec1dd434ed033fa60ee",
+      "source_execution_equal": true
+    },
+    "src/mock_servers/package.xml": {
+      "sha256": "3a4c451010b7cb57c7610b64fe0d1a6266ced02cc158c81d5ca18228350e9133",
+      "source_execution_equal": true
+    },
+    "src/mock_servers/setup.py": {
+      "sha256": "39c88b2e2bfa391dd884b4355fdfcdccf14d0080e12ab712dbc6c13dd8a6d84e",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/config/cyclonedds_profile.xml": {
+      "sha256": "1d92231542179b8d140d732f97504935b577b6a472d29a06ff982be9aab96d92",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/config/link_monitor_params.yaml": {
+      "sha256": "d13cc8dae535bd6bb648f9b85c644ac9e69c43335685b59044d72397e98d4594",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/config/oak_params.yaml": {
+      "sha256": "558760085831c92a11e66708ba480361f252fc2442236d81aa037484fcd8bd6d",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/config/oak_params_slam.yaml": {
+      "sha256": "b95ebee4cd2fb5d0540d9ad9d5b00d35ab0354278ed88d3a210d1ca60738805e",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/config/teleop_joy.yaml": {
+      "sha256": "0b27a03f246551ba4f2e0a4773fb9d8bbf959ef10fd8d8eafe8901731324af82",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/config/teleop_joy_befreien.yaml": {
+      "sha256": "e47bd93fb1be8c70056588c4b76bd9e525cb0c8c188573c17efd29987b46ae46",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/launch/app_mapping.launch.py": {
+      "sha256": "2e6854dfc8f7dbdc3b2ca86db873538d79e63a45205cd4d8a486b17de30a29b2",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/launch/oak.launch.py": {
+      "sha256": "8df01397f1d95cbf78c63e2b94cdab8d51ae3db7b9013a9c949374f3f48195fc",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/launch/robot.launch.py": {
+      "sha256": "42e0a5db99903473dc2df7d4a9049654cbfbfc49f3c493d14cd6e8998865a0dd",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/launch/server.launch.py": {
+      "sha256": "1b6576321091be44a1564636ae160bd6970b89cfeacc8f47f7279a330f696afc",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/launch/slam.launch.py": {
+      "sha256": "38b845c693f2c4f5bb9827542a29372e17c6608ca43b1f2124eed9fb308a7284",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/launch/teleop_joy.launch.py": {
+      "sha256": "2a3b4c4125728e7cecb80fefeded500e7a97e3faec6d495a32b4ace650c424b0",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/package.xml": {
+      "sha256": "1b7249364f4849213854e203e436c3398fd460adfc9bf92c7acc76655325ceb8",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/robot_bringup/__init__.py": {
+      "sha256": "6fcec5dbd3ca7cd41352acf787ae2f349008f7d7b08958633357d91a55eb871e",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/robot_bringup/link_monitor_node.py": {
+      "sha256": "a247ffdc5b9a8d8e7b2a6517c6fb6f65658e15d6eaf658012f2327d721025ad3",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/robot_bringup/oak_rectifier_node.py": {
+      "sha256": "7295c4c0904f1a32ce880e10d2c5a6772f12521e6d0334c3ffcb49d22cc5f115",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/setup.py": {
+      "sha256": "3ab7da1c41928891d4e73f05f991bc6c2f5cb3b183a13d912c900af9f6fff63d",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/test/test_oak_rectifier.py": {
+      "sha256": "186beb59241e054e0d3adf177aed5409ff42d24296e72ef467e11a372923adc9",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/test/test_semantic_map_launch_contract.py": {
+      "sha256": "f61da59218a68b651a8e74a40d197bb19473a86a4680d8ebc2bf8cc194d10b19",
+      "source_execution_equal": true
+    },
+    "src/robot_bringup/test/test_shutdown_entrypoints.py": {
+      "sha256": "8c71b4731a9bc29c0a1b3d66d5847aba633abba611a14eba12ebaaf312703efa",
+      "source_execution_equal": true
+    },
+    "src/robot_description/CMakeLists.txt": {
+      "sha256": "a86f26299bc378834665c64308baaaff8f9da1e706d35d462b751d44df986210",
+      "source_execution_equal": true
+    },
+    "src/robot_description/launch/display_dummy.launch.py": {
+      "sha256": "83afb42918149e9db820d376350675c6cc04c983ef2e36e76a3a58ce85cbfc03",
+      "source_execution_equal": true
+    },
+    "src/robot_description/package.xml": {
+      "sha256": "61df54a02f7da1124eef128d901d4c289366115d245ddf6b16d939ec39ec5179",
+      "source_execution_equal": true
+    },
+    "src/robot_face/config/event_expression_map.yaml": {
+      "sha256": "d4b84a3c308ec87ef1dbe368ad916859362aa7014d645dd1d67b50ee917a9a33",
+      "source_execution_equal": true
+    },
+    "src/robot_face/config/face_params.yaml": {
+      "sha256": "3a571c88a3f4a0fec4857bf174664919a95f0807d0a15cee924ed0bf9fc69ab0",
+      "source_execution_equal": true
+    },
+    "src/robot_face/launch/robot_face.launch.py": {
+      "sha256": "7642a0fa8ac2f7b31df8c3b6e25f781916d1db3af932aa28b5bf63167e84d85f",
+      "source_execution_equal": true
+    },
+    "src/robot_face/package.xml": {
+      "sha256": "c503613a11c900e0713ee6b993108159bc322ec7e8a0aa34637ec74f54043f22",
+      "source_execution_equal": true
+    },
+    "src/robot_face/robot_face/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_execution_equal": true
+    },
+    "src/robot_face/robot_face/face_controller_node.py": {
+      "sha256": "04ed3f09e69aa97c1b5f907ed726f3d4ee60837ae2d12b772fad8af5bbbc5840",
+      "source_execution_equal": true
+    },
+    "src/robot_face/robot_face/serve_face.py": {
+      "sha256": "584e523db8ea0bbd19cdcbc2019bf04e6b6d3b21ea3f04eba31f7516afc42280",
+      "source_execution_equal": true
+    },
+    "src/robot_face/setup.py": {
+      "sha256": "91c436c5bd822e4bbc8299aaafd2ad38e749ab0d1df5c5026b226ed8f0ee4934",
+      "source_execution_equal": true
+    },
+    "src/robot_interfaces/CMakeLists.txt": {
+      "sha256": "bf8330a29e93956b343b0e02b3c60cca3147f254cecaeb3da74943a458cc2618",
+      "source_execution_equal": true
+    },
+    "src/robot_interfaces/action/ExploreArea.action": {
+      "sha256": "a3e320a4392adf02628be223987407914df35c15365c4de3f4d7e5269f595cd3",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/action/ExploreArea.action",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_interfaces/action/MoveArmToNamed.action": {
+      "sha256": "5735f05b8dae3c6ea56cd071b6dc1b2d97aac10813091000a43277a10adcfa10",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/action/MoveArmToNamed.action",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_interfaces/action/MoveArmToPose.action": {
+      "sha256": "aad5400d82f93667396c6639499c06ea7b1f1a5a8ecff1480a16a978f6ccb423",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/action/MoveArmToPose.action",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_interfaces/action/RunMission.action": {
+      "sha256": "7ea499441bc5afe7f62ccbe9aaf59cb31bec6083c39ad9fb9adaa660fcf5b72b",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/action/RunMission.action",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_interfaces/msg/NearFieldStatus.msg": {
+      "sha256": "5ed685910858b624f2535d46dbf007265262ce387171d892de8c69b049b11d9f",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/msg/NearFieldStatus.msg",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_interfaces/package.xml": {
+      "sha256": "b3efa636bc0cf7d56cdb6821aa679f1e16f50272376319be942461e8c72d07a2",
+      "source_execution_equal": true
+    },
+    "src/robot_interfaces/srv/ComputeApproachPose.srv": {
+      "sha256": "e1d334bd800d75b615c88b6f4e6dcd6d8630abce2c28eece375d07c491ffc9c5",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/srv/ComputeApproachPose.srv",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_interfaces/srv/ComputeGrasp.srv": {
+      "sha256": "6ee9555f64cd280d98580a39e223db0b760be813bbcfe49e1e99e198c4a3a1dd",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/srv/ComputeGrasp.srv",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_interfaces/srv/GetObjectPose.srv": {
+      "sha256": "43dd3bd5e9356db0c5b7ca6d49e17242a19c8ae94b063a45451068da112bc3ba",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/srv/GetObjectPose.srv",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_interfaces/srv/RefineObjectPose.srv": {
+      "sha256": "13cc0d0d49845d6b5771a3914cf83d747f57146b36f0ca522432e61b5d63c479",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/srv/RefineObjectPose.srv",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_map_manager/config/robot_map_manager.yaml": {
+      "sha256": "859bad2f890b338825697db66e7837c5a9c8ca8d46b9142cf53ef10418c8c13d",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_map_manager/share/robot_map_manager/config/robot_map_manager.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_map_manager/launch/map_manager.launch.py": {
+      "sha256": "9c5ae8d21009e6ea77fe07d1e2a0a8c2daa7c4a3955169b132f187418556cef5",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_map_manager/share/robot_map_manager/launch/map_manager.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_map_manager/launch/map_manager_smoke.launch.py": {
+      "sha256": "235ac2e32869065e910d52e0d7e76cf5231ebe5b25e991cc4332c0eb97581bc6",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_map_manager/share/robot_map_manager/launch/map_manager_smoke.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_map_manager/package.xml": {
+      "sha256": "28c89e351ab3a891661663aa750f3e9e3f20d3a131b3cd4c983c9a299f406e3d",
+      "source_execution_equal": true
+    },
+    "src/robot_map_manager/robot_map_manager/__init__.py": {
+      "sha256": "691c4d48c819871aa61e71f59f40702d623b06f247277614edf7080cff5938e4",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_map_manager/lib/python3.10/site-packages/robot_map_manager/__init__.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_map_manager/robot_map_manager/map_core.py": {
+      "sha256": "067bb0b974e7b2dad29f6a9b681d7a42ba122fb0269a8298acea50e087cf9404",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_map_manager/lib/python3.10/site-packages/robot_map_manager/map_core.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_map_manager/robot_map_manager/robot_map_manager_node.py": {
+      "sha256": "4f8822b8ae1b1b97aa140096bdae67d30fc1704485e73c00ac51a063370d8975",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_map_manager/lib/python3.10/site-packages/robot_map_manager/robot_map_manager_node.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_map_manager/setup.py": {
+      "sha256": "f5ffdcc8000bcd6ed9de93e650b67353e476d5de6d41717556c7e3b3df0a29da",
+      "source_execution_equal": true
+    },
+    "src/robot_map_manager/test/test_map_core.py": {
+      "sha256": "10ebb39ed5b88710fb7bee276587fc5fd9100730989e78ce3f670ed599b8cc94",
+      "source_execution_equal": true
+    },
+    "src/robot_navigation/config/nav2_params.yaml": {
+      "sha256": "97b9c46f5147e39d6cc1e1842b691501c37d769b3ba3cd75f93072c19848d8d7",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/share/robot_navigation/config/nav2_params.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_navigation/config/nav2_params_real.yaml": {
+      "sha256": "08c23f9581921e7c9265d335ac408428acf922367a43eebed1bb8772ec947f73",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/share/robot_navigation/config/nav2_params_real.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_navigation/launch/nav_localized.launch.py": {
+      "sha256": "dbe7ced4c49fba7bae975fb4221ea8a4db0b09e72da01cba7439069dd67466ca",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/share/robot_navigation/launch/nav_localized.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_navigation/launch/nav_mapping.launch.py": {
+      "sha256": "5efa40f90086dfb35778bf8a0c4859c959ffe27f3f39b5afc36eeefd4ccf358d",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/share/robot_navigation/launch/nav_mapping.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_navigation/launch/nav_real.launch.py": {
+      "sha256": "92bf75abb144f940c56cafbab1dc6d11f822a8d71a9b030f97aafa05c46e0be6",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/share/robot_navigation/launch/nav_real.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_navigation/launch/nav_test.launch.py": {
+      "sha256": "eb782a58209c3f4f92eb704b47d3d7c4750103ce39be2f8ed2b90082f58850cd",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/share/robot_navigation/launch/nav_test.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_navigation/maps/leer.yaml": {
+      "sha256": "7b1929377ee0715f3400566869d9a454d95418b77cd5418a300ca78631db4abf",
+      "source_execution_equal": true
+    },
+    "src/robot_navigation/maps/testwohnung.yaml": {
+      "sha256": "c48d25f30d93b213597eed757f7e22b3846dabf787dcd06842e35729c943edb6",
+      "source_execution_equal": true
+    },
+    "src/robot_navigation/package.xml": {
+      "sha256": "ed457650b32b38570c979fb101d9dc1bc0094ae4fbc80770bd2865f54bd08f78",
+      "source_execution_equal": true
+    },
+    "src/robot_navigation/robot_navigation/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/__init__.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_navigation/robot_navigation/cmd_vel_mission_gate.py": {
+      "sha256": "9367c46bbd2569964dd6a3068723188de0832bb076315a80101079d942a8310c",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/cmd_vel_mission_gate.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_navigation/robot_navigation/global_scan_localizer.py": {
+      "sha256": "07b120339494f553ac61a65d0a3fed479e3d0d6c755aaea7eae59f83146e69d4",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/global_scan_localizer.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_navigation/robot_navigation/global_scan_matcher.py": {
+      "sha256": "c33c9e758bcf13bdb9b37fce963931b225e0cf15d5ed6bb55ca399efdb91eab0",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/global_scan_matcher.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_navigation/robot_navigation/localization_contract.py": {
+      "sha256": "365299fba55892349dcc99f6ca33c6142e44d1b3ff910ec43e7beb61243f4bb7",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/localization_contract.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_navigation/robot_navigation/localization_guard.py": {
+      "sha256": "50ca1840e86da8b09aca08c73202309bcec66c9dbfe199455b72c2edd9a29cfc",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/localization_guard.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_navigation/robot_navigation/stage3_motion_diagnostic.py": {
+      "sha256": "9dd3054cb38fe21477f188ae81dbc147a93a624fd338c7cc08ae17a42404ba3a",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/stage3_motion_diagnostic.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_navigation/setup.py": {
+      "sha256": "af03863bee9a4f462a9c44d1b1fabbde4ef84d3f2d1ef204d633608e013994cc",
+      "source_execution_equal": true
+    },
+    "src/robot_navigation/test/test_global_scan_matcher.py": {
+      "sha256": "f24922111717488a7697d2e156d772a875eaed849e29c360a34975b6a60e0ed7",
+      "source_execution_equal": true
+    },
+    "src/robot_navigation/test/test_hwt601_gate_integration.py": {
+      "sha256": "0cff6b0e0ff7c9045807e9a4fd6c263db124ade6d1a459d3c391c15cc502e5b2",
+      "source_execution_equal": true
+    },
+    "src/robot_navigation/test/test_hwt601_gate_pending_wheel.py": {
+      "sha256": "d06f1dcfe2b5cd7c677eb257017add2ad657ae3058eea0d434f77579e11a1aa5",
+      "source_execution_equal": true
+    },
+    "src/robot_navigation/test/test_hwt601_gate_source_callbacks.py": {
+      "sha256": "6af81ead2624d00c248aee9da0a2c99c7ef99e6be7107fdc740ac588a3f67ac1",
+      "source_execution_equal": true
+    },
+    "src/robot_navigation/test/test_localization_contract.py": {
+      "sha256": "edf5d5cca08847263ae114b1b010226692b396e6d169f7a0c4961ba1db9cd579",
+      "source_execution_equal": true
+    },
+    "src/robot_navigation/test/test_nav_real_contract.py": {
+      "sha256": "5e69d2bb1f1dc626948ef68251255f89a85d48814748f7858823e9e2990eaab4",
+      "source_execution_equal": true
+    },
+    "src/robot_navigation/test/test_stage3_motion_diagnostic.py": {
+      "sha256": "a56c12291df8785fa9f9d69530993d4de7bec2309ae277cfff9df5d83e646758",
+      "source_execution_equal": true
+    },
+    "src/robot_navigation/test/test_vl53_costmap_sources.py": {
+      "sha256": "c0dda82857ce07028c4a8b95388ccf50a20e7ec6eba7d7ebd27b37d449556a81",
+      "source_execution_equal": true
+    },
+    "src/robot_state_estimation/config/amadeus_hwt601.yaml": {
+      "sha256": "744c24347a443c903b775213057190c0ae133a64606eb23bcd4f292ff5e077d7",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/share/robot_state_estimation/config/amadeus_hwt601.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/config/ekf_hwt601_mapping.yaml": {
+      "sha256": "12ce22e8482fe6487ea488da4a4f164a8d2185545c131d2316b2499703af9b93",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/share/robot_state_estimation/config/ekf_hwt601_mapping.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/config/hwt601_metric_development.yaml": {
+      "sha256": "db5275f44fbe75e44c51089959695f711c7772c8402376668f5c009ac7c53997",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/share/robot_state_estimation/config/hwt601_metric_development.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/config/hwt601_mount.yaml": {
+      "sha256": "3879d331c06171decddb9b8f29271d5cab0577e3e4bb4676d44c00c2556348f1",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/share/robot_state_estimation/config/hwt601_mount.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/config/hwt601_shadow.yaml": {
+      "sha256": "00c4308e1028348277dd4dd43c018290cb628d81929ea3861eb74b0c1f849d9f",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/share/robot_state_estimation/config/hwt601_shadow.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/launch/hwt601_mount.launch.py": {
+      "sha256": "b14a543801ad1504ba7af0beea68e3b6189ffacd9079fbd98164a86bb5bd7ac2",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/share/robot_state_estimation/launch/hwt601_mount.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/launch/hwt601_shadow.launch.py": {
+      "sha256": "6c18eb6295c2d0d541d35fa8e21eb20ba7b3e3bd46d24688658c43f5db89f288",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/share/robot_state_estimation/launch/hwt601_shadow.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/package.xml": {
+      "sha256": "f3c53aa66176aa911e03483d9e36d539a4e28ef6a8600c288fbbec85605a1d56",
+      "source_execution_equal": true
+    },
+    "src/robot_state_estimation/robot_state_estimation/__init__.py": {
+      "sha256": "3384b6c5dfaecaaa31a57c36a374b1f4f0fa42067f2541803b33df1eaee1e475",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/__init__.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/robot_state_estimation/_hwt601_clock.py": {
+      "sha256": "876bd95e33185a0c804bfb2ebeada64088974f97e5f158bf3d7fa8768435f772",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/_hwt601_clock.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/robot_state_estimation/hwt601_fusion_guard.py": {
+      "sha256": "75d910736935011ba08bf7257859c945be4eda7398925c8c4675b6c14ba314f9",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_fusion_guard.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/robot_state_estimation/hwt601_fusion_health.py": {
+      "sha256": "a3476de3cc3a915ccc92480256a2b31ce43ba1bb094718d08a129a50a92542e1",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_fusion_health.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/robot_state_estimation/hwt601_imu_node.py": {
+      "sha256": "572443d640ad721067ebad90ed7c06ad68a4886fbad4000b7364d85348266a27",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_imu_node.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/robot_state_estimation/hwt601_mount.py": {
+      "sha256": "6aa74d6a95346590874574838a73b8f8d44a34298e58af998001218bd7563b0f",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_mount.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/robot_state_estimation/hwt601_protocol.py": {
+      "sha256": "3f9844483617a0c2be95d0998d5223229a0a16945027bc73965555d8ccd42906",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_protocol.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/robot_state_estimation/hwt601_shadow_core.py": {
+      "sha256": "907aba5f9e1654e762f5fbbeb611e81fec4097f2ed8f0dfcf87b264b6fc35707",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_shadow_core.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/robot_state_estimation/hwt601_shadow_node.py": {
+      "sha256": "d9d824fd1ca3d7164eb7097d9341e87972ce9d7e956a9f0d9be1c9e0211d5d6a",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_shadow_node.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/robot_state_estimation/hwt601_transport.py": {
+      "sha256": "237941c43e0141100ed2cfed6e48e334a3c9d0cd3ab24e31b27d493fd464ef52",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_transport.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/robot_state_estimation/lidar_odometry_node.py": {
+      "sha256": "65f462dd097386d6b898c99a102d22b07f6111a9f256c206418a42f1ee3428c3",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/lidar_odometry_node.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/robot_state_estimation/planar_scan_matcher.py": {
+      "sha256": "7b4cad2cda67bcd52167642eceaf21e7cf238fce20330d6f8be491e7f112fe46",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/planar_scan_matcher.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/robot_state_estimation/quality_core.py": {
+      "sha256": "d031f63364d968722b728387f8109c338713d5ae9744db2d32fefd24f49ec1af",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/quality_core.py",
+      "source_execution_installed_equal": true
+    },
+    "src/robot_state_estimation/setup.py": {
+      "sha256": "5e69a2d9e241b8526347e541f570efc3ca919358f3ed8d91e2f5509e5cd793e9",
+      "source_execution_equal": true
+    },
+    "src/robot_state_estimation/test/test_hwt601_decision_events.py": {
+      "sha256": "2c4079876abf2a1237e8e661e12d57088210d7675aac04e3c8d104af20f84a38",
+      "source_execution_equal": true
+    },
+    "src/robot_state_estimation/test/test_hwt601_fusion_health.py": {
+      "sha256": "62ad90d4d25765bf813ea21aa2444cbdad3420e6dc844ab4c7d24a2b9de80def",
+      "source_execution_equal": true
+    },
+    "src/robot_state_estimation/test/test_hwt601_guard_clock.py": {
+      "sha256": "2f06583e4a064a1ca82e032bc199975f973397a3d48242d50d2d19ebd098c314",
+      "source_execution_equal": true
+    },
+    "src/robot_state_estimation/test/test_hwt601_guard_dispatch_order.py": {
+      "sha256": "6d84032362f1341615b23d9391f4255b8a85a76f30b8aecc4d9379a6d58d8bfc",
+      "source_execution_equal": true
+    },
+    "src/robot_state_estimation/test/test_hwt601_latest_wheel.py": {
+      "sha256": "fbd5fa0e1375a8f9b89e3710c067b0cd909324058ac38091f4e7b1733bfc1713",
+      "source_execution_equal": true
+    },
+    "src/robot_state_estimation/test/test_hwt601_mount.py": {
+      "sha256": "fea7221dba6e276ff7e47c834daa2e2532a19e705f4e1db9d20925bd50f07b75",
+      "source_execution_equal": true
+    },
+    "src/robot_state_estimation/test/test_hwt601_protocol.py": {
+      "sha256": "58f0a38aeb2bef26548c027c1586dd4c0f30db0102d05a6e6ed8bc60e36a0600",
+      "source_execution_equal": true
+    },
+    "src/robot_state_estimation/test/test_hwt601_raw_development.py": {
+      "sha256": "bbbfb71ecd2b1e528b713b49edda9c2d3206e874df8ac4ac291dce5f30c71f34",
+      "source_execution_equal": true
+    },
+    "src/robot_state_estimation/test/test_hwt601_shadow.py": {
+      "sha256": "ff9aef216c9ba31ac392f233e893b69a82198297ef8ddde818a410f0fb371379",
+      "source_execution_equal": true
+    },
+    "src/robot_state_estimation/test/test_hwt601_time_correlation.py": {
+      "sha256": "86d5441a5054a443967ee5fd9e7e74e27a32bf7fa5e3391608136585aa572ba2",
+      "source_execution_equal": true
+    },
+    "src/robot_state_estimation/test/test_hwt601_transport.py": {
+      "sha256": "65b7e2c00ae61a81bee24f1155b9f0ddbe90c246d78c61b0d0631f79d43846bc",
+      "source_execution_equal": true
+    },
+    "src/robot_state_estimation/test/test_hwt601_we_launch.py": {
+      "sha256": "1f597ee7ed58a2ffb74f80baad5fd0b6bee675bbed2152f150ed4ba25c2fd0cb",
+      "source_execution_equal": true
+    },
+    "src/robot_state_estimation/test/test_planar_scan_matcher.py": {
+      "sha256": "30ce0d0670b034a2b8f0890a557903f4622bd45045f6558e1fc42691e19229ac",
+      "source_execution_equal": true
+    },
+    "src/robot_state_estimation/test/test_quality_core.py": {
+      "sha256": "17ddb2f62460e78ef76bf4f6b6049dec79bdf2aa576bc96336550521bdde44b1",
+      "source_execution_equal": true
+    },
+    "src/safety_monitor/config/safety_monitor_params.yaml": {
+      "sha256": "e3f54d6e6770f9e14ef2c326dd8462db9768793ddb2a4ba31adf27d52401d4bd",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/safety_monitor/share/safety_monitor/config/safety_monitor_params.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/safety_monitor/launch/safety_monitor.launch.py": {
+      "sha256": "8a2ea964aa8da278c49821080c52858cdc2935ece853520ac2aba47a31bc9f69",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/safety_monitor/share/safety_monitor/launch/safety_monitor.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/safety_monitor/package.xml": {
+      "sha256": "159273bcf7d50fd995532875ee5bccc1eac3bb0662a9342660f8d4d20e719d34",
+      "source_execution_equal": true
+    },
+    "src/safety_monitor/safety_monitor/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/safety_monitor/lib/python3.10/site-packages/safety_monitor/__init__.py",
+      "source_execution_installed_equal": true
+    },
+    "src/safety_monitor/safety_monitor/safety_monitor_node.py": {
+      "sha256": "48d9a0f0674830f3cb5e67de77337289a7c1aa337553e96a002c2de6923f4994",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/safety_monitor/lib/python3.10/site-packages/safety_monitor/safety_monitor_node.py",
+      "source_execution_installed_equal": true
+    },
+    "src/safety_monitor/setup.py": {
+      "sha256": "d457723b69b12c69fc2a321f2e6da0fa7764e1272cf979127a7541546cb3155c",
+      "source_execution_equal": true
+    },
+    "src/safety_monitor/test/test_near_field_quality.py": {
+      "sha256": "a2aa66083ea8f1392683363d55916f8b22da9bd98b10ac71eda2604cbd7180cc",
+      "source_execution_equal": true
+    },
+    "src/semantic_map_manager/config/semantic_map_manager.yaml": {
+      "sha256": "e59e4bc057bd1ffade222162c334ac1c99164bf7465ebfb6adc4a5f70c23c965",
+      "source_execution_equal": true
+    },
+    "src/semantic_map_manager/launch/semantic_map_manager.launch.py": {
+      "sha256": "18ff938e1078165c6b0222c849d83dc5dfeb229487eecd38996fcf280caeb2c6",
+      "source_execution_equal": true
+    },
+    "src/semantic_map_manager/package.xml": {
+      "sha256": "9c7664083ca00c673f84a83e19fa4db9e3e112095b6fd3392b765969e39579ee",
+      "source_execution_equal": true
+    },
+    "src/semantic_map_manager/semantic_map_manager/__init__.py": {
+      "sha256": "8939e2f2c9a9d6d3ae85642634043b412719eba6674e73af9a0b09475cf6b60a",
+      "source_execution_equal": true
+    },
+    "src/semantic_map_manager/semantic_map_manager/semantic_core.py": {
+      "sha256": "a94499c9fa36faed3f75be732eca54df02708c1795a1dc1401e93b64245e58e7",
+      "source_execution_equal": true
+    },
+    "src/semantic_map_manager/semantic_map_manager/semantic_map_manager_node.py": {
+      "sha256": "498919e76c961e6a7154a530a45733d163de0d5cc357b034a35cb16ec9bf69a8",
+      "source_execution_equal": true
+    },
+    "src/semantic_map_manager/setup.py": {
+      "sha256": "fea1937a0bc2b32f436a157c6c506a9299172acb13ce57364db37bcdf35171cf",
+      "source_execution_equal": true
+    },
+    "src/semantic_map_manager/test/test_semantic_core.py": {
+      "sha256": "b6d848e6225595bd5a1bc9ed948ce01c7b620527970b1b6a5d5c3f879d536b51",
+      "source_execution_equal": true
+    },
+    "src/semantic_perception/config/semantic_perception_params.yaml": {
+      "sha256": "fb3fb8a779c45f74e701a355d94fb5eda60e5d9875bbe9ade37945f19660ab7f",
+      "source_execution_equal": true
+    },
+    "src/semantic_perception/config/semantic_stream_relay_params.yaml": {
+      "sha256": "a07880b4963493c3831c06623f844e56e69088709540ce8dabb76a12c1a1af90",
+      "source_execution_equal": true
+    },
+    "src/semantic_perception/launch/semantic_perception.launch.py": {
+      "sha256": "a376fe83e616c30c865f51e97bf12d2ca6eb249aaf416a5c9aa23b264625c945",
+      "source_execution_equal": true
+    },
+    "src/semantic_perception/package.xml": {
+      "sha256": "440a565a2bbf2d856ac7d74ddce04f4ae736faedfa8389065703dc5226914b6f",
+      "source_execution_equal": true
+    },
+    "src/semantic_perception/semantic_perception/__init__.py": {
+      "sha256": "151843efda0ffe3feacec82ab1d853dd682b13dc69afc1b02ede360794966862",
+      "source_execution_equal": true
+    },
+    "src/semantic_perception/semantic_perception/semantic_perception_node.py": {
+      "sha256": "406f7c75a9498262a6a1ade1165d99748071d505999aa23bfca93f0c8244fc2b",
+      "source_execution_equal": true
+    },
+    "src/semantic_perception/semantic_perception/semantic_stream_relay_node.py": {
+      "sha256": "f3418824080c2d9a5f73987ea1f0d69e36a3ed6ab54dc2072f85a934483a4cb6",
+      "source_execution_equal": true
+    },
+    "src/semantic_perception/semantic_perception/stream_codec.py": {
+      "sha256": "e0a760af21de6c514f9626dd996aee027cb763f80623efbcd75bc7b6e6cf87b1",
+      "source_execution_equal": true
+    },
+    "src/semantic_perception/setup.py": {
+      "sha256": "9bd97e962841a9ef17103464ead27f6e75c31e58d6a730462a5abb7c0c7c0eb0",
+      "source_execution_equal": true
+    },
+    "src/semantic_perception/test/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_execution_equal": true
+    },
+    "src/semantic_perception/test/test_backend_dispatch.py": {
+      "sha256": "4178912c251701fc85d1640c5dbfe5f0fd189616d7660c97fda5a6d1acae5507",
+      "source_execution_equal": true
+    },
+    "src/semantic_perception/test/test_stream_codec.py": {
+      "sha256": "41b102ead5bf57836bdbbc5adb210d17568f1ccef70110ebc7666989d27ddaa4",
+      "source_execution_equal": true
+    },
+    "src/semantic_perception/test/test_stream_contract.py": {
+      "sha256": "7c0379eaed7f6ed480f9951a4c9469d0cc4ae4b42a1879c101635e8e227e5432",
+      "source_execution_equal": true
+    },
+    "src/smartphone_gui/launch/smartphone_gui.launch.py": {
+      "sha256": "07388b520b39a412028a67bb838848d09b2fcf06b18ac3036e225dd9e97c8c8a",
+      "source_execution_equal": true
+    },
+    "src/smartphone_gui/package.xml": {
+      "sha256": "dd98376cd920fa5302818e46f6650cf3a1f96cc3bf9c17ce0a5494e892bc96b8",
+      "source_execution_equal": true
+    },
+    "src/smartphone_gui/setup.py": {
+      "sha256": "45d66c2acfed62ad7cdb457baf5dab95b75928cb2b38fd3cfd4efdab1e91dacd",
+      "source_execution_equal": true
+    },
+    "src/smartphone_gui/smartphone_gui/__init__.py": {
+      "sha256": "6460453915c827a507ec2aac233a865f15a655ab3fad9afeba2d643f0c686061",
+      "source_execution_equal": true
+    },
+    "src/smartphone_gui/smartphone_gui/serve_gui.py": {
+      "sha256": "48410cf202a8773de37d0034898979c2caef0c6bb01d774332e382dae7ba2838",
+      "source_execution_equal": true
+    },
+    "src/smartphone_gui/web/robots.txt": {
+      "sha256": "9133ceedd6bece0761cc791489df7a3fdbfaaa32d6316d98b92e6f8ff76e397a",
+      "source_execution_equal": true
+    },
+    "src/vl53_near_field/config/collision_monitor_mapping_params.yaml": {
+      "sha256": "9f44851a0fdcb27dd8e8a6100b25ddea7e88c0f3ff6947b4fae14368a5b5651f",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/vl53_near_field/share/vl53_near_field/config/collision_monitor_mapping_params.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/vl53_near_field/config/collision_monitor_params.yaml": {
+      "sha256": "a4d412f6109cd0bbdbbd354d26f53b6ae707c8940f844a286ec2ddab2d5617aa",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/vl53_near_field/share/vl53_near_field/config/collision_monitor_params.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/vl53_near_field/config/costmap_vl53_obstacle_layer.snippet.yaml": {
+      "sha256": "e9efab08ae1c6709b14df8aab2bc4ac71309b082d3ff966757b0f8f016396397",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/vl53_near_field/share/vl53_near_field/config/costmap_vl53_obstacle_layer.snippet.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/vl53_near_field/config/vl53_params.yaml": {
+      "sha256": "f7591f32bc11a44325276432a0d44223a329efe4b07a66e3eb19de002eb9133d",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/vl53_near_field/share/vl53_near_field/config/vl53_params.yaml",
+      "source_execution_installed_equal": true
+    },
+    "src/vl53_near_field/launch/vl53_near_field.launch.py": {
+      "sha256": "ae0d210b9ace01ef9b7ed2d86905f383896d924f59286830260a66052f687750",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/vl53_near_field/share/vl53_near_field/launch/vl53_near_field.launch.py",
+      "source_execution_installed_equal": true
+    },
+    "src/vl53_near_field/package.xml": {
+      "sha256": "7774c021107fcf11e85457674426e5d53c824989655e09584dac463c5b3a4c4b",
+      "source_execution_equal": true
+    },
+    "src/vl53_near_field/setup.py": {
+      "sha256": "a99ca19d32b98e2e3273946bd8898ccad23f8f80a207425019e912df238e258b",
+      "source_execution_equal": true
+    },
+    "src/vl53_near_field/test/test_mapping_collision_contract.py": {
+      "sha256": "f758db9038dc40a0857eed1b8123f705df1ee2d2fc7d3822f6c3d1ebe6c5038e",
+      "source_execution_equal": true
+    },
+    "src/vl53_near_field/test/test_measurement_quality.py": {
+      "sha256": "af2b7ed71dc6a3bf3c2fa06bf74087cd8ae2dcc84c375e885ffbfcfc86c0014f",
+      "source_execution_equal": true
+    },
+    "src/vl53_near_field/vl53_near_field/__init__.py": {
+      "sha256": "1abf578bd9056043710823a1741935066d717c13a6a0a03c9a4e2e2cfb7f4e78",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/vl53_near_field/lib/python3.10/site-packages/vl53_near_field/__init__.py",
+      "source_execution_installed_equal": true
+    },
+    "src/vl53_near_field/vl53_near_field/measurement_quality.py": {
+      "sha256": "72aa736c9c3afadbd86f5e83eccfe524155c02ecda08e2727fdb26807f7de9ab",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/vl53_near_field/lib/python3.10/site-packages/vl53_near_field/measurement_quality.py",
+      "source_execution_installed_equal": true
+    },
+    "src/vl53_near_field/vl53_near_field/vl53_near_field_node.py": {
+      "sha256": "06eae30914e48a1402a50f4aadb08e60ed9fe4009627550b2ce7f2890ac11f71",
+      "source_execution_equal": true,
+      "installed": "/evidence/ap06-old-product-install/vl53_near_field/lib/python3.10/site-packages/vl53_near_field/vl53_near_field_node.py",
+      "source_execution_installed_equal": true
+    },
+    "tools/simulation/ap03_nav2_closed_loop.py": {
+      "sha256": "a51c4e31ee65829748c2805335ce444bb3feffbacbc5ef204f8411f7af39fd8c",
+      "source_execution_equal": true
+    },
+    "tools/simulation/ap06_closed_product.py": {
+      "sha256": "c415a1f39282a6501c08a19082dae334e4a6e7b2632efd50467b3a329b7e31f3",
+      "source_execution_equal": true
+    },
+    "tools/simulation/ap06_dependencies.json": {
+      "sha256": "1f8808c73fe9a99f26591f3afc46d237680fe7c58a0fd48b2dd93346be629c0a",
+      "source_execution_equal": true
+    },
+    "tools/simulation/ap06_native_scenarios.json": {
+      "sha256": "684d5682d0bc7e952fdcb0dff3c0636c7785b63260f41c1aea245263fbe02ecd",
+      "source_execution_equal": true
+    },
+    "tools/simulation/ap06_nearfield_costmap_probe.py": {
+      "sha256": "1c2e5c24d66a4d5ae9bd23b159f0f10bd418d901e2fc9709dfe25795b90ba6ad",
+      "source_execution_equal": true
+    },
+    "tools/simulation/ap06_product_scenarios.json": {
+      "sha256": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da",
+      "source_execution_equal": true
+    },
+    "tools/simulation/ap06_scenarios.json": {
+      "sha256": "1a1d91e1fc2d5a822fc8956ab1ae3a2860053aca4107d8bcbb7488565ab086f1",
+      "source_execution_equal": true
+    },
+    "tools/simulation/ap06_sensors.py": {
+      "sha256": "fc772aaf81b83dc9980e7223d23297a161357797e434de13e2b366092d6584d3",
+      "source_execution_equal": true
+    },
+    "tools/simulation/ap06_trace.py": {
+      "sha256": "e6797fb8cca6df5ea56f00d2b6b055b88785f34dafbad89abfa4f8e55fcdf3e3",
+      "source_execution_equal": true
+    },
+    "tools/simulation/ap06_world.py": {
+      "sha256": "09c43dced4d5e1269214e4232ecc9bacd7c6a89c493c0dcec11519bc519241a5",
+      "source_execution_equal": true
+    },
+    "tools/simulation/goal_checker_regression/CMakeLists.txt": {
+      "sha256": "bd5b8c4703bc2add420a89774962abfdf3336463b3ef36e3aaee0278863da325",
+      "source_execution_equal": true
+    },
+    "tools/simulation/goal_checker_regression/main.cpp": {
+      "sha256": "5a8a58412d79e118d3549b5e551ac97ee1baa89610a2b94c78cfdbf181216350",
+      "source_execution_equal": true
+    },
+    "tools/simulation/navfn_cell_regression/CMakeLists.txt": {
+      "sha256": "d974f333e2a845d29f3abb2e701d54a22ecb2d5eda807f70b75a9d54e859f6f4",
+      "source_execution_equal": true
+    },
+    "tools/simulation/navfn_cell_regression/navfn_cell_regression.cpp": {
+      "sha256": "a1a13566cb827fe9e2b84aca2e547c98c07dc1285ad7191b5c249f87f7e571c0",
+      "source_execution_equal": true
+    },
+    "tools/simulation/navigate_through_poses_no_recovery.xml": {
+      "sha256": "fb534db8563f342e3da1ad1e8405f20cd9ef640e5d7db267eda10f4a544a5c89",
+      "source_execution_equal": true
+    },
+    "tools/simulation/prepare_ap06_sources.py": {
+      "sha256": "ff06b82955b4d47259a7cf63ba0e408a05ce10e80cdfd8b8ffec4dbb0bc78d5b",
+      "source_execution_equal": true
+    },
+    "tools/simulation/slam_grid_regression.cpp": {
+      "sha256": "425cfd7bb8d18a4709297557c8088c66db7d0b5018fa8432961236c44f693ddb",
+      "source_execution_equal": true
+    },
+    "tools/simulation/test_ap06_device_isolation.py": {
+      "sha256": "15992545d25a19317a7d31308c88ec3d17e6346e6f484b4ef0b1e83cb415a873",
+      "source_execution_equal": true
+    },
+    "tools/simulation/test_ap06_lifecycle.py": {
+      "sha256": "eb9911014859a29b1e35052132f42b5c977f66b3e1f7a095d58e499789ff37c7",
+      "source_execution_equal": true
+    },
+    "tools/simulation/test_ap06_trace.py": {
+      "sha256": "1311c9e7575ad62d93487d8373f075d800139151ecbb104edda64a8a548c5c98",
+      "source_execution_equal": true
+    },
+    "tools/simulation/test_ap06_world.py": {
+      "sha256": "64d4457c10209a4a422cbe89b4a190590c36e590d663543f6a8454a6da5843e5",
+      "source_execution_equal": true
+    },
+    "tools/simulation/tf_ownership_probe/CMakeLists.txt": {
+      "sha256": "643b6f46b6b3cffcb7ac984cc3d9a47eac2ebed27d4a85e6bb8260f70b1e3ecb",
+      "source_execution_equal": true
+    },
+    "tools/simulation/tf_ownership_probe/tf_ownership_probe.cpp": {
+      "sha256": "e03e011cae2d98ba834bc82f24d33472b4a84aea469c8d3bf2e43c13b4efe170",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b76_before_third_view.json": {
+      "sha256": "a033f40df6b7aa713a50e2a97aaa023b3dc99cbe11895c6f4db65975f377a568",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b76_before_third_view.npz": {
+      "sha256": "1e1c2bf4d2faa36fa2ab64c48fed10ddac5c3089dc68be0197ce4fd27fc84a8b",
+      "source_execution_equal": true
+    },
+    "src/explore/explore/_reserved_sweep.c": {
+      "sha256": "906ab44ac133a5203b4f772e4e075643485b9a24264d001f0c2ce68781f18505",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_native_sweep.py": {
+      "sha256": "83397207bd2b5c07df5afefa83c4e2579ce1f28a909b9de32f0519fdb70686b4",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_task_view_group.py": {
+      "sha256": "7b2f7341411124c7b6260ddb2a238b19e36087c1c449223d59bbed8c220ab11e",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b102_terminal_public_task.json": {
+      "sha256": "aef5b5d375984447e8b51adc9d9ac18037c564d6a5d0e68be17fac86c69f12e4",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b102_terminal_public_task.npz": {
+      "sha256": "28aa7333fb771d0d6b55be6d71f872d7e7c4cb8212ad9477a7e40d7a092bcd5c",
+      "source_execution_equal": true
+    },
+    ".github/workflows/hwt601-we.yml": {
+      "sha256": "b30d64e366740e9adc2d21b5274346a7d7b2fc980930e0f1446be76419579cf9",
+      "source_execution_equal": true
+    },
+    "src/explore/explore/action_client.py": {
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/action_client.py",
+      "sha256": "3fe155ab4e10e0e921579328c51221c3dba0b9a1af9db752e03c20d4ae0603a8",
+      "source_execution_equal": true,
+      "source_execution_installed_equal": true
+    },
+    "src/explore/test/test_action_client_registration.py": {
+      "sha256": "f8e77c35e2a01f08ce7260a72e2ae69bd3e7574fa1f676d0caccea46afb699a4",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_actual_stop.py": {
+      "sha256": "23ca5d105f9c401f3c728bf1b3602eaaa55372fe798a162874441b1dcad37c45",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_c119_terminal_native_stop.json": {
+      "sha256": "07804404073bd140b4faca3ee7a03d7ae34af9c7a20e500f3b54e8d76eb1a31d",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_c119_terminal_native_stop.npz": {
+      "sha256": "09ce116b6e16ca8fd9ba76c089a1a2d4478fd2f32cef44fc00e6c2c861cdc12a",
+      "source_execution_equal": true
+    },
+    "src/explore/test/conftest.py": {
+      "sha256": "977e0ffb5609bc279d49d5783f8b64d6c2d9815abb85cc84c51839b56bb525d0",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_native_continuation.py": {
+      "sha256": "cbce6252aacecddb6348a6221a0553cfac3e481731e49de1ee38922d5332cde3",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b126_native_continuation.json": {
+      "sha256": "bac4097b47fe807ca6935c604aaf276128b2395ebe2843108ef1985894509f51",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b126_native_continuation.npz": {
+      "sha256": "c66e6937f134e2164de8de19195306791a7a61cfc4e1d14299262b28d669350e",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_local_remainder.py": {
+      "sha256": "b3d053d8cbd3e77d52c5ae5a8cb0d8c2f82d6e94ed5d7c497efd6c542b445f2f",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b147_local_remainder.json": {
+      "sha256": "8287b520740e7ff5deeabb865b8c36d12448a8d89fc4686734e5b0facaf7e40f",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b147_local_remainder.npz": {
+      "sha256": "85746d4f2068bb762f5e2fffdfe261816924f8ce096f29affba3a31a1a96da36",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_recorded_raster.py": {
+      "sha256": "fb8098890b1ef31a8017720ffc35c76a180441f9aac240add1b932db90fe5319",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b166_recorded_raster.json": {
+      "sha256": "ad4b5b95f26f332a697205877fd55eee91452a3faab06ba622c59287fb52a5e3",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b166_recorded_raster.npz": {
+      "sha256": "f141f1d81f84b800f3eff137f5d3f4a12e20b4eaa536f8862d8604eccf6ea20c",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_start_raster.py": {
+      "sha256": "bb4afebbfc0205d40b0ae2c77f1ae155f625a75a9be219523256c0453fd0ef7b",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b176_start_raster.json": {
+      "sha256": "be167c91e414fc6beea2f4c5d0b31461e6185c0ffc5cf85e80a79f3f6f050a69",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b176_start_raster.npz": {
+      "sha256": "0f1105af9885e3c9b663ab3d7288f198f139306424736c9a7f5bf6c63b1eb77b",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_egress_region.py": {
+      "sha256": "5fca6a0c3b34b4380505055f413d59b19caf819282e85f598f47ac88dd0d3fd7",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_egress_batch.py": {
+      "sha256": "218ac1e19712406828294dab9b3738bc4e21003a382488017b07de50b2cc8498",
+      "source_execution_equal": true
+    },
+    "src/explore/test/test_metric_fresh_motion.py": {
+      "sha256": "d7a3dccaa2b9ee2836b2cff25cd9fd5f1afb9c1d5c36226ff66a96f5436d05f9",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b186_decision_inputs.json": {
+      "sha256": "88c885b438086577d537a2c531010e0a8d9d31ae2860eb09ddf39560cdfe9d97",
+      "source_execution_equal": true
+    },
+    "src/explore/test/data/ap06_b186_decision_inputs.npz": {
+      "sha256": "f3baeba5f0139d7bcf1108410f2023267f206d4f3f69ef83973642adf4ad8557",
+      "source_execution_equal": true
+    }
+  },
+  "masterplan_sha256": "030782dc0cce24d23ef730783703f91cac6957ceb4b7305a224342fba74a8a10",
+  "manifest_sha256": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da",
+  "additional_native_arithmetic": {
+    "package": "explore",
+    "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/_reserved_sweep.cpython-310-x86_64-linux-gnu.so",
+    "sha256": "1a0adb0d50be1fda411ab64529ba048429cbf9ae5f2e3a741a0ce19ed2a32e00",
+    "source": "src/explore/explore/_reserved_sweep.c",
+    "source_sha256": "906ab44ac133a5203b4f772e4e075643485b9a24264d001f0c2ce68781f18505",
+    "compile_flags": [
+      "-O3",
+      "-fno-fast-math",
+      "-ffp-contract=off"
+    ],
+    "authority": "pure arithmetic only"
+  }
+}

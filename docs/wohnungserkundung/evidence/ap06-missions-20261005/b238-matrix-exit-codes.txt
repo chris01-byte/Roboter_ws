@@ -1,0 +1,5 @@
+door68_start_a 1
+door68_start_b 1
+door80_start_c 1
+cancel 0
+gyro_hold 0

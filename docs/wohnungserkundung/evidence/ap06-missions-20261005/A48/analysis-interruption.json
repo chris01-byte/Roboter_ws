@@ -1,0 +1,6 @@
+{
+  "reason": "Repeated idle with 188 raw reachable boundary cells and no eligible candidate; actual later messages/pose/policy captured for analysis",
+  "unix_s": 1791237980.5947933,
+  "acceptance_qualified": false,
+  "original_budgets_unchanged": true
+}

@@ -1,0 +1,125 @@
+{
+  "case": {
+    "id": "door68_start_b",
+    "door_m": 0.68,
+    "start": [
+      -2.1,
+      0.45,
+      0.0
+    ]
+  },
+  "passed": false,
+  "hardware_qualified": false,
+  "manifest_compatible": false,
+  "actual_lidar_beams": 2160,
+  "sensor_profile": "native_mast_mask",
+  "reference_geometry_provided_to_product": false,
+  "truth_map_publisher": false,
+  "truth_tf_publisher": false,
+  "manual_navigation_goals": 0,
+  "cpu_allocation": {
+    "available": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "graph": [
+      0,
+      1,
+      2
+    ],
+    "source": 4,
+    "sensors": 3
+  },
+  "source_initialization_order": "independent_spawned_device_process",
+  "prefixes": {
+    "explore": "/evidence/ap06-old-product-install/explore",
+    "mission_manager": "/evidence/ap06-old-product-install/mission_manager",
+    "bt_orchestrator": "/evidence/ap06-old-product-install/bt_orchestrator",
+    "robot_navigation": "/evidence/ap06-old-product-install/robot_navigation",
+    "robot_state_estimation": "/evidence/ap06-old-product-install/robot_state_estimation",
+    "base_hardware": "/evidence/ap06-old-product-install/base_hardware",
+    "robot_map_manager": "/evidence/ap06-old-product-install/robot_map_manager",
+    "robot_localization": "/evidence/ap06-support-install/robot_localization",
+    "slam_toolbox": "/evidence/ap06-missions-20261005/slam-install/slam_toolbox",
+    "nav2_bt_navigator": "/evidence/ap06-support-install/nav2_bt_navigator",
+    "nav2_controller": "/evidence/ap03-nav2-install/nav2_controller",
+    "nav2_planner": "/evidence/ap03-nav2-install/nav2_planner",
+    "nav2_velocity_smoother": "/evidence/ap06-support-install/nav2_velocity_smoother",
+    "nav2_collision_monitor": "/evidence/ap06-support-install/nav2_collision_monitor",
+    "vl53_near_field": "/evidence/ap06-old-product-install/vl53_near_field",
+    "safety_monitor": "/evidence/ap06-old-product-install/safety_monitor",
+    "amadeus_lidar_bringup": "/evidence/ap06-old-product-install/amadeus_lidar_bringup"
+  },
+  "initial_map": {
+    "fingerprint": "90d8c97bb97e420cd116ec7eb814c10f74f9fe8b1d9581db1772d45494d06dfb",
+    "width": 563,
+    "height": 283
+  },
+  "lifecycle_states": {
+    "planner_server": [
+      {
+        "transition": 1,
+        "actual_state": 2,
+        "acknowledgement_received": true
+      },
+      {
+        "transition": 3,
+        "actual_state": 3,
+        "acknowledgement_received": true
+      }
+    ],
+    "controller_server": [
+      {
+        "transition": 1,
+        "actual_state": 2,
+        "acknowledgement_received": true
+      },
+      {
+        "transition": 3,
+        "actual_state": 3,
+        "acknowledgement_received": true
+      }
+    ],
+    "bt_navigator": [
+      {
+        "transition": 1,
+        "actual_state": 2,
+        "acknowledgement_received": true
+      },
+      {
+        "transition": 3,
+        "actual_state": 3,
+        "acknowledgement_received": true
+      }
+    ],
+    "velocity_smoother": [
+      {
+        "transition": 1,
+        "actual_state": 2,
+        "acknowledgement_received": true
+      },
+      {
+        "transition": 3,
+        "actual_state": 3,
+        "acknowledgement_received": true
+      }
+    ],
+    "collision_monitor": [
+      {
+        "transition": 1,
+        "actual_state": 2,
+        "acknowledgement_received": true
+      },
+      {
+        "transition": 3,
+        "actual_state": 3,
+        "acknowledgement_received": true
+      }
+    ]
+  },
+  "error": "real scope and HWT readiness",
+  "device_process_exitcode": 0
+}

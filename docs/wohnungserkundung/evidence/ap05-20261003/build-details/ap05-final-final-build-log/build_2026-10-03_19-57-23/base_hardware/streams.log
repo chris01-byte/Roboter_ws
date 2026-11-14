@@ -1,0 +1,54 @@
+[0.493s] Invoking command in '/evidence/ap05-repo/src/base_hardware': PYTHONPATH=/evidence/ap05-final-build/base_hardware/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap05-final-build/base_hardware build --build-base /evidence/ap05-final-build/base_hardware/build install --record /evidence/ap05-final-build/base_hardware/install.log --install-scripts $base/lib/base_hardware --single-version-externally-managed install_data
+[0.634s] running egg_info
+[0.634s] creating ../../../ap05-final-build/base_hardware/base_hardware.egg-info
+[0.634s] writing ../../../ap05-final-build/base_hardware/base_hardware.egg-info/PKG-INFO
+[0.635s] writing dependency_links to ../../../ap05-final-build/base_hardware/base_hardware.egg-info/dependency_links.txt
+[0.635s] writing entry points to ../../../ap05-final-build/base_hardware/base_hardware.egg-info/entry_points.txt
+[0.635s] writing requirements to ../../../ap05-final-build/base_hardware/base_hardware.egg-info/requires.txt
+[0.635s] writing top-level names to ../../../ap05-final-build/base_hardware/base_hardware.egg-info/top_level.txt
+[0.635s] writing manifest file '../../../ap05-final-build/base_hardware/base_hardware.egg-info/SOURCES.txt'
+[0.636s] reading manifest file '../../../ap05-final-build/base_hardware/base_hardware.egg-info/SOURCES.txt'
+[0.636s] writing manifest file '../../../ap05-final-build/base_hardware/base_hardware.egg-info/SOURCES.txt'
+[0.637s] running build
+[0.637s] running build_py
+[0.637s] creating /evidence/ap05-final-build/base_hardware/build
+[0.637s] creating /evidence/ap05-final-build/base_hardware/build/lib
+[0.637s] creating /evidence/ap05-final-build/base_hardware/build/lib/base_hardware
+[0.637s] copying base_hardware/encoder_shadow_reader.py -> /evidence/ap05-final-build/base_hardware/build/lib/base_hardware
+[0.637s] copying base_hardware/encoder_odometry.py -> /evidence/ap05-final-build/base_hardware/build/lib/base_hardware
+[0.637s] copying base_hardware/__init__.py -> /evidence/ap05-final-build/base_hardware/build/lib/base_hardware
+[0.637s] copying base_hardware/base_hardware_node.py -> /evidence/ap05-final-build/base_hardware/build/lib/base_hardware
+[0.637s] copying base_hardware/encoder_shadow_node.py -> /evidence/ap05-final-build/base_hardware/build/lib/base_hardware
+[0.638s] running install
+[0.638s] running install_lib
+[0.638s] creating /evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages/base_hardware
+[0.638s] copying /evidence/ap05-final-build/base_hardware/build/lib/base_hardware/encoder_shadow_reader.py -> /evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages/base_hardware
+[0.638s] copying /evidence/ap05-final-build/base_hardware/build/lib/base_hardware/encoder_odometry.py -> /evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages/base_hardware
+[0.639s] copying /evidence/ap05-final-build/base_hardware/build/lib/base_hardware/__init__.py -> /evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages/base_hardware
+[0.639s] copying /evidence/ap05-final-build/base_hardware/build/lib/base_hardware/base_hardware_node.py -> /evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages/base_hardware
+[0.639s] copying /evidence/ap05-final-build/base_hardware/build/lib/base_hardware/encoder_shadow_node.py -> /evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages/base_hardware
+[0.639s] byte-compiling /evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages/base_hardware/encoder_shadow_reader.py to encoder_shadow_reader.cpython-310.pyc
+[0.648s] byte-compiling /evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages/base_hardware/encoder_odometry.py to encoder_odometry.cpython-310.pyc
+[0.648s] byte-compiling /evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages/base_hardware/__init__.py to __init__.cpython-310.pyc
+[0.648s] byte-compiling /evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages/base_hardware/base_hardware_node.py to base_hardware_node.cpython-310.pyc
+[0.651s] byte-compiling /evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages/base_hardware/encoder_shadow_node.py to encoder_shadow_node.cpython-310.pyc
+[0.652s] running install_data
+[0.653s] creating /evidence/ap05-final-install/base_hardware/share/ament_index
+[0.653s] creating /evidence/ap05-final-install/base_hardware/share/ament_index/resource_index
+[0.653s] creating /evidence/ap05-final-install/base_hardware/share/ament_index/resource_index/packages
+[0.653s] copying resource/base_hardware -> /evidence/ap05-final-install/base_hardware/share/ament_index/resource_index/packages
+[0.653s] copying package.xml -> /evidence/ap05-final-install/base_hardware/share/base_hardware
+[0.653s] copying README.md -> /evidence/ap05-final-install/base_hardware/share/base_hardware
+[0.653s] creating /evidence/ap05-final-install/base_hardware/share/base_hardware/launch
+[0.653s] copying launch/encoder_shadow.launch.py -> /evidence/ap05-final-install/base_hardware/share/base_hardware/launch
+[0.653s] copying launch/base_hardware.launch.py -> /evidence/ap05-final-install/base_hardware/share/base_hardware/launch
+[0.653s] creating /evidence/ap05-final-install/base_hardware/share/base_hardware/config
+[0.653s] copying config/encoder_shadow.yaml -> /evidence/ap05-final-install/base_hardware/share/base_hardware/config
+[0.653s] copying config/base_hardware_params.yaml -> /evidence/ap05-final-install/base_hardware/share/base_hardware/config
+[0.653s] running install_egg_info
+[0.655s] Copying ../../../ap05-final-build/base_hardware/base_hardware.egg-info to /evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages/base_hardware-0.1.0-py3.10.egg-info
+[0.655s] running install_scripts
+[0.669s] Installing base_hardware script to /evidence/ap05-final-install/base_hardware/lib/base_hardware
+[0.669s] Installing encoder_shadow_reader script to /evidence/ap05-final-install/base_hardware/lib/base_hardware
+[0.669s] writing list of installed files to '/evidence/ap05-final-build/base_hardware/install.log'
+[0.696s] Invoked command in '/evidence/ap05-repo/src/base_hardware' returned '0': PYTHONPATH=/evidence/ap05-final-build/base_hardware/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap05-final-build/base_hardware build --build-base /evidence/ap05-final-build/base_hardware/build install --record /evidence/ap05-final-build/base_hardware/install.log --install-scripts $base/lib/base_hardware --single-version-externally-managed install_data

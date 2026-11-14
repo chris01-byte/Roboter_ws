@@ -1,0 +1,99 @@
+{
+  "body_anchor_expired": true,
+  "egress_expired": false,
+  "egress": [
+    {
+      "valid": false,
+      "reason": "start_egress_approaches_unknown",
+      "unknown_cells": 0
+    },
+    {
+      "valid": false,
+      "reason": "start_egress_approaches_unknown",
+      "unknown_cells": 0
+    }
+  ],
+  "first_body_grid": [
+    "PortalMapContext(session_id='ap06-door68_start_b', map_id='map-de2d21aca8ba1997bffab53fe9e6e3b39e564a7ff8124d1ad3b3f31404faca4a', frame_id='map')",
+    189,
+    96,
+    0.029999999329447746,
+    [
+      -0.7199999839067459,
+      -1.889999957755208,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    0.0
+  ],
+  "first_egress_grid": [
+    "PortalMapContext(session_id='ap06-door68_start_b', map_id='map-de2d21aca8ba1997bffab53fe9e6e3b39e564a7ff8124d1ad3b3f31404faca4a', frame_id='map')",
+    [
+      [
+        "map",
+        189,
+        95,
+        0.029999999329447746,
+        [
+          -0.7199999839067459,
+          -1.8599999584257603,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      [
+        "map",
+        189,
+        95,
+        0.029999999329447746,
+        [
+          -0.7199999839067459,
+          -1.8599999584257603,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    ]
+  ],
+  "current_grids": [
+    [
+      "map",
+      189,
+      96,
+      0.029999999329447746,
+      [
+        -0.7199999839067459,
+        -1.889999957755208,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    [
+      "map",
+      189,
+      96,
+      0.029999999329447746,
+      [
+        -0.7199999839067459,
+        -1.889999957755208,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ]
+  ]
+}

@@ -32,6 +32,7 @@ import time
 from typing import Dict, List, Optional
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.action import ActionClient
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy
@@ -190,6 +191,9 @@ class MissionManager(Node):
         self.status_pub = self.create_publisher(String, '/mission_manager/status_json', status_qos)
         self.command_sub = self.create_subscription(
             String, '/mission_manager/command_json', self._on_command, 10)
+        if self.enable_real_explore:
+            self.create_subscription(
+                String, '/explore/status_json', self._on_explore_status, 10)
         self.offboard_sub = self.create_subscription(
             Bool, self.offboard_topic, self._on_offboard, 10)
         if self.use_dynamic_catalog:
@@ -251,6 +255,9 @@ class MissionManager(Node):
         self._action_epoch = 0
         self._active_action_epoch = None
         self._room_initial_distance = None
+        self._hwt_hold_active = False
+        self._hwt_seen_sequence = 0
+        self._hwt_session_floor = 0
 
         self.timer = self.create_timer(0.2, self._timer_tick)
         self._publish_status()
@@ -568,6 +575,10 @@ class MissionManager(Node):
                     f"{base.pose.position.y:.2f}) im {self.place_base_frame}.")
 
         self.state = 'running'
+        self._hwt_hold_active = False
+        self._hwt_session_floor = self._hwt_seen_sequence
+        self._metric_exploration_result = None
+        self._explore_started_wall = time.time()
         self.mode = 'real'
         self.active_command = dict(cmd)
         self.phase = 'gestartet'
@@ -646,11 +657,54 @@ class MissionManager(Node):
         fb = feedback_msg.feedback
         if self.state != 'running' or self.mode != 'real' or self._cancel_requested:
             return
-        if fb.phase:
+        if fb.phase and not self._hwt_hold_active:
             self.phase = fb.phase
         self.progress = float(fb.progress)
         self.message = f'Phase: {self.phase}'
         self._publish_status()
+
+    def _on_explore_status(self, msg: String):
+        try:
+            status = json.loads(msg.data)
+        except (ValueError, TypeError):
+            return
+        if not isinstance(status, dict):
+            return
+        metric = status.get('metric_exploration')
+        if (isinstance(metric, dict) and metric.get('schema_version') == 1
+                and metric.get('outcome') in ('in_progress','metric_complete','usable_partial',
+                                              'blocked_help_required','error','user_canceled')
+                and self.state == 'running' and self.mode == 'real'
+                and self.active_command.get('type') == 'explore' and not self._cancel_requested):
+            stamp, started = status.get('time'), metric.get('started_wall_time')
+            if (type(stamp) in (int,float) and type(started) in (int,float)
+                    and 0 <= time.time()-stamp <= 2.
+                    and started >= getattr(self, '_explore_started_wall', float('inf'))):
+                self._metric_exploration_result = dict(metric)
+                # Telemetry enriches the result; only the owned BT Action can
+                # complete this mission. A delayed status never unlocks it.
+                self._publish_status()
+        sequence = status.get('hwt_recovery_sequence')
+        if type(sequence) is not int or sequence < 0:
+            return
+        self._hwt_seen_sequence = max(self._hwt_seen_sequence, sequence)
+        if (self.state != 'running' or self.mode != 'real'
+                or self.active_command.get('type') != 'explore'
+                or self._cancel_requested
+                or sequence <= self._hwt_session_floor):
+            return
+        phase = status.get('phase')
+        if phase in ('we_hwt_hold', 'we_hwt_recovery_validation'):
+            self._hwt_hold_active = True
+            self.phase = ('HWT_HOLD' if phase == 'we_hwt_hold'
+                          else 'HWT_RECOVERING')
+            self.message = 'Explore-Auftrag erhalten; HWT-Recovery ohne Fahrt.'
+            self._publish_status()
+        elif phase == 'we_hwt_resumed' and self._hwt_hold_active:
+            self._hwt_hold_active = False
+            self.phase = 'Explore'
+            self.message = 'HWT validiert; Explore-Auftrag wird fortgesetzt.'
+            self._publish_status()
 
     def _request_real_cancel(self, goal_handle, action_epoch):
         if (
@@ -882,6 +936,7 @@ class MissionManager(Node):
 
     def _finish(self, state: str, phase: str, message: str, cmd: Dict, progress=None):
         self.state = state
+        self._hwt_hold_active = False
         self.mode = None
         self._localization_loss_started_monotonic = None
         self.phase = phase
@@ -1115,6 +1170,7 @@ class MissionManager(Node):
                 'bt_explicit_opt_in'
                 if self.enable_real_explore
                 else 'simulation_only_no_navigation'),
+            'metric_exploration_result': getattr(self, '_metric_exploration_result', None),
             'time': time.time(),
         }
         self.status_pub.publish(String(data=json.dumps(payload, ensure_ascii=False)))
@@ -1125,8 +1181,11 @@ def main(args=None):
     node = MissionManager()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except RuntimeError:
+        if rclpy.ok():
+            raise
     finally:
         node.destroy_node()
         if rclpy.ok():

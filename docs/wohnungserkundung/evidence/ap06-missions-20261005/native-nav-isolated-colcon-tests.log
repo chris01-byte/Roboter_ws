@@ -1,0 +1,5 @@
+Starting >>> robot_navigation
+Finished <<< robot_navigation [7.30s]	[ with test failures ]
+
+Summary: 1 package finished [7.54s]
+  1 package had test failures: robot_navigation

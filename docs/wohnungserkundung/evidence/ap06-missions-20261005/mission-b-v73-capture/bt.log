@@ -1,0 +1,6 @@
+[INFO] [1791280556.446880662] [bt_orchestrator]: mission_server bereit -> Action '/run_mission' (10.0 Hz).
+[INFO] [1791280579.116301778] [bt_orchestrator]: Node [IsEstopClear] created Subscriber to topic [/safety/estop]
+[INFO] [1791280579.134923996] [bt_orchestrator]: Mission 'explore' gestartet (Objekt 'Tasse', Baum '/evidence/ap06-repo/src/bt_orchestrator/bt_xml/explore.xml'); Sicherheits-Subscriptions erhalten 1.0 s Vorlauf.
+[INFO] [1791280944.256135413] [bt_orchestrator]: Abbruch angefordert.
+[INFO] [1791280947.830674692] [bt_orchestrator]: Mission beendet mit Status: CANCELED
+[INFO] [1791280949.456889639] [rclcpp]: signal_handler(signum=2)

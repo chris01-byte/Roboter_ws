@@ -1,0 +1,4 @@
+Original official image ghcr.io/ros-navigation/navigation2@sha256:48d3727817bdb1582a40c46f3d2caecea509a60a67895b96e6558ed24b040644
+Configuration sha256:a7e402a67a1015f4b8aaed99f214de96f36bc8c0460b412a2d95ff11402f414c
+All compressed layer hashes verified before flattening.
+Source/build/log directories and apt caches omitted; installed files preserved.

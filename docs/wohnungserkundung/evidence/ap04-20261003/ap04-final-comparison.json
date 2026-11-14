@@ -1,0 +1,1913 @@
+[
+  {
+    "case": "ring",
+    "revision": 1,
+    "pose": [
+      2.85,
+      2.85,
+      0.0
+    ],
+    "fingerprint": "2eb20ea30ac8f9f64c76e42a80ce25f547eaa7e446a19544f513863abcc444be",
+    "cores": {
+      "legacy_centroid": {
+        "reason": "ok",
+        "accepted": 0,
+        "visible_boundary_union_m": 0.0,
+        "best_single_sight_m": 0.0,
+        "elapsed_s": 0.0005712239999411395,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 1,
+          "deferred_or_served": 0,
+          "accepted": 0,
+          "route_rejections": {
+            "approach_unavailable": 1
+          }
+        },
+        "goals": []
+      },
+      "upstream_418e971": {
+        "reason": "ok",
+        "accepted": 0,
+        "visible_boundary_union_m": 0.0,
+        "best_single_sight_m": 0.0,
+        "elapsed_s": 0.04908442900159571,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 1,
+          "deferred_or_served": 0,
+          "accepted": 0,
+          "route_rejections": {
+            "footprint_sweep_invalid": 1
+          }
+        },
+        "goals": []
+      },
+      "boundary_samples": {
+        "reason": "ok",
+        "accepted": 13,
+        "visible_boundary_union_m": 10.0,
+        "best_single_sight_m": 2.5,
+        "elapsed_s": 0.5981181489987648,
+        "rejections": {
+          "raw": 16,
+          "unsafe": 3,
+          "deferred_or_served": 0,
+          "accepted": 13,
+          "route_rejections": {
+            "goal_orientation_invalid": 3
+          }
+        },
+        "goals": [
+          {
+            "x": 3.75,
+            "y": 2.75,
+            "yaw": -0.11065722117389576,
+            "frontier": [
+              4.45,
+              2.75
+            ],
+            "route_length_m": 0.9055385138137416,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 3.8085786437626905,
+            "y": 3.1085786437626903,
+            "yaw": 0.263480804481284,
+            "frontier": [
+              4.3500000000000005,
+              3.6500000000000004
+            ],
+            "route_length_m": 0.9928423496648756,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 3.8085786437626905,
+            "y": 2.5914213562373094,
+            "yaw": -0.26348080448128447,
+            "frontier": [
+              4.3500000000000005,
+              2.0500000000000003
+            ],
+            "route_length_m": 0.9928423496648757,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 3.5085786437626907,
+            "y": 3.5085786437626907,
+            "yaw": 0.7853981633974483,
+            "frontier": [
+              4.05,
+              4.05
+            ],
+            "route_length_m": 0.9313708498984762,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 2.75,
+            "y": 1.9500000000000002,
+            "yaw": -1.6814535479687924,
+            "frontier": [
+              2.75,
+              1.25
+            ],
+            "route_length_m": 0.9055385138137416,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 2.75,
+            "y": 3.75,
+            "yaw": 1.6814535479687924,
+            "frontier": [
+              2.75,
+              4.45
+            ],
+            "route_length_m": 0.9055385138137416,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 3.1085786437626903,
+            "y": 3.8085786437626905,
+            "yaw": 1.3073155223136126,
+            "frontier": [
+              3.6500000000000004,
+              4.3500000000000005
+            ],
+            "route_length_m": 0.9928423496648756,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 3.1085786437626903,
+            "y": 1.8914213562373094,
+            "yaw": -1.3073155223136126,
+            "frontier": [
+              3.6500000000000004,
+              1.35
+            ],
+            "route_length_m": 0.9928423496648758,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 2.59142135623731,
+            "y": 1.8914213562373094,
+            "yaw": -1.8342771312761805,
+            "frontier": [
+              2.0500000000000003,
+              1.35
+            ],
+            "route_length_m": 0.9928423496648758,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 2.5914213562373094,
+            "y": 3.8085786437626905,
+            "yaw": 1.8342771312761812,
+            "frontier": [
+              2.0500000000000003,
+              4.3500000000000005
+            ],
+            "route_length_m": 0.9928423496648757,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 1.9500000000000002,
+            "y": 2.75,
+            "yaw": -3.0309354324158977,
+            "frontier": [
+              1.25,
+              2.75
+            ],
+            "route_length_m": 0.9055385138137416,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 1.8914213562373094,
+            "y": 2.59142135623731,
+            "yaw": -2.8781118491085094,
+            "frontier": [
+              1.35,
+              2.0500000000000003
+            ],
+            "route_length_m": 0.9928423496648758,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 1.8914213562373094,
+            "y": 3.1085786437626903,
+            "yaw": 2.8781118491085094,
+            "frontier": [
+              1.35,
+              3.6500000000000004
+            ],
+            "route_length_m": 0.9928423496648758,
+            "requires_nav2_plan": false
+          }
+        ]
+      }
+    }
+  },
+  {
+    "case": "concave",
+    "revision": 1,
+    "pose": [
+      2.05,
+      1.85,
+      0.0
+    ],
+    "fingerprint": "f647ba03bd533b53cad1c113af6ff4513039371a484a1ac4f882a4090a133fbc",
+    "cores": {
+      "legacy_centroid": {
+        "reason": "ok",
+        "accepted": 1,
+        "visible_boundary_union_m": 1.0,
+        "best_single_sight_m": 1.0,
+        "elapsed_s": 0.011636967999947956,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 0,
+          "deferred_or_served": 0,
+          "accepted": 1,
+          "route_rejections": {}
+        },
+        "goals": [
+          {
+            "x": 2.85,
+            "y": 2.15,
+            "yaw": 0.3587706702705719,
+            "frontier": [
+              3.3697860962566843,
+              2.3692513368983956
+            ],
+            "route_length_m": 0.8544003745317533,
+            "requires_nav2_plan": false
+          }
+        ]
+      },
+      "upstream_418e971": {
+        "reason": "ok",
+        "accepted": 1,
+        "visible_boundary_union_m": 1.1,
+        "best_single_sight_m": 1.1,
+        "elapsed_s": 0.028391936000843998,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 0,
+          "deferred_or_served": 0,
+          "accepted": 1,
+          "route_rejections": {}
+        },
+        "goals": [
+          {
+            "x": 3.008578641391931,
+            "y": 2.1085786461334504,
+            "yaw": 0.2634808074086275,
+            "frontier": [
+              3.5500000528991222,
+              2.650000039488077
+            ],
+            "route_length_m": 0.9928423479933806,
+            "requires_nav2_plan": false
+          }
+        ]
+      },
+      "boundary_samples": {
+        "reason": "ok",
+        "accepted": 14,
+        "visible_boundary_union_m": 18.2,
+        "best_single_sight_m": 4.2,
+        "elapsed_s": 0.9389682220007671,
+        "rejections": {
+          "raw": 22,
+          "unsafe": 8,
+          "deferred_or_served": 0,
+          "accepted": 14,
+          "route_rejections": {
+            "footprint_sweep_invalid": 4,
+            "goal_orientation_invalid": 4
+          }
+        },
+        "goals": [
+          {
+            "x": 2.0500000000000003,
+            "y": 1.4500000000000002,
+            "yaw": -1.5707963267948954,
+            "frontier": [
+              2.0500000000000003,
+              0.8500000000000001
+            ],
+            "route_length_m": 0.3999999999999999,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 2.85,
+            "y": 1.5500000000000003,
+            "yaw": -0.35877067027057213,
+            "frontier": [
+              2.85,
+              0.8500000000000001
+            ],
+            "route_length_m": 0.8544003745317534,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 1.5500000000000003,
+            "y": 2.0500000000000003,
+            "yaw": 2.7610862764774278,
+            "frontier": [
+              0.8500000000000001,
+              2.0500000000000003
+            ],
+            "route_length_m": 0.5385164807134503,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 1.5500000000000003,
+            "y": 2.85,
+            "yaw": 2.0344439357957027,
+            "frontier": [
+              0.8500000000000001,
+              2.85
+            ],
+            "route_length_m": 1.1180339887498947,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 2.75,
+            "y": 2.85,
+            "yaw": 0.9600703624056879,
+            "frontier": [
+              3.45,
+              2.85
+            ],
+            "route_length_m": 1.2206555615733703,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 3.6500000000000004,
+            "y": 1.5500000000000003,
+            "yaw": -0.18534794999569473,
+            "frontier": [
+              3.6500000000000004,
+              0.8500000000000001
+            ],
+            "route_length_m": 1.6278820596099712,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 2.75,
+            "y": 3.6500000000000004,
+            "yaw": 1.1999050379822342,
+            "frontier": [
+              3.45,
+              3.6500000000000004
+            ],
+            "route_length_m": 1.9313207915827968,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 1.5500000000000003,
+            "y": 3.6500000000000004,
+            "yaw": 1.841743177133317,
+            "frontier": [
+              0.8500000000000001,
+              3.6500000000000004
+            ],
+            "route_length_m": 1.8681541692269406,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 4.45,
+            "y": 1.9500000000000002,
+            "yaw": 0.041642579098588456,
+            "frontier": [
+              4.45,
+              2.5500000000000003
+            ],
+            "route_length_m": 2.402082429892863,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 4.45,
+            "y": 1.4500000000000002,
+            "yaw": -0.16514867741462677,
+            "frontier": [
+              4.45,
+              0.8500000000000001
+            ],
+            "route_length_m": 2.433105012119288,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 2.0500000000000003,
+            "y": 3.95,
+            "yaw": 1.5707963267948963,
+            "frontier": [
+              2.0500000000000003,
+              4.55
+            ],
+            "route_length_m": 2.1,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 5.25,
+            "y": 1.9500000000000002,
+            "yaw": 0.0312398334302683,
+            "frontier": [
+              5.25,
+              2.5500000000000003
+            ],
+            "route_length_m": 3.2015621187164247,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 5.25,
+            "y": 1.4500000000000002,
+            "yaw": -0.1243549945467614,
+            "frontier": [
+              5.25,
+              0.8500000000000001
+            ],
+            "route_length_m": 3.22490309931942,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 5.9378679656440365,
+            "y": 1.9378679656440356,
+            "yaw": 0.022596706075833167,
+            "frontier": [
+              6.550000000000001,
+              2.5500000000000003
+            ],
+            "route_length_m": 3.888860771185762,
+            "requires_nav2_plan": false
+          }
+        ]
+      }
+    }
+  },
+  {
+    "case": "long",
+    "revision": 1,
+    "pose": [
+      2.05,
+      2.05,
+      0.0
+    ],
+    "fingerprint": "0ad0af20161d7ee199eb38ac572763bdf4d210dbfca6fa10940f8cbbaafaeddc",
+    "cores": {
+      "legacy_centroid": {
+        "reason": "ok",
+        "accepted": 0,
+        "visible_boundary_union_m": 0.0,
+        "best_single_sight_m": 0.0,
+        "elapsed_s": 0.0625595820001763,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 1,
+          "deferred_or_served": 0,
+          "accepted": 0,
+          "route_rejections": {
+            "goal_orientation_invalid": 1
+          }
+        },
+        "goals": []
+      },
+      "upstream_418e971": {
+        "reason": "ok",
+        "accepted": 1,
+        "visible_boundary_union_m": 1.9000000000000001,
+        "best_single_sight_m": 1.9000000000000001,
+        "elapsed_s": 0.07520835200011788,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 0,
+          "deferred_or_served": 0,
+          "accepted": 1,
+          "route_rejections": {}
+        },
+        "goals": [
+          {
+            "x": 4.4499999778966135,
+            "y": 3.4500000000000015,
+            "yaw": 0.5280744484263598,
+            "frontier": [
+              4.450000066310167,
+              4.250000063329935
+            ],
+            "route_length_m": 2.7784887978899615,
+            "requires_nav2_plan": false
+          }
+        ]
+      },
+      "boundary_samples": {
+        "reason": "ok",
+        "accepted": 8,
+        "visible_boundary_union_m": 7.4,
+        "best_single_sight_m": 2.1,
+        "elapsed_s": 0.5329722900005436,
+        "rejections": {
+          "raw": 11,
+          "unsafe": 3,
+          "deferred_or_served": 0,
+          "accepted": 8,
+          "route_rejections": {
+            "footprint_sweep_invalid": 2,
+            "goal_orientation_invalid": 1
+          }
+        },
+        "goals": [
+          {
+            "x": 2.85,
+            "y": 3.45,
+            "yaw": 1.0516502125483735,
+            "frontier": [
+              2.85,
+              4.15
+            ],
+            "route_length_m": 1.6124515496597103,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 2.0500000000000003,
+            "y": 3.5500000000000003,
+            "yaw": 1.5707963267948963,
+            "frontier": [
+              2.0500000000000003,
+              4.15
+            ],
+            "route_length_m": 1.5000000000000004,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 3.6500000000000004,
+            "y": 3.45,
+            "yaw": 0.7188299996216244,
+            "frontier": [
+              3.6500000000000004,
+              4.15
+            ],
+            "route_length_m": 2.1260291625469305,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 4.45,
+            "y": 3.45,
+            "yaw": 0.5280744484263598,
+            "frontier": [
+              4.45,
+              4.15
+            ],
+            "route_length_m": 2.7784887978899615,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 5.25,
+            "y": 3.45,
+            "yaw": 0.4124104415973874,
+            "frontier": [
+              5.25,
+              4.15
+            ],
+            "route_length_m": 3.4928498393145966,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 6.050000000000001,
+            "y": 3.45,
+            "yaw": 0.33667481938672716,
+            "frontier": [
+              6.050000000000001,
+              4.15
+            ],
+            "route_length_m": 4.237924020083419,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 6.8500000000000005,
+            "y": 3.45,
+            "yaw": 0.28379410920832787,
+            "frontier": [
+              6.8500000000000005,
+              4.15
+            ],
+            "route_length_m": 5.000000000000001,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 7.65,
+            "y": 3.5500000000000003,
+            "yaw": 0.2617135024012051,
+            "frontier": [
+              7.65,
+              4.15
+            ],
+            "route_length_m": 5.797413216254299,
+            "requires_nav2_plan": false
+          }
+        ]
+      }
+    }
+  },
+  {
+    "case": "blocked",
+    "revision": 1,
+    "pose": [
+      2.05,
+      2.05,
+      0.0
+    ],
+    "fingerprint": "0ad0af20161d7ee199eb38ac572763bdf4d210dbfca6fa10940f8cbbaafaeddc",
+    "cores": {
+      "legacy_centroid": {
+        "reason": "ok",
+        "accepted": 0,
+        "visible_boundary_union_m": 0.0,
+        "best_single_sight_m": 0.0,
+        "elapsed_s": 0.035955367999122245,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 1,
+          "deferred_or_served": 0,
+          "accepted": 0,
+          "route_rejections": {
+            "footprint_sweep_invalid": 1
+          }
+        },
+        "goals": []
+      },
+      "upstream_418e971": {
+        "reason": "ok",
+        "accepted": 1,
+        "visible_boundary_union_m": 1.9000000000000001,
+        "best_single_sight_m": 1.9000000000000001,
+        "elapsed_s": 0.040328025999770034,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 0,
+          "deferred_or_served": 0,
+          "accepted": 1,
+          "route_rejections": {}
+        },
+        "goals": [
+          {
+            "x": 4.4499999778966135,
+            "y": 3.4500000000000015,
+            "yaw": 0.5280744484263598,
+            "frontier": [
+              4.450000066310167,
+              4.250000063329935
+            ],
+            "route_length_m": 2.7784887978899615,
+            "requires_nav2_plan": false
+          }
+        ]
+      },
+      "boundary_samples": {
+        "reason": "ok",
+        "accepted": 6,
+        "visible_boundary_union_m": 7.0,
+        "best_single_sight_m": 2.1,
+        "elapsed_s": 0.5158255539990932,
+        "rejections": {
+          "raw": 11,
+          "unsafe": 5,
+          "deferred_or_served": 0,
+          "accepted": 6,
+          "route_rejections": {
+            "footprint_sweep_invalid": 4,
+            "goal_orientation_invalid": 1
+          }
+        },
+        "goals": [
+          {
+            "x": 2.0500000000000003,
+            "y": 3.5500000000000003,
+            "yaw": 1.5707963267948963,
+            "frontier": [
+              2.0500000000000003,
+              4.15
+            ],
+            "route_length_m": 1.5000000000000004,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 4.45,
+            "y": 3.45,
+            "yaw": 0.5280744484263598,
+            "frontier": [
+              4.45,
+              4.15
+            ],
+            "route_length_m": 2.7784887978899615,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 5.25,
+            "y": 3.45,
+            "yaw": 0.4124104415973874,
+            "frontier": [
+              5.25,
+              4.15
+            ],
+            "route_length_m": 3.4928498393145966,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 6.050000000000001,
+            "y": 3.45,
+            "yaw": 0.33667481938672716,
+            "frontier": [
+              6.050000000000001,
+              4.15
+            ],
+            "route_length_m": 4.237924020083419,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 6.8500000000000005,
+            "y": 3.45,
+            "yaw": 0.28379410920832787,
+            "frontier": [
+              6.8500000000000005,
+              4.15
+            ],
+            "route_length_m": 5.000000000000001,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 7.65,
+            "y": 3.5500000000000003,
+            "yaw": 0.2617135024012051,
+            "frontier": [
+              7.65,
+              4.15
+            ],
+            "route_length_m": 5.797413216254299,
+            "requires_nav2_plan": false
+          }
+        ]
+      }
+    }
+  },
+  {
+    "case": "growth",
+    "revision": 1,
+    "pose": [
+      2.05,
+      2.05,
+      0.0
+    ],
+    "fingerprint": "0ad0af20161d7ee199eb38ac572763bdf4d210dbfca6fa10940f8cbbaafaeddc",
+    "cores": {
+      "legacy_centroid": {
+        "reason": "ok",
+        "accepted": 0,
+        "visible_boundary_union_m": 0.0,
+        "best_single_sight_m": 0.0,
+        "elapsed_s": 0.05874840300020878,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 1,
+          "deferred_or_served": 0,
+          "accepted": 0,
+          "route_rejections": {
+            "goal_orientation_invalid": 1
+          }
+        },
+        "goals": []
+      },
+      "upstream_418e971": {
+        "reason": "ok",
+        "accepted": 1,
+        "visible_boundary_union_m": 1.9000000000000001,
+        "best_single_sight_m": 1.9000000000000001,
+        "elapsed_s": 0.06624640799964254,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 0,
+          "deferred_or_served": 0,
+          "accepted": 1,
+          "route_rejections": {}
+        },
+        "goals": [
+          {
+            "x": 4.4499999778966135,
+            "y": 3.4500000000000015,
+            "yaw": 0.5280744484263598,
+            "frontier": [
+              4.450000066310167,
+              4.250000063329935
+            ],
+            "route_length_m": 2.7784887978899615,
+            "requires_nav2_plan": false
+          }
+        ]
+      },
+      "boundary_samples": {
+        "reason": "ok",
+        "accepted": 8,
+        "visible_boundary_union_m": 7.4,
+        "best_single_sight_m": 2.1,
+        "elapsed_s": 0.5472220869996818,
+        "rejections": {
+          "raw": 11,
+          "unsafe": 3,
+          "deferred_or_served": 0,
+          "accepted": 8,
+          "route_rejections": {
+            "footprint_sweep_invalid": 2,
+            "goal_orientation_invalid": 1
+          }
+        },
+        "goals": [
+          {
+            "x": 2.85,
+            "y": 3.45,
+            "yaw": 1.0516502125483735,
+            "frontier": [
+              2.85,
+              4.15
+            ],
+            "route_length_m": 1.6124515496597103,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 2.0500000000000003,
+            "y": 3.5500000000000003,
+            "yaw": 1.5707963267948963,
+            "frontier": [
+              2.0500000000000003,
+              4.15
+            ],
+            "route_length_m": 1.5000000000000004,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 3.6500000000000004,
+            "y": 3.45,
+            "yaw": 0.7188299996216244,
+            "frontier": [
+              3.6500000000000004,
+              4.15
+            ],
+            "route_length_m": 2.1260291625469305,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 4.45,
+            "y": 3.45,
+            "yaw": 0.5280744484263598,
+            "frontier": [
+              4.45,
+              4.15
+            ],
+            "route_length_m": 2.7784887978899615,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 5.25,
+            "y": 3.45,
+            "yaw": 0.4124104415973874,
+            "frontier": [
+              5.25,
+              4.15
+            ],
+            "route_length_m": 3.4928498393145966,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 6.050000000000001,
+            "y": 3.45,
+            "yaw": 0.33667481938672716,
+            "frontier": [
+              6.050000000000001,
+              4.15
+            ],
+            "route_length_m": 4.237924020083419,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 6.8500000000000005,
+            "y": 3.45,
+            "yaw": 0.28379410920832787,
+            "frontier": [
+              6.8500000000000005,
+              4.15
+            ],
+            "route_length_m": 5.000000000000001,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 7.65,
+            "y": 3.5500000000000003,
+            "yaw": 0.2617135024012051,
+            "frontier": [
+              7.65,
+              4.15
+            ],
+            "route_length_m": 5.797413216254299,
+            "requires_nav2_plan": false
+          }
+        ]
+      }
+    }
+  },
+  {
+    "case": "growth",
+    "revision": 2,
+    "pose": [
+      2.05,
+      2.05,
+      0.0
+    ],
+    "fingerprint": "03265b6e8ee949a960429e3ed8aecc33fd4734d185561ba78ac339f2db42957d",
+    "cores": {
+      "legacy_centroid": {
+        "reason": "ok",
+        "accepted": 0,
+        "visible_boundary_union_m": 0.0,
+        "best_single_sight_m": 0.0,
+        "elapsed_s": 0.05963250500099093,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 1,
+          "deferred_or_served": 0,
+          "accepted": 0,
+          "route_rejections": {
+            "goal_orientation_invalid": 1
+          }
+        },
+        "goals": []
+      },
+      "upstream_418e971": {
+        "reason": "ok",
+        "accepted": 1,
+        "visible_boundary_union_m": 1.9000000000000001,
+        "best_single_sight_m": 1.9000000000000001,
+        "elapsed_s": 0.058618147999368375,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 0,
+          "deferred_or_served": 0,
+          "accepted": 1,
+          "route_rejections": {}
+        },
+        "goals": [
+          {
+            "x": 4.449999977399909,
+            "y": 3.7500000000000013,
+            "yaw": 0.6162969373960713,
+            "frontier": [
+              4.450000067800284,
+              4.550000067800283
+            ],
+            "route_length_m": 2.941088233970549,
+            "requires_nav2_plan": false
+          }
+        ]
+      },
+      "boundary_samples": {
+        "reason": "ok",
+        "accepted": 8,
+        "visible_boundary_union_m": 7.5,
+        "best_single_sight_m": 2.1,
+        "elapsed_s": 0.6455005469997559,
+        "rejections": {
+          "raw": 11,
+          "unsafe": 3,
+          "deferred_or_served": 0,
+          "accepted": 8,
+          "route_rejections": {
+            "footprint_sweep_invalid": 2,
+            "goal_orientation_invalid": 1
+          }
+        },
+        "goals": [
+          {
+            "x": 2.75,
+            "y": 3.75,
+            "yaw": 1.1801892830972098,
+            "frontier": [
+              2.75,
+              4.45
+            ],
+            "route_length_m": 1.8384776310850237,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 1.9500000000000002,
+            "y": 3.85,
+            "yaw": 1.6262948320406132,
+            "frontier": [
+              1.9500000000000002,
+              4.45
+            ],
+            "route_length_m": 1.8027756377319948,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 3.5500000000000003,
+            "y": 3.75,
+            "yaw": 0.8478169733934056,
+            "frontier": [
+              3.5500000000000003,
+              4.45
+            ],
+            "route_length_m": 2.267156809750927,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 4.3500000000000005,
+            "y": 3.75,
+            "yaw": 0.6365082157879509,
+            "frontier": [
+              4.3500000000000005,
+              4.45
+            ],
+            "route_length_m": 2.860069929215019,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 5.15,
+            "y": 3.75,
+            "yaw": 0.5016040541891205,
+            "frontier": [
+              5.15,
+              4.45
+            ],
+            "route_length_m": 3.535533905932738,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 5.950000000000001,
+            "y": 3.75,
+            "yaw": 0.4110645473898643,
+            "frontier": [
+              5.950000000000001,
+              4.45
+            ],
+            "route_length_m": 4.254409477236531,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 6.750000000000001,
+            "y": 3.75,
+            "yaw": 0.34706160353949045,
+            "frontier": [
+              6.750000000000001,
+              4.45
+            ],
+            "route_length_m": 4.997999599839921,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 7.550000000000001,
+            "y": 3.75,
+            "yaw": 0.29977607009997964,
+            "frontier": [
+              7.550000000000001,
+              4.45
+            ],
+            "route_length_m": 5.756735185849703,
+            "requires_nav2_plan": false
+          }
+        ]
+      }
+    }
+  },
+  {
+    "case": "growth",
+    "revision": 3,
+    "pose": [
+      2.05,
+      2.05,
+      0.0
+    ],
+    "fingerprint": "6cecf6d3fa7dadaf1ca195add49477cb4f2c70545392fcabca4960dbcd6ce511",
+    "cores": {
+      "legacy_centroid": {
+        "reason": "ok",
+        "accepted": 0,
+        "visible_boundary_union_m": 0.0,
+        "best_single_sight_m": 0.0,
+        "elapsed_s": 0.08320506199925148,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 1,
+          "deferred_or_served": 0,
+          "accepted": 0,
+          "route_rejections": {
+            "goal_orientation_invalid": 1
+          }
+        },
+        "goals": []
+      },
+      "upstream_418e971": {
+        "reason": "ok",
+        "accepted": 1,
+        "visible_boundary_union_m": 1.9000000000000001,
+        "best_single_sight_m": 1.9000000000000001,
+        "elapsed_s": 0.08315248500002781,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 0,
+          "deferred_or_served": 0,
+          "accepted": 1,
+          "route_rejections": {}
+        },
+        "goals": [
+          {
+            "x": 4.449999976903203,
+            "y": 4.050000000000002,
+            "yaw": 0.6947382761967031,
+            "frontier": [
+              4.450000069290399,
+              4.850000072270632
+            ],
+            "route_length_m": 3.124099870362662,
+            "requires_nav2_plan": false
+          }
+        ]
+      },
+      "boundary_samples": {
+        "reason": "ok",
+        "accepted": 8,
+        "visible_boundary_union_m": 7.5,
+        "best_single_sight_m": 1.9000000000000001,
+        "elapsed_s": 0.7064554770004179,
+        "rejections": {
+          "raw": 10,
+          "unsafe": 2,
+          "deferred_or_served": 0,
+          "accepted": 8,
+          "route_rejections": {
+            "footprint_sweep_invalid": 2
+          }
+        },
+        "goals": [
+          {
+            "x": 2.65,
+            "y": 4.050000000000001,
+            "yaw": 1.2793395323170296,
+            "frontier": [
+              2.65,
+              4.75
+            ],
+            "route_length_m": 2.08806130178211,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 1.8500000000000003,
+            "y": 4.050000000000001,
+            "yaw": 1.6704649792860584,
+            "frontier": [
+              1.8500000000000003,
+              4.75
+            ],
+            "route_length_m": 2.009975124224178,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 3.45,
+            "y": 4.050000000000001,
+            "yaw": 0.9600703624056879,
+            "frontier": [
+              3.45,
+              4.75
+            ],
+            "route_length_m": 2.4413111231467406,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 4.25,
+            "y": 4.050000000000001,
+            "yaw": 0.7378150601204648,
+            "frontier": [
+              4.25,
+              4.75
+            ],
+            "route_length_m": 2.973213749463701,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 5.05,
+            "y": 4.050000000000001,
+            "yaw": 0.5880026035475675,
+            "frontier": [
+              5.05,
+              4.75
+            ],
+            "route_length_m": 3.605551275463989,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 5.8500000000000005,
+            "y": 4.050000000000001,
+            "yaw": 0.48447792903702314,
+            "frontier": [
+              5.8500000000000005,
+              4.75
+            ],
+            "route_length_m": 4.294182110716778,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 6.65,
+            "y": 4.050000000000001,
+            "yaw": 0.41012734054149097,
+            "frontier": [
+              6.65,
+              4.75
+            ],
+            "route_length_m": 5.015974481593782,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 7.45,
+            "y": 4.050000000000001,
+            "yaw": 0.3547056520109403,
+            "frontier": [
+              7.45,
+              4.75
+            ],
+            "route_length_m": 5.758472019555188,
+            "requires_nav2_plan": false
+          }
+        ]
+      }
+    }
+  },
+  {
+    "case": "revisit",
+    "revision": 1,
+    "pose": [
+      2.05,
+      2.05,
+      0.0
+    ],
+    "fingerprint": "0ad0af20161d7ee199eb38ac572763bdf4d210dbfca6fa10940f8cbbaafaeddc",
+    "cores": {
+      "legacy_centroid": {
+        "reason": "ok",
+        "accepted": 0,
+        "visible_boundary_union_m": 0.0,
+        "best_single_sight_m": 0.0,
+        "elapsed_s": 0.0860580350017699,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 1,
+          "deferred_or_served": 0,
+          "accepted": 0,
+          "route_rejections": {
+            "goal_orientation_invalid": 1
+          }
+        },
+        "goals": []
+      },
+      "upstream_418e971": {
+        "reason": "ok",
+        "accepted": 1,
+        "visible_boundary_union_m": 1.9000000000000001,
+        "best_single_sight_m": 1.9000000000000001,
+        "elapsed_s": 0.0814151779995882,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 0,
+          "deferred_or_served": 0,
+          "accepted": 1,
+          "route_rejections": {}
+        },
+        "goals": [
+          {
+            "x": 4.4499999778966135,
+            "y": 3.4500000000000015,
+            "yaw": 0.5280744484263598,
+            "frontier": [
+              4.450000066310167,
+              4.250000063329935
+            ],
+            "route_length_m": 2.7784887978899615,
+            "requires_nav2_plan": false
+          }
+        ]
+      },
+      "boundary_samples": {
+        "reason": "ok",
+        "accepted": 8,
+        "visible_boundary_union_m": 7.4,
+        "best_single_sight_m": 2.1,
+        "elapsed_s": 0.6863358949995018,
+        "rejections": {
+          "raw": 11,
+          "unsafe": 3,
+          "deferred_or_served": 0,
+          "accepted": 8,
+          "route_rejections": {
+            "footprint_sweep_invalid": 2,
+            "goal_orientation_invalid": 1
+          }
+        },
+        "goals": [
+          {
+            "x": 2.85,
+            "y": 3.45,
+            "yaw": 1.0516502125483735,
+            "frontier": [
+              2.85,
+              4.15
+            ],
+            "route_length_m": 1.6124515496597103,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 2.0500000000000003,
+            "y": 3.5500000000000003,
+            "yaw": 1.5707963267948963,
+            "frontier": [
+              2.0500000000000003,
+              4.15
+            ],
+            "route_length_m": 1.5000000000000004,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 3.6500000000000004,
+            "y": 3.45,
+            "yaw": 0.7188299996216244,
+            "frontier": [
+              3.6500000000000004,
+              4.15
+            ],
+            "route_length_m": 2.1260291625469305,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 4.45,
+            "y": 3.45,
+            "yaw": 0.5280744484263598,
+            "frontier": [
+              4.45,
+              4.15
+            ],
+            "route_length_m": 2.7784887978899615,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 5.25,
+            "y": 3.45,
+            "yaw": 0.4124104415973874,
+            "frontier": [
+              5.25,
+              4.15
+            ],
+            "route_length_m": 3.4928498393145966,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 6.050000000000001,
+            "y": 3.45,
+            "yaw": 0.33667481938672716,
+            "frontier": [
+              6.050000000000001,
+              4.15
+            ],
+            "route_length_m": 4.237924020083419,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 6.8500000000000005,
+            "y": 3.45,
+            "yaw": 0.28379410920832787,
+            "frontier": [
+              6.8500000000000005,
+              4.15
+            ],
+            "route_length_m": 5.000000000000001,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 7.65,
+            "y": 3.5500000000000003,
+            "yaw": 0.2617135024012051,
+            "frontier": [
+              7.65,
+              4.15
+            ],
+            "route_length_m": 5.797413216254299,
+            "requires_nav2_plan": false
+          }
+        ]
+      }
+    }
+  },
+  {
+    "case": "revisit",
+    "revision": 2,
+    "pose": [
+      2.85,
+      3.45,
+      1.0516502125483735
+    ],
+    "fingerprint": "003d1bae9d1420113bd2ffa787fad3cf75f60292570305dd99e83b1273848b97",
+    "cores": {
+      "legacy_centroid": {
+        "reason": "ok",
+        "accepted": 0,
+        "visible_boundary_union_m": 0.0,
+        "best_single_sight_m": 0.0,
+        "elapsed_s": 0.05420493600104237,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 1,
+          "deferred_or_served": 0,
+          "accepted": 0,
+          "route_rejections": {
+            "footprint_sweep_invalid": 1
+          }
+        },
+        "goals": []
+      },
+      "upstream_418e971": {
+        "reason": "ok",
+        "accepted": 1,
+        "visible_boundary_union_m": 1.9000000000000001,
+        "best_single_sight_m": 1.9000000000000001,
+        "elapsed_s": 0.06415662200015504,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 0,
+          "deferred_or_served": 0,
+          "accepted": 1,
+          "route_rejections": {}
+        },
+        "goals": [
+          {
+            "x": 4.4499999778966135,
+            "y": 3.7500000000000013,
+            "yaw": 0.18534794999569465,
+            "frontier": [
+              4.450000066310167,
+              4.550000067800283
+            ],
+            "route_length_m": 1.6278820596099708,
+            "requires_nav2_plan": false
+          }
+        ]
+      },
+      "boundary_samples": {
+        "reason": "ok",
+        "accepted": 9,
+        "visible_boundary_union_m": 7.800000000000001,
+        "best_single_sight_m": 2.1,
+        "elapsed_s": 0.5313380750012584,
+        "rejections": {
+          "raw": 11,
+          "unsafe": 2,
+          "deferred_or_served": 0,
+          "accepted": 9,
+          "route_rejections": {
+            "footprint_sweep_invalid": 1,
+            "goal_orientation_invalid": 1
+          }
+        },
+        "goals": [
+          {
+            "x": 2.85,
+            "y": 3.85,
+            "yaw": 1.5707963267948966,
+            "frontier": [
+              2.85,
+              4.45
+            ],
+            "route_length_m": 0.3999999999999999,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 3.6500000000000004,
+            "y": 3.75,
+            "yaw": 0.3587706702705719,
+            "frontier": [
+              3.6500000000000004,
+              4.45
+            ],
+            "route_length_m": 0.8544003745317533,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 2.0500000000000003,
+            "y": 3.75,
+            "yaw": 2.782821983319221,
+            "frontier": [
+              2.0500000000000003,
+              4.45
+            ],
+            "route_length_m": 0.8544003745317529,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 4.45,
+            "y": 3.75,
+            "yaw": 0.18534794999569465,
+            "frontier": [
+              4.45,
+              4.45
+            ],
+            "route_length_m": 1.6278820596099708,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 1.25,
+            "y": 3.5500000000000003,
+            "yaw": 3.079173843593836,
+            "frontier": [
+              1.25,
+              4.45
+            ],
+            "route_length_m": 1.6031219541881399,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 5.25,
+            "y": 3.85,
+            "yaw": 0.1651486774146268,
+            "frontier": [
+              5.25,
+              4.45
+            ],
+            "route_length_m": 2.4331050121192876,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 6.050000000000001,
+            "y": 3.85,
+            "yaw": 0.12435499454676138,
+            "frontier": [
+              6.050000000000001,
+              4.45
+            ],
+            "route_length_m": 3.2249030993194205,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 6.8500000000000005,
+            "y": 3.85,
+            "yaw": 0.09966865249116201,
+            "frontier": [
+              6.8500000000000005,
+              4.45
+            ],
+            "route_length_m": 4.019950248448356,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 7.65,
+            "y": 3.85,
+            "yaw": 0.0831412318884412,
+            "frontier": [
+              7.65,
+              4.45
+            ],
+            "route_length_m": 4.8166378315169185,
+            "requires_nav2_plan": false
+          }
+        ]
+      }
+    }
+  },
+  {
+    "case": "revisit",
+    "revision": 3,
+    "pose": [
+      2.85,
+      3.85,
+      1.5707963267948966
+    ],
+    "fingerprint": "81d5a23b535ba9757ac6355df19403c745fb20e27cae42ad85d6d7904636ad1e",
+    "cores": {
+      "legacy_centroid": {
+        "reason": "ok",
+        "accepted": 0,
+        "visible_boundary_union_m": 0.0,
+        "best_single_sight_m": 0.0,
+        "elapsed_s": 0.05894687900035933,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 1,
+          "deferred_or_served": 0,
+          "accepted": 0,
+          "route_rejections": {
+            "footprint_sweep_invalid": 1
+          }
+        },
+        "goals": []
+      },
+      "upstream_418e971": {
+        "reason": "ok",
+        "accepted": 1,
+        "visible_boundary_union_m": 1.9000000000000001,
+        "best_single_sight_m": 1.9000000000000001,
+        "elapsed_s": 0.07559667600071407,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 0,
+          "deferred_or_served": 0,
+          "accepted": 1,
+          "route_rejections": {}
+        },
+        "goals": [
+          {
+            "x": 4.4499999778966135,
+            "y": 4.050000000000002,
+            "yaw": 0.12435499454676126,
+            "frontier": [
+              4.450000066310167,
+              4.850000072270632
+            ],
+            "route_length_m": 1.61245154965971,
+            "requires_nav2_plan": false
+          }
+        ]
+      },
+      "boundary_samples": {
+        "reason": "ok",
+        "accepted": 9,
+        "visible_boundary_union_m": 7.800000000000001,
+        "best_single_sight_m": 2.1,
+        "elapsed_s": 0.5602030959998956,
+        "rejections": {
+          "raw": 11,
+          "unsafe": 2,
+          "deferred_or_served": 0,
+          "accepted": 9,
+          "route_rejections": {
+            "goal_orientation_invalid": 2
+          }
+        },
+        "goals": [
+          {
+            "x": 2.85,
+            "y": 4.15,
+            "yaw": 1.5707963267948966,
+            "frontier": [
+              2.85,
+              4.75
+            ],
+            "route_length_m": 0.30000000000000027,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 2.0500000000000003,
+            "y": 4.050000000000001,
+            "yaw": 2.8966139904629293,
+            "frontier": [
+              2.0500000000000003,
+              4.75
+            ],
+            "route_length_m": 0.8246211251235319,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 3.6500000000000004,
+            "y": 4.050000000000001,
+            "yaw": 0.24497866312686375,
+            "frontier": [
+              3.6500000000000004,
+              4.75
+            ],
+            "route_length_m": 0.8246211251235323,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 4.45,
+            "y": 4.050000000000001,
+            "yaw": 0.12435499454676126,
+            "frontier": [
+              4.45,
+              4.75
+            ],
+            "route_length_m": 1.61245154965971,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 1.25,
+            "y": 3.95,
+            "yaw": 3.079173843593836,
+            "frontier": [
+              1.25,
+              4.75
+            ],
+            "route_length_m": 1.6031219541881399,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 5.25,
+            "y": 4.15,
+            "yaw": 0.12435499454676155,
+            "frontier": [
+              5.25,
+              4.75
+            ],
+            "route_length_m": 2.4186773244895647,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 6.050000000000001,
+            "y": 4.15,
+            "yaw": 0.09347678115858953,
+            "frontier": [
+              6.050000000000001,
+              4.75
+            ],
+            "route_length_m": 3.21403173599764,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 6.8500000000000005,
+            "y": 4.15,
+            "yaw": 0.07485984771076692,
+            "frontier": [
+              6.8500000000000005,
+              4.75
+            ],
+            "route_length_m": 4.011234224026316,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 7.65,
+            "y": 4.15,
+            "yaw": 0.06241880999595739,
+            "frontier": [
+              7.65,
+              4.75
+            ],
+            "route_length_m": 4.80936586256442,
+            "requires_nav2_plan": false
+          }
+        ]
+      }
+    }
+  },
+  {
+    "case": "no_semantics",
+    "revision": 1,
+    "pose": [
+      2.05,
+      2.05,
+      0.0
+    ],
+    "fingerprint": "0ad0af20161d7ee199eb38ac572763bdf4d210dbfca6fa10940f8cbbaafaeddc",
+    "cores": {
+      "legacy_centroid": {
+        "reason": "ok",
+        "accepted": 0,
+        "visible_boundary_union_m": 0.0,
+        "best_single_sight_m": 0.0,
+        "elapsed_s": 0.07810412300023017,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 1,
+          "deferred_or_served": 0,
+          "accepted": 0,
+          "route_rejections": {
+            "goal_orientation_invalid": 1
+          }
+        },
+        "goals": []
+      },
+      "upstream_418e971": {
+        "reason": "ok",
+        "accepted": 1,
+        "visible_boundary_union_m": 1.9000000000000001,
+        "best_single_sight_m": 1.9000000000000001,
+        "elapsed_s": 0.08121062099962728,
+        "rejections": {
+          "raw": 1,
+          "unsafe": 0,
+          "deferred_or_served": 0,
+          "accepted": 1,
+          "route_rejections": {}
+        },
+        "goals": [
+          {
+            "x": 4.4499999778966135,
+            "y": 3.4500000000000015,
+            "yaw": 0.5280744484263598,
+            "frontier": [
+              4.450000066310167,
+              4.250000063329935
+            ],
+            "route_length_m": 2.7784887978899615,
+            "requires_nav2_plan": false
+          }
+        ]
+      },
+      "boundary_samples": {
+        "reason": "ok",
+        "accepted": 8,
+        "visible_boundary_union_m": 7.4,
+        "best_single_sight_m": 2.1,
+        "elapsed_s": 0.696556930000952,
+        "rejections": {
+          "raw": 11,
+          "unsafe": 3,
+          "deferred_or_served": 0,
+          "accepted": 8,
+          "route_rejections": {
+            "footprint_sweep_invalid": 2,
+            "goal_orientation_invalid": 1
+          }
+        },
+        "goals": [
+          {
+            "x": 2.85,
+            "y": 3.45,
+            "yaw": 1.0516502125483735,
+            "frontier": [
+              2.85,
+              4.15
+            ],
+            "route_length_m": 1.6124515496597103,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 2.0500000000000003,
+            "y": 3.5500000000000003,
+            "yaw": 1.5707963267948963,
+            "frontier": [
+              2.0500000000000003,
+              4.15
+            ],
+            "route_length_m": 1.5000000000000004,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 3.6500000000000004,
+            "y": 3.45,
+            "yaw": 0.7188299996216244,
+            "frontier": [
+              3.6500000000000004,
+              4.15
+            ],
+            "route_length_m": 2.1260291625469305,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 4.45,
+            "y": 3.45,
+            "yaw": 0.5280744484263598,
+            "frontier": [
+              4.45,
+              4.15
+            ],
+            "route_length_m": 2.7784887978899615,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 5.25,
+            "y": 3.45,
+            "yaw": 0.4124104415973874,
+            "frontier": [
+              5.25,
+              4.15
+            ],
+            "route_length_m": 3.4928498393145966,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 6.050000000000001,
+            "y": 3.45,
+            "yaw": 0.33667481938672716,
+            "frontier": [
+              6.050000000000001,
+              4.15
+            ],
+            "route_length_m": 4.237924020083419,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 6.8500000000000005,
+            "y": 3.45,
+            "yaw": 0.28379410920832787,
+            "frontier": [
+              6.8500000000000005,
+              4.15
+            ],
+            "route_length_m": 5.000000000000001,
+            "requires_nav2_plan": false
+          },
+          {
+            "x": 7.65,
+            "y": 3.5500000000000003,
+            "yaw": 0.2617135024012051,
+            "frontier": [
+              7.65,
+              4.15
+            ],
+            "route_length_m": 5.797413216254299,
+            "requires_nav2_plan": false
+          }
+        ]
+      }
+    }
+  }
+]

@@ -1,0 +1,43 @@
+{
+  "modules": {
+    "explore.metric_frontier": {
+      "actual_file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+      "sha256": "614ecf954c306a942ee11239a5b9a98387c1f49cba1668cf9e40bc745fddb5a6",
+      "source_file": "/workspace/Roboter_ws-ap06/src/explore/explore/metric_frontier.py",
+      "execution_file": "/workspace/scratch/ap06-repo/src/explore/explore/metric_frontier.py",
+      "all_three_byte_equal": true
+    },
+    "explore.metric_frontier_runtime": {
+      "actual_file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+      "sha256": "069c00f5eb8c7e6b9f03f04bca4a28407bb54b0a1f8f8ac2f82ad6f968c5f831",
+      "source_file": "/workspace/Roboter_ws-ap06/src/explore/explore/metric_frontier_runtime.py",
+      "execution_file": "/workspace/scratch/ap06-repo/src/explore/explore/metric_frontier_runtime.py",
+      "all_three_byte_equal": true
+    },
+    "explore.metric_egress_reference": {
+      "actual_file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py",
+      "sha256": "88231dbc6e02dd5a1b62de0d818e850299855db577e5dde57fd3520246976258",
+      "source_file": "/workspace/Roboter_ws-ap06/src/explore/explore/metric_egress_reference.py",
+      "execution_file": "/workspace/scratch/ap06-repo/src/explore/explore/metric_egress_reference.py",
+      "all_three_byte_equal": true
+    },
+    "robot_navigation.cmd_vel_mission_gate": {
+      "actual_file": "/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/cmd_vel_mission_gate.py",
+      "sha256": "9367c46bbd2569964dd6a3068723188de0832bb076315a80101079d942a8310c",
+      "source_file": "/workspace/Roboter_ws-ap06/src/robot_navigation/robot_navigation/cmd_vel_mission_gate.py",
+      "execution_file": "/workspace/scratch/ap06-repo/src/robot_navigation/robot_navigation/cmd_vel_mission_gate.py",
+      "all_three_byte_equal": true
+    },
+    "robot_state_estimation.hwt601_fusion_guard": {
+      "actual_file": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_fusion_guard.py",
+      "sha256": "31eef320935918fd8ad6dfcd595b0b7212370e01ca063fa8653d9875d228a602",
+      "source_file": "/workspace/Roboter_ws-ap06/src/robot_state_estimation/robot_state_estimation/hwt601_fusion_guard.py",
+      "execution_file": "/workspace/scratch/ap06-repo/src/robot_state_estimation/robot_state_estimation/hwt601_fusion_guard.py",
+      "all_three_byte_equal": true
+    }
+  },
+  "platform": "Linux x86_64",
+  "software_commit": "5d38f85cc3682a1972f42af864f1b89d45676cae",
+  "masterplan_sha256": "030782dc0cce24d23ef730783703f91cac6957ceb4b7305a224342fba74a8a10",
+  "scenario_sha256": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da"
+}

@@ -1,0 +1,38 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_ test_vl53_clearing_endpoints_cannot_mark_but_measurements_still_can[local_costmap] _
+
+costmap = 'local_costmap'
+
+    @pytest.mark.parametrize('costmap', ('local_costmap', 'global_costmap'))
+    def test_vl53_clearing_endpoints_cannot_mark_but_measurements_still_can(costmap):
+        source = Path(__file__).resolve().parents[1]/'config/nav2_params_real.yaml'
+        layer = yaml.safe_load(source.read_text())[costmap][costmap]['ros__parameters']['obstacle_layer']
+        for side in ('left', 'right'):
+            clear = layer['vl53_'+side]
+            measured = layer['vl53_'+side+'_mark']
+            assert clear['topic'] == '/near_field/'+side+'/points_costmap'
+>           assert clear['clearing'] is True and clear['marking'] is False
+E           assert (True is True and True is False)
+
+evidence/ap06-repo/src/robot_navigation/test/test_vl53_costmap_sources.py:15: AssertionError
+_ test_vl53_clearing_endpoints_cannot_mark_but_measurements_still_can[global_costmap] _
+
+costmap = 'global_costmap'
+
+    @pytest.mark.parametrize('costmap', ('local_costmap', 'global_costmap'))
+    def test_vl53_clearing_endpoints_cannot_mark_but_measurements_still_can(costmap):
+        source = Path(__file__).resolve().parents[1]/'config/nav2_params_real.yaml'
+        layer = yaml.safe_load(source.read_text())[costmap][costmap]['ros__parameters']['obstacle_layer']
+        for side in ('left', 'right'):
+            clear = layer['vl53_'+side]
+            measured = layer['vl53_'+side+'_mark']
+            assert clear['topic'] == '/near_field/'+side+'/points_costmap'
+>           assert clear['clearing'] is True and clear['marking'] is False
+E           assert (True is True and True is False)
+
+evidence/ap06-repo/src/robot_navigation/test/test_vl53_costmap_sources.py:15: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/robot_navigation/test/test_vl53_costmap_sources.py::test_vl53_clearing_endpoints_cannot_mark_but_measurements_still_can[local_costmap]
+FAILED evidence/ap06-repo/src/robot_navigation/test/test_vl53_costmap_sources.py::test_vl53_clearing_endpoints_cannot_mark_but_measurements_still_can[global_costmap]
+2 failed in 0.06s

@@ -1,0 +1,5 @@
+Captured verbatim from the tool read of pytest temporary data before automatic pytest retention removed that directory. This is a transcription of observed output, not an independently retained original JSONL file; the full original pytest failure log is retained separately.
+{"node": "base_hardware", "begin": 197064.363097825, "end": 197064.540664844, "duration_s": 0.177567019010894, "process_cpu_s": 0.17537291700000002, "thread_cpu_s": 0.0012519260000000004}
+{"node": "hwt601_imu", "begin": 197064.400486347, "end": 197064.541624251, "duration_s": 0.14113790399278514, "process_cpu_s": 0.141103749, "thread_cpu_s": 0.0008382330000000007}
+{"node": "ap06_simulated_devices", "begin": 197064.366110619, "end": 197064.545420248, "duration_s": 0.1793096289911773, "process_cpu_s": 0.17927867600000003, "thread_cpu_s": 0.174938374}
+Observed device_result: plant_tick_gaps [0.058077090012375265, 0.179624534008326], simulated_register_writes 12, source_periods_unchanged true, separate_source_process true, actual_cpu_affinity [4].

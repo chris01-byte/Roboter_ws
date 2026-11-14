@@ -1,9 +1,40 @@
 # Inventar
 
 **Hardwarestand:** 17.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
-**Softwaredelta:** 17.08.2026 · Branch
-`feature/hybrid-erkundung-app`; dreistufige App-Erkundung real bis 88,30 %
-abgenommen, erfolgreich bediente Frontier-Umfelder gegen Wiederholung gesperrt
+**Softwaredelta:** 27.09.2026 · `feature/parity-reset` enthält den real
+bewährten Mehrraum-Scan-/Portalpfad und kanalgetrennte VL53-Recovery; ein
+Realversuch erreichte den Rundblick, stoppte danach am gelatchten HWT-Rohstatus
+(Details: `docs/WE_PARITY_RESET.md`, aktueller WE-Stand: `docs/wohnungserkundung/STATUS.md`)
+
+**Softwaredelta 01.10.2026 / PR #105:** HWT-Entwicklungsopt-in ergänzt
+kompatible Transport-/Daten-/HOLD-Diagnose an bestehenden Status-Topics;
+50/300 ms und zwei echte HOLDs je 60 s ausdrücklich profilgebunden.
+Metrisches Start-Egress benötigt festen Körperanker und tatsächlichen
+reservierten RPP-Sweep. Software geprüft, reale Stufe 3 weiter offen.
+[Nachweise und Rückfall](wohnungserkundung/STATUS.md#aktueller-abschluss-hwt-entwicklungsvertrag-und-start-egress-01102026).
+
+**Softwaredelta 03.10.2026 / AP-03:** Gerätefreier echter Nav2-Prüfstand
+`tools/simulation/ap03_nav2_closed_loop.py` und getrenntes metrisches
+Simulationsprofil ergänzen vorhandene Bewegung/Startprüfung. 68-/80-cm-
+Komponentenfälle und autonome erste Beobachtung synthetisch geprüft;
+kein neuer Hardware-Reifegrad, keine Jetson-Aktivierung. Einzige aktuelle
+WE-Abnahme/Grenzen: [STATUS](wohnungserkundung/STATUS.md).
+
+**Softwaredelta 03.10.2026 / AP-04:** Im vorhandenen Explorer echte metrische
+Randproben und endliche aktuelle LiDAR-Sicht; gepinnter Fremdkern geprüft und
+nach belegten Gegenfällen die ausdrücklich erlaubte Eigenkorrektur gewählt.
+Kandidaten-/Adaptersoftware und echte Nav2-Planbarkeit geprüft, keine neue
+Hardware-/Wohnungsreife oder Jetson-Aktivierung. Missionserledigung bleibt
+AP-05; aktuelle Nachweise/Grenzen ausschließlich im [STATUS](wohnungserkundung/STATUS.md).
+
+**Softwaredelta 03.10.2026 / AP-05:** Vorhandener Explorer ergänzt belegten
+metrischen Beobachtungsfortschritt, begrenzte Wiederbeobachtung und ehrlichen
+Abschluss/Teilstand. Bestehende Map-/Sidecar-Persistenz hält Aufgaben und Budgets;
+Resume nur mit explizitem Auftrag und aktueller verifizierter Lokalisierung.
+ROS-Verbraucherverträge software_geprüft; native App-Quellen angepasst,
+Apple-Build/Laufzeit unter WE-M7 offen. Kein neuer Hardware-Reifegrad oder
+Jetson-Installwechsel; aktuelle Nachweise/Grenzen ausschließlich im
+[STATUS](wohnungserkundung/STATUS.md).
 
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
@@ -30,6 +61,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | `base_hardware` | Antrieb über RS485/Modbus; Encoderpositions-Odometrie H0–H4 real bestanden, H5 offen | **erprobt (Encoder)** |
 | `vl53_near_field` | 2× VL53L7CX über CH341A (Treiber gepinnt in `vendor_ch34x_mphsi.repos`, per DKMS kernelupdate-fest), Nahbereichsschutz, `collision_monitor` | **produktiv** (15.08.2026 in realer Nav2-Kette mit frischen Daten überwacht) |
 | `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung und einzelner App-Kartierungsstack; OAK-Entzerrer ohne Exact-Sync | **produktiv** (App-Erkundungsstack real; OAK-Entzerrer motorlos dauergetestet) |
+| `amadeus_map_identity` | gemeinsame ROS-unabhängige Zellnormalisierung und Inhaltsidentität validierter Kartenmomentaufnahmen | **Entwurf** (bytegleiche Schnell-/Fallbackpfade, bekannte Digestvektoren und Kartenmanager-/Explorer-Cross-Contracts softwaregeprüft; kein Deployment) |
 | `robot_map_manager` | versionierte Kartenablage, Schnittstelle zur App | **produktiv** |
 | `semantic_map_manager` | manuelle Raum-Overlays, fest an gespeicherte Kartenfingerprints gebunden | **produktiv** (App-/Jetson-Persistenz und reales Raumziel abgenommen) |
 | `robot_description` | URDF/Xacro, Sensor-Frames | erprobt |
@@ -42,7 +74,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | `llm_planner` | Sprachgestützte Auftragsplanung | **erprobt** (Qwen/Ollama→validiertes Missions-JSON live; Ausführung bleibt onboard gegated) |
 | `smartphone_gui` | Weboberfläche | erprobt |
 | `robot_face` | Gesichtsanzeige | erprobt |
-| `explore` | Dreistufige Erkundung: Rundblick, sichere Frontier-Ziele und adaptive Abdeckung aus realer Fahrspur | **produktiv** (88,30 % im beaufsichtigten Akku-Realtest) |
+| `explore` | Dreistufige Erkundung: Rundblick, sichere Frontier-Ziele und adaptive Abdeckung aus realer Fahrspur | **produktiv** (88,30 % im historischen Test); Parity-Realversuch am 27.09. erreichte 361,7° Rundblick, danach HWT-Sperre vor Frontierziel; kein neuer Mehrraumnachweis |
 | `handeye_calibration` | Kamera-Arm-Kalibrierung | Entwurf |
 | `mock_servers` | Testgegenstellen ohne Hardware | erprobt |
 | `behaviortree_ros2` | **Submodul** → github.com/BehaviorTree/BehaviorTree.ROS2 (humble) | extern |

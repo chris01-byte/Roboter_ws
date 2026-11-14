@@ -1,0 +1,41 @@
+{
+  "cell_encoding": "signed-int8-row-major-from-map-origin",
+  "files": {
+    "map.pgm": {
+      "bytes": 160236,
+      "sha256": "acfe2e9eb0f138752c56681e218692f5de9e181f4617975f4d1b507038863ffc"
+    },
+    "map.yaml": {
+      "bytes": 170,
+      "sha256": "30a19672a0e7b7d8a89fe3eddfb5e6ef2871911a9e3b829917e9c611d39cb196"
+    },
+    "occupancy.bin": {
+      "bytes": 160176,
+      "sha256": "40e4a29e4d81bef14d3371f4e207e4e882e02bf9317fada8c2c78cfae076d889"
+    }
+  },
+  "fingerprint": "305405243e935abaedaabc7e8c245573ed49826e8e1bbdc98cebf56447311c66",
+  "frame_id": "map",
+  "height": 284,
+  "name": "amadeus",
+  "origin": {
+    "orientation": {
+      "w": 1.0,
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0
+    },
+    "position": {
+      "x": -0.909999979659915,
+      "y": -0.9699999783188105,
+      "z": 0.0
+    },
+    "yaw": 0.0
+  },
+  "resolution": 0.009999999776482582,
+  "saved_at": "2026-10-08T07:23:25.540920Z",
+  "schema_version": 1,
+  "source_stamp_ns": 1791444205173833434,
+  "version": "20261008T072325540920Z-305405243e93",
+  "width": 564
+}

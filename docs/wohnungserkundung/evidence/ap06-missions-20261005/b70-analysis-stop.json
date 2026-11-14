@@ -1,0 +1,7 @@
+{
+  "candidate": "b8189a9",
+  "diagnostic": "capture-decisions; not qualification",
+  "reason": "Two actual observations, six attempts, all twelve frontiers deferred/served after original cooldown; native footprint route rejections and 226 reachable boundaries. Required exact decision inputs captured. Explicit analysis cancellation, no positive whole claim.",
+  "time_unix": 1791259692.0653358,
+  "positive_acceptance": false
+}

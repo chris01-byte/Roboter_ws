@@ -1,0 +1,12 @@
+{
+  "free_bytes": 1600352256,
+  "required_bytes": 1241513984,
+  "budgets": {
+    "trace": 536870912,
+    "auxiliary": 67108864,
+    "map_temporary": 33554432,
+    "map_save_minimum": 536870912,
+    "margin": 67108864
+  },
+  "ready": true
+}

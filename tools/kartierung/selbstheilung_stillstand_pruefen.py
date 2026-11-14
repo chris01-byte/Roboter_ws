@@ -1,0 +1,1015 @@
+#!/usr/bin/env python3
+"""Rein lesende Stillstandspruefung fuer ``self_healing:=true``.
+
+Konzept: docs/wohnungserkundung/KONZEPT_SELBSTHEILUNG.md (Abschnitt 10/11),
+Laborrahmen: docs/LABORMODUS.md (LAB-1 Abschnitt 3).
+
+Voraussetzung: der Stack laeuft bereits motorlos, zum Beispiel
+
+    ros2 launch robot_navigation nav_mapping.launch.py self_healing:=true
+
+(``active_drive`` bleibt false, ``enable_auto_explore`` bleibt false).
+
+Das Skript publiziert nichts, sendet keine Aktion und ruft keinen Dienst
+mit Wirkung auf. Es liest nur Parameter (GetParameters/ListParameters),
+den ROS-Graphen, ``/cmd_vel`` und optional die VL53-Punktwolken.
+
+Geprueft wird:
+  A  Explorer-Profil: jeder Wert aus self_healing_params.yaml ist live
+     gesetzt, der Explorer verwendet den Baum mit leichter Recovery.
+  B  Overlays: jeder Wert aus nav2_params_self_healing.yaml (Planer,
+     Glaetter, Behavior-Server, beide Kostenkarten) und aus
+     collision_monitor_self_healing_overlay.yaml ist live
+     gesetzt (Planung durch Unbekanntes, -0,05 m/s, simulate_ahead_time).
+  C  Verdrahtung: BackUp geht ueber cmd_vel_nav_raw (Fahrtor -> Smoother
+     -> collision_monitor), RPP hoert auf das Geschwindigkeitslimit.
+  C  Odometrie (mit --odometrie): HWT601-Fusion oder Standard, genau ein
+     /odom-Publisher (EKF bzw. base_hardware).
+  D  Stillstand: base_hardware im Dry-Run ohne RS485-Schreibpfad, auf
+     /cmd_vel kein Fahrbefehl ungleich null. Mit --aktiv (vor einer
+     beauftragten Laborfahrt): Basis scharf, aber noch kein Fahrbefehl,
+     und die Fahrquellen sind bereit (Encoder frisch, Encoder-Zeitwache
+     „ready“, im HWT-Weg Fusion ``sources_ready`` ohne verriegelten Fehler).
+     Mit --odometrie hwt601 ohne --aktiv startet der Launch base_hardware
+     gar nicht (active_drive=false), sondern den Encoder-Shadow (nur FC03);
+     dann muss genau dieser sichtbar sein und base_hardware fehlen.
+  E  (optional, --vl53-s) Niedrige Hindernisse: wie hoch ueber dem Boden
+     liegen die VL53-Treffer, und welche davon verwerfen Kostenkarten und
+     collision_monitor wegen min_obstacle_height/min_height?
+  F  (optional, --eigenecho-s) Eigenechos fuer KM-1 B (13.11.2026): Seit die
+     lokale Karte unter der Kontur nichts mehr loescht, bliebe ein Messpunkt
+     auf dem Roboter selbst (Mast, Halter) als Hindernis stehen. Im Stand,
+     rundherum mindestens 0,5 m frei, darf kein LiDAR- und kein markierender
+     VL53-Punkt im Gehaeuse liegen und keine toedliche Zelle der lokalen
+     Karte darunter.
+
+Exitcode 0 = alle Pflichtpruefungen erfuellt, 1 = mindestens eine nicht
+erfuellt, 2 = Explorer nicht erreichbar (Stack laeuft nicht).
+"""
+
+import argparse
+import json
+import math
+import sys
+import time
+
+import numpy as np
+
+
+NOT_SET = object()
+
+# Hoehe von base_link ueber dem Boden. Quelle: URDF base_height 0,18 m
+# (base_link in der Mitte) und Kommentar in nav2_params_real.yaml
+# ("z=0 = base_link = 9 cm ueber Boden").
+BASE_LINK_UEBER_BODEN_M = 0.09
+
+SELF_HEALING_BT = 'navigate_to_pose_self_healing.xml'
+STEUERPFAD_ROH = '/cmd_vel_nav_raw'
+RECOVERY_GESPERRT = '/cmd_vel_recovery_blocked'
+LIDAR_NAHBEREICH = '/scan_normiert'
+LOKALE_KOSTENKARTE = '/local_costmap/local_costmap'
+RUECKFAHRKONTUR = '/rueckfahr_kontur'
+RUECKFAHRKONTUR_KNOTEN = '/rueckfahr_kontur'
+
+# Erwarteter Odometriepfad: HWT601-Gier + Encoder im EKF (slam_lidar_hwt601)
+# oder reine Encoder-Odometrie der Basis (slam_lidar).
+ODOMETRIE = {
+    'hwt601': {'require_hwt601_fusion': True, 'odom_publisher': '/hwt601_mapping_ekf'},
+    'standard': {'require_hwt601_fusion': False, 'odom_publisher': '/base_hardware'},
+}
+
+# HWT-Weg ohne active_drive: einziger Encoder-Leser statt base_hardware
+# (slam_lidar_hwt601.launch.py, UnlessCondition(active_drive)).
+BASE = '/base_hardware'
+ENCODER_SHADOW = '/hwt601_encoder_shadow_reader'
+
+
+# ---------------------------------------------------------------------------
+#  Reine Funktionen (ohne ROS testbar)
+# ---------------------------------------------------------------------------
+
+def flatten_ros_params(document):
+    """``{'/knoten': {'a.b': wert}}`` aus einer ROS-2-Parameterdatei."""
+    result = {}
+
+    def walk(tree, path):
+        if not isinstance(tree, dict):
+            return
+        if 'ros__parameters' in tree:
+            node = '/' + '/'.join(path)
+            params = result.setdefault(node, {})
+            _flatten_values(tree['ros__parameters'], '', params)
+        for key, value in tree.items():
+            if key != 'ros__parameters':
+                walk(value, path + [str(key)])
+
+    walk(document or {}, [])
+    return result
+
+
+def _flatten_values(tree, prefix, out):
+    for key, value in tree.items():
+        name = f'{prefix}{key}'
+        if isinstance(value, dict):
+            _flatten_values(value, name + '.', out)
+        else:
+            out[name] = value
+
+
+def values_match(expected, live, tol=1e-6):
+    if live is NOT_SET:
+        return False
+    if isinstance(expected, bool) or isinstance(live, bool):
+        return isinstance(expected, bool) and isinstance(live, bool) and expected == live
+    if isinstance(expected, (int, float)) and isinstance(live, (int, float)):
+        return math.isclose(float(expected), float(live), rel_tol=0.0, abs_tol=tol)
+    if isinstance(expected, (list, tuple)) and isinstance(live, (list, tuple)):
+        return (len(expected) == len(live)
+                and all(values_match(e, v, tol) for e, v in zip(expected, live)))
+    return expected == live
+
+
+def compare_params(expected, live):
+    """Liste ``(name, erwartet, live, ok)`` fuer jeden erwarteten Wert."""
+    rows = []
+    for name in sorted(expected):
+        value = live.get(name, NOT_SET)
+        rows.append((name, expected[name], value, values_match(expected[name], value)))
+    return rows
+
+
+def normalize_topic(name):
+    name = str(name or '').strip()
+    return name if name.startswith('/') else '/' + name
+
+
+def full_node_name(namespace, name):
+    namespace = (namespace or '/').rstrip('/')
+    return f'{namespace}/{name}'
+
+
+def quaternion_matrix(x, y, z, w):
+    n = math.sqrt(x*x + y*y + z*z + w*w)
+    if n == 0.0:
+        raise ValueError('Quaternion der Laenge null')
+    x, y, z, w = x/n, y/n, z/n, w/n
+    return np.array([
+        [1 - 2*(y*y + z*z), 2*(x*y - z*w), 2*(x*z + y*w)],
+        [2*(x*y + z*w), 1 - 2*(x*x + z*z), 2*(y*z - x*w)],
+        [2*(x*z - y*w), 2*(y*z + x*w), 1 - 2*(x*x + y*y)],
+    ])
+
+
+def transform_points(points, translation, rotation_xyzw):
+    points = np.asarray(points, dtype=float).reshape(-1, 3)
+    return points @ quaternion_matrix(*rotation_xyzw).T + np.asarray(translation, dtype=float)
+
+
+def near_field_filters(params):
+    """Hoehenfilter aller Quellen, deren Topic ``near_field`` enthaelt.
+
+    ``params`` ist die flache Parameterliste eines Kostenkarten- oder
+    collision_monitor-Knotens. Rueckgabe ``{quelle: {topic, min, max, marking}}``.
+    Kostenkarten heissen ``min_obstacle_height``, der collision_monitor
+    ``min_height``; reine Raeumquellen (marking=false) markieren nie.
+    """
+    sources = {}
+    for name, value in params.items():
+        if not name.endswith('.topic') or 'near_field' not in str(value):
+            continue
+        base = name[:-len('.topic')]
+        low = params.get(f'{base}.min_obstacle_height', params.get(f'{base}.min_height'))
+        high = params.get(f'{base}.max_obstacle_height', params.get(f'{base}.max_height'))
+        sources[base] = {
+            'topic': normalize_topic(value),
+            'min': None if low is None else float(low),
+            'max': None if high is None else float(high),
+            'marking': bool(params.get(f'{base}.marking', True)),
+        }
+    return sources
+
+
+def height_report(points_base_link, sensor_points, min_height, base_link_above_floor,
+                  row_elevations_rad=None):
+    """Hoehenauswertung von VL53-Treffern gegen den wirksamen Hoehenfilter.
+
+    ``min_height`` ist im base_link-Rahmen angegeben wie in den Parametern.
+    Hoehen im Bericht sind ueber dem Boden, damit Testobjekte direkt
+    vergleichbar sind.
+    """
+    pts = np.asarray(points_base_link, dtype=float).reshape(-1, 3)
+    floor = pts[:, 2] + base_link_above_floor
+    threshold_floor = min_height + base_link_above_floor
+    dropped = floor < threshold_floor
+    report = {
+        'punkte': int(len(pts)),
+        'filter_ueber_boden_m': round(threshold_floor, 3),
+        'verworfen': int(np.count_nonzero(dropped)),
+        'behalten': int(np.count_nonzero(~dropped)),
+        # Feste Baender, unabhaengig vom Filter, damit Messreihen mit
+        # verschiedenen Grenzen vergleichbar bleiben (0,14 m = bisherige Grenze).
+        'baender_ueber_boden': {
+            '<0,05 m': int(np.count_nonzero(floor < 0.05)),
+            '0,05-0,10 m': int(np.count_nonzero((floor >= 0.05) & (floor < 0.10))),
+            '0,10-0,14 m': int(np.count_nonzero((floor >= 0.10) & (floor < 0.14))),
+            '>=0,14 m': int(np.count_nonzero(floor >= 0.14)),
+        },
+    }
+    if len(pts):
+        report['hoehe_ueber_boden_min_m'] = round(float(floor.min()), 3)
+        report['hoehe_ueber_boden_max_m'] = round(float(floor.max()), 3)
+    if np.any(dropped):
+        report['naechster_verworfener_x_base_link_m'] = round(float(pts[dropped, 0].min()), 3)
+    if np.any(~dropped):
+        report['naechster_behaltener_x_base_link_m'] = round(float(pts[~dropped, 0].min()), 3)
+    if row_elevations_rad is not None and len(pts):
+        sensor = np.asarray(sensor_points, dtype=float).reshape(-1, 3)
+        elevation = np.arctan2(sensor[:, 2], np.hypot(sensor[:, 0], sensor[:, 1]))
+        rows = np.asarray(row_elevations_rad, dtype=float)
+        nearest_row = np.argmin(np.abs(elevation[:, None] - rows[None, :]), axis=1)
+        report['zeilen'] = []
+        for row, angle in enumerate(rows):
+            mask = nearest_row == row
+            if not np.any(mask):
+                continue
+            report['zeilen'].append({
+                'zeile': row,
+                'elevation_grad': round(math.degrees(angle), 2),
+                'treffer': int(np.count_nonzero(mask)),
+                'median_abstand_m': round(float(np.median(np.linalg.norm(sensor[mask], axis=1))), 3),
+                'median_hoehe_ueber_boden_m': round(float(np.median(floor[mask])), 3),
+                'verworfen': int(np.count_nonzero(dropped & mask)),
+            })
+    return report
+
+
+# Fenster vor dem Roboter, in dem niedrige Objekte der Messreihe liegen
+# (base_link; Front bei x=0,31 m, VL53-Sicht bis etwa 0,8 m).
+KOSTENKARTE_FENSTER = {'x_min': 0.35, 'x_max': 1.0, 'y_abs': 0.35}
+
+
+def motorpfad_zeilen(odometrie, aktiv, knoten, base):
+    """Zeilen ``(pruefung, ok, detail)`` für Bereich D, Motorpfad.
+
+    ``knoten``: sichtbare Knotennamen; ``base``: Parameterantwort von
+    base_hardware (``dry_run``, ``allow_rs485``) oder ``None``.
+    Im HWT-Weg startet der Launch genau einen der beiden Encoder-Leser
+    (base_hardware nur mit active_drive). Fehlt base_hardware, zählt das nur
+    mit dem sichtbaren Encoder-Shadow als Beleg, sonst kann auch ein
+    unvollständiger DDS-Graph dahinterstecken.
+    """
+    shadow = ENCODER_SHADOW in knoten
+    base_da = base is not None or BASE in knoten
+    if odometrie == 'hwt601' and not aktiv and not base_da:
+        return [('kein Motorschreiber (HWT-Weg ohne active_drive)', shadow,
+                 'base_hardware nicht gestartet, Encoder-Shadow sichtbar (nur FC03)' if shadow
+                 else 'weder base_hardware noch Encoder-Shadow sichtbar: '
+                      'Graph unvollständig oder anderer Startweg')]
+    if base is None:
+        zeilen = [(f'{BASE} erreichbar', False, 'keine Parameterantwort')]
+    elif aktiv:
+        # Vor einer beauftragten Laborfahrt: Basis scharf wie bestellt.
+        zeilen = [('base_hardware scharf (aktiver Auftrag)',
+                   base.get('dry_run') is False and base.get('allow_rs485') is True,
+                   f'dry_run={base.get("dry_run")!r}, allow_rs485={base.get("allow_rs485")!r}')]
+    else:
+        zeilen = [('base_hardware im Dry-Run', base.get('dry_run') is True,
+                   f'dry_run={base.get("dry_run")!r}'),
+                  ('kein RS485-Schreibpfad', base.get('allow_rs485') is False,
+                   f'allow_rs485={base.get("allow_rs485")!r}')]
+    if odometrie == 'hwt601' and shadow:
+        zeilen.append(('Encoder-Shadow nicht neben base_hardware', False,
+                       'zwei Encoder-Leser am selben Bus'))
+    return zeilen
+
+
+def quellen_zeilen(aktiv, odometrie, base_state, fusion):
+    """Zeilen ``(pruefung, ok, detail)``: Sind die Fahrquellen vor der Fahrt bereit?
+
+    Nur vor einer beauftragten Fahrt (``aktiv``). ``base_state``: letzte
+    Nachricht von ``/base_hardware/state_json``, ``fusion``: von
+    ``/fusion/hwt601/status_json`` (je ``dict`` oder ``None``). SH-4 Fahrt 3,
+    erster Versuch: Encoder-Zeitwache ``fault_latched``, Fusion
+    ``sources_ready: false``; die Vorprüfung meldete trotzdem „bestanden“, der
+    Roboter bekam nie einen Fahrbefehl durch. ``STARTUP`` der Fusion vor dem
+    Missionsstart ist normal und kein Fehler.
+    """
+    if not aktiv:
+        return []
+    zeilen = []
+    if not isinstance(base_state, dict):
+        zeilen.append(('base_hardware meldet Zustand', False,
+                       'keine Nachricht auf /base_hardware/state_json'))
+    else:
+        frisch = (base_state.get('encoder_feedback_ok') is True
+                  and base_state.get('encoder_stale') is False)
+        zeilen.append(('Encoder liefern frisch', frisch,
+                       f'encoder_feedback_ok={base_state.get("encoder_feedback_ok")!r}, '
+                       f'encoder_stale={base_state.get("encoder_stale")!r}, '
+                       f'Alter={base_state.get("encoder_feedback_age_s")!r} s, '
+                       f'Grund={base_state.get("encoder_last_reason")!r}'))
+        wache = base_state.get('encoder_timing_recovery')
+        if isinstance(wache, dict):
+            zeilen.append(('Encoder-Zeitwache bereit',
+                           wache.get('state') == 'ready' and wache.get('ready') is True,
+                           f'state={wache.get("state")!r}, Grund={wache.get("current_reason")!r}'))
+    if odometrie == 'hwt601':
+        if not isinstance(fusion, dict):
+            zeilen.append(('HWT-Fusion meldet Zustand', False,
+                           'keine Nachricht auf /fusion/hwt601/status_json'))
+        else:
+            bereit = (fusion.get('sources_ready') is True and fusion.get('latched_fault') is None
+                      and fusion.get('recovery_state') != 'TERMINAL_FAULT')
+            letzter = fusion.get('last_fault')
+            grund = letzter.get('aggregate_reason') if isinstance(letzter, dict) else letzter
+            zeilen.append(('HWT-Fusion Quellen bereit', bereit,
+                           f'sources_ready={fusion.get("sources_ready")!r}, '
+                           f'latched_fault={fusion.get("latched_fault")!r}, '
+                           f'recovery_state={fusion.get("recovery_state")!r}, letzter Fehler={grund!r}'))
+    return zeilen
+
+
+def lethal_cells_in_window(data, width, height, resolution, origin_xy,
+                           to_base_link, window=KOSTENKARTE_FENSTER):
+    """Zahl toedlicher Zellen (100) einer OccupancyGrid im Fenster vor base_link.
+
+    ``to_base_link`` bildet Nx3-Punkte des Kartenrahmens nach base_link ab.
+    """
+    grid = np.asarray(data, dtype=np.int16).reshape(height, width)
+    rows, cols = np.nonzero(grid == 100)
+    if rows.size == 0:
+        return 0
+    points = np.column_stack([
+        origin_xy[0] + (cols + 0.5)*resolution,
+        origin_xy[1] + (rows + 0.5)*resolution,
+        np.zeros(rows.size)])
+    base = to_base_link(points)
+    inside = ((base[:, 0] >= window['x_min']) & (base[:, 0] <= window['x_max'])
+              & (np.abs(base[:, 1]) <= window['y_abs']))
+    return int(np.count_nonzero(inside))
+
+
+# Gehaeuse ohne Polster wie footprint in nav2_params_real.yaml (lokale Karte);
+# Ersatz, falls die Kostenkarte nicht antwortet.
+KOERPER_STANDARD = ((0.31, 0.23), (0.31, -0.23), (-0.11, -0.23), (-0.11, 0.23))
+
+
+def parse_footprint(text):
+    """Nav2-Footprint ``"[[x, y], ...]"`` in eine Liste von Punkten."""
+    werte = json.loads(str(text))
+    punkte = [(float(x), float(y)) for x, y in werte]
+    if len(punkte) < 3:
+        raise ValueError('footprint braucht mindestens drei Punkte')
+    return punkte
+
+
+def polster(polygon, abstand):
+    """Wie nav2 ``padFootprint``: jeder Punkt um ``abstand`` nach außen je Achse.
+
+    Mit negativem ``abstand`` schrumpft die Kontur entsprechend.
+    """
+    def vorzeichen(v):
+        return (v > 0) - (v < 0)
+    return [(x + vorzeichen(x)*abstand, y + vorzeichen(y)*abstand) for x, y in polygon]
+
+
+def im_polygon(punkte_xy, polygon):
+    """Bool-Maske: liegt der Punkt (x, y) innerhalb des Polygons (Strahlverfahren)?"""
+    pts = np.asarray(punkte_xy, dtype=float).reshape(-1, 2)
+    x, y = pts[:, 0], pts[:, 1]
+    innen = np.zeros(len(pts), dtype=bool)
+    poly = list(polygon)
+    for (x0, y0), (x1, y1) in zip(poly, poly[1:] + poly[:1]):
+        kreuzt = (y0 > y) != (y1 > y)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            x_schnitt = x0 + (y - y0)*(x1 - x0)/(y1 - y0)
+        innen ^= kreuzt & (x < x_schnitt)
+    return innen
+
+
+def scan_punkte(ranges, angle_min, angle_increment, range_min, range_max):
+    """Gültige LaserScan-Strahlen als Nx3-Punkte im Sensorrahmen (z = 0).
+
+    NaN (z. B. die Mastmaske), Unendlich und Werte außerhalb
+    ``range_min``..``range_max`` sind keine Messung.
+    """
+    r = np.asarray(ranges, dtype=float)
+    winkel = angle_min + np.arange(len(r))*angle_increment
+    gueltig = np.isfinite(r) & (r >= range_min) & (r <= range_max)
+    return np.column_stack([r[gueltig]*np.cos(winkel[gueltig]),
+                            r[gueltig]*np.sin(winkel[gueltig]),
+                            np.zeros(int(np.count_nonzero(gueltig)))])
+
+
+def eigenecho_zaehlung(punkte_base_link, koerper, padding):
+    """Punkte im Gehäuse und im Polsterband (base_link, nur x/y)."""
+    pts = np.asarray(punkte_base_link, dtype=float).reshape(-1, 3)
+    im_koerper = im_polygon(pts[:, :2], koerper)
+    im_gepolstert = im_polygon(pts[:, :2], polster(koerper, padding))
+    bericht = {'punkte': int(len(pts)),
+               'im_gehaeuse': int(np.count_nonzero(im_koerper)),
+               'im_polsterband': int(np.count_nonzero(im_gepolstert & ~im_koerper))}
+    if bericht['im_gehaeuse']:
+        innen = pts[im_koerper]
+        bericht['beispiele_gehaeuse_xy'] = [
+            [round(float(px), 3), round(float(py), 3)] for px, py in innen[:5, :2]]
+    return bericht
+
+
+def lethal_cells_in_body(data, width, height, resolution, origin_xy, to_base_link, koerper):
+    """Tödliche Zellen (100), deren Mitte tief im Gehäuse liegt.
+
+    Das Gehäuse wird um eine halbe Zelle geschrumpft: Ein echtes Hindernis
+    3–5 cm vor der Front (Stellprobe) kann sonst durch die Rasterung mit seiner
+    Zellmitte knapp hinter der Frontlinie liegen.
+    """
+    grid = np.asarray(data, dtype=np.int16).reshape(height, width)
+    rows, cols = np.nonzero(grid == 100)
+    if rows.size == 0:
+        return 0
+    points = np.column_stack([
+        origin_xy[0] + (cols + 0.5)*resolution,
+        origin_xy[1] + (rows + 0.5)*resolution,
+        np.zeros(rows.size)])
+    base = to_base_link(points)
+    return int(np.count_nonzero(im_polygon(base[:, :2], polster(koerper, -resolution/2.0))))
+
+
+def row_elevations(fov_deg, rows=8):
+    """Zeilenmitten wie im vl53_near_field-Knoten (Konvention z oben +)."""
+    return np.radians([(-fov_deg/2.0 + (r + 0.5)/rows*fov_deg) for r in range(rows)])
+
+
+class Ergebnis:
+    def __init__(self):
+        self.zeilen = []
+
+    def add(self, bereich, name, ok, detail=''):
+        """``ok``: True erfuellt, False nicht erfuellt, None nur Hinweis."""
+        self.zeilen.append({'bereich': bereich, 'pruefung': name, 'ok': ok, 'detail': detail})
+
+    @property
+    def bestanden(self):
+        return all(z['ok'] is not False for z in self.zeilen)
+
+    def drucken(self, stream=sys.stdout):
+        marke = {True: 'OK  ', False: 'FEHL', None: 'INFO'}
+        for z in self.zeilen:
+            detail = f' - {z["detail"]}' if z['detail'] else ''
+            print(f'[{marke[z["ok"]]}] {z["bereich"]}: {z["pruefung"]}{detail}', file=stream)
+
+
+# ---------------------------------------------------------------------------
+#  ROS-Teil (nur lesend)
+# ---------------------------------------------------------------------------
+
+def _param_to_python(value):
+    from rcl_interfaces.msg import ParameterType as T
+    kind = value.type
+    if kind == T.PARAMETER_BOOL:
+        return bool(value.bool_value)
+    if kind == T.PARAMETER_INTEGER:
+        return int(value.integer_value)
+    if kind == T.PARAMETER_DOUBLE:
+        return float(value.double_value)
+    if kind == T.PARAMETER_STRING:
+        return str(value.string_value)
+    if kind == T.PARAMETER_BYTE_ARRAY:
+        return list(value.byte_array_value)
+    if kind == T.PARAMETER_BOOL_ARRAY:
+        return [bool(v) for v in value.bool_array_value]
+    if kind == T.PARAMETER_INTEGER_ARRAY:
+        return [int(v) for v in value.integer_array_value]
+    if kind == T.PARAMETER_DOUBLE_ARRAY:
+        return [float(v) for v in value.double_array_value]
+    if kind == T.PARAMETER_STRING_ARRAY:
+        return [str(v) for v in value.string_array_value]
+    return NOT_SET
+
+
+class Leser:
+    """Passiver Knoten: keine Publisher, keine Aktionen, keine Schreibdienste."""
+
+    def __init__(self, timeout_s):
+        import rclpy
+        self.rclpy = rclpy
+        self.node = rclpy.create_node('selbstheilung_stillstand_pruefer')
+        self.timeout_s = timeout_s
+
+    def spin_for(self, seconds):
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            self.rclpy.spin_once(self.node, timeout_sec=0.05)
+
+    def _call(self, srv_type, name, request):
+        client = self.node.create_client(srv_type, name)
+        try:
+            if not client.wait_for_service(timeout_sec=self.timeout_s):
+                return None
+            future = client.call_async(request)
+            self.rclpy.spin_until_future_complete(self.node, future, timeout_sec=self.timeout_s)
+            return future.result() if future.done() else None
+        finally:
+            self.node.destroy_client(client)
+
+    def get_params(self, node, names):
+        """``{name: wert}`` oder ``None``, wenn der Knoten nicht antwortet."""
+        from rcl_interfaces.srv import GetParameters
+        names = list(names)
+        if not names:
+            return {}
+        request = GetParameters.Request()
+        request.names = names
+        response = self._call(GetParameters, f'{node}/get_parameters', request)
+        if response is None:
+            return None
+        return {n: _param_to_python(v) for n, v in zip(names, response.values)}
+
+    def all_params(self, node):
+        from rcl_interfaces.srv import ListParameters
+        request = ListParameters.Request()
+        request.depth = 0  # rekursiv
+        response = self._call(ListParameters, f'{node}/list_parameters', request)
+        if response is None:
+            return None
+        return self.get_params(node, response.result.names)
+
+    def publishers(self, topic):
+        return {full_node_name(i.node_namespace, i.node_name)
+                for i in self.node.get_publishers_info_by_topic(topic)}
+
+    def subscribers(self, topic):
+        return {full_node_name(i.node_namespace, i.node_name)
+                for i in self.node.get_subscriptions_info_by_topic(topic)}
+
+    def knoten(self):
+        return {full_node_name(ns, name)
+                for name, ns in self.node.get_node_names_and_namespaces()}
+
+    def action_servers(self, node_name, namespace='/'):
+        from rclpy.action import get_action_server_names_and_types_by_node
+        return {name for name, _ in get_action_server_names_and_types_by_node(
+            self.node, node_name, namespace)}
+
+    def close(self):
+        self.node.destroy_node()
+
+
+def _load_yaml(path):
+    import yaml
+    with open(path, 'r', encoding='utf-8') as handle:
+        return yaml.safe_load(handle)
+
+
+def _share(package, *parts):
+    import os
+    from ament_index_python.packages import get_package_share_directory
+    return os.path.join(get_package_share_directory(package), *parts)
+
+
+def pruefe_profile(leser, ergebnis, explore_profil, overlays):
+    explore_expected = flatten_ros_params(_load_yaml(explore_profil)).get('/explore_node', {})
+    live = leser.get_params('/explore_node', list(explore_expected) + [
+        'behavior_tree', 'self_healing_speed_limit_topic', 'require_hwt601_fusion'])
+    if live is None:
+        ergebnis.add('A Explorer', '/explore_node erreichbar', False,
+                     'keine Parameterantwort; Stack mit self_healing:=true starten')
+        return None
+    falsch = [(n, e, v) for n, e, v, ok in compare_params(explore_expected, live) if not ok]
+    ergebnis.add('A Explorer', f'{len(explore_expected)} Profilwerte live gesetzt', not falsch,
+                 '; '.join(f'{n}: erwartet {e!r}, live '
+                           f'{"nicht deklariert" if v is NOT_SET else repr(v)}'
+                           for n, e, v in falsch[:6]))
+    tree = live.get('behavior_tree')
+    ergebnis.add('A Explorer', 'Nav2-Baum mit leichter Recovery',
+                 isinstance(tree, str) and tree.endswith(SELF_HEALING_BT), repr(tree))
+
+    for bereich, overlay in overlays:
+        for node, expected in sorted(flatten_ros_params(_load_yaml(overlay)).items()):
+            values = leser.get_params(node, expected)
+            if values is None:
+                ergebnis.add(bereich, f'{node} erreichbar', False, 'keine Parameterantwort')
+                continue
+            for name, e, v, ok in compare_params(expected, values):
+                ergebnis.add(bereich, f'{node} {name}', ok,
+                             f'erwartet {e!r}, live '
+                             f'{"nicht deklariert" if v is NOT_SET else repr(v)}')
+    return live
+
+
+def pruefe_verdrahtung(leser, ergebnis, explore_live):
+    raw_pubs = leser.publishers(STEUERPFAD_ROH)
+    for node in ('/controller_server', '/behavior_server'):
+        ergebnis.add('C Verdrahtung', f'{node} publiziert auf {STEUERPFAD_ROH}',
+                     node in raw_pubs, ', '.join(sorted(raw_pubs)) or 'keine Publisher')
+    raw_subs = leser.subscribers(STEUERPFAD_ROH)
+    ergebnis.add('C Verdrahtung', f'Fahrtor liest {STEUERPFAD_ROH}',
+                 '/cmd_vel_mission_gate' in raw_subs, ', '.join(sorted(raw_subs)) or 'keine Leser')
+    blocked = leser.publishers(RECOVERY_GESPERRT)
+    ergebnis.add('C Verdrahtung', f'behavior_server nicht mehr auf {RECOVERY_GESPERRT}',
+                 '/behavior_server' not in blocked, ', '.join(sorted(blocked)) or 'leer')
+    actions = leser.action_servers('behavior_server')
+    ergebnis.add('C Verdrahtung', 'BackUp-Aktion /backup angeboten', '/backup' in actions,
+                 ', '.join(sorted(actions)) or 'keine Aktionsserver')
+    # Entscheidung 08.11.2026 (SH-7N): BackUp prueft gegen die Rueckfahrkontur,
+    # sonst verweigert er die Rueckfahrt, sobald die volle Kontur anliegt.
+    behavior = leser.get_params('/behavior_server', ['footprint_topic'])
+    konfiguriert = None if behavior is None else behavior.get('footprint_topic')
+    kontur = (normalize_topic(konfiguriert)
+              if konfiguriert is not None and konfiguriert is not NOT_SET else None)
+    kontur_pubs = leser.publishers(kontur) if kontur else set()
+    kontur_subs = leser.subscribers(kontur) if kontur else set()
+    ergebnis.add('C Verdrahtung', 'Rueckfahrkontur liegt am Behavior-Server an',
+                 kontur == RUECKFAHRKONTUR and RUECKFAHRKONTUR_KNOTEN in kontur_pubs
+                 and '/behavior_server' in kontur_subs,
+                 f'footprint_topic '
+                 f'{"nicht deklariert" if konfiguriert is NOT_SET else repr(konfiguriert)}, '
+                 f'Publisher {", ".join(sorted(kontur_pubs)) or "keine"}, '
+                 f'Leser {", ".join(sorted(kontur_subs)) or "keine"}')
+
+    topic = normalize_topic((explore_live or {}).get('self_healing_speed_limit_topic', '/speed_limit'))
+    controller = leser.get_params('/controller_server', ['speed_limit_topic'])
+    configured = None if controller is None else controller.get('speed_limit_topic')
+    ergebnis.add('C Verdrahtung', 'controller_server speed_limit_topic passt zum Explorer',
+                 configured is not NOT_SET and configured is not None
+                 and normalize_topic(configured) == topic,
+                 f'Explorer {topic}, Controller '
+                 f'{"nicht deklariert" if configured is NOT_SET else repr(configured)}')
+    subs = leser.subscribers(topic)
+    ergebnis.add('C Verdrahtung', f'controller_server abonniert {topic}',
+                 '/controller_server' in subs, ', '.join(sorted(subs)) or 'keine Leser')
+    pubs = leser.publishers(topic)
+    ergebnis.add('C Verdrahtung', f'Publisher auf {topic}', None,
+                 (', '.join(sorted(pubs)) or 'keine') +
+                 ' (der Explorer publiziert erst waehrend einer Mission)')
+    # Entscheidung 22.10.2026 (X9): der normierte LiDAR markiert Seitenwaende in
+    # der lokalen Kostenkarte; ohne Publisher galte nur das alte VL53-Verhalten.
+    scan_subs = leser.subscribers(LIDAR_NAHBEREICH)
+    ergebnis.add('C Verdrahtung', f'lokale Kostenkarte liest {LIDAR_NAHBEREICH}',
+                 LOKALE_KOSTENKARTE in scan_subs, ', '.join(sorted(scan_subs)) or 'keine Leser')
+    scan_pubs = leser.publishers(LIDAR_NAHBEREICH)
+    ergebnis.add('C Verdrahtung', f'Publisher auf {LIDAR_NAHBEREICH}', bool(scan_pubs),
+                 ', '.join(sorted(scan_pubs)) or 'kein Publisher (normalize_scan:=false?)')
+    cmd_pubs = leser.publishers('/cmd_vel')
+    andere = sorted(cmd_pubs - {'/collision_monitor'})
+    ergebnis.add('C Verdrahtung', '/cmd_vel kommt vom collision_monitor',
+                 '/collision_monitor' in cmd_pubs,
+                 ', '.join(sorted(cmd_pubs)) or 'keine Publisher')
+    if andere:
+        ergebnis.add('C Verdrahtung', 'weitere /cmd_vel-Publisher', None, ', '.join(andere))
+
+
+def pruefe_odometrie(leser, ergebnis, explore_live, erwartet):
+    fusion = (explore_live or {}).get('require_hwt601_fusion', NOT_SET)
+    publishers = leser.publishers('/odom')
+    detail = f'/odom: {", ".join(sorted(publishers)) or "kein Publisher"}'
+    if erwartet is None:
+        ergebnis.add('C Odometrie', 'Odometriepfad', None,
+                     f'require_hwt601_fusion={fusion!r}, {detail}')
+        return
+    soll = ODOMETRIE[erwartet]
+    ergebnis.add('C Odometrie', f'Explorer erwartet {erwartet}',
+                 fusion is soll['require_hwt601_fusion'],
+                 f'require_hwt601_fusion={fusion!r}')
+    ergebnis.add('C Odometrie', f'genau ein /odom-Publisher ({soll["odom_publisher"]})',
+                 publishers == {soll['odom_publisher']}, detail)
+
+
+def pruefe_stillstand(leser, ergebnis, beobachten_s, aktiv=False, odometrie=None):
+    base = leser.get_params(BASE, ['dry_run', 'allow_rs485'])
+    for pruefung, ok, detail in motorpfad_zeilen(odometrie, aktiv, leser.knoten(), base):
+        ergebnis.add('D Stillstand', pruefung, ok, detail)
+    from geometry_msgs.msg import Twist
+    from std_msgs.msg import String
+    seen = {'n': 0, 'max_lin': 0.0, 'max_ang': 0.0}
+    status = {'base': None, 'fusion': None}
+
+    def on_twist(msg):
+        seen['n'] += 1
+        seen['max_lin'] = max(seen['max_lin'], abs(msg.linear.x), abs(msg.linear.y))
+        seen['max_ang'] = max(seen['max_ang'], abs(msg.angular.z))
+
+    def merke(schluessel):
+        def callback(msg):
+            try:
+                status[schluessel] = json.loads(msg.data)
+            except (TypeError, ValueError):
+                status[schluessel] = None
+        return callback
+
+    subs = [leser.node.create_subscription(Twist, '/cmd_vel', on_twist, 10)]
+    if aktiv:   # nur lesend mithören, wie /cmd_vel
+        subs.append(leser.node.create_subscription(
+            String, '/base_hardware/state_json', merke('base'), 10))
+        if odometrie == 'hwt601':
+            subs.append(leser.node.create_subscription(
+                String, '/fusion/hwt601/status_json', merke('fusion'), 10))
+    leser.spin_for(beobachten_s)
+    for sub in subs:
+        leser.node.destroy_subscription(sub)
+    for pruefung, ok, detail in quellen_zeilen(aktiv, odometrie, status['base'], status['fusion']):
+        ergebnis.add('D Quellen', pruefung, ok, detail)
+    ergebnis.add('D Stillstand', f'/cmd_vel {beobachten_s:.0f} s ohne Fahrbefehl',
+                 seen['max_lin'] == 0.0 and seen['max_ang'] == 0.0,
+                 f'{seen["n"]} Nachrichten, max |v|={seen["max_lin"]:.3f} m/s, '
+                 f'max |w|={seen["max_ang"]:.3f} rad/s')
+
+
+def pruefe_vl53(leser, ergebnis, sekunden, base_link_above_floor):
+    from rclpy.qos import qos_profile_sensor_data
+    from rclpy.time import Time
+    from sensor_msgs.msg import PointCloud2
+    from sensor_msgs_py.point_cloud2 import read_points
+    from tf2_ros import Buffer, TransformListener
+
+    filters = {}
+    for node in ('/collision_monitor', '/local_costmap/local_costmap',
+                 '/global_costmap/global_costmap'):
+        params = leser.all_params(node)
+        if params is None:
+            ergebnis.add('E VL53', f'{node} erreichbar', None, 'keine Parameterantwort')
+            continue
+        for source, info in near_field_filters(params).items():
+            filters[f'{node} {source}'] = info
+    marking = {k: v for k, v in filters.items() if v['marking'] and v['min'] is not None}
+    for key, info in sorted(filters.items()):
+        ergebnis.add('E VL53', f'Filter {key}', None,
+                     f'{info["topic"]} min={info["min"]} max={info["max"]} '
+                     f'marking={info["marking"]}')
+    if not marking:
+        ergebnis.add('E VL53', 'Hoehenfilter gefunden', False, 'keine markierende near_field-Quelle')
+        return {}
+    min_height = max(info['min'] for info in marking.values())
+
+    vl53 = leser.get_params('/vl53_near_field', ['fov_deg', 'z_max'])
+    fov = (vl53 or {}).get('fov_deg', 60.0)
+    if fov is NOT_SET:
+        fov = 60.0
+    rows = row_elevations(fov)
+
+    tf_buffer = Buffer()
+    TransformListener(tf_buffer, leser.node)
+    clouds = {'left': [], 'right': []}
+
+    def collect(side):
+        def callback(msg):
+            pts = [(float(p[0]), float(p[1]), float(p[2]))
+                   for p in read_points(msg, field_names=('x', 'y', 'z'), skip_nans=True)]
+            clouds[side].append((msg.header.frame_id, np.array(pts, dtype=float).reshape(-1, 3)))
+        return callback
+
+    subs = [leser.node.create_subscription(
+                PointCloud2, f'/near_field/{side}/points', collect(side), qos_profile_sensor_data)
+            for side in clouds]
+    # Lokale Kostenkarte: belegen die VL53-Treffer tatsaechlich Zellen vor dem
+    # Roboter? Nav2 publiziert sie zuverlaessig und latched.
+    from nav_msgs.msg import OccupancyGrid
+    from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
+    costmaps = []
+    latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
+                         durability=DurabilityPolicy.TRANSIENT_LOCAL)
+    subs.append(leser.node.create_subscription(
+        OccupancyGrid, '/local_costmap/costmap', costmaps.append, latched))
+    leser.spin_for(sekunden)
+    for sub in subs:
+        leser.node.destroy_subscription(sub)
+
+    berichte = {}
+    for side, frames in clouds.items():
+        if not frames:
+            ergebnis.add('E VL53', f'{side}: Punktwolken empfangen', False, 'keine Nachricht')
+            continue
+        frame_id = frames[0][0]
+        try:
+            tf = tf_buffer.lookup_transform('base_link', frame_id, Time())
+        except Exception as error:  # noqa: BLE001 - Diagnose ausgeben
+            ergebnis.add('E VL53', f'{side}: TF {frame_id} -> base_link', False, str(error))
+            continue
+        t, q = tf.transform.translation, tf.transform.rotation
+        sensor = np.vstack([pts for _, pts in frames]) if frames else np.zeros((0, 3))
+        base = transform_points(sensor, (t.x, t.y, t.z), (q.x, q.y, q.z, q.w))
+        report = height_report(base, sensor, min_height, base_link_above_floor, rows)
+        report['frames'] = len(frames)
+        report['sensor_ueber_boden_m'] = round(t.z + base_link_above_floor, 3)
+        berichte[side] = report
+        ergebnis.add('E VL53', f'{side}: {len(frames)} Frames, {report["punkte"]} Treffer', None,
+                     f'{report["verworfen"]} unter dem Filter '
+                     f'({report["filter_ueber_boden_m"]:.2f} m ueber Boden), '
+                     f'Baender {report["baender_ueber_boden"]}')
+
+    if not costmaps:
+        ergebnis.add('E VL53', 'lokale Kostenkarte empfangen', None, 'keine Nachricht')
+        return berichte
+    grid = costmaps[-1]
+    try:
+        tf = tf_buffer.lookup_transform('base_link', grid.header.frame_id, Time())
+        t, q = tf.transform.translation, tf.transform.rotation
+        count = lethal_cells_in_window(
+            grid.data, grid.info.width, grid.info.height, grid.info.resolution,
+            (grid.info.origin.position.x, grid.info.origin.position.y),
+            lambda pts: transform_points(pts, (t.x, t.y, t.z), (q.x, q.y, q.z, q.w)))
+    except Exception as error:  # noqa: BLE001 - Diagnose ausgeben
+        ergebnis.add('E VL53', f'TF {grid.header.frame_id} -> base_link', None, str(error))
+        return berichte
+    berichte['kostenkarte'] = {
+        'belegte_zellen_vorn': count, 'fenster_base_link_m': KOSTENKARTE_FENSTER,
+        'aufloesung_m': round(grid.info.resolution, 3), 'nachrichten': len(costmaps)}
+    ergebnis.add('E VL53', f'lokale Kostenkarte: {count} belegte Zellen vor dem Roboter', None,
+                 'x 0,35-1,0 m, |y| <= 0,35 m vor base_link; Markierungen koennen aus '
+                 'frueheren Lagen stammen (ohne Raeumstrahl bleiben sie bestehen)')
+    return berichte
+
+
+def pruefe_eigenechos(leser, ergebnis, sekunden):
+    """F: LiDAR-, VL53- und Kostenkartenpunkte auf dem Roboter selbst (KM-1 B)."""
+    from nav_msgs.msg import OccupancyGrid
+    from rclpy.qos import (DurabilityPolicy, QoSProfile, ReliabilityPolicy,
+                           qos_profile_sensor_data)
+    from rclpy.time import Time
+    from sensor_msgs.msg import LaserScan, PointCloud2
+    from sensor_msgs_py.point_cloud2 import read_points
+    from tf2_ros import Buffer, TransformListener
+
+    bereich = 'F Eigenechos'
+    params = leser.all_params('/local_costmap/local_costmap') or {}
+    koerper, padding = list(KOERPER_STANDARD), 0.02
+    try:
+        if params.get('footprint') not in (None, NOT_SET):
+            koerper = parse_footprint(params['footprint'])
+        if params.get('footprint_padding') not in (None, NOT_SET):
+            padding = float(params['footprint_padding'])
+    except (ValueError, TypeError) as error:
+        ergebnis.add(bereich, 'Kontur der lokalen Karte lesbar', False, str(error))
+    loeschen = {layer: params.get(f'{layer}.footprint_clearing_enabled', NOT_SET)
+                for layer in ('obstacle_layer', 'lidar_layer')}
+    ergebnis.add(bereich, 'Loeschen unter der Kontur (lokale Karte)', None,
+                 ', '.join(f'{k}={"nicht deklariert" if v is NOT_SET else v}'
+                           for k, v in loeschen.items())
+                 + f'; Gehaeuse {koerper}, Polster {padding:.2f} m')
+    marking = {k: v for k, v in near_field_filters(params).items() if v['marking']}
+    z_min = max((v['min'] for v in marking.values() if v['min'] is not None), default=None)
+    z_max = min((v['max'] for v in marking.values() if v['max'] is not None), default=None)
+
+    tf_buffer = Buffer()
+    TransformListener(tf_buffer, leser.node)
+    scans, clouds, costmaps = [], {'left': [], 'right': []}, []
+
+    def on_scan(msg):
+        scans.append((msg.header.frame_id, scan_punkte(
+            msg.ranges, msg.angle_min, msg.angle_increment, msg.range_min, msg.range_max)))
+
+    def collect(side):
+        def callback(msg):
+            pts = [(float(p[0]), float(p[1]), float(p[2]))
+                   for p in read_points(msg, field_names=('x', 'y', 'z'), skip_nans=True)]
+            clouds[side].append((msg.header.frame_id, np.array(pts, dtype=float).reshape(-1, 3)))
+        return callback
+
+    latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
+                         durability=DurabilityPolicy.TRANSIENT_LOCAL)
+    subs = [leser.node.create_subscription(LaserScan, LIDAR_NAHBEREICH, on_scan,
+                                           qos_profile_sensor_data)]
+    subs += [leser.node.create_subscription(PointCloud2, f'/near_field/{side}/points',
+                                            collect(side), qos_profile_sensor_data)
+             for side in clouds]
+    subs.append(leser.node.create_subscription(
+        OccupancyGrid, '/local_costmap/costmap', costmaps.append, latched))
+    leser.spin_for(sekunden)
+    for sub in subs:
+        leser.node.destroy_subscription(sub)
+
+    def nach_base_link(frame_id, pts):
+        tf = tf_buffer.lookup_transform('base_link', frame_id, Time())
+        t, q = tf.transform.translation, tf.transform.rotation
+        return transform_points(pts, (t.x, t.y, t.z), (q.x, q.y, q.z, q.w))
+
+    berichte = {'gehaeuse': koerper, 'polster_m': padding,
+                'loeschen_unter_kontur': {k: (None if v is NOT_SET else v)
+                                          for k, v in loeschen.items()}}
+    quellen = [('LiDAR', scans)] + [(f'VL53 {side}', frames) for side, frames in clouds.items()]
+    for name, frames in quellen:
+        if not frames:
+            ergebnis.add(bereich, f'{name}: Messungen empfangen', False, 'keine Nachricht')
+            continue
+        try:
+            pts = nach_base_link(frames[0][0], np.vstack([p for _, p in frames]))
+        except Exception as error:  # noqa: BLE001 - Diagnose ausgeben
+            ergebnis.add(bereich, f'{name}: TF {frames[0][0]} -> base_link', False, str(error))
+            continue
+        if name.startswith('VL53') and (z_min is not None or z_max is not None):
+            hoehe = np.ones(len(pts), dtype=bool)
+            if z_min is not None:
+                hoehe &= pts[:, 2] >= z_min
+            if z_max is not None:
+                hoehe &= pts[:, 2] <= z_max
+            pts = pts[hoehe]         # nur Punkte, die die lokale Karte markiert
+        zaehlung = eigenecho_zaehlung(pts, koerper, padding)
+        zaehlung['nachrichten'] = len(frames)
+        berichte[name] = zaehlung
+        ergebnis.add(bereich, f'{name}: {len(frames)} Nachrichten, '
+                              f'{zaehlung["im_gehaeuse"]} Punkte im Gehaeuse',
+                     zaehlung['im_gehaeuse'] == 0,
+                     f'{zaehlung["punkte"]} Punkte gesamt, {zaehlung["im_polsterband"]} im '
+                     f'{padding*100:.0f}-cm-Polsterband'
+                     + (f', Beispiele {zaehlung["beispiele_gehaeuse_xy"]}'
+                        if zaehlung['im_gehaeuse'] else ''))
+
+    if not costmaps:
+        ergebnis.add(bereich, 'lokale Kostenkarte empfangen', False, 'keine Nachricht')
+        return berichte
+    grid = costmaps[-1]
+    try:
+        count = lethal_cells_in_body(
+            grid.data, grid.info.width, grid.info.height, grid.info.resolution,
+            (grid.info.origin.position.x, grid.info.origin.position.y),
+            lambda pts: nach_base_link(grid.header.frame_id, pts), koerper)
+    except Exception as error:  # noqa: BLE001 - Diagnose ausgeben
+        ergebnis.add(bereich, f'TF {grid.header.frame_id} -> base_link', False, str(error))
+        return berichte
+    berichte['kostenkarte_toedlich_im_gehaeuse'] = count
+    ergebnis.add(bereich, f'lokale Kostenkarte: {count} toedliche Zellen im Gehaeuse',
+                 count == 0, 'Zellmitte mindestens eine halbe Zelle innerhalb des Gehaeuses')
+    return berichte
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
+    parser.add_argument('--explore-profil', help='Default: installiertes self_healing_params.yaml')
+    parser.add_argument('--nav-overlay', help='Default: installiertes nav2_params_self_healing.yaml')
+    parser.add_argument('--collision-overlay',
+                        help='Default: installiertes collision_monitor_self_healing_overlay.yaml')
+    parser.add_argument('--slam-overlay',
+                        help='Default: installiertes slam_toolbox_self_healing.yaml')
+    parser.add_argument('--timeout-s', type=float, default=3.0)
+    parser.add_argument('--entdeckung-s', type=float, default=2.0,
+                        help='Wartezeit fuer die DDS-Entdeckung vor den Graphabfragen')
+    parser.add_argument('--beobachten-s', type=float, default=3.0,
+                        help='So lange wird /cmd_vel beobachtet')
+    parser.add_argument('--vl53-s', type=float, default=0.0,
+                        help='> 0: VL53-Hoehenmessung ueber diese Dauer (Testobjekt vor dem Roboter)')
+    parser.add_argument('--eigenecho-s', type=float, default=0.0,
+                        help='> 0: Eigenechos ueber diese Dauer pruefen (KM-1 B; Roboter steht, '
+                             'rundherum mindestens 0,5 m frei)')
+    parser.add_argument('--base-link-ueber-boden', type=float, default=BASE_LINK_UEBER_BODEN_M)
+    parser.add_argument('--notiz', default='', help='z. B. "Klotz 5 cm, 0,35 m mittig"')
+    parser.add_argument('--json', help='Ergebnis zusaetzlich als JSON (lokal, nicht ins Repo)')
+    parser.add_argument('--odometrie', choices=sorted(ODOMETRIE),
+                        help='Erwarteten Odometriepfad pruefen (sonst nur Hinweis)')
+    parser.add_argument('--aktiv', action='store_true',
+                        help='Vor einer beauftragten Laborfahrt: Basis scharf erwartet, '
+                             'aber noch kein Fahrbefehl')
+    args = parser.parse_args(argv)
+
+    explore_profil = args.explore_profil or _share('explore', 'config', 'self_healing_params.yaml')
+    nav_overlay = args.nav_overlay or _share(
+        'robot_navigation', 'config', 'nav2_params_self_healing.yaml')
+    collision_overlay = args.collision_overlay or _share(
+        'vl53_near_field', 'config', 'collision_monitor_self_healing_overlay.yaml')
+    slam_overlay = args.slam_overlay or _share(
+        'amadeus_lidar_bringup', 'config', 'slam_toolbox_self_healing.yaml')
+    overlays = (('B Nav2-Overlay', nav_overlay), ('B Kollisionswaechter', collision_overlay),
+                ('B SLAM-Overlay', slam_overlay))
+
+    import rclpy
+    rclpy.init()
+    leser = Leser(args.timeout_s)
+    ergebnis = Ergebnis()
+    vl53 = {}
+    eigenechos = {}
+    try:
+        leser.spin_for(args.entdeckung_s)
+        explore_live = pruefe_profile(leser, ergebnis, explore_profil, overlays)
+        if explore_live is None:
+            ergebnis.drucken()
+            return 2
+        pruefe_verdrahtung(leser, ergebnis, explore_live)
+        pruefe_odometrie(leser, ergebnis, explore_live, args.odometrie)
+        pruefe_stillstand(leser, ergebnis, args.beobachten_s, aktiv=args.aktiv,
+                          odometrie=args.odometrie)
+        if args.vl53_s > 0:
+            vl53 = pruefe_vl53(leser, ergebnis, args.vl53_s, args.base_link_ueber_boden)
+        if args.eigenecho_s > 0:
+            eigenechos = pruefe_eigenechos(leser, ergebnis, args.eigenecho_s)
+    finally:
+        leser.close()
+        rclpy.try_shutdown()
+
+    ergebnis.drucken()
+    if vl53:
+        print(json.dumps({'notiz': args.notiz, 'vl53': vl53}, ensure_ascii=False, indent=2))
+    if eigenechos:
+        print(json.dumps({'eigenechos': eigenechos}, ensure_ascii=False, indent=2, default=str))
+    print('ERGEBNIS:', 'bestanden' if ergebnis.bestanden else 'NICHT bestanden')
+    if args.json:
+        import os
+        os.makedirs(os.path.dirname(os.path.abspath(args.json)), exist_ok=True)
+        with open(args.json, 'w', encoding='utf-8') as handle:
+            json.dump({'zeit': time.strftime('%Y-%m-%dT%H:%M:%S'), 'notiz': args.notiz,
+                       'bestanden': ergebnis.bestanden, 'pruefungen': ergebnis.zeilen,
+                       'vl53': vl53, 'eigenechos': eigenechos}, handle,
+                      ensure_ascii=False, indent=2, default=str)
+    return 0 if ergebnis.bestanden else 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())

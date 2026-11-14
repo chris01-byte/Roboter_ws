@@ -1,0 +1,10 @@
+{
+  "observed_parent_quota": "400000 100000",
+  "affinity": [
+    0,
+    1,
+    3,
+    4
+  ],
+  "reason": "No five simultaneously runnable CPUs against the observed four-CPU quota; no source timestamp, period or guard changed"
+}

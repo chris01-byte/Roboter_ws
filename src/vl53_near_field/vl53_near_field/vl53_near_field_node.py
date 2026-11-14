@@ -28,6 +28,7 @@ import time
 
 import numpy as np
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 
@@ -35,18 +36,21 @@ from std_msgs.msg import Header
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs_py import point_cloud2
 from robot_interfaces.msg import NearFieldStatus
+from vl53_near_field.measurement_quality import assess_frame
 
 from smbus2 import SMBus
 
 # Treiber-Import exakt wie im getesteten Skript (vl53l5cx ODER vl53l7cx).
 try:
-    from vl53l5cx.vl53l5cx import VL53L5CX as DRV
+    from vl53l5cx.vl53l5cx import (
+        VL53L5CX as DRV, VL53L5CXException as SensorInitTimeout)
     # CH341A-USB-I2C uebertraegt nur ~32 Byte pro I2C-Transaktion. Sonst wird die
     # VL53-Firmware in einem 4096-Byte-Block geschrieben -> OSError(5)/EIO im init().
     import vl53l5cx.vl53l5cx as _vl53mod
     _vl53mod.VL53L5CX_COMMS_CHUNK_SIZE = 32
 except Exception:  # pragma: no cover
     from vl53l7cx import VL53L7CX as DRV
+    SensorInitTimeout = ()
 
 
 class Vl53NearField(Node):
@@ -118,9 +122,37 @@ class Vl53NearField(Node):
         # -------------------------------------------------------------------
         self.bus = SMBus(self.bus_num)
         self.bad = {self.ch_left: 0, self.ch_right: 0}
+        self.recovery_stage = {self.ch_left: 0, self.ch_right: 0}
+        self.recovery_good = {self.ch_left: 0, self.ch_right: 0}
+        self.recovery_stats = {
+            ch: dict(read_errors=0, healthy_frames=0, ranging_restarts=0,
+                     full_reinits=0, successful_recoveries=0, final_faults=0)
+            for ch in (self.ch_left, self.ch_right)}
+        self.final_fault = {self.ch_left: False, self.ch_right: False}
         self.get_logger().info('Starte VL53-Sensoren (links/rechts) ...')
-        self.sL = self._sensor_start(self.ch_left)
-        self.sR = self._sensor_start(self.ch_right)
+        self.sL = self.sR = None
+        try:
+            self.sL = self._sensor_start(self.ch_left)
+            self.sR = self._sensor_start(self.ch_right)
+        except Exception:
+            # A partially initialized right sensor must not leave the left
+            # ranging or the mux/bus open after a failed startup.
+            for sensor, channel in ((self.sL, self.ch_left),
+                                    (self.sR, self.ch_right)):
+                if sensor is not None:
+                    try:
+                        self._stop_sensor(sensor, channel)
+                    except Exception:
+                        pass
+            try:
+                self._mux_disable_all()
+            except Exception:
+                pass
+            try:
+                self.bus.close()
+            finally:
+                super().destroy_node()
+            raise
 
         # -------------------------------------------------------------------
         #  Publisher
@@ -195,10 +227,33 @@ class Vl53NearField(Node):
                 continue
         if s is None:
             raise RuntimeError('VL53-Treiber liess sich nicht instanziieren')
-        if hasattr(s, 'init'):
-            s.init()
-        elif hasattr(s, 'begin') and not s.begin():
-            raise RuntimeError('begin() failed')
+        try:
+            if hasattr(s, 'init'):
+                try:
+                    s.init()
+                except SensorInitTimeout as error:
+                    # Real right channel: the driver's 2-s MCU boot poll
+                    # intermittently times out with status 0. Retry once;
+                    # no output or movement gate exists until both start.
+                    if error.args != (0,):
+                        raise
+                    self.get_logger().warn(
+                        f'ch{ch}: MCU-Bootantwort ausgeblieben; '
+                        'einmaliger erneuter Initialisierungsversuch.')
+                    self._mux_disable_all()
+                    time.sleep(0.1)
+                    self._mux_select(ch)
+                    s.init()
+            elif hasattr(s, 'begin') and not s.begin():
+                raise RuntimeError('begin() failed')
+        except Exception:
+            driver_bus = getattr(s, '_i2c_bus', None)
+            if driver_bus is not None and driver_bus is not self.bus:
+                try:
+                    driver_bus.close()
+                except Exception:
+                    pass
+            raise
         for fn, arg in (('set_resolution', self.GR * self.GC),
                         ('set_ranging_frequency_hz', int(self.rate_hz))):
             if hasattr(s, fn):
@@ -225,15 +280,16 @@ class Vl53NearField(Node):
 
     # ======================= Daten lesen (faithful) =====================
     def _get_data_safe(self, s, ch):
-        self._mux_select(ch)
-        for fn in ('check_data_ready', 'data_ready'):
-            if hasattr(s, fn):
-                try:
+        if self.final_fault.get(ch, False):
+            return None
+        try:
+            if s is None:
+                raise RuntimeError('Sensor nicht initialisiert')
+            self._mux_select(ch)
+            for fn in ('check_data_ready', 'data_ready'):
+                if hasattr(s, fn):
                     if not getattr(s, fn)():
                         return None
-                except Exception:
-                    pass
-        try:
             if hasattr(s, 'get_ranging_data'):
                 d = s.get_ranging_data()
                 if d is None:
@@ -244,8 +300,11 @@ class Vl53NearField(Node):
                         'nb_target_detected': getattr(d, 'nb_target_detected', None),
                         'target_status': getattr(d, 'target_status', None),
                         'signal_per_spad': getattr(d, 'signal_per_spad', None),
-                        'sigma_mm': getattr(d, 'sigma_mm', None),
+                        'sigma_mm': getattr(d, 'sigma_mm',
+                                            getattr(d, 'range_sigma_mm', None)),
                     }
+                elif 'sigma_mm' not in d:
+                    d['sigma_mm'] = d.get('range_sigma_mm')
             elif hasattr(s, 'get_data'):
                 if not s.get_data():
                     return None
@@ -255,23 +314,90 @@ class Vl53NearField(Node):
             dist = d.get('distance_mm')
             if not dist or len(dist) != self.GR * self.GC:
                 raise RuntimeError('unvollstaendiges Frame')
+            required = ['target_status']
+            if self.require_nb:
+                required.append('nb_target_detected')
+            if self.max_sigma > 0:
+                required.append('sigma_mm')
+            if self.min_sps > 0:
+                required.append('signal_per_spad')
+            for name in required:
+                value = d.get(name)
+                if value is None or len(value) != self.GR * self.GC:
+                    raise RuntimeError(f'unvollstaendiges Frame: {name}')
+            self.recovery_stats[ch]['healthy_frames'] += 1
+            if self.recovery_stage[ch]:
+                self.recovery_good[ch] += 1
+                if self.recovery_good[ch] < 2:
+                    # One valid frame does not yet certify recovered ranging.
+                    return None
+                self.recovery_stats[ch]['successful_recoveries'] += 1
+                self.get_logger().info(
+                    f'ch{ch}: Recovery erfolgreich; {self.recovery_stats[ch]}')
+                self.recovery_stage[ch] = 0
             self.bad[ch] = 0
+            self.recovery_good[ch] = 0
             return d
         except Exception as e:
-            # Fehlerbehandlung wie im Skript: nach MAX_BAD_FRAMES neu starten.
             self.bad[ch] += 1
-            if self.bad[ch] >= self.max_bad:
-                self.get_logger().warn(f'ch{ch}: {e} - Ranging neu starten ...')
-                self._stop_sensor(s, ch)
-                time.sleep(0.03)
-                self._mux_select(ch)
-                for fn in ('start_ranging', 'start'):
-                    if hasattr(s, fn):
-                        try:
-                            getattr(s, fn)()
-                        except Exception:
-                            pass
-                self.bad[ch] = 0
+            self.recovery_good[ch] = 0
+            self.recovery_stats[ch]['read_errors'] += 1
+            if self.bad[ch] == 1:
+                self.get_logger().warn(
+                    f'ch{ch}: {type(e).__name__}: {e} - kein neues Frame; '
+                    'Frischeueberwachung bleibt aktiv.')
+            stage = self.recovery_stage[ch]
+            if stage == 0 and self.bad[ch] < self.max_bad:
+                return None
+            try:
+                if stage == 0:
+                    self.get_logger().warn(f'ch{ch}: {e} - Ranging neu starten ...')
+                    self._stop_sensor(s, ch)
+                    time.sleep(0.03)
+                    self._mux_select(ch)
+                    start = (getattr(s, 'start_ranging', None)
+                             or getattr(s, 'start', None))
+                    if start is None:
+                        raise RuntimeError('kein Ranging-Start verfuegbar')
+                    start()
+                    self.recovery_stats[ch]['ranging_restarts'] += 1
+                    self.recovery_stage[ch] = 1
+                elif stage <= 2:
+                    # The same channel still fails after restart/reinit.
+                    # Recreate its driver with an explicit mux selection.
+                    self.get_logger().warn(f'ch{ch}: {e} - Sensor neu initialisieren ...')
+                    if s is not None:
+                        self._stop_sensor(s, ch)
+                        driver_bus = getattr(s, '_i2c_bus', None)
+                        if driver_bus is not None and driver_bus is not self.bus:
+                            driver_bus.close()
+                    if ch == self.ch_left:
+                        self.sL = None
+                    else:
+                        self.sR = None
+                    replacement = self._sensor_start(ch)
+                    if ch == self.ch_left:
+                        self.sL = replacement
+                    else:
+                        self.sR = replacement
+                    self.recovery_stats[ch]['full_reinits'] += 1
+                    self.recovery_stage[ch] = stage + 1
+                else:
+                    self.final_fault[ch] = True
+                    self.recovery_stats[ch]['final_faults'] += 1
+                    self.get_logger().error(
+                        f'ch{ch}: endgueltiger Sensorfehler; {self.recovery_stats[ch]}')
+            except Exception as recovery_error:
+                self.get_logger().error(
+                    f'ch{ch}: Recovery fehlgeschlagen: {recovery_error}')
+                if stage == 0:
+                    self.recovery_stage[ch] = 1
+                elif stage < 3:
+                    self.recovery_stats[ch]['full_reinits'] += 1
+                    self.recovery_stage[ch] = stage + 1
+                else:
+                    self.final_fault[ch] = True
+                    self.recovery_stats[ch]['final_faults'] += 1
             return None
 
     # ======================= Matrix bauen (faithful) ====================
@@ -320,19 +446,16 @@ class Vl53NearField(Node):
         header.frame_id = frame_id
         return point_cloud2.create_cloud_xyz32(header, pts)
 
-    def _matrix_to_costmap_cloud(self, M, frame_id, stamp):
-        # Fuer den Nav2-ObstacleLayer: pro SPALTE (Azimut) genau EIN horizontaler
-        # Punkt (z=0, Sensorhoehe) - wie ein 8-Strahl-Laserscan. Naechstes
-        # gueltiges Ziel der Spalte = Hindernis (wird markiert); keine gueltige
-        # Zelle = "frei" -> Punkt auf costmap_clear_range (> obstacle_max_range,
-        # < raytrace_max_range) -> raeumt den Strahl, wird NICHT markiert.
-        # So loescht der Layer jeden Frame korrekt (Gegenstueck zur sparsamen
-        # Original-Wolke, die keine Raeum-Strahlen liefert).
+    def _matrix_to_costmap_cloud(self, measured, valid, frame_id, stamp):
+        # Nur vollstaendig beobachtete Spalten duerfen raeumen. Ein gueltiges
+        # Fernziel bei 0,55 m belegt keinen Freiraum bis 0,60 m; daher endet
+        # der Strahl beim tatsaechlichen Ziel oder am konservativen Limit.
+        # Teilgueltige/ungueltige Spalten liefern keinen neuen Freiraumbeleg.
         pts = []
         for c in range(self.GC):
-            col = M[:, c]
-            finite = col[np.isfinite(col)]
-            dist = float(np.min(finite)) if finite.size > 0 else self.costmap_clear_range
+            if not np.all(valid[:, c]):
+                continue
+            dist = min(float(np.min(measured[:, c])), self.costmap_clear_range)
             az = self.col_az[c]
             pts.append((float(dist * math.cos(az)), float(dist * math.sin(az)), 0.0))
         header = Header()
@@ -353,15 +476,50 @@ class Vl53NearField(Node):
         dL = self._get_data_safe(self.sL, self.ch_left)
         dR = self._get_data_safe(self.sR, self.ch_right)
         if dL is None or dR is None:
+            # Ein nicht geliefertes Frame hat keinen neuen Messzeitpunkt.
+            # Historisch bewaehrt: kein neues Tripel publizieren. Gate und
+            # Safety sperren nach ihren unveraenderten Frische-Timeouts;
+            # ungueltige *empfangene* Frames melden weiterhin UNKNOWN sofort.
             return
 
-        ML = self._build_matrix(dL)
-        MR = self._build_matrix(dR)
+        quality_args = (self.GR, self.GC, self.valid_statuses,
+                        self.require_nb, self.min_sps, self.max_sigma,
+                        self.z_min, self.z_max)
+        observedL, validL, columnsL, qualityL = assess_frame(dL, *quality_args)
+        observedR, validR, columnsR, qualityR = assess_frame(dR, *quality_args)
+
+        # UNKNOWN means missing/malformed required fields, not a target miss.
+        # A complete frame with zero valid returns is technically healthy;
+        # its zones stay unknown and cannot create costmap clearing rays.
+        healthyL = (self.GR == self.GC == 8
+                    and qualityL != NearFieldStatus.QUALITY_UNKNOWN)
+        healthyR = (self.GR == self.GC == 8
+                    and qualityR != NearFieldStatus.QUALITY_UNKNOWN)
+        if not healthyL:
+            validL[:] = False
+            columnsL = 0
+        if not healthyR:
+            validR[:] = False
+            columnsR = 0
+        ML = (self._build_matrix(dL) if healthyL else
+              np.full((self.GR, self.GC), np.nan, dtype=np.float32))
+        MR = (self._build_matrix(dR) if healthyR else
+              np.full((self.GR, self.GC), np.nan, dtype=np.float32))
+        ML[~validL] = np.nan
+        MR[~validR] = np.nan
         # FLIPX wie im getesteten Skript (Orientierung links/rechts korrekt).
         if self.flipx_left:
             ML = ML[:, ::-1]
+            observedL = observedL[:, ::-1]
+            validL = validL[:, ::-1]
+            columnsL = sum(1 << c for c in range(self.GC)
+                           if np.all(validL[:, c]))
         if self.flipx_right:
             MR = MR[:, ::-1]
+            observedR = observedR[:, ::-1]
+            validR = validR[:, ::-1]
+            columnsR = sum(1 << c for c in range(self.GC)
+                           if np.all(validR[:, c]))
 
         # Zonen-Logik exakt wie im Skript.
         n = self.inner
@@ -389,14 +547,22 @@ class Vl53NearField(Node):
         st.min_dist_right = float(mR) if np.isfinite(mR) else -1.0
         mmid = min(mML, mMR)
         st.min_dist_middle = float(mmid) if np.isfinite(mmid) else -1.0
+        st.left_quality = qualityL
+        st.right_quality = qualityR
+        st.left_observed_columns = columnsL
+        st.right_observed_columns = columnsR
+        st.left_frame_healthy = healthyL
+        st.right_frame_healthy = healthyR
         self.pub_status.publish(st)
 
         # --- Punktwolken publizieren (geflippte Matrizen -> Orientierung wie Status) ---
         self.pub_left.publish(self._matrix_to_cloud(ML, self.frame_left, stamp))
         self.pub_right.publish(self._matrix_to_cloud(MR, self.frame_right, stamp))
         if self.publish_costmap_cloud:
-            self.pub_left_cm.publish(self._matrix_to_costmap_cloud(ML, self.frame_left, stamp))
-            self.pub_right_cm.publish(self._matrix_to_costmap_cloud(MR, self.frame_right, stamp))
+            self.pub_left_cm.publish(self._matrix_to_costmap_cloud(
+                observedL, validL, self.frame_left, stamp))
+            self.pub_right_cm.publish(self._matrix_to_costmap_cloud(
+                observedR, validR, self.frame_right, stamp))
 
     # ======================= Aufraeumen =================================
     def destroy_node(self):
@@ -415,11 +581,18 @@ def main(args=None):
     node = Vl53NearField()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except RuntimeError:
+        # Beim globalen SIGINT/SIGTERM kann Humble einen bereits laufenden
+        # Publish-Callback erst nach dem Kontext-Shutdown fortsetzen. Nur
+        # dieser Fall ist ein normaler Stop; sonst den Fehler weiterreichen.
+        if rclpy.ok():
+            raise
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':

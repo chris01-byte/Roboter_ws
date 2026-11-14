@@ -1,0 +1,82 @@
+........................................................................ [  3%]
+........................................................................ [  6%]
+........................................................................ [ 10%]
+........................................................................ [ 13%]
+........................................................................ [ 17%]
+........................................................................ [ 20%]
+........................................................................ [ 23%]
+........................................................................ [ 27%]
+........................................................................ [ 30%]
+........................................................................ [ 34%]
+........................................................................ [ 37%]
+........................................................................ [ 41%]
+........................................................................ [ 44%]
+........................................................................ [ 47%]
+........................................................................ [ 51%]
+........................................................................ [ 54%]
+........................................................................ [ 58%]
+........................................................................ [ 61%]
+........................................................................ [ 64%]
+........................................................................ [ 68%]
+........................................................................ [ 71%]
+........................................................................ [ 75%]
+........................................................................ [ 78%]
+........................................................................ [ 82%]
+........................................................................ [ 85%]
+........................................................................ [ 88%]
+.........................................F.F............................ [ 92%]
+........................................................................ [ 95%]
+........................................................................ [ 99%]
+..................                                                       [100%]
+=================================== FAILURES ===================================
+_____ test_passive_wheel_continues_during_busy_callback[imu_status-False] ______
+
+stop_wheel = False, busy_group = 'imu_status'
+
+    @pytest.mark.parametrize('stop_wheel', [False, True])
+    @pytest.mark.parametrize('busy_group', ['default', 'imu_status'])
+    def test_passive_wheel_continues_during_busy_callback(stop_wheel, busy_group):
+        # A real gate starts in its own process. Reusing rclpy's global context
+        # after other DDS tests left Humble executor wait-set threads racing the
+        # next context (including a NoneType.handle teardown exception). Keep the
+        # original real subscriptions, executor and freshness assertions inside
+        # a fresh process, rather than forgiving a delayed measurement.
+        result = subprocess.run([sys.executable, str(Path(__file__).resolve()),
+            busy_group, 'stop' if stop_wheel else 'continue'],
+            capture_output=True, text=True, timeout=20.)
+>       assert result.returncode == 0, result.stdout + result.stderr
+E       AssertionError: [WARN] [1791257298.131063067] [cmd_vel_mission_gate]: Nav2-Fahrtor aktiv: Befehle nur bei explizit freigegebener Mission und belastbarer Lokalisierung.
+E         Traceback (most recent call last):
+E           File "/evidence/ap06-repo/src/robot_navigation/test/test_hwt601_gate_source_callbacks.py", line 182, in <module>
+E             _passive_wheel_case(sys.argv[2] == 'stop', sys.argv[1])
+E           File "/evidence/ap06-repo/src/robot_navigation/test/test_hwt601_gate_source_callbacks.py", line 136, in _passive_wheel_case
+E             assert gate._hwt_guard.health.recovery_state == 'HOLD'
+E         AssertionError
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/evidence/ap06-repo/src/robot_navigation/test/test_hwt601_gate_source_call...py", line 136, in _passive_wheel_case\n    assert gate._hwt_guard.health.recovery_state == \'HOLD\'\nAssertionError\n').returncode
+
+src/robot_navigation/test/test_hwt601_gate_source_callbacks.py:67: AssertionError
+___________ test_active_gate_keeps_its_existing_serial_source_group ____________
+
+    def test_active_gate_keeps_its_existing_serial_source_group():
+        assert os.environ.get('ROS_LOCALHOST_ONLY') == '1'
+        assert 200 <= int(os.environ.get('ROS_DOMAIN_ID', '-1')) <= 230
+        rclpy.init(args=['--ros-args', '-p', 'require_hwt601_fusion:=true',
+                        '-p', 'hwt601_active_drive:=true'])
+        gate = CmdVelMissionGate()
+        try:
+            assert gate._hwt_source_cb is None
+            assert gate._hwt_wheel_cb is None
+>           assert all(s.callback_group is gate.default_callback_group
+                       for s in gate._hwt_guard.subscriptions)
+E                      assert False
+E                       +  where False = all(<generator object test_active_gate_keeps_its_existing_serial_source_group.<locals>.<genexpr> at 0x7f89035133e0>)
+
+src/robot_navigation/test/test_hwt601_gate_source_callbacks.py:171: AssertionError
+----------------------------- Captured stderr call -----------------------------
+[WARN] [1791257301.621154231] [cmd_vel_mission_gate]: Nav2-Fahrtor aktiv: Befehle nur bei explizit freigegebener Mission und belastbarer Lokalisierung.
+=========================== short test summary info ============================
+FAILED src/robot_navigation/test/test_hwt601_gate_source_callbacks.py::test_passive_wheel_continues_during_busy_callback[imu_status-False]
+FAILED src/robot_navigation/test/test_hwt601_gate_source_callbacks.py::test_active_gate_keeps_its_existing_serial_source_group
+2 failed, 2104 passed in 122.97s (0:02:02)

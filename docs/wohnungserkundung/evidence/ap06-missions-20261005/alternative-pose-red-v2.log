@@ -1,0 +1,16 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_ test_remaining_real_boundary_yields_safe_pose_and_still_requires_native_path _
+
+    def test_remaining_real_boundary_yields_safe_pose_and_still_requires_native_path():
+        node,inputs,policy=fixture()
+        before=[bytes(np.asarray(inputs[i].data,dtype=np.int8)) for i in (0,5)]
+        candidates=node._metric_select(inputs,policy,.3)
+>       assert candidates, node._frontier_rank_stats
+E       AssertionError: {'accepted': 0, 'deferred_or_served': 0, 'raw': 1, 'route_rejections': {'goal_orientation_invalid': 1}, ...}
+E       assert []
+
+src/explore/test/test_metric_alternative_pose.py:54: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_alternative_pose.py::test_remaining_real_boundary_yields_safe_pose_and_still_requires_native_path
+1 failed in 0.35s

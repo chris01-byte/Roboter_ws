@@ -1,0 +1,37 @@
+F.........................                                               [100%]
+=================================== FAILURES ===================================
+___ test_actual_initial_private_departure_is_not_starved_by_distant_queries ____
+
+    def test_actual_initial_private_departure_is_not_starved_by_distant_queries():
+        node, inputs, policy = frozen('ap06_a227_start_selection')
+        assert not policy.attempts and all(e.valid for e in node._metric_egress)
+        before = copy.deepcopy(node._metric_egress)
+        maps = [list(inputs[i].data) for i in (0, 5)]
+        def distant(*_, **__):
+            pytest.fail('Proved short private departure must precede distant approaches')
+        node._frontier_approach_goal = distant
+>       candidates = node._metric_select(inputs, policy, .3)
+
+src/explore/test/test_metric_near_start_priority.py:15: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:2414: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:2033: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:2156: in _metric_candidates_in_pass
+    goal = self._frontier_approach_goal(f, pose[:2], grid, **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_ = (<explore.explore_node.Frontier object at 0x7f4c7c991ed0>, (0.0, 0.0), nav_msgs.msg.OccupancyGrid(header=std_msgs.msg...., -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]))
+__ = {'approach_direction': (-0.7071067811865475, -0.7071067811865475), 'search_mask': array([[False, False, False, ..., Fa...lse],
+       [False, False, False, ..., False, False, False],
+       [False, False, False, ..., False, False, False]])}
+
+    def distant(*_, **__):
+>       pytest.fail('Proved short private departure must precede distant approaches')
+E       Failed: Proved short private departure must precede distant approaches
+
+src/explore/test/test_metric_near_start_priority.py:13: Failed
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_near_start_priority.py::test_actual_initial_private_departure_is_not_starved_by_distant_queries
+1 failed, 25 passed in 3.97s

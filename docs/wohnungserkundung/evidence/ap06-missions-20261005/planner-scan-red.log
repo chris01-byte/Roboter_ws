@@ -1,0 +1,63 @@
+FF.                                                                      [100%]
+=================================== FAILURES ===================================
+_ test_waiting_native_plan_keeps_goal_and_defers_route_authority_to_actual_plan _
+
+    def test_waiting_native_plan_keeps_goal_and_defers_route_authority_to_actual_plan():
+        node, inputs = door_inputs()
+        grid = inputs[0]; rr,cc = np.indices(inputs[3].shape)
+        x = -2+(cc+.5)*grid.info.resolution; y = -2+(rr+.5)*grid.info.resolution
+        data = np.zeros(inputs[3].shape,np.int8)
+        data[(abs(x)<.1)&(abs(y)<.5)] = 100
+        data[[0,-1],:]=100;data[:,[0,-1]]=100
+        grid.data=data.ravel().tolist();inputs[3]=inputs[4]=inputs[6]=data==0
+        route = ((-.9,0.),(-.9,-1.),(.9,-1.),(.9,0.))
+        target = MetricCandidate('proved',.9,0.,0.,(.9,0.),route,4.,1.,'a'*64,1,False)
+        node._metric_nav_path = None
+        assert node._metric_route(inputs,(.9,0.),0.) is None
+        assert node._metric_navigation_geometry_ready(inputs,target)
+        native = Path();native.header.frame_id='map';native.header.stamp.sec=1
+        for x,y in route:
+            point=PoseStamped();point.pose.position.x=x;point.pose.position.y=y
+            point.pose.orientation.w=1.;native.poses.append(point)
+        node._metric_plan_after_ns=0;node._metric_nav_path=native
+        assert node._metric_navigation_geometry_ready(inputs,target)
+        node._metric_nav_path=None
+        col,row = node._world_to_grid(-.9,-.7,grid.info)
+        data[row,col] = 100;grid.data=data.ravel().tolist()
+        inputs[3]=inputs[4]=inputs[6]=data==0
+        # The old route became unsafe while no child exists. Actual Nav2 may
+        # still find another route; the fresh goal/connectivity remain valid.
+        assert node._metric_waypoints_clear(inputs,route,target.yaw) is None
+>       assert node._metric_navigation_geometry_ready(inputs,target)
+E       AssertionError: assert False
+E        +  where False = <bound method MetricFrontierRuntime._metric_navigation_geometry_ready of <explore.explore_node.ExploreNode object at 0x7f5c39a9e770>>([nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id='...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...], MetricCandidate(task_id='proved', x=0.9, y=0.0, yaw=0.0, frontier_xy=(0.9, 0.0), route=((-0.9, 0.0), (-0.9, -1.0), (0....aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', revision=1, requires_nav2_plan=False, observation_points=(), evidence_key=''))
+E        +    where <bound method MetricFrontierRuntime._metric_navigation_geometry_ready of <explore.explore_node.ExploreNode object at 0x7f5c39a9e770>> = <explore.explore_node.ExploreNode object at 0x7f5c39a9e770>._metric_navigation_geometry_ready
+
+src/explore/test/test_metric_motion_geometry.py:246: AssertionError
+_______ test_full_scan_retains_qualified_rpp_position_reserve[0.9-False] _______
+
+width = 0.9, qualified_scan = False
+
+    @pytest.mark.parametrize('width,qualified_scan',[(.90,False),(1.20,True)])
+    def test_full_scan_retains_qualified_rpp_position_reserve(width,qualified_scan):
+        node,inputs=door_inputs();g=inputs[0]
+        rr,cc=np.indices(inputs[3].shape);res=g.info.resolution
+        x=-2+(cc+.5)*res;y=-2+(rr+.5)*res
+        data=np.zeros(x.shape,np.int8);data[abs(y)>=width/2]=100
+        data[(x>1.4)&(abs(y)<width/2)]=-1
+        g.data=data.ravel().tolist();inputs[2]=(0.,0.,0.)
+        inputs[3]=inputs[4]=inputs[6]=data==0
+        node._metric_select=lambda *_:[];node._frontiers_remaining=1
+        node._metric_path_validation='conservative'
+        legacy,_=node._metric_start_decision(inputs,MetricTaskPolicy(.6,30.,2),.3,True)
+        assert legacy['scan_admissible'] and legacy['selected_motion']=='full_scan'
+        node._metric_path_validation='rpp_rollout'
+        decision,_=node._metric_start_decision(inputs,MetricTaskPolicy(.6,30.,2),.3,True)
+>       assert decision['scan_admissible'] is qualified_scan
+E       assert True is False
+
+src/explore/test/test_metric_motion_geometry.py:271: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_motion_geometry.py::test_waiting_native_plan_keeps_goal_and_defers_route_authority_to_actual_plan
+FAILED src/explore/test/test_metric_motion_geometry.py::test_full_scan_retains_qualified_rpp_position_reserve[0.9-False]
+2 failed, 1 passed, 26 deselected in 0.79s

@@ -1,0 +1,292 @@
+[
+  {
+    "case": "revisit",
+    "revision": 1,
+    "core": "legacy_centroid",
+    "attempts": [],
+    "planable": 0,
+    "native_valid_boundary_union_m": 0.0,
+    "best_single_sight_m": 0.0
+  },
+  {
+    "case": "revisit",
+    "revision": 1,
+    "core": "upstream_418e971",
+    "attempts": [
+      {
+        "index": 0,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.3989450309982203
+      }
+    ],
+    "planable": 1,
+    "native_valid_boundary_union_m": 1.9000000000000001,
+    "best_single_sight_m": 1.9000000000000001
+  },
+  {
+    "case": "revisit",
+    "revision": 1,
+    "core": "boundary_samples",
+    "attempts": [
+      {
+        "index": 0,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.2625749450016883
+      },
+      {
+        "index": 1,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.07504052399963257
+      },
+      {
+        "index": 2,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.28398634400036826
+      },
+      {
+        "index": 3,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.3904513039997255
+      },
+      {
+        "index": 4,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.5011622199999692
+      },
+      {
+        "index": 5,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.5888046630007011
+      },
+      {
+        "index": 6,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.684453988000314
+      },
+      {
+        "index": 7,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.8074225519994798
+      }
+    ],
+    "planable": 6,
+    "native_valid_boundary_union_m": 5.9,
+    "best_single_sight_m": 1.9000000000000001
+  },
+  {
+    "case": "revisit",
+    "revision": 2,
+    "core": "legacy_centroid",
+    "attempts": [],
+    "planable": 0,
+    "native_valid_boundary_union_m": 0.0,
+    "best_single_sight_m": 0.0
+  },
+  {
+    "case": "revisit",
+    "revision": 2,
+    "core": "upstream_418e971",
+    "attempts": [
+      {
+        "index": 0,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.24303181100003712
+      }
+    ],
+    "planable": 1,
+    "native_valid_boundary_union_m": 1.9000000000000001,
+    "best_single_sight_m": 1.9000000000000001
+  },
+  {
+    "case": "revisit",
+    "revision": 2,
+    "core": "boundary_samples",
+    "attempts": [
+      {
+        "index": 0,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.059871658000702155
+      },
+      {
+        "index": 1,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.14878612800021074
+      },
+      {
+        "index": 2,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.18701018700085115
+      },
+      {
+        "index": 3,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.31215489800160867
+      },
+      {
+        "index": 4,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.11697181899944553
+      },
+      {
+        "index": 5,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.3545572530001664
+      },
+      {
+        "index": 6,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.4765693610006565
+      },
+      {
+        "index": 7,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.5722729169992817
+      },
+      {
+        "index": 8,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.6916429430002609
+      }
+    ],
+    "planable": 3,
+    "native_valid_boundary_union_m": 4.3,
+    "best_single_sight_m": 1.9000000000000001
+  },
+  {
+    "case": "revisit",
+    "revision": 3,
+    "core": "legacy_centroid",
+    "attempts": [],
+    "planable": 0,
+    "native_valid_boundary_union_m": 0.0,
+    "best_single_sight_m": 0.0
+  },
+  {
+    "case": "revisit",
+    "revision": 3,
+    "core": "upstream_418e971",
+    "attempts": [
+      {
+        "index": 0,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.26456433000021207
+      }
+    ],
+    "planable": 1,
+    "native_valid_boundary_union_m": 1.9000000000000001,
+    "best_single_sight_m": 1.9000000000000001
+  },
+  {
+    "case": "revisit",
+    "revision": 3,
+    "core": "boundary_samples",
+    "attempts": [
+      {
+        "index": 0,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.06282800999906613
+      },
+      {
+        "index": 1,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.18937241599996923
+      },
+      {
+        "index": 2,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.16175101800035918
+      },
+      {
+        "index": 3,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.26838062800015905
+      },
+      {
+        "index": 4,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.11119505799979379
+      },
+      {
+        "index": 5,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.38250524799877894
+      },
+      {
+        "index": 6,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.518531214000177
+      },
+      {
+        "index": 7,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.6154688409988012
+      },
+      {
+        "index": 8,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.6428985849997844
+      }
+    ],
+    "planable": 3,
+    "native_valid_boundary_union_m": 4.3,
+    "best_single_sight_m": 1.9000000000000001
+  }
+]

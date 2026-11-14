@@ -1,0 +1,125 @@
+FFFF...FFFFFFFF.FFFFFF                                                   [100%]
+=================================== FAILURES ===================================
+_ test_straight_door_preserves_body_raster_tracking_and_goal_reserves[0.01-0.68] _
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:36: in test_straight_door_preserves_body_raster_tracking_and_goal_reserves
+    assert n._metric_waypoints_clear(inputs,((-.9,0.),(.9,0.)),0.)
+E   AssertionError: assert None
+E    +  where None = <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7f1554e09030>>([nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id='...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...], ((-0.9, 0.0), (0.9, 0.0)), 0.0)
+E    +    where <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7f1554e09030>> = <explore.explore_node.ExploreNode object at 0x7f1554e09030>._metric_waypoints_clear
+_ test_straight_door_preserves_body_raster_tracking_and_goal_reserves[0.01-0.8] _
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:36: in test_straight_door_preserves_body_raster_tracking_and_goal_reserves
+    assert n._metric_waypoints_clear(inputs,((-.9,0.),(.9,0.)),0.)
+E   AssertionError: assert None
+E    +  where None = <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7f1554e7baf0>>([nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id='...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...], ((-0.9, 0.0), (0.9, 0.0)), 0.0)
+E    +    where <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7f1554e7baf0>> = <explore.explore_node.ExploreNode object at 0x7f1554e7baf0>._metric_waypoints_clear
+_ test_straight_door_preserves_body_raster_tracking_and_goal_reserves[0.02-0.68] _
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:36: in test_straight_door_preserves_body_raster_tracking_and_goal_reserves
+    assert n._metric_waypoints_clear(inputs,((-.9,0.),(.9,0.)),0.)
+E   AssertionError: assert None
+E    +  where None = <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7f1554e793c0>>([nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id='...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...], ((-0.9, 0.0), (0.9, 0.0)), 0.0)
+E    +    where <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7f1554e793c0>> = <explore.explore_node.ExploreNode object at 0x7f1554e793c0>._metric_waypoints_clear
+_ test_straight_door_preserves_body_raster_tracking_and_goal_reserves[0.02-0.8] _
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:36: in test_straight_door_preserves_body_raster_tracking_and_goal_reserves
+    assert n._metric_waypoints_clear(inputs,((-.9,0.),(.9,0.)),0.)
+E   AssertionError: assert None
+E    +  where None = <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7f1554e7b250>>([nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id='...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...], ((-0.9, 0.0), (0.9, 0.0)), 0.0)
+E    +    where <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7f1554e7b250>> = <explore.explore_node.ExploreNode object at 0x7f1554e7b250>._metric_waypoints_clear
+___ test_turn_in_narrow_passage_rejected_but_free_goal_region_beyond_passes ____
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:52: in test_turn_in_narrow_passage_rejected_but_free_goal_region_beyond_passes
+    assert n._metric_waypoints_clear(inputs,((-.9,0.),(.9,0.)),math.pi/2)
+E   AssertionError: assert None
+E    +  where None = <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7f1554e0a5c0>>([nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id='...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...], ((-0.9, 0.0), (0.9, 0.0)), (3.141592653589793 / 2))
+E    +    where <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7f1554e0a5c0>> = <explore.explore_node.ExploreNode object at 0x7f1554e0a5c0>._metric_waypoints_clear
+E    +    and   3.141592653589793 = math.pi
+______ test_unknown_exterior_never_used_as_free_by_rollout_or_proposal[3] ______
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:61: in test_unknown_exterior_never_used_as_free_by_rollout_or_proposal
+    assert n._metric_nav2_proposal(inputs,(.9,0.),0.) is None
+E   AttributeError: 'ExploreNode' object has no attribute '_metric_nav2_proposal'
+______ test_unknown_exterior_never_used_as_free_by_rollout_or_proposal[6] ______
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:61: in test_unknown_exterior_never_used_as_free_by_rollout_or_proposal
+    assert n._metric_nav2_proposal(inputs,(.9,0.),0.) is None
+E   AttributeError: 'ExploreNode' object has no attribute '_metric_nav2_proposal'
+_______ test_known_connected_proposal_is_not_claimed_as_footprint_proof ________
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:67: in test_known_connected_proposal_is_not_claimed_as_footprint_proof
+    assert n._metric_nav2_proposal(inputs,(.9,0.),0.)
+E   AttributeError: 'ExploreNode' object has no attribute '_metric_nav2_proposal'
+___ test_valid_actual_detour_takes_precedence_over_unrelated_shortest_route ____
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:85: in test_valid_actual_detour_takes_precedence_over_unrelated_shortest_route
+    c=MetricCandidate('t',.9,0.,0.,(.9,0.),(),4.,1.,'a'*64,1,True)
+E   TypeError: MetricCandidate.__init__() takes 11 positional arguments but 12 were given
+_ test_selection_retains_reachable_target_for_real_nav2_instead_of_banning_shortest _
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:105: in test_selection_retains_reachable_target_for_real_nav2_instead_of_banning_shortest
+    assert candidates and all(c.requires_nav2_plan for c in candidates)
+E   assert ([])
+_ test_controller_rollout_prealigns_to_first_actual_leg_not_chord_through_obstacle _
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:111: in test_controller_rollout_prealigns_to_first_actual_leg_not_chord_through_obstacle
+    poses=rpp_trajectory(route,(0.,0.,0.),.02,prealign_to_first_leg=True)
+E   TypeError: rpp_trajectory() got an unexpected keyword argument 'prealign_to_first_leg'
+_____________ test_subcell_goal_join_does_not_invent_quarter_turn ______________
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:119: in test_subcell_goal_join_does_not_invent_quarter_turn
+    assert abs(motion.route_arrival_yaw(route,0.,.02))<.001
+E   AttributeError: module 'explore.metric_frontier' has no attribute 'route_arrival_yaw'
+_____ test_rollout_real_node_rejects_unqualified_prealignment[False-0.02] ______
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:147: in test_rollout_real_node_rejects_unqualified_prealignment
+    with pytest.raises(ValueError,match='enabled prealignment within 0.02 rad'):ExploreNode()
+E   Failed: DID NOT RAISE <class 'ValueError'>
+----------------------------- Captured stderr call -----------------------------
+[INFO] [1791043813.324600829] [explore_node]: explore_node bereit. Map='/map', Nav='navigate_to_pose'. Erkundung starten via Action /explore_area.
+______ test_rollout_real_node_rejects_unqualified_prealignment[True-0.17] ______
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:147: in test_rollout_real_node_rejects_unqualified_prealignment
+    with pytest.raises(ValueError,match='enabled prealignment within 0.02 rad'):ExploreNode()
+E   Failed: DID NOT RAISE <class 'ValueError'>
+----------------------------- Captured stderr call -----------------------------
+[INFO] [1791043813.365040677] [explore_node]: explore_node bereit. Map='/map', Nav='navigate_to_pose'. Erkundung starten via Action /explore_area.
+_ test_simulation_tracking_contract_rejects_different_actual_response_limits[controller_frequency-10.0] _
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:160: in test_simulation_tracking_contract_rejects_different_actual_response_limits
+    data=yaml.safe_load((FilePath(__file__).parents[2]/'robot_navigation/config/nav2_params_real.yaml').read_text())['controller_server']['ros__parameters']
+/usr/lib/python3.10/pathlib.py:1134: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+/usr/lib/python3.10/pathlib.py:1119: in open
+    return self._accessor.open(self, mode, buffering, encoding, errors,
+E   FileNotFoundError: [Errno 2] No such file or directory: '/evidence/ap03-baseline/src/robot_navigation/config/nav2_params_real.yaml'
+_ test_simulation_tracking_contract_rejects_different_actual_response_limits[FollowPath.desired_linear_vel-0.2] _
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:160: in test_simulation_tracking_contract_rejects_different_actual_response_limits
+    data=yaml.safe_load((FilePath(__file__).parents[2]/'robot_navigation/config/nav2_params_real.yaml').read_text())['controller_server']['ros__parameters']
+/usr/lib/python3.10/pathlib.py:1134: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+/usr/lib/python3.10/pathlib.py:1119: in open
+    return self._accessor.open(self, mode, buffering, encoding, errors,
+E   FileNotFoundError: [Errno 2] No such file or directory: '/evidence/ap03-baseline/src/robot_navigation/config/nav2_params_real.yaml'
+_ test_simulation_tracking_contract_rejects_different_actual_response_limits[FollowPath.rotate_to_heading_angular_vel-0.4] _
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:160: in test_simulation_tracking_contract_rejects_different_actual_response_limits
+    data=yaml.safe_load((FilePath(__file__).parents[2]/'robot_navigation/config/nav2_params_real.yaml').read_text())['controller_server']['ros__parameters']
+/usr/lib/python3.10/pathlib.py:1134: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+/usr/lib/python3.10/pathlib.py:1119: in open
+    return self._accessor.open(self, mode, buffering, encoding, errors,
+E   FileNotFoundError: [Errno 2] No such file or directory: '/evidence/ap03-baseline/src/robot_navigation/config/nav2_params_real.yaml'
+_ test_simulation_tracking_contract_rejects_different_actual_response_limits[FollowPath.max_angular_accel-4.0] _
+/evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py:160: in test_simulation_tracking_contract_rejects_different_actual_response_limits
+    data=yaml.safe_load((FilePath(__file__).parents[2]/'robot_navigation/config/nav2_params_real.yaml').read_text())['controller_server']['ros__parameters']
+/usr/lib/python3.10/pathlib.py:1134: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+/usr/lib/python3.10/pathlib.py:1119: in open
+    return self._accessor.open(self, mode, buffering, encoding, errors,
+E   FileNotFoundError: [Errno 2] No such file or directory: '/evidence/ap03-baseline/src/robot_navigation/config/nav2_params_real.yaml'
+=========================== short test summary info ============================
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_straight_door_preserves_body_raster_tracking_and_goal_reserves[0.01-0.68]
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_straight_door_preserves_body_raster_tracking_and_goal_reserves[0.01-0.8]
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_straight_door_preserves_body_raster_tracking_and_goal_reserves[0.02-0.68]
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_straight_door_preserves_body_raster_tracking_and_goal_reserves[0.02-0.8]
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_turn_in_narrow_passage_rejected_but_free_goal_region_beyond_passes
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_unknown_exterior_never_used_as_free_by_rollout_or_proposal[3]
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_unknown_exterior_never_used_as_free_by_rollout_or_proposal[6]
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_known_connected_proposal_is_not_claimed_as_footprint_proof
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_valid_actual_detour_takes_precedence_over_unrelated_shortest_route
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_selection_retains_reachable_target_for_real_nav2_instead_of_banning_shortest
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_controller_rollout_prealigns_to_first_actual_leg_not_chord_through_obstacle
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_subcell_goal_join_does_not_invent_quarter_turn
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_rollout_real_node_rejects_unqualified_prealignment[False-0.02]
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_rollout_real_node_rejects_unqualified_prealignment[True-0.17]
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_simulation_tracking_contract_rejects_different_actual_response_limits[controller_frequency-10.0]
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_simulation_tracking_contract_rejects_different_actual_response_limits[FollowPath.desired_linear_vel-0.2]
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_simulation_tracking_contract_rejects_different_actual_response_limits[FollowPath.rotate_to_heading_angular_vel-0.4]
+FAILED ../evidence/ap03-baseline/src/explore/test/test_metric_motion_geometry.py::test_simulation_tracking_contract_rejects_different_actual_response_limits[FollowPath.max_angular_accel-4.0]
+18 failed, 4 passed in 1.36s

@@ -1,0 +1,10 @@
+{
+  "published": 3280,
+  "withheld_stale_plant": 1,
+  "actual_cpu_affinity": [
+    3
+  ],
+  "separate_process": true,
+  "writes_registers": false,
+  "plant_integration": false
+}

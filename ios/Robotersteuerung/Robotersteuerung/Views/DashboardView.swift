@@ -326,8 +326,9 @@ struct DashboardView: View {
 
                 case .explore:
                     Text(
-                        "Der Roboter kartiert zuerst unbekannte Grenzen und fährt "
-                            + "danach die sicher erreichbare Raumfläche gezielt ab."
+                        controller.exploreStatus?.strategy == "metric_frontier"
+                            ? "Der Roboter erkundet erreichbare Beobachtungsstellen. Metrischer Abschluss bestätigt keine Bodenabdeckung oder Raumsemantik."
+                            : "Der Roboter kartiert zuerst unbekannte Grenzen und fährt danach die sicher erreichbare Raumfläche gezielt ab."
                     )
                     .font(.subheadline)
                     .foregroundStyle(RobotPalette.muted)
@@ -347,13 +348,17 @@ struct DashboardView: View {
                                     : RobotPalette.muted
                             )
                             Spacer()
-                            Text("\(Int((controller.explorationProgress * 100).rounded())) %")
-                                .monospacedDigit()
+                            if controller.exploreStatus?.strategy != "metric_frontier" {
+                                Text("\(Int((controller.explorationProgress * 100).rounded())) %")
+                                    .monospacedDigit()
+                            }
                         }
                         .font(.caption)
 
-                        ProgressView(value: controller.explorationProgress)
-                            .tint(RobotPalette.success)
+                        if controller.exploreStatus?.strategy != "metric_frontier" {
+                            ProgressView(value: controller.explorationProgress)
+                                .tint(RobotPalette.success)
+                        }
 
                         Text(controller.explorationMessage)
                             .font(.caption)
@@ -374,11 +379,21 @@ struct DashboardView: View {
                             }
                             if status.mapReadyToSave == true {
                                 Label(
-                                    "Zielabdeckung erreicht – Karte kann gespeichert werden.",
+                                    status.strategy == "metric_frontier"
+                                        ? "Metrisch abgeschlossen – Karte kann gespeichert werden."
+                                        : "Zielabdeckung erreicht – Karte kann gespeichert werden.",
                                     systemImage: "checkmark.seal.fill"
                                 )
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(RobotPalette.success)
+                            }
+                            if let metric = status.metricExploration {
+                                Text("Ankünfte: \(metric.arrivals ?? 0) · Beobachtungen: \(metric.observations ?? 0) · Sichtgewinn: \(metric.observedAreaM2 ?? 0, specifier: "%.2f") m²")
+                                    .font(.caption)
+                                if metric.partialMapReadyToSave == true && status.mapReadyToSave != true {
+                                    Label("Teilkarte kann gespeichert werden; Erkundung bleibt offen.", systemImage: "square.and.arrow.down")
+                                        .font(.caption)
+                                }
                             }
                         }
                     }

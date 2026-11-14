@@ -1,0 +1,437 @@
+[
+  {
+    "at": 167500.948170782,
+    "outer_state": "running",
+    "phase": "metric_navigation",
+    "message": "start_egress_no_admissible_motion",
+    "metric": {
+      "state": "running",
+      "reason": null,
+      "route_rejection": null,
+      "nav2_plan_rejection": null,
+      "departure_plan_rejection": null,
+      "planning_stop_reason": null,
+      "planning_route_rejection": null,
+      "attempts": 5,
+      "failures": 0
+    },
+    "chain_len": 4,
+    "last_chain": {
+      "task": "metric-task-2",
+      "target": [
+        0.9135349131647723,
+        0.06647289048650883
+      ],
+      "result": "success",
+      "decision": "partially_observed",
+      "stop_reason": null,
+      "child_dispatched": true
+    }
+  },
+  {
+    "at": 167504.958105485,
+    "outer_state": "running",
+    "phase": "metric_replanning",
+    "message": "start_egress_no_admissible_motion",
+    "metric": {
+      "state": "waiting_new_observation",
+      "reason": null,
+      "route_rejection": null,
+      "nav2_plan_rejection": null,
+      "departure_plan_rejection": null,
+      "planning_stop_reason": null,
+      "planning_route_rejection": null,
+      "attempts": 6,
+      "failures": 0
+    },
+    "chain_len": 5,
+    "last_chain": {
+      "task": "metric-task-2",
+      "target": [
+        0.7684550451610568,
+        0.6770192790476892
+      ],
+      "result": "success",
+      "decision": "partially_observed",
+      "stop_reason": null,
+      "child_dispatched": true
+    }
+  },
+  {
+    "at": 167506.954875838,
+    "outer_state": "running",
+    "phase": "metric_prealign",
+    "message": "start_egress_no_admissible_motion",
+    "metric": {
+      "state": "running",
+      "reason": null,
+      "route_rejection": null,
+      "nav2_plan_rejection": null,
+      "departure_plan_rejection": null,
+      "planning_stop_reason": null,
+      "planning_route_rejection": null,
+      "attempts": 6,
+      "failures": 0
+    },
+    "chain_len": 5,
+    "last_chain": {
+      "task": "metric-task-2",
+      "target": [
+        0.7684550451610568,
+        0.6770192790476892
+      ],
+      "result": "success",
+      "decision": "partially_observed",
+      "stop_reason": null,
+      "child_dispatched": true
+    }
+  },
+  {
+    "at": 167534.95595346,
+    "outer_state": "running",
+    "phase": "metric_replanning",
+    "message": "start_egress_no_admissible_motion",
+    "metric": {
+      "state": "waiting_new_observation",
+      "reason": null,
+      "route_rejection": null,
+      "nav2_plan_rejection": null,
+      "departure_plan_rejection": null,
+      "planning_stop_reason": null,
+      "planning_route_rejection": null,
+      "attempts": 7,
+      "failures": 1
+    },
+    "chain_len": 6,
+    "last_chain": {
+      "task": "metric-task-4",
+      "target": [
+        3.050398483825851,
+        0.29820157296277905
+      ],
+      "result": "alignment_failed",
+      "decision": "task_unreached_cause_unproven",
+      "stop_reason": null,
+      "child_dispatched": false
+    }
+  },
+  {
+    "at": 167538.950759581,
+    "outer_state": "running",
+    "phase": "metric_prealign",
+    "message": "start_egress_no_admissible_motion",
+    "metric": {
+      "state": "running",
+      "reason": null,
+      "route_rejection": null,
+      "nav2_plan_rejection": null,
+      "departure_plan_rejection": null,
+      "planning_stop_reason": null,
+      "planning_route_rejection": null,
+      "attempts": 7,
+      "failures": 1
+    },
+    "chain_len": 6,
+    "last_chain": {
+      "task": "metric-task-4",
+      "target": [
+        3.050398483825851,
+        0.29820157296277905
+      ],
+      "result": "alignment_failed",
+      "decision": "task_unreached_cause_unproven",
+      "stop_reason": null,
+      "child_dispatched": false
+    }
+  },
+  {
+    "at": 167539.956496405,
+    "outer_state": "running",
+    "phase": "metric_prealign",
+    "message": "start_egress_no_admissible_motion",
+    "metric": {
+      "state": "running",
+      "reason": null,
+      "route_rejection": "footprint_sweep_invalid",
+      "nav2_plan_rejection": null,
+      "departure_plan_rejection": null,
+      "planning_stop_reason": null,
+      "planning_route_rejection": null,
+      "attempts": 7,
+      "failures": 1
+    },
+    "chain_len": 6,
+    "last_chain": {
+      "task": "metric-task-4",
+      "target": [
+        3.050398483825851,
+        0.29820157296277905
+      ],
+      "result": "alignment_failed",
+      "decision": "task_unreached_cause_unproven",
+      "stop_reason": null,
+      "child_dispatched": false
+    }
+  },
+  {
+    "at": 167540.954923351,
+    "outer_state": "running",
+    "phase": "metric_prealign",
+    "message": "start_egress_no_admissible_motion",
+    "metric": {
+      "state": "running",
+      "reason": null,
+      "route_rejection": "footprint_sweep_invalid",
+      "nav2_plan_rejection": "nav2_plan_timeout_or_stop",
+      "departure_plan_rejection": null,
+      "planning_stop_reason": "route_invalidated",
+      "planning_route_rejection": "footprint_sweep_invalid",
+      "attempts": 7,
+      "failures": 1
+    },
+    "chain_len": 6,
+    "last_chain": {
+      "task": "metric-task-4",
+      "target": [
+        3.050398483825851,
+        0.29820157296277905
+      ],
+      "result": "alignment_failed",
+      "decision": "task_unreached_cause_unproven",
+      "stop_reason": null,
+      "child_dispatched": false
+    }
+  },
+  {
+    "at": 167541.947045569,
+    "outer_state": "running",
+    "phase": "metric_replanning",
+    "message": "start_egress_no_admissible_motion",
+    "metric": {
+      "state": "waiting_new_observation",
+      "reason": null,
+      "route_rejection": "footprint_sweep_invalid",
+      "nav2_plan_rejection": "nav2_plan_timeout_or_stop",
+      "departure_plan_rejection": null,
+      "planning_stop_reason": "route_invalidated",
+      "planning_route_rejection": "footprint_sweep_invalid",
+      "attempts": 8,
+      "failures": 1
+    },
+    "chain_len": 7,
+    "last_chain": {
+      "task": "metric-task-3",
+      "target": [
+        2.474999944679439,
+        0.4949999889358878
+      ],
+      "result": "planning_failed",
+      "decision": "proposal_rejected",
+      "stop_reason": "route_invalidated",
+      "child_dispatched": false
+    }
+  },
+  {
+    "at": 167544.954846215,
+    "outer_state": "running",
+    "phase": "metric_waiting_tasks",
+    "message": "start_egress_no_admissible_motion",
+    "metric": {
+      "state": "waiting",
+      "reason": null,
+      "route_rejection": "footprint_sweep_invalid",
+      "nav2_plan_rejection": "nav2_plan_timeout_or_stop",
+      "departure_plan_rejection": null,
+      "planning_stop_reason": "route_invalidated",
+      "planning_route_rejection": "footprint_sweep_invalid",
+      "attempts": 8,
+      "failures": 1
+    },
+    "chain_len": 7,
+    "last_chain": {
+      "task": "metric-task-3",
+      "target": [
+        2.474999944679439,
+        0.4949999889358878
+      ],
+      "result": "planning_failed",
+      "decision": "proposal_rejected",
+      "stop_reason": "route_invalidated",
+      "child_dispatched": false
+    }
+  },
+  {
+    "at": 167564.95339798,
+    "outer_state": "running",
+    "phase": "metric_prealign",
+    "message": "start_egress_no_admissible_motion",
+    "metric": {
+      "state": "running",
+      "reason": null,
+      "route_rejection": "footprint_sweep_invalid",
+      "nav2_plan_rejection": "nav2_plan_timeout_or_stop",
+      "departure_plan_rejection": null,
+      "planning_stop_reason": "route_invalidated",
+      "planning_route_rejection": "footprint_sweep_invalid",
+      "attempts": 8,
+      "failures": 1
+    },
+    "chain_len": 7,
+    "last_chain": {
+      "task": "metric-task-3",
+      "target": [
+        2.474999944679439,
+        0.4949999889358878
+      ],
+      "result": "planning_failed",
+      "decision": "proposal_rejected",
+      "stop_reason": "route_invalidated",
+      "child_dispatched": false
+    }
+  },
+  {
+    "at": 167593.947203198,
+    "outer_state": "running",
+    "phase": "metric_replanning",
+    "message": "start_egress_no_admissible_motion",
+    "metric": {
+      "state": "waiting_new_observation",
+      "reason": null,
+      "route_rejection": "footprint_sweep_invalid",
+      "nav2_plan_rejection": "nav2_plan_timeout_or_stop",
+      "departure_plan_rejection": null,
+      "planning_stop_reason": "route_invalidated",
+      "planning_route_rejection": "footprint_sweep_invalid",
+      "attempts": 9,
+      "failures": 2
+    },
+    "chain_len": 8,
+    "last_chain": {
+      "task": "metric-task-5",
+      "target": [
+        3.0849999310448766,
+        0.5749999871477485
+      ],
+      "result": "alignment_failed",
+      "decision": "task_unreached_cause_unproven",
+      "stop_reason": null,
+      "child_dispatched": false
+    }
+  },
+  {
+    "at": 167597.957165959,
+    "outer_state": "running",
+    "phase": "metric_prealign",
+    "message": "start_egress_no_admissible_motion",
+    "metric": {
+      "state": "running",
+      "reason": null,
+      "route_rejection": "footprint_sweep_invalid",
+      "nav2_plan_rejection": "nav2_plan_timeout_or_stop",
+      "departure_plan_rejection": null,
+      "planning_stop_reason": "route_invalidated",
+      "planning_route_rejection": "footprint_sweep_invalid",
+      "attempts": 9,
+      "failures": 2
+    },
+    "chain_len": 8,
+    "last_chain": {
+      "task": "metric-task-5",
+      "target": [
+        3.0849999310448766,
+        0.5749999871477485
+      ],
+      "result": "alignment_failed",
+      "decision": "task_unreached_cause_unproven",
+      "stop_reason": null,
+      "child_dispatched": false
+    }
+  },
+  {
+    "at": 167600.960275852,
+    "outer_state": "running",
+    "phase": "metric_prealign",
+    "message": "start_egress_no_admissible_motion",
+    "metric": {
+      "state": "running",
+      "reason": null,
+      "route_rejection": "footprint_sweep_invalid",
+      "nav2_plan_rejection": "nav2_plan_timeout_or_stop",
+      "departure_plan_rejection": "footprint_sweep_invalid",
+      "planning_stop_reason": "route_invalidated",
+      "planning_route_rejection": "footprint_sweep_invalid",
+      "attempts": 9,
+      "failures": 2
+    },
+    "chain_len": 8,
+    "last_chain": {
+      "task": "metric-task-5",
+      "target": [
+        3.0849999310448766,
+        0.5749999871477485
+      ],
+      "result": "alignment_failed",
+      "decision": "task_unreached_cause_unproven",
+      "stop_reason": null,
+      "child_dispatched": false
+    }
+  },
+  {
+    "at": 167606.949937649,
+    "outer_state": "running",
+    "phase": "metric_navigation",
+    "message": "start_egress_no_admissible_motion",
+    "metric": {
+      "state": "running",
+      "reason": null,
+      "route_rejection": "footprint_sweep_invalid",
+      "nav2_plan_rejection": "nav2_plan_timeout_or_stop",
+      "departure_plan_rejection": "footprint_sweep_invalid",
+      "planning_stop_reason": "route_invalidated",
+      "planning_route_rejection": "footprint_sweep_invalid",
+      "attempts": 9,
+      "failures": 2
+    },
+    "chain_len": 8,
+    "last_chain": {
+      "task": "metric-task-5",
+      "target": [
+        3.0849999310448766,
+        0.5749999871477485
+      ],
+      "result": "alignment_failed",
+      "decision": "task_unreached_cause_unproven",
+      "stop_reason": null,
+      "child_dispatched": false
+    }
+  },
+  {
+    "at": 167609.87471121,
+    "outer_state": "partial",
+    "phase": "partial",
+    "message": "metric_frontier:blocked:failure_budget_exhausted",
+    "metric": {
+      "state": "blocked",
+      "reason": "failure_budget_exhausted",
+      "route_rejection": "footprint_sweep_invalid",
+      "nav2_plan_rejection": "nav2_plan_timeout_or_stop",
+      "departure_plan_rejection": "footprint_sweep_invalid",
+      "planning_stop_reason": "route_invalidated",
+      "planning_route_rejection": "footprint_sweep_invalid",
+      "attempts": 10,
+      "failures": 3
+    },
+    "chain_len": 9,
+    "last_chain": {
+      "task": "metric-task-3",
+      "target": [
+        2.4849999444559216,
+        0.48499998915940523
+      ],
+      "result": "canceled",
+      "decision": "route_invalidated",
+      "stop_reason": "route_invalidated",
+      "child_dispatched": true
+    }
+  }
+]

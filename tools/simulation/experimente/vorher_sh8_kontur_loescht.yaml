@@ -1,0 +1,9 @@
+# Vergleichsstand SH-8 (13.11.2026): die lokale Karte loescht wie bis dahin alles
+# unter der gepolsterten Kontur. Nur fuer den Vorher/Nachher-Vergleich zu KM-1 B.
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      obstacle_layer:
+        footprint_clearing_enabled: True
+      lidar_layer:
+        footprint_clearing_enabled: True

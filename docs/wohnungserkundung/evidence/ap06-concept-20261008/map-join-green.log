@@ -1,0 +1,2545 @@
+FFFFFFFFFFFFFFFF..FFFFFF..FF....FF......FF.............................. [ 39%]
+.FFF.........................FFF........................................ [ 79%]
+......................................                                   [100%]
+=================================== FAILURES ===================================
+_ test_active_old_join_retains_original_identity_and_only_withdraws[gain-False] _
+
+change = 'gain', referenced = False
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce4447fcd0>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('change', ['gain', 'obstacle', 'unknown', 'growth'])
+    def test_active_old_join_retains_original_identity_and_only_withdraws(change, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if change in ('obstacle', 'unknown'):
+            newer.data[20*100+11] = 100 if change == 'obstacle' else -1
+        if change == 'growth':
+            newer.info.width += 1; newer.info.origin.position.x -= grid.info.resolution
+            newer.data = np.pad(np.asarray(newer.data).reshape(100,100),
+                                ((0,0),(1,0)),constant_values=-1).ravel().tolist()
+        raw_bytes = list(grid.data)
+        node._on_map(newer)
+        assert not node._metric_matches_status(node._metric_raw[1])
+        current = node._metric_inputs(active=True)
+        assert current[0] is grid and list(grid.data) == raw_bytes
+        assert current[1].fingerprint == before[1].fingerprint
+        assert current[1].source_stamp_ns == before[1].source_stamp_ns
+        assert current[1].map_revision == before[1].map_revision
+        assert not current[3][25,40]  # newer unknown-to-free is NOT granted
+        assert not np.any(current[3] & ~before[3])
+        if change in ('obstacle', 'unknown'):
+            assert not current[3][20,11]
+            assert node._metric_waypoints_clear(current, ((.05,.05),(.65,.05)), 0.) is None
+        else:
+            assert node._metric_waypoints_clear(current, ((.05,.05),(.65,.05)), 0.) is not None
+        # Terminal observation/selection still requires the genuine exact pair.
+        node._wohnungserkundung_active_child = None
+        with pytest.raises(ValueError, match='map_status_join_pending'):
+>           node._metric_inputs(active=True)
+
+test/test_metric_pending_withdrawal.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:616: in _metric_inputs_locked
+    reject_join('no_active_child')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'no_active_child'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_active_old_join_retains_original_identity_and_only_withdraws[gain-True] _
+
+change = 'gain', referenced = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce44431b70>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('change', ['gain', 'obstacle', 'unknown', 'growth'])
+    def test_active_old_join_retains_original_identity_and_only_withdraws(change, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if change in ('obstacle', 'unknown'):
+            newer.data[20*100+11] = 100 if change == 'obstacle' else -1
+        if change == 'growth':
+            newer.info.width += 1; newer.info.origin.position.x -= grid.info.resolution
+            newer.data = np.pad(np.asarray(newer.data).reshape(100,100),
+                                ((0,0),(1,0)),constant_values=-1).ravel().tolist()
+        raw_bytes = list(grid.data)
+        node._on_map(newer)
+        assert not node._metric_matches_status(node._metric_raw[1])
+        current = node._metric_inputs(active=True)
+        assert current[0] is grid and list(grid.data) == raw_bytes
+        assert current[1].fingerprint == before[1].fingerprint
+        assert current[1].source_stamp_ns == before[1].source_stamp_ns
+        assert current[1].map_revision == before[1].map_revision
+        assert not current[3][25,40]  # newer unknown-to-free is NOT granted
+        assert not np.any(current[3] & ~before[3])
+        if change in ('obstacle', 'unknown'):
+            assert not current[3][20,11]
+            assert node._metric_waypoints_clear(current, ((.05,.05),(.65,.05)), 0.) is None
+        else:
+            assert node._metric_waypoints_clear(current, ((.05,.05),(.65,.05)), 0.) is not None
+        # Terminal observation/selection still requires the genuine exact pair.
+        node._wohnungserkundung_active_child = None
+        with pytest.raises(ValueError, match='map_status_join_pending'):
+>           node._metric_inputs(active=True)
+
+test/test_metric_pending_withdrawal.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:616: in _metric_inputs_locked
+    reject_join('no_active_child')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'no_active_child'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_active_old_join_retains_original_identity_and_only_withdraws[obstacle-False] _
+
+change = 'obstacle', referenced = False
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce442aee00>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('change', ['gain', 'obstacle', 'unknown', 'growth'])
+    def test_active_old_join_retains_original_identity_and_only_withdraws(change, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if change in ('obstacle', 'unknown'):
+            newer.data[20*100+11] = 100 if change == 'obstacle' else -1
+        if change == 'growth':
+            newer.info.width += 1; newer.info.origin.position.x -= grid.info.resolution
+            newer.data = np.pad(np.asarray(newer.data).reshape(100,100),
+                                ((0,0),(1,0)),constant_values=-1).ravel().tolist()
+        raw_bytes = list(grid.data)
+        node._on_map(newer)
+        assert not node._metric_matches_status(node._metric_raw[1])
+        current = node._metric_inputs(active=True)
+        assert current[0] is grid and list(grid.data) == raw_bytes
+        assert current[1].fingerprint == before[1].fingerprint
+        assert current[1].source_stamp_ns == before[1].source_stamp_ns
+        assert current[1].map_revision == before[1].map_revision
+        assert not current[3][25,40]  # newer unknown-to-free is NOT granted
+        assert not np.any(current[3] & ~before[3])
+        if change in ('obstacle', 'unknown'):
+            assert not current[3][20,11]
+            assert node._metric_waypoints_clear(current, ((.05,.05),(.65,.05)), 0.) is None
+        else:
+            assert node._metric_waypoints_clear(current, ((.05,.05),(.65,.05)), 0.) is not None
+        # Terminal observation/selection still requires the genuine exact pair.
+        node._wohnungserkundung_active_child = None
+        with pytest.raises(ValueError, match='map_status_join_pending'):
+>           node._metric_inputs(active=True)
+
+test/test_metric_pending_withdrawal.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:616: in _metric_inputs_locked
+    reject_join('no_active_child')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'no_active_child'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_active_old_join_retains_original_identity_and_only_withdraws[obstacle-True] _
+
+change = 'obstacle', referenced = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce442bf5e0>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('change', ['gain', 'obstacle', 'unknown', 'growth'])
+    def test_active_old_join_retains_original_identity_and_only_withdraws(change, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if change in ('obstacle', 'unknown'):
+            newer.data[20*100+11] = 100 if change == 'obstacle' else -1
+        if change == 'growth':
+            newer.info.width += 1; newer.info.origin.position.x -= grid.info.resolution
+            newer.data = np.pad(np.asarray(newer.data).reshape(100,100),
+                                ((0,0),(1,0)),constant_values=-1).ravel().tolist()
+        raw_bytes = list(grid.data)
+        node._on_map(newer)
+        assert not node._metric_matches_status(node._metric_raw[1])
+        current = node._metric_inputs(active=True)
+        assert current[0] is grid and list(grid.data) == raw_bytes
+        assert current[1].fingerprint == before[1].fingerprint
+        assert current[1].source_stamp_ns == before[1].source_stamp_ns
+        assert current[1].map_revision == before[1].map_revision
+        assert not current[3][25,40]  # newer unknown-to-free is NOT granted
+        assert not np.any(current[3] & ~before[3])
+        if change in ('obstacle', 'unknown'):
+            assert not current[3][20,11]
+            assert node._metric_waypoints_clear(current, ((.05,.05),(.65,.05)), 0.) is None
+        else:
+            assert node._metric_waypoints_clear(current, ((.05,.05),(.65,.05)), 0.) is not None
+        # Terminal observation/selection still requires the genuine exact pair.
+        node._wohnungserkundung_active_child = None
+        with pytest.raises(ValueError, match='map_status_join_pending'):
+>           node._metric_inputs(active=True)
+
+test/test_metric_pending_withdrawal.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:616: in _metric_inputs_locked
+    reject_join('no_active_child')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'no_active_child'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_active_old_join_retains_original_identity_and_only_withdraws[unknown-False] _
+
+change = 'unknown', referenced = False
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce44303910>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('change', ['gain', 'obstacle', 'unknown', 'growth'])
+    def test_active_old_join_retains_original_identity_and_only_withdraws(change, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if change in ('obstacle', 'unknown'):
+            newer.data[20*100+11] = 100 if change == 'obstacle' else -1
+        if change == 'growth':
+            newer.info.width += 1; newer.info.origin.position.x -= grid.info.resolution
+            newer.data = np.pad(np.asarray(newer.data).reshape(100,100),
+                                ((0,0),(1,0)),constant_values=-1).ravel().tolist()
+        raw_bytes = list(grid.data)
+        node._on_map(newer)
+        assert not node._metric_matches_status(node._metric_raw[1])
+        current = node._metric_inputs(active=True)
+        assert current[0] is grid and list(grid.data) == raw_bytes
+        assert current[1].fingerprint == before[1].fingerprint
+        assert current[1].source_stamp_ns == before[1].source_stamp_ns
+        assert current[1].map_revision == before[1].map_revision
+        assert not current[3][25,40]  # newer unknown-to-free is NOT granted
+        assert not np.any(current[3] & ~before[3])
+        if change in ('obstacle', 'unknown'):
+            assert not current[3][20,11]
+            assert node._metric_waypoints_clear(current, ((.05,.05),(.65,.05)), 0.) is None
+        else:
+            assert node._metric_waypoints_clear(current, ((.05,.05),(.65,.05)), 0.) is not None
+        # Terminal observation/selection still requires the genuine exact pair.
+        node._wohnungserkundung_active_child = None
+        with pytest.raises(ValueError, match='map_status_join_pending'):
+>           node._metric_inputs(active=True)
+
+test/test_metric_pending_withdrawal.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:616: in _metric_inputs_locked
+    reject_join('no_active_child')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'no_active_child'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_active_old_join_retains_original_identity_and_only_withdraws[unknown-True] _
+
+change = 'unknown', referenced = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce442db8b0>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('change', ['gain', 'obstacle', 'unknown', 'growth'])
+    def test_active_old_join_retains_original_identity_and_only_withdraws(change, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if change in ('obstacle', 'unknown'):
+            newer.data[20*100+11] = 100 if change == 'obstacle' else -1
+        if change == 'growth':
+            newer.info.width += 1; newer.info.origin.position.x -= grid.info.resolution
+            newer.data = np.pad(np.asarray(newer.data).reshape(100,100),
+                                ((0,0),(1,0)),constant_values=-1).ravel().tolist()
+        raw_bytes = list(grid.data)
+        node._on_map(newer)
+        assert not node._metric_matches_status(node._metric_raw[1])
+        current = node._metric_inputs(active=True)
+        assert current[0] is grid and list(grid.data) == raw_bytes
+        assert current[1].fingerprint == before[1].fingerprint
+        assert current[1].source_stamp_ns == before[1].source_stamp_ns
+        assert current[1].map_revision == before[1].map_revision
+        assert not current[3][25,40]  # newer unknown-to-free is NOT granted
+        assert not np.any(current[3] & ~before[3])
+        if change in ('obstacle', 'unknown'):
+            assert not current[3][20,11]
+            assert node._metric_waypoints_clear(current, ((.05,.05),(.65,.05)), 0.) is None
+        else:
+            assert node._metric_waypoints_clear(current, ((.05,.05),(.65,.05)), 0.) is not None
+        # Terminal observation/selection still requires the genuine exact pair.
+        node._wohnungserkundung_active_child = None
+        with pytest.raises(ValueError, match='map_status_join_pending'):
+>           node._metric_inputs(active=True)
+
+test/test_metric_pending_withdrawal.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:616: in _metric_inputs_locked
+    reject_join('no_active_child')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'no_active_child'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_active_old_join_retains_original_identity_and_only_withdraws[growth-False] _
+
+change = 'growth', referenced = False
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce4448ba60>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('change', ['gain', 'obstacle', 'unknown', 'growth'])
+    def test_active_old_join_retains_original_identity_and_only_withdraws(change, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if change in ('obstacle', 'unknown'):
+            newer.data[20*100+11] = 100 if change == 'obstacle' else -1
+        if change == 'growth':
+            newer.info.width += 1; newer.info.origin.position.x -= grid.info.resolution
+            newer.data = np.pad(np.asarray(newer.data).reshape(100,100),
+                                ((0,0),(1,0)),constant_values=-1).ravel().tolist()
+        raw_bytes = list(grid.data)
+        node._on_map(newer)
+        assert not node._metric_matches_status(node._metric_raw[1])
+        current = node._metric_inputs(active=True)
+        assert current[0] is grid and list(grid.data) == raw_bytes
+        assert current[1].fingerprint == before[1].fingerprint
+        assert current[1].source_stamp_ns == before[1].source_stamp_ns
+        assert current[1].map_revision == before[1].map_revision
+        assert not current[3][25,40]  # newer unknown-to-free is NOT granted
+        assert not np.any(current[3] & ~before[3])
+        if change in ('obstacle', 'unknown'):
+            assert not current[3][20,11]
+            assert node._metric_waypoints_clear(current, ((.05,.05),(.65,.05)), 0.) is None
+        else:
+            assert node._metric_waypoints_clear(current, ((.05,.05),(.65,.05)), 0.) is not None
+        # Terminal observation/selection still requires the genuine exact pair.
+        node._wohnungserkundung_active_child = None
+        with pytest.raises(ValueError, match='map_status_join_pending'):
+>           node._metric_inputs(active=True)
+
+test/test_metric_pending_withdrawal.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:616: in _metric_inputs_locked
+    reject_join('no_active_child')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'no_active_child'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_active_old_join_retains_original_identity_and_only_withdraws[growth-True] _
+
+change = 'growth', referenced = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce44187cd0>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('change', ['gain', 'obstacle', 'unknown', 'growth'])
+    def test_active_old_join_retains_original_identity_and_only_withdraws(change, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if change in ('obstacle', 'unknown'):
+            newer.data[20*100+11] = 100 if change == 'obstacle' else -1
+        if change == 'growth':
+            newer.info.width += 1; newer.info.origin.position.x -= grid.info.resolution
+            newer.data = np.pad(np.asarray(newer.data).reshape(100,100),
+                                ((0,0),(1,0)),constant_values=-1).ravel().tolist()
+        raw_bytes = list(grid.data)
+        node._on_map(newer)
+        assert not node._metric_matches_status(node._metric_raw[1])
+        current = node._metric_inputs(active=True)
+        assert current[0] is grid and list(grid.data) == raw_bytes
+        assert current[1].fingerprint == before[1].fingerprint
+        assert current[1].source_stamp_ns == before[1].source_stamp_ns
+        assert current[1].map_revision == before[1].map_revision
+        assert not current[3][25,40]  # newer unknown-to-free is NOT granted
+        assert not np.any(current[3] & ~before[3])
+        if change in ('obstacle', 'unknown'):
+            assert not current[3][20,11]
+            assert node._metric_waypoints_clear(current, ((.05,.05),(.65,.05)), 0.) is None
+        else:
+            assert node._metric_waypoints_clear(current, ((.05,.05),(.65,.05)), 0.) is not None
+        # Terminal observation/selection still requires the genuine exact pair.
+        node._wohnungserkundung_active_child = None
+        with pytest.raises(ValueError, match='map_status_join_pending'):
+>           node._metric_inputs(active=True)
+
+test/test_metric_pending_withdrawal.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:616: in _metric_inputs_locked
+    reject_join('no_active_child')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'no_active_child'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_pending_withdrawal_never_heals_original_binding_or_source_guards[no_child-False] _
+
+fault = 'no_child', referenced = False
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce4a602140>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['no_child', 'selection', 'private', 'deadline',
+        'future', 'fractional', 'status_ahead', 'resolution', 'epoch', 'conservative',
+        'old_raw_age', 'old_status_age'])
+    def test_pending_withdrawal_never_heals_original_binding_or_source_guards(fault, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if fault == 'future': newer.header.stamp.sec = 200
+        if fault == 'fractional': newer.info.origin.position.x += .03
+        if fault == 'resolution': newer.info.resolution = .11
+        node._on_map(newer)
+        if fault == 'no_child': node._wohnungserkundung_active_child = None
+        if fault == 'private':
+            node._metric_egress = (StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(100,100), before[3], np.ones((100,100),bool),
+                before[2], node._metric_bounds, node._world_to_grid),)
+            assert node._metric_egress[0].valid
+        if fault == 'deadline': node._metric_pending_since = 8.
+        if fault == 'status_ahead':
+            accepted = copy.deepcopy(newer); accepted.header.stamp.nanosec += 10_000_000
+            accepted.data[-1] = 100
+            node._on_metric_map_status(status(accepted, accepted=3, observed=3, when=100.03))
+        if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+        if fault == 'conservative': node._metric_path_validation = 'conservative'
+        if fault in ('old_raw_age', 'old_status_age'):
+            raw, correlation, at = node._metric_joined
+            if fault == 'old_raw_age': raw = (*raw[:2], 4.)
+            else: at = 4.
+            node._metric_joined = (raw, correlation, at)
+        with pytest.raises(ValueError):
+>           node._metric_inputs(active=fault != 'selection')
+
+test/test_metric_pending_withdrawal.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:616: in _metric_inputs_locked
+    reject_join('no_active_child')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'no_active_child'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_pending_withdrawal_never_heals_original_binding_or_source_guards[no_child-True] _
+
+fault = 'no_child', referenced = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce443a1930>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['no_child', 'selection', 'private', 'deadline',
+        'future', 'fractional', 'status_ahead', 'resolution', 'epoch', 'conservative',
+        'old_raw_age', 'old_status_age'])
+    def test_pending_withdrawal_never_heals_original_binding_or_source_guards(fault, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if fault == 'future': newer.header.stamp.sec = 200
+        if fault == 'fractional': newer.info.origin.position.x += .03
+        if fault == 'resolution': newer.info.resolution = .11
+        node._on_map(newer)
+        if fault == 'no_child': node._wohnungserkundung_active_child = None
+        if fault == 'private':
+            node._metric_egress = (StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(100,100), before[3], np.ones((100,100),bool),
+                before[2], node._metric_bounds, node._world_to_grid),)
+            assert node._metric_egress[0].valid
+        if fault == 'deadline': node._metric_pending_since = 8.
+        if fault == 'status_ahead':
+            accepted = copy.deepcopy(newer); accepted.header.stamp.nanosec += 10_000_000
+            accepted.data[-1] = 100
+            node._on_metric_map_status(status(accepted, accepted=3, observed=3, when=100.03))
+        if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+        if fault == 'conservative': node._metric_path_validation = 'conservative'
+        if fault in ('old_raw_age', 'old_status_age'):
+            raw, correlation, at = node._metric_joined
+            if fault == 'old_raw_age': raw = (*raw[:2], 4.)
+            else: at = 4.
+            node._metric_joined = (raw, correlation, at)
+        with pytest.raises(ValueError):
+>           node._metric_inputs(active=fault != 'selection')
+
+test/test_metric_pending_withdrawal.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:616: in _metric_inputs_locked
+    reject_join('no_active_child')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'no_active_child'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_pending_withdrawal_never_heals_original_binding_or_source_guards[selection-False] _
+
+fault = 'selection', referenced = False
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce442ac340>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['no_child', 'selection', 'private', 'deadline',
+        'future', 'fractional', 'status_ahead', 'resolution', 'epoch', 'conservative',
+        'old_raw_age', 'old_status_age'])
+    def test_pending_withdrawal_never_heals_original_binding_or_source_guards(fault, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if fault == 'future': newer.header.stamp.sec = 200
+        if fault == 'fractional': newer.info.origin.position.x += .03
+        if fault == 'resolution': newer.info.resolution = .11
+        node._on_map(newer)
+        if fault == 'no_child': node._wohnungserkundung_active_child = None
+        if fault == 'private':
+            node._metric_egress = (StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(100,100), before[3], np.ones((100,100),bool),
+                before[2], node._metric_bounds, node._world_to_grid),)
+            assert node._metric_egress[0].valid
+        if fault == 'deadline': node._metric_pending_since = 8.
+        if fault == 'status_ahead':
+            accepted = copy.deepcopy(newer); accepted.header.stamp.nanosec += 10_000_000
+            accepted.data[-1] = 100
+            node._on_metric_map_status(status(accepted, accepted=3, observed=3, when=100.03))
+        if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+        if fault == 'conservative': node._metric_path_validation = 'conservative'
+        if fault in ('old_raw_age', 'old_status_age'):
+            raw, correlation, at = node._metric_joined
+            if fault == 'old_raw_age': raw = (*raw[:2], 4.)
+            else: at = 4.
+            node._metric_joined = (raw, correlation, at)
+        with pytest.raises(ValueError):
+>           node._metric_inputs(active=fault != 'selection')
+
+test/test_metric_pending_withdrawal.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:605: in _metric_inputs_locked
+    reject_join('not_active')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'not_active'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_pending_withdrawal_never_heals_original_binding_or_source_guards[selection-True] _
+
+fault = 'selection', referenced = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce44302890>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['no_child', 'selection', 'private', 'deadline',
+        'future', 'fractional', 'status_ahead', 'resolution', 'epoch', 'conservative',
+        'old_raw_age', 'old_status_age'])
+    def test_pending_withdrawal_never_heals_original_binding_or_source_guards(fault, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if fault == 'future': newer.header.stamp.sec = 200
+        if fault == 'fractional': newer.info.origin.position.x += .03
+        if fault == 'resolution': newer.info.resolution = .11
+        node._on_map(newer)
+        if fault == 'no_child': node._wohnungserkundung_active_child = None
+        if fault == 'private':
+            node._metric_egress = (StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(100,100), before[3], np.ones((100,100),bool),
+                before[2], node._metric_bounds, node._world_to_grid),)
+            assert node._metric_egress[0].valid
+        if fault == 'deadline': node._metric_pending_since = 8.
+        if fault == 'status_ahead':
+            accepted = copy.deepcopy(newer); accepted.header.stamp.nanosec += 10_000_000
+            accepted.data[-1] = 100
+            node._on_metric_map_status(status(accepted, accepted=3, observed=3, when=100.03))
+        if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+        if fault == 'conservative': node._metric_path_validation = 'conservative'
+        if fault in ('old_raw_age', 'old_status_age'):
+            raw, correlation, at = node._metric_joined
+            if fault == 'old_raw_age': raw = (*raw[:2], 4.)
+            else: at = 4.
+            node._metric_joined = (raw, correlation, at)
+        with pytest.raises(ValueError):
+>           node._metric_inputs(active=fault != 'selection')
+
+test/test_metric_pending_withdrawal.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:605: in _metric_inputs_locked
+    reject_join('not_active')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'not_active'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_pending_withdrawal_never_heals_original_binding_or_source_guards[private-False] _
+
+fault = 'private', referenced = False
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce443e21d0>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['no_child', 'selection', 'private', 'deadline',
+        'future', 'fractional', 'status_ahead', 'resolution', 'epoch', 'conservative',
+        'old_raw_age', 'old_status_age'])
+    def test_pending_withdrawal_never_heals_original_binding_or_source_guards(fault, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if fault == 'future': newer.header.stamp.sec = 200
+        if fault == 'fractional': newer.info.origin.position.x += .03
+        if fault == 'resolution': newer.info.resolution = .11
+        node._on_map(newer)
+        if fault == 'no_child': node._wohnungserkundung_active_child = None
+        if fault == 'private':
+            node._metric_egress = (StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(100,100), before[3], np.ones((100,100),bool),
+                before[2], node._metric_bounds, node._world_to_grid),)
+            assert node._metric_egress[0].valid
+        if fault == 'deadline': node._metric_pending_since = 8.
+        if fault == 'status_ahead':
+            accepted = copy.deepcopy(newer); accepted.header.stamp.nanosec += 10_000_000
+            accepted.data[-1] = 100
+            node._on_metric_map_status(status(accepted, accepted=3, observed=3, when=100.03))
+        if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+        if fault == 'conservative': node._metric_path_validation = 'conservative'
+        if fault in ('old_raw_age', 'old_status_age'):
+            raw, correlation, at = node._metric_joined
+            if fault == 'old_raw_age': raw = (*raw[:2], 4.)
+            else: at = 4.
+            node._metric_joined = (raw, correlation, at)
+        with pytest.raises(ValueError):
+>           node._metric_inputs(active=fault != 'selection')
+
+test/test_metric_pending_withdrawal.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:618: in _metric_inputs_locked
+    reject_join('private_permit_remaining')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'private_permit_remaining'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_pending_withdrawal_never_heals_original_binding_or_source_guards[private-True] _
+
+fault = 'private', referenced = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce4424e7d0>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['no_child', 'selection', 'private', 'deadline',
+        'future', 'fractional', 'status_ahead', 'resolution', 'epoch', 'conservative',
+        'old_raw_age', 'old_status_age'])
+    def test_pending_withdrawal_never_heals_original_binding_or_source_guards(fault, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if fault == 'future': newer.header.stamp.sec = 200
+        if fault == 'fractional': newer.info.origin.position.x += .03
+        if fault == 'resolution': newer.info.resolution = .11
+        node._on_map(newer)
+        if fault == 'no_child': node._wohnungserkundung_active_child = None
+        if fault == 'private':
+            node._metric_egress = (StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(100,100), before[3], np.ones((100,100),bool),
+                before[2], node._metric_bounds, node._world_to_grid),)
+            assert node._metric_egress[0].valid
+        if fault == 'deadline': node._metric_pending_since = 8.
+        if fault == 'status_ahead':
+            accepted = copy.deepcopy(newer); accepted.header.stamp.nanosec += 10_000_000
+            accepted.data[-1] = 100
+            node._on_metric_map_status(status(accepted, accepted=3, observed=3, when=100.03))
+        if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+        if fault == 'conservative': node._metric_path_validation = 'conservative'
+        if fault in ('old_raw_age', 'old_status_age'):
+            raw, correlation, at = node._metric_joined
+            if fault == 'old_raw_age': raw = (*raw[:2], 4.)
+            else: at = 4.
+            node._metric_joined = (raw, correlation, at)
+        with pytest.raises(ValueError):
+>           node._metric_inputs(active=fault != 'selection')
+
+test/test_metric_pending_withdrawal.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:618: in _metric_inputs_locked
+    reject_join('private_permit_remaining')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'private_permit_remaining'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_pending_withdrawal_never_heals_original_binding_or_source_guards[deadline-False] _
+
+fault = 'deadline', referenced = False
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce4448ae90>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['no_child', 'selection', 'private', 'deadline',
+        'future', 'fractional', 'status_ahead', 'resolution', 'epoch', 'conservative',
+        'old_raw_age', 'old_status_age'])
+    def test_pending_withdrawal_never_heals_original_binding_or_source_guards(fault, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if fault == 'future': newer.header.stamp.sec = 200
+        if fault == 'fractional': newer.info.origin.position.x += .03
+        if fault == 'resolution': newer.info.resolution = .11
+        node._on_map(newer)
+        if fault == 'no_child': node._wohnungserkundung_active_child = None
+        if fault == 'private':
+            node._metric_egress = (StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(100,100), before[3], np.ones((100,100),bool),
+                before[2], node._metric_bounds, node._world_to_grid),)
+            assert node._metric_egress[0].valid
+        if fault == 'deadline': node._metric_pending_since = 8.
+        if fault == 'status_ahead':
+            accepted = copy.deepcopy(newer); accepted.header.stamp.nanosec += 10_000_000
+            accepted.data[-1] = 100
+            node._on_metric_map_status(status(accepted, accepted=3, observed=3, when=100.03))
+        if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+        if fault == 'conservative': node._metric_path_validation = 'conservative'
+        if fault in ('old_raw_age', 'old_status_age'):
+            raw, correlation, at = node._metric_joined
+            if fault == 'old_raw_age': raw = (*raw[:2], 4.)
+            else: at = 4.
+            node._metric_joined = (raw, correlation, at)
+        with pytest.raises(ValueError):
+>           node._metric_inputs(active=fault != 'selection')
+
+test/test_metric_pending_withdrawal.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:607: in _metric_inputs_locked
+    reject_join('pending_missing_or_expired')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'pending_missing_or_expired'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_pending_withdrawal_never_heals_original_binding_or_source_guards[deadline-True] _
+
+fault = 'deadline', referenced = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce44112800>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['no_child', 'selection', 'private', 'deadline',
+        'future', 'fractional', 'status_ahead', 'resolution', 'epoch', 'conservative',
+        'old_raw_age', 'old_status_age'])
+    def test_pending_withdrawal_never_heals_original_binding_or_source_guards(fault, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if fault == 'future': newer.header.stamp.sec = 200
+        if fault == 'fractional': newer.info.origin.position.x += .03
+        if fault == 'resolution': newer.info.resolution = .11
+        node._on_map(newer)
+        if fault == 'no_child': node._wohnungserkundung_active_child = None
+        if fault == 'private':
+            node._metric_egress = (StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(100,100), before[3], np.ones((100,100),bool),
+                before[2], node._metric_bounds, node._world_to_grid),)
+            assert node._metric_egress[0].valid
+        if fault == 'deadline': node._metric_pending_since = 8.
+        if fault == 'status_ahead':
+            accepted = copy.deepcopy(newer); accepted.header.stamp.nanosec += 10_000_000
+            accepted.data[-1] = 100
+            node._on_metric_map_status(status(accepted, accepted=3, observed=3, when=100.03))
+        if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+        if fault == 'conservative': node._metric_path_validation = 'conservative'
+        if fault in ('old_raw_age', 'old_status_age'):
+            raw, correlation, at = node._metric_joined
+            if fault == 'old_raw_age': raw = (*raw[:2], 4.)
+            else: at = 4.
+            node._metric_joined = (raw, correlation, at)
+        with pytest.raises(ValueError):
+>           node._metric_inputs(active=fault != 'selection')
+
+test/test_metric_pending_withdrawal.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:607: in _metric_inputs_locked
+    reject_join('pending_missing_or_expired')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'pending_missing_or_expired'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_pending_withdrawal_never_heals_original_binding_or_source_guards[fractional-False] _
+
+self = <explore.explore_node.ExploreNode object at 0x7fce4424eec0>
+active = True
+
+    def _metric_inputs_locked(self, active=False):
+        with self._metric_lock:
+            fault = self._metric_fault
+            raw, c, scope = self._metric_raw, self._metric_correlation, self._metric_scope
+            at, pending = self._metric_status_at, self._metric_pending_since
+        now = time.monotonic()
+        if fault:
+            raise ValueError(fault)
+        if raw is None or c is None or scope is None:
+            raise ValueError('map_scope_not_joined')
+        if not self._metric_resume_localization_ready():
+            raise ValueError('resume_localization_unconfirmed')
+        withdrawal = None
+        if not self._metric_matches_status(raw[1]):
+            joined = getattr(self, '_metric_joined', None)
+            evidence = getattr(self, '_metric_egress', None) or ()
+            # Validity is not private authority: a referenced capture can be
+            # valid and empty from the first fully observed body onward. Only
+            # its completely empty fixed, retained and projected permits can
+            # join the existing public-only withdrawal path. Legacy evidence
+            # and even temporarily unprojectable private remnants still wait.
+            private = any(e.valid and not (isinstance(e, ReferencedStartEgress)
+                and not e.fixed.unknown.any() and e.retained_region.is_empty
+                and not e.unknown.any()) for e in evidence)
+            def reject_join(branch):
+                def identity(source):
+                    return dict(fingerprint=source.fingerprint,
+                                source_stamp_ns=source.source_stamp_ns)
+                self._metric_status['map_join_rejection'] = dict(
+                    branch=branch, checked_at=now,
+                    pending_age_s=None if pending is None else now-pending,
+                    active=bool(active), active_child=getattr(self,
+                        '_wohnungserkundung_active_child', None) is not None,
+                    private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+                    joined_raw=None if joined is None else identity(joined[0][1]),
+                    joined_status=None if joined is None else identity(joined[1]),
+                    context_matches_joined=None if joined is None else c.context == joined[1].context,
+                    egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                        projected_cells=int(e.unknown.sum()),
+                        retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                        retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                            if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+                raise ValueError('map_status_join_pending')
+            if not active:
+                reject_join('not_active')
+            if pending is None or now-pending > 1.25:
+                reject_join('pending_missing_or_expired')
+            if joined is None:
+                reject_join('joined_missing')
+            if c.fingerprint != joined[1].fingerprint or c.context != joined[1].context:
+                reject_join('status_binding_changed')
+            if raw[1].fingerprint != joined[0][1].fingerprint:
+                if getattr(self, '_metric_path_validation', 'conservative') != 'rpp_rollout':
+                    reject_join('controller_not_qualified')
+                if getattr(self, '_wohnungserkundung_active_child', None) is None:
+                    reject_join('no_active_child')
+                if private:
+                    reject_join('private_permit_remaining')
+                latest_age = (self.get_clock().now().nanoseconds-raw[1].source_stamp_ns)/1e9
+                if not 0 <= now-raw[2] <= self._map_timeout_s or not 0 <= latest_age <= self._map_timeout_s:
+                    raise ValueError('raw_map_stamp_stale')
+                try:
+>                   withdrawal = self._metric_public_withdrawal_mask(joined[0][0],raw[0])
+
+explore/metric_frontier_runtime.py:623: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fce4424eec0>
+previous = nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=10000000), fr..., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+current = nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=20000000), fr..., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+
+    def _metric_public_withdrawal_mask(self, previous, current):
+        """Project only current FREE onto an old exact grid, without adding cells."""
+        old, new = previous.info, current.info
+        a, b = self._metric_grid_values(previous)['origin'], self._metric_grid_values(current)['origin']
+        if (previous.header.frame_id != current.header.frame_id
+                or old.resolution != new.resolution or a[2:] != b[2:]):
+            raise ValueError('map_status_join_pending')
+        yaw = math.atan2(2*a[6]*a[5], 1-2*a[5]**2)
+        dx, dy = a[0]-b[0], a[1]-b[1]
+        offsets = ((math.cos(yaw)*dx+math.sin(yaw)*dy)/old.resolution,
+                   (-math.sin(yaw)*dx+math.cos(yaw)*dy)/old.resolution)
+        dc, dr = (round(v) for v in offsets)
+        if max(abs(offsets[0]-dc), abs(offsets[1]-dr)) > 1e-9:
+>           raise ValueError('map_status_join_pending')
+E           ValueError: map_status_join_pending
+
+explore/metric_frontier_runtime.py:552: ValueError
+
+During handling of the above exception, another exception occurred:
+
+fault = 'fractional', referenced = False
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce4424f0d0>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['no_child', 'selection', 'private', 'deadline',
+        'future', 'fractional', 'status_ahead', 'resolution', 'epoch', 'conservative',
+        'old_raw_age', 'old_status_age'])
+    def test_pending_withdrawal_never_heals_original_binding_or_source_guards(fault, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if fault == 'future': newer.header.stamp.sec = 200
+        if fault == 'fractional': newer.info.origin.position.x += .03
+        if fault == 'resolution': newer.info.resolution = .11
+        node._on_map(newer)
+        if fault == 'no_child': node._wohnungserkundung_active_child = None
+        if fault == 'private':
+            node._metric_egress = (StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(100,100), before[3], np.ones((100,100),bool),
+                before[2], node._metric_bounds, node._world_to_grid),)
+            assert node._metric_egress[0].valid
+        if fault == 'deadline': node._metric_pending_since = 8.
+        if fault == 'status_ahead':
+            accepted = copy.deepcopy(newer); accepted.header.stamp.nanosec += 10_000_000
+            accepted.data[-1] = 100
+            node._on_metric_map_status(status(accepted, accepted=3, observed=3, when=100.03))
+        if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+        if fault == 'conservative': node._metric_path_validation = 'conservative'
+        if fault in ('old_raw_age', 'old_status_age'):
+            raw, correlation, at = node._metric_joined
+            if fault == 'old_raw_age': raw = (*raw[:2], 4.)
+            else: at = 4.
+            node._metric_joined = (raw, correlation, at)
+        with pytest.raises(ValueError):
+>           node._metric_inputs(active=fault != 'selection')
+
+test/test_metric_pending_withdrawal.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:625: in _metric_inputs_locked
+    reject_join('withdrawal_lattice_incompatible')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'withdrawal_lattice_incompatible'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_pending_withdrawal_never_heals_original_binding_or_source_guards[fractional-True] _
+
+self = <explore.explore_node.ExploreNode object at 0x7fce444e47f0>
+active = True
+
+    def _metric_inputs_locked(self, active=False):
+        with self._metric_lock:
+            fault = self._metric_fault
+            raw, c, scope = self._metric_raw, self._metric_correlation, self._metric_scope
+            at, pending = self._metric_status_at, self._metric_pending_since
+        now = time.monotonic()
+        if fault:
+            raise ValueError(fault)
+        if raw is None or c is None or scope is None:
+            raise ValueError('map_scope_not_joined')
+        if not self._metric_resume_localization_ready():
+            raise ValueError('resume_localization_unconfirmed')
+        withdrawal = None
+        if not self._metric_matches_status(raw[1]):
+            joined = getattr(self, '_metric_joined', None)
+            evidence = getattr(self, '_metric_egress', None) or ()
+            # Validity is not private authority: a referenced capture can be
+            # valid and empty from the first fully observed body onward. Only
+            # its completely empty fixed, retained and projected permits can
+            # join the existing public-only withdrawal path. Legacy evidence
+            # and even temporarily unprojectable private remnants still wait.
+            private = any(e.valid and not (isinstance(e, ReferencedStartEgress)
+                and not e.fixed.unknown.any() and e.retained_region.is_empty
+                and not e.unknown.any()) for e in evidence)
+            def reject_join(branch):
+                def identity(source):
+                    return dict(fingerprint=source.fingerprint,
+                                source_stamp_ns=source.source_stamp_ns)
+                self._metric_status['map_join_rejection'] = dict(
+                    branch=branch, checked_at=now,
+                    pending_age_s=None if pending is None else now-pending,
+                    active=bool(active), active_child=getattr(self,
+                        '_wohnungserkundung_active_child', None) is not None,
+                    private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+                    joined_raw=None if joined is None else identity(joined[0][1]),
+                    joined_status=None if joined is None else identity(joined[1]),
+                    context_matches_joined=None if joined is None else c.context == joined[1].context,
+                    egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                        projected_cells=int(e.unknown.sum()),
+                        retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                        retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                            if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+                raise ValueError('map_status_join_pending')
+            if not active:
+                reject_join('not_active')
+            if pending is None or now-pending > 1.25:
+                reject_join('pending_missing_or_expired')
+            if joined is None:
+                reject_join('joined_missing')
+            if c.fingerprint != joined[1].fingerprint or c.context != joined[1].context:
+                reject_join('status_binding_changed')
+            if raw[1].fingerprint != joined[0][1].fingerprint:
+                if getattr(self, '_metric_path_validation', 'conservative') != 'rpp_rollout':
+                    reject_join('controller_not_qualified')
+                if getattr(self, '_wohnungserkundung_active_child', None) is None:
+                    reject_join('no_active_child')
+                if private:
+                    reject_join('private_permit_remaining')
+                latest_age = (self.get_clock().now().nanoseconds-raw[1].source_stamp_ns)/1e9
+                if not 0 <= now-raw[2] <= self._map_timeout_s or not 0 <= latest_age <= self._map_timeout_s:
+                    raise ValueError('raw_map_stamp_stale')
+                try:
+>                   withdrawal = self._metric_public_withdrawal_mask(joined[0][0],raw[0])
+
+explore/metric_frontier_runtime.py:623: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fce444e47f0>
+previous = nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=10000000), fr..., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+current = nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=20000000), fr..., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+
+    def _metric_public_withdrawal_mask(self, previous, current):
+        """Project only current FREE onto an old exact grid, without adding cells."""
+        old, new = previous.info, current.info
+        a, b = self._metric_grid_values(previous)['origin'], self._metric_grid_values(current)['origin']
+        if (previous.header.frame_id != current.header.frame_id
+                or old.resolution != new.resolution or a[2:] != b[2:]):
+            raise ValueError('map_status_join_pending')
+        yaw = math.atan2(2*a[6]*a[5], 1-2*a[5]**2)
+        dx, dy = a[0]-b[0], a[1]-b[1]
+        offsets = ((math.cos(yaw)*dx+math.sin(yaw)*dy)/old.resolution,
+                   (-math.sin(yaw)*dx+math.cos(yaw)*dy)/old.resolution)
+        dc, dr = (round(v) for v in offsets)
+        if max(abs(offsets[0]-dc), abs(offsets[1]-dr)) > 1e-9:
+>           raise ValueError('map_status_join_pending')
+E           ValueError: map_status_join_pending
+
+explore/metric_frontier_runtime.py:552: ValueError
+
+During handling of the above exception, another exception occurred:
+
+fault = 'fractional', referenced = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce444e7f10>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['no_child', 'selection', 'private', 'deadline',
+        'future', 'fractional', 'status_ahead', 'resolution', 'epoch', 'conservative',
+        'old_raw_age', 'old_status_age'])
+    def test_pending_withdrawal_never_heals_original_binding_or_source_guards(fault, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if fault == 'future': newer.header.stamp.sec = 200
+        if fault == 'fractional': newer.info.origin.position.x += .03
+        if fault == 'resolution': newer.info.resolution = .11
+        node._on_map(newer)
+        if fault == 'no_child': node._wohnungserkundung_active_child = None
+        if fault == 'private':
+            node._metric_egress = (StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(100,100), before[3], np.ones((100,100),bool),
+                before[2], node._metric_bounds, node._world_to_grid),)
+            assert node._metric_egress[0].valid
+        if fault == 'deadline': node._metric_pending_since = 8.
+        if fault == 'status_ahead':
+            accepted = copy.deepcopy(newer); accepted.header.stamp.nanosec += 10_000_000
+            accepted.data[-1] = 100
+            node._on_metric_map_status(status(accepted, accepted=3, observed=3, when=100.03))
+        if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+        if fault == 'conservative': node._metric_path_validation = 'conservative'
+        if fault in ('old_raw_age', 'old_status_age'):
+            raw, correlation, at = node._metric_joined
+            if fault == 'old_raw_age': raw = (*raw[:2], 4.)
+            else: at = 4.
+            node._metric_joined = (raw, correlation, at)
+        with pytest.raises(ValueError):
+>           node._metric_inputs(active=fault != 'selection')
+
+test/test_metric_pending_withdrawal.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:625: in _metric_inputs_locked
+    reject_join('withdrawal_lattice_incompatible')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'withdrawal_lattice_incompatible'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_pending_withdrawal_never_heals_original_binding_or_source_guards[status_ahead-False] _
+
+fault = 'status_ahead', referenced = False
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce4424f760>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['no_child', 'selection', 'private', 'deadline',
+        'future', 'fractional', 'status_ahead', 'resolution', 'epoch', 'conservative',
+        'old_raw_age', 'old_status_age'])
+    def test_pending_withdrawal_never_heals_original_binding_or_source_guards(fault, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if fault == 'future': newer.header.stamp.sec = 200
+        if fault == 'fractional': newer.info.origin.position.x += .03
+        if fault == 'resolution': newer.info.resolution = .11
+        node._on_map(newer)
+        if fault == 'no_child': node._wohnungserkundung_active_child = None
+        if fault == 'private':
+            node._metric_egress = (StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(100,100), before[3], np.ones((100,100),bool),
+                before[2], node._metric_bounds, node._world_to_grid),)
+            assert node._metric_egress[0].valid
+        if fault == 'deadline': node._metric_pending_since = 8.
+        if fault == 'status_ahead':
+            accepted = copy.deepcopy(newer); accepted.header.stamp.nanosec += 10_000_000
+            accepted.data[-1] = 100
+            node._on_metric_map_status(status(accepted, accepted=3, observed=3, when=100.03))
+        if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+        if fault == 'conservative': node._metric_path_validation = 'conservative'
+        if fault in ('old_raw_age', 'old_status_age'):
+            raw, correlation, at = node._metric_joined
+            if fault == 'old_raw_age': raw = (*raw[:2], 4.)
+            else: at = 4.
+            node._metric_joined = (raw, correlation, at)
+        with pytest.raises(ValueError):
+>           node._metric_inputs(active=fault != 'selection')
+
+test/test_metric_pending_withdrawal.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:611: in _metric_inputs_locked
+    reject_join('status_binding_changed')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'status_binding_changed'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_pending_withdrawal_never_heals_original_binding_or_source_guards[status_ahead-True] _
+
+fault = 'status_ahead', referenced = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce442ac250>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['no_child', 'selection', 'private', 'deadline',
+        'future', 'fractional', 'status_ahead', 'resolution', 'epoch', 'conservative',
+        'old_raw_age', 'old_status_age'])
+    def test_pending_withdrawal_never_heals_original_binding_or_source_guards(fault, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if fault == 'future': newer.header.stamp.sec = 200
+        if fault == 'fractional': newer.info.origin.position.x += .03
+        if fault == 'resolution': newer.info.resolution = .11
+        node._on_map(newer)
+        if fault == 'no_child': node._wohnungserkundung_active_child = None
+        if fault == 'private':
+            node._metric_egress = (StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(100,100), before[3], np.ones((100,100),bool),
+                before[2], node._metric_bounds, node._world_to_grid),)
+            assert node._metric_egress[0].valid
+        if fault == 'deadline': node._metric_pending_since = 8.
+        if fault == 'status_ahead':
+            accepted = copy.deepcopy(newer); accepted.header.stamp.nanosec += 10_000_000
+            accepted.data[-1] = 100
+            node._on_metric_map_status(status(accepted, accepted=3, observed=3, when=100.03))
+        if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+        if fault == 'conservative': node._metric_path_validation = 'conservative'
+        if fault in ('old_raw_age', 'old_status_age'):
+            raw, correlation, at = node._metric_joined
+            if fault == 'old_raw_age': raw = (*raw[:2], 4.)
+            else: at = 4.
+            node._metric_joined = (raw, correlation, at)
+        with pytest.raises(ValueError):
+>           node._metric_inputs(active=fault != 'selection')
+
+test/test_metric_pending_withdrawal.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:611: in _metric_inputs_locked
+    reject_join('status_binding_changed')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'status_binding_changed'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_pending_withdrawal_never_heals_original_binding_or_source_guards[resolution-False] _
+
+self = <explore.explore_node.ExploreNode object at 0x7fce443e0b20>
+active = True
+
+    def _metric_inputs_locked(self, active=False):
+        with self._metric_lock:
+            fault = self._metric_fault
+            raw, c, scope = self._metric_raw, self._metric_correlation, self._metric_scope
+            at, pending = self._metric_status_at, self._metric_pending_since
+        now = time.monotonic()
+        if fault:
+            raise ValueError(fault)
+        if raw is None or c is None or scope is None:
+            raise ValueError('map_scope_not_joined')
+        if not self._metric_resume_localization_ready():
+            raise ValueError('resume_localization_unconfirmed')
+        withdrawal = None
+        if not self._metric_matches_status(raw[1]):
+            joined = getattr(self, '_metric_joined', None)
+            evidence = getattr(self, '_metric_egress', None) or ()
+            # Validity is not private authority: a referenced capture can be
+            # valid and empty from the first fully observed body onward. Only
+            # its completely empty fixed, retained and projected permits can
+            # join the existing public-only withdrawal path. Legacy evidence
+            # and even temporarily unprojectable private remnants still wait.
+            private = any(e.valid and not (isinstance(e, ReferencedStartEgress)
+                and not e.fixed.unknown.any() and e.retained_region.is_empty
+                and not e.unknown.any()) for e in evidence)
+            def reject_join(branch):
+                def identity(source):
+                    return dict(fingerprint=source.fingerprint,
+                                source_stamp_ns=source.source_stamp_ns)
+                self._metric_status['map_join_rejection'] = dict(
+                    branch=branch, checked_at=now,
+                    pending_age_s=None if pending is None else now-pending,
+                    active=bool(active), active_child=getattr(self,
+                        '_wohnungserkundung_active_child', None) is not None,
+                    private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+                    joined_raw=None if joined is None else identity(joined[0][1]),
+                    joined_status=None if joined is None else identity(joined[1]),
+                    context_matches_joined=None if joined is None else c.context == joined[1].context,
+                    egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                        projected_cells=int(e.unknown.sum()),
+                        retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                        retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                            if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+                raise ValueError('map_status_join_pending')
+            if not active:
+                reject_join('not_active')
+            if pending is None or now-pending > 1.25:
+                reject_join('pending_missing_or_expired')
+            if joined is None:
+                reject_join('joined_missing')
+            if c.fingerprint != joined[1].fingerprint or c.context != joined[1].context:
+                reject_join('status_binding_changed')
+            if raw[1].fingerprint != joined[0][1].fingerprint:
+                if getattr(self, '_metric_path_validation', 'conservative') != 'rpp_rollout':
+                    reject_join('controller_not_qualified')
+                if getattr(self, '_wohnungserkundung_active_child', None) is None:
+                    reject_join('no_active_child')
+                if private:
+                    reject_join('private_permit_remaining')
+                latest_age = (self.get_clock().now().nanoseconds-raw[1].source_stamp_ns)/1e9
+                if not 0 <= now-raw[2] <= self._map_timeout_s or not 0 <= latest_age <= self._map_timeout_s:
+                    raise ValueError('raw_map_stamp_stale')
+                try:
+>                   withdrawal = self._metric_public_withdrawal_mask(joined[0][0],raw[0])
+
+explore/metric_frontier_runtime.py:623: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fce443e0b20>
+previous = nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=10000000), fr..., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+current = nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=20000000), fr..., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+
+    def _metric_public_withdrawal_mask(self, previous, current):
+        """Project only current FREE onto an old exact grid, without adding cells."""
+        old, new = previous.info, current.info
+        a, b = self._metric_grid_values(previous)['origin'], self._metric_grid_values(current)['origin']
+        if (previous.header.frame_id != current.header.frame_id
+                or old.resolution != new.resolution or a[2:] != b[2:]):
+>           raise ValueError('map_status_join_pending')
+E           ValueError: map_status_join_pending
+
+explore/metric_frontier_runtime.py:545: ValueError
+
+During handling of the above exception, another exception occurred:
+
+fault = 'resolution', referenced = False
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce443e0af0>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['no_child', 'selection', 'private', 'deadline',
+        'future', 'fractional', 'status_ahead', 'resolution', 'epoch', 'conservative',
+        'old_raw_age', 'old_status_age'])
+    def test_pending_withdrawal_never_heals_original_binding_or_source_guards(fault, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if fault == 'future': newer.header.stamp.sec = 200
+        if fault == 'fractional': newer.info.origin.position.x += .03
+        if fault == 'resolution': newer.info.resolution = .11
+        node._on_map(newer)
+        if fault == 'no_child': node._wohnungserkundung_active_child = None
+        if fault == 'private':
+            node._metric_egress = (StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(100,100), before[3], np.ones((100,100),bool),
+                before[2], node._metric_bounds, node._world_to_grid),)
+            assert node._metric_egress[0].valid
+        if fault == 'deadline': node._metric_pending_since = 8.
+        if fault == 'status_ahead':
+            accepted = copy.deepcopy(newer); accepted.header.stamp.nanosec += 10_000_000
+            accepted.data[-1] = 100
+            node._on_metric_map_status(status(accepted, accepted=3, observed=3, when=100.03))
+        if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+        if fault == 'conservative': node._metric_path_validation = 'conservative'
+        if fault in ('old_raw_age', 'old_status_age'):
+            raw, correlation, at = node._metric_joined
+            if fault == 'old_raw_age': raw = (*raw[:2], 4.)
+            else: at = 4.
+            node._metric_joined = (raw, correlation, at)
+        with pytest.raises(ValueError):
+>           node._metric_inputs(active=fault != 'selection')
+
+test/test_metric_pending_withdrawal.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:625: in _metric_inputs_locked
+    reject_join('withdrawal_lattice_incompatible')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'withdrawal_lattice_incompatible'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_pending_withdrawal_never_heals_original_binding_or_source_guards[resolution-True] _
+
+self = <explore.explore_node.ExploreNode object at 0x7fce442af3d0>
+active = True
+
+    def _metric_inputs_locked(self, active=False):
+        with self._metric_lock:
+            fault = self._metric_fault
+            raw, c, scope = self._metric_raw, self._metric_correlation, self._metric_scope
+            at, pending = self._metric_status_at, self._metric_pending_since
+        now = time.monotonic()
+        if fault:
+            raise ValueError(fault)
+        if raw is None or c is None or scope is None:
+            raise ValueError('map_scope_not_joined')
+        if not self._metric_resume_localization_ready():
+            raise ValueError('resume_localization_unconfirmed')
+        withdrawal = None
+        if not self._metric_matches_status(raw[1]):
+            joined = getattr(self, '_metric_joined', None)
+            evidence = getattr(self, '_metric_egress', None) or ()
+            # Validity is not private authority: a referenced capture can be
+            # valid and empty from the first fully observed body onward. Only
+            # its completely empty fixed, retained and projected permits can
+            # join the existing public-only withdrawal path. Legacy evidence
+            # and even temporarily unprojectable private remnants still wait.
+            private = any(e.valid and not (isinstance(e, ReferencedStartEgress)
+                and not e.fixed.unknown.any() and e.retained_region.is_empty
+                and not e.unknown.any()) for e in evidence)
+            def reject_join(branch):
+                def identity(source):
+                    return dict(fingerprint=source.fingerprint,
+                                source_stamp_ns=source.source_stamp_ns)
+                self._metric_status['map_join_rejection'] = dict(
+                    branch=branch, checked_at=now,
+                    pending_age_s=None if pending is None else now-pending,
+                    active=bool(active), active_child=getattr(self,
+                        '_wohnungserkundung_active_child', None) is not None,
+                    private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+                    joined_raw=None if joined is None else identity(joined[0][1]),
+                    joined_status=None if joined is None else identity(joined[1]),
+                    context_matches_joined=None if joined is None else c.context == joined[1].context,
+                    egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                        projected_cells=int(e.unknown.sum()),
+                        retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                        retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                            if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+                raise ValueError('map_status_join_pending')
+            if not active:
+                reject_join('not_active')
+            if pending is None or now-pending > 1.25:
+                reject_join('pending_missing_or_expired')
+            if joined is None:
+                reject_join('joined_missing')
+            if c.fingerprint != joined[1].fingerprint or c.context != joined[1].context:
+                reject_join('status_binding_changed')
+            if raw[1].fingerprint != joined[0][1].fingerprint:
+                if getattr(self, '_metric_path_validation', 'conservative') != 'rpp_rollout':
+                    reject_join('controller_not_qualified')
+                if getattr(self, '_wohnungserkundung_active_child', None) is None:
+                    reject_join('no_active_child')
+                if private:
+                    reject_join('private_permit_remaining')
+                latest_age = (self.get_clock().now().nanoseconds-raw[1].source_stamp_ns)/1e9
+                if not 0 <= now-raw[2] <= self._map_timeout_s or not 0 <= latest_age <= self._map_timeout_s:
+                    raise ValueError('raw_map_stamp_stale')
+                try:
+>                   withdrawal = self._metric_public_withdrawal_mask(joined[0][0],raw[0])
+
+explore/metric_frontier_runtime.py:623: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fce442af3d0>
+previous = nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=10000000), fr..., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+current = nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=20000000), fr..., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+
+    def _metric_public_withdrawal_mask(self, previous, current):
+        """Project only current FREE onto an old exact grid, without adding cells."""
+        old, new = previous.info, current.info
+        a, b = self._metric_grid_values(previous)['origin'], self._metric_grid_values(current)['origin']
+        if (previous.header.frame_id != current.header.frame_id
+                or old.resolution != new.resolution or a[2:] != b[2:]):
+>           raise ValueError('map_status_join_pending')
+E           ValueError: map_status_join_pending
+
+explore/metric_frontier_runtime.py:545: ValueError
+
+During handling of the above exception, another exception occurred:
+
+fault = 'resolution', referenced = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce442acdc0>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['no_child', 'selection', 'private', 'deadline',
+        'future', 'fractional', 'status_ahead', 'resolution', 'epoch', 'conservative',
+        'old_raw_age', 'old_status_age'])
+    def test_pending_withdrawal_never_heals_original_binding_or_source_guards(fault, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if fault == 'future': newer.header.stamp.sec = 200
+        if fault == 'fractional': newer.info.origin.position.x += .03
+        if fault == 'resolution': newer.info.resolution = .11
+        node._on_map(newer)
+        if fault == 'no_child': node._wohnungserkundung_active_child = None
+        if fault == 'private':
+            node._metric_egress = (StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(100,100), before[3], np.ones((100,100),bool),
+                before[2], node._metric_bounds, node._world_to_grid),)
+            assert node._metric_egress[0].valid
+        if fault == 'deadline': node._metric_pending_since = 8.
+        if fault == 'status_ahead':
+            accepted = copy.deepcopy(newer); accepted.header.stamp.nanosec += 10_000_000
+            accepted.data[-1] = 100
+            node._on_metric_map_status(status(accepted, accepted=3, observed=3, when=100.03))
+        if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+        if fault == 'conservative': node._metric_path_validation = 'conservative'
+        if fault in ('old_raw_age', 'old_status_age'):
+            raw, correlation, at = node._metric_joined
+            if fault == 'old_raw_age': raw = (*raw[:2], 4.)
+            else: at = 4.
+            node._metric_joined = (raw, correlation, at)
+        with pytest.raises(ValueError):
+>           node._metric_inputs(active=fault != 'selection')
+
+test/test_metric_pending_withdrawal.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:625: in _metric_inputs_locked
+    reject_join('withdrawal_lattice_incompatible')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'withdrawal_lattice_incompatible'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_pending_withdrawal_never_heals_original_binding_or_source_guards[conservative-False] _
+
+fault = 'conservative', referenced = False
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce442bc670>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['no_child', 'selection', 'private', 'deadline',
+        'future', 'fractional', 'status_ahead', 'resolution', 'epoch', 'conservative',
+        'old_raw_age', 'old_status_age'])
+    def test_pending_withdrawal_never_heals_original_binding_or_source_guards(fault, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if fault == 'future': newer.header.stamp.sec = 200
+        if fault == 'fractional': newer.info.origin.position.x += .03
+        if fault == 'resolution': newer.info.resolution = .11
+        node._on_map(newer)
+        if fault == 'no_child': node._wohnungserkundung_active_child = None
+        if fault == 'private':
+            node._metric_egress = (StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(100,100), before[3], np.ones((100,100),bool),
+                before[2], node._metric_bounds, node._world_to_grid),)
+            assert node._metric_egress[0].valid
+        if fault == 'deadline': node._metric_pending_since = 8.
+        if fault == 'status_ahead':
+            accepted = copy.deepcopy(newer); accepted.header.stamp.nanosec += 10_000_000
+            accepted.data[-1] = 100
+            node._on_metric_map_status(status(accepted, accepted=3, observed=3, when=100.03))
+        if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+        if fault == 'conservative': node._metric_path_validation = 'conservative'
+        if fault in ('old_raw_age', 'old_status_age'):
+            raw, correlation, at = node._metric_joined
+            if fault == 'old_raw_age': raw = (*raw[:2], 4.)
+            else: at = 4.
+            node._metric_joined = (raw, correlation, at)
+        with pytest.raises(ValueError):
+>           node._metric_inputs(active=fault != 'selection')
+
+test/test_metric_pending_withdrawal.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:614: in _metric_inputs_locked
+    reject_join('controller_not_qualified')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'controller_not_qualified'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_pending_withdrawal_never_heals_original_binding_or_source_guards[conservative-True] _
+
+fault = 'conservative', referenced = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce4448bb50>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['no_child', 'selection', 'private', 'deadline',
+        'future', 'fractional', 'status_ahead', 'resolution', 'epoch', 'conservative',
+        'old_raw_age', 'old_status_age'])
+    def test_pending_withdrawal_never_heals_original_binding_or_source_guards(fault, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if fault == 'future': newer.header.stamp.sec = 200
+        if fault == 'fractional': newer.info.origin.position.x += .03
+        if fault == 'resolution': newer.info.resolution = .11
+        node._on_map(newer)
+        if fault == 'no_child': node._wohnungserkundung_active_child = None
+        if fault == 'private':
+            node._metric_egress = (StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(100,100), before[3], np.ones((100,100),bool),
+                before[2], node._metric_bounds, node._world_to_grid),)
+            assert node._metric_egress[0].valid
+        if fault == 'deadline': node._metric_pending_since = 8.
+        if fault == 'status_ahead':
+            accepted = copy.deepcopy(newer); accepted.header.stamp.nanosec += 10_000_000
+            accepted.data[-1] = 100
+            node._on_metric_map_status(status(accepted, accepted=3, observed=3, when=100.03))
+        if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+        if fault == 'conservative': node._metric_path_validation = 'conservative'
+        if fault in ('old_raw_age', 'old_status_age'):
+            raw, correlation, at = node._metric_joined
+            if fault == 'old_raw_age': raw = (*raw[:2], 4.)
+            else: at = 4.
+            node._metric_joined = (raw, correlation, at)
+        with pytest.raises(ValueError):
+>           node._metric_inputs(active=fault != 'selection')
+
+test/test_metric_pending_withdrawal.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:614: in _metric_inputs_locked
+    reject_join('controller_not_qualified')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'controller_not_qualified'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+______ test_referenced_private_remainder_still_requires_exact_join[False] ______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce443030a0>
+unprojected = False
+
+    @pytest.mark.parametrize('unprojected', [False, True])
+    def test_referenced_private_remainder_still_requires_exact_join(monkeypatch, unprojected):
+        node, grid = runtime(monkeypatch, body_reference=(0., 0., 0.))
+        node._metric_self_body_enabled = False
+        node._metric_path_validation = 'rpp_rollout'
+        node._wohnungserkundung_active_child = object()
+        evidence = node._metric_egress[0]
+        assert isinstance(evidence, ReferencedStartEgress) and evidence.valid
+        assert evidence.fixed.unknown.any() and not evidence.retained_region.is_empty
+        if unprojected:
+            # A genuine subcell TF refinement can leave physical permit area but
+            # no fully covered current raster cell. Zero projection is not empty.
+            evidence.refresh(grid, np.asarray(grid.data).reshape(100, 100),
+                             evidence.scope_mask, (.035, 0., 0.))
+            assert not evidence.unknown.any()
+            assert evidence.fixed.unknown.any() and not evidence.retained_region.is_empty
+        newer = copy.deepcopy(grid)
+        newer.header.stamp.nanosec = 10_000_000
+        newer.data[-1] = 100
+        node._on_map(newer)
+        with pytest.raises(ValueError, match='map_status_join_pending'):
+>           node._metric_inputs(active=True)
+
+test/test_metric_pending_withdrawal.py:128: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:618: in _metric_inputs_locked
+    reject_join('private_permit_remaining')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'private_permit_remaining'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+______ test_referenced_private_remainder_still_requires_exact_join[True] _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce444e73a0>
+unprojected = True
+
+    @pytest.mark.parametrize('unprojected', [False, True])
+    def test_referenced_private_remainder_still_requires_exact_join(monkeypatch, unprojected):
+        node, grid = runtime(monkeypatch, body_reference=(0., 0., 0.))
+        node._metric_self_body_enabled = False
+        node._metric_path_validation = 'rpp_rollout'
+        node._wohnungserkundung_active_child = object()
+        evidence = node._metric_egress[0]
+        assert isinstance(evidence, ReferencedStartEgress) and evidence.valid
+        assert evidence.fixed.unknown.any() and not evidence.retained_region.is_empty
+        if unprojected:
+            # A genuine subcell TF refinement can leave physical permit area but
+            # no fully covered current raster cell. Zero projection is not empty.
+            evidence.refresh(grid, np.asarray(grid.data).reshape(100, 100),
+                             evidence.scope_mask, (.035, 0., 0.))
+            assert not evidence.unknown.any()
+            assert evidence.fixed.unknown.any() and not evidence.retained_region.is_empty
+        newer = copy.deepcopy(grid)
+        newer.header.stamp.nanosec = 10_000_000
+        newer.data[-1] = 100
+        node._on_map(newer)
+        with pytest.raises(ValueError, match='map_status_join_pending'):
+>           node._metric_inputs(active=True)
+
+test/test_metric_pending_withdrawal.py:128: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:618: in _metric_inputs_locked
+    reject_join('private_permit_remaining')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'private_permit_remaining'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_actual_parent_keeps_one_child_or_stops_on_withdrawn_authority[deadline_exhausted-False] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce4403ba30>
+fault = 'deadline_exhausted', referenced = False
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['none', 'obstacle', 'deadline', 'deadline_exhausted', 'source', 'epoch'])
+    def test_actual_parent_keeps_one_child_or_stops_on_withdrawn_authority(monkeypatch, fault, referenced):
+        import math
+        from geometry_msgs.msg import PoseStamped
+        from nav_msgs.msg import Path
+        from test_metric_progress import parent_fixture
+        node, grid, clock, parent, terminal = parent_fixture(monkeypatch, 'open')
+        node._metric_path_validation = 'rpp_rollout'
+        node._max_frontier_goals = 1
+        if fault == 'deadline_exhausted':
+            node._metric_retry_limit = 0
+        node._metric_egress = None  # this leg uses public free space only
+        if referenced:
+            node._metric_start_egress_enabled = True
+            node._metric_body_reference = lambda: (0., 0., 0.)
+            node._metric_inputs()
+            assert all(isinstance(e, ReferencedStartEgress) and e.valid
+                       and not e.fixed.unknown.any() and e.retained_region.is_empty
+                       and not e.unknown.any() for e in node._metric_egress)
+        chosen = []; children = []; stops = []
+        def planner(target, *_, **kwargs):
+            chosen.append(target)
+            path = Path(); path.header.frame_id = 'map'
+            start = kwargs.get('start_pose', node._robot_pose_sample()[0])
+            for x,y in (start[:2], (target.x,target.y)):
+                p = PoseStamped(); p.pose.position.x=x; p.pose.position.y=y
+                p.pose.orientation.z=math.sin(target.yaw/2)
+                p.pose.orientation.w=math.cos(target.yaw/2); path.poses.append(p)
+            return path, None
+        node._metric_request_nav_plan = planner
+        node._prealign_to_goal = lambda *_, **__: ('skipped',)
+        def navigate(*_, stop_requested, **__):
+            target=chosen[-1]; children.append(target)
+            assert node._wohnungserkundung_active_child is target
+            latest = copy.deepcopy(grid)
+            for index in range(3):
+                clock[0]+=.1; latest=copy.deepcopy(latest)
+                latest.header.stamp.nanosec=int((clock[0]-10)*1e9)
+                latest.data[80*latest.info.width+80] = (index+1)*10
+                if fault == 'obstacle': latest.data[20*latest.info.width+10] = 100
+                node._on_map(latest)
+                if fault in ('deadline', 'deadline_exhausted'): node._metric_pending_since=clock[0]-2
+                if fault == 'source':
+                    raw,cor,at=node._metric_joined
+                    node._metric_joined=((*raw[:2],4.),cor,at)
+                if fault == 'epoch': node._metric_fault='map_epoch_changed'
+                stops.append(stop_requested())
+                node._on_metric_map_status(status(latest,accepted=3+index,observed=3+index,
+                                                 when=100+clock[0]-10))
+                if stops[-1]: return 'canceled'
+            node._robot_pose_sample=lambda:((target.x,target.y,target.yaw),0.)
+            clock[0]+=.1; latest=copy.deepcopy(latest)
+            for xy in target.observation_points:
+                col,row=node._world_to_grid(*xy,latest.info)
+                latest.data[row*latest.info.width+col]=0
+            latest.header.stamp.nanosec=int((clock[0]-10)*1e9)
+            node._on_map(latest)
+            node._on_metric_map_status(status(latest,accepted=6,observed=6,when=100+clock[0]-10))
+            return 'success'
+        node._navigate_to=navigate
+        result=node._execute_metric_frontier(parent,10.,.3)
+        assert terminal and not result.success  # original total limit, no whole claim
+>       assert len(children)==1 and node._wohnungserkundung_active_child is None
+E       assert (0 == 1)
+E        +  where 0 = len([])
+
+test/test_metric_pending_withdrawal.py:199: AssertionError
+_ test_actual_parent_keeps_one_child_or_stops_on_withdrawn_authority[deadline_exhausted-True] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce443a0190>
+fault = 'deadline_exhausted', referenced = True
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['none', 'obstacle', 'deadline', 'deadline_exhausted', 'source', 'epoch'])
+    def test_actual_parent_keeps_one_child_or_stops_on_withdrawn_authority(monkeypatch, fault, referenced):
+        import math
+        from geometry_msgs.msg import PoseStamped
+        from nav_msgs.msg import Path
+        from test_metric_progress import parent_fixture
+        node, grid, clock, parent, terminal = parent_fixture(monkeypatch, 'open')
+        node._metric_path_validation = 'rpp_rollout'
+        node._max_frontier_goals = 1
+        if fault == 'deadline_exhausted':
+            node._metric_retry_limit = 0
+        node._metric_egress = None  # this leg uses public free space only
+        if referenced:
+            node._metric_start_egress_enabled = True
+            node._metric_body_reference = lambda: (0., 0., 0.)
+            node._metric_inputs()
+            assert all(isinstance(e, ReferencedStartEgress) and e.valid
+                       and not e.fixed.unknown.any() and e.retained_region.is_empty
+                       and not e.unknown.any() for e in node._metric_egress)
+        chosen = []; children = []; stops = []
+        def planner(target, *_, **kwargs):
+            chosen.append(target)
+            path = Path(); path.header.frame_id = 'map'
+            start = kwargs.get('start_pose', node._robot_pose_sample()[0])
+            for x,y in (start[:2], (target.x,target.y)):
+                p = PoseStamped(); p.pose.position.x=x; p.pose.position.y=y
+                p.pose.orientation.z=math.sin(target.yaw/2)
+                p.pose.orientation.w=math.cos(target.yaw/2); path.poses.append(p)
+            return path, None
+        node._metric_request_nav_plan = planner
+        node._prealign_to_goal = lambda *_, **__: ('skipped',)
+        def navigate(*_, stop_requested, **__):
+            target=chosen[-1]; children.append(target)
+            assert node._wohnungserkundung_active_child is target
+            latest = copy.deepcopy(grid)
+            for index in range(3):
+                clock[0]+=.1; latest=copy.deepcopy(latest)
+                latest.header.stamp.nanosec=int((clock[0]-10)*1e9)
+                latest.data[80*latest.info.width+80] = (index+1)*10
+                if fault == 'obstacle': latest.data[20*latest.info.width+10] = 100
+                node._on_map(latest)
+                if fault in ('deadline', 'deadline_exhausted'): node._metric_pending_since=clock[0]-2
+                if fault == 'source':
+                    raw,cor,at=node._metric_joined
+                    node._metric_joined=((*raw[:2],4.),cor,at)
+                if fault == 'epoch': node._metric_fault='map_epoch_changed'
+                stops.append(stop_requested())
+                node._on_metric_map_status(status(latest,accepted=3+index,observed=3+index,
+                                                 when=100+clock[0]-10))
+                if stops[-1]: return 'canceled'
+            node._robot_pose_sample=lambda:((target.x,target.y,target.yaw),0.)
+            clock[0]+=.1; latest=copy.deepcopy(latest)
+            for xy in target.observation_points:
+                col,row=node._world_to_grid(*xy,latest.info)
+                latest.data[row*latest.info.width+col]=0
+            latest.header.stamp.nanosec=int((clock[0]-10)*1e9)
+            node._on_map(latest)
+            node._on_metric_map_status(status(latest,accepted=6,observed=6,when=100+clock[0]-10))
+            return 'success'
+        node._navigate_to=navigate
+        result=node._execute_metric_frontier(parent,10.,.3)
+        assert terminal and not result.success  # original total limit, no whole claim
+>       assert len(children)==1 and node._wohnungserkundung_active_child is None
+E       assert (0 == 1)
+E        +  where 0 = len([])
+
+test/test_metric_pending_withdrawal.py:199: AssertionError
+_ test_new_content_requires_exact_status_join_then_valid_update_is_processed[raw_first] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce44112e90>
+order = 'raw_first'
+
+    @pytest.mark.parametrize('order', ['raw_first', 'status_first'])
+    def test_new_content_requires_exact_status_join_then_valid_update_is_processed(monkeypatch, order):
+        n, g = runtime(monkeypatch)
+        new = copy.deepcopy(g)
+        new.header.stamp.nanosec = 10_000_000
+        new.data[9999] = 100
+        callbacks = [lambda: n._on_map(new), lambda: n._on_metric_map_status(
+            status(new, accepted=2, observed=2, when=100.02))]
+        if order == 'status_first':
+            callbacks.reverse()
+        callbacks[0]()
+        for active in (False, True):
+            with pytest.raises(ValueError, match='map_status_join_pending'):
+>               n._metric_inputs(active=active)
+
+test/test_metric_map_lifecycle.py:209: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:605: in _metric_inputs_locked
+    reject_join('not_active')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'not_active'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_new_content_requires_exact_status_join_then_valid_update_is_processed[status_first] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce441127a0>
+order = 'status_first'
+
+    @pytest.mark.parametrize('order', ['raw_first', 'status_first'])
+    def test_new_content_requires_exact_status_join_then_valid_update_is_processed(monkeypatch, order):
+        n, g = runtime(monkeypatch)
+        new = copy.deepcopy(g)
+        new.header.stamp.nanosec = 10_000_000
+        new.data[9999] = 100
+        callbacks = [lambda: n._on_map(new), lambda: n._on_metric_map_status(
+            status(new, accepted=2, observed=2, when=100.02))]
+        if order == 'status_first':
+            callbacks.reverse()
+        callbacks[0]()
+        for active in (False, True):
+            with pytest.raises(ValueError, match='map_status_join_pending'):
+>               n._metric_inputs(active=active)
+
+test/test_metric_map_lifecycle.py:209: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:605: in _metric_inputs_locked
+    reject_join('not_active')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'not_active'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+____ test_identical_content_pending_keeps_original_exact_join_and_deadline _____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fce443a09d0>
+
+    def test_identical_content_pending_keeps_original_exact_join_and_deadline(monkeypatch):
+        n, g = runtime(monkeypatch)
+        new = copy.deepcopy(g)
+        new.header.stamp.nanosec = 10_000_000
+        n._on_map(new)
+        inputs = n._metric_inputs(active=True)
+        assert inputs[0] is g and inputs[1].source_stamp_ns == 100_000_000_000
+        with pytest.raises(ValueError, match='map_status_join_pending'):
+>           n._metric_inputs()
+
+test/test_metric_map_lifecycle.py:225: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+explore/metric_frontier_runtime.py:605: in _metric_inputs_locked
+    reject_join('not_active')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+branch = 'not_active'
+
+    def reject_join(branch):
+        def identity(source):
+            return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns)
+>       self._metric_status['map_join_rejection'] = dict(
+            branch=branch, checked_at=now,
+            pending_age_s=None if pending is None else now-pending,
+            active=bool(active), active_child=getattr(self,
+                '_wohnungserkundung_active_child', None) is not None,
+            private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+            joined_raw=None if joined is None else identity(joined[0][1]),
+            joined_status=None if joined is None else identity(joined[1]),
+            context_matches_joined=None if joined is None else c.context == joined[1].context,
+            egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                projected_cells=int(e.unknown.sum()),
+                retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                    if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_status'
+
+explore/metric_frontier_runtime.py:589: AttributeError
+_ test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof[-0.00198534484739743--6.557910150495e-05-0.0-False] _
+
+dx = -0.00198534484739743, dy = -6.557910150495e-05, yaw = 0.0, growth = False
+
+    @pytest.mark.parametrize('dx,dy,yaw,growth', [(-.00198534484739743,-.00006557910150495,0.,False),
+        (.11,-.07,0.,True), (.12,-.08,.03,True)])
+    def test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof(dx,dy,yaw,growth):
+>       node, inputs = referenced_fixture(native=True)
+
+test/test_metric_egress_reference.py:50: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test/test_metric_egress_reference.py:13: in referenced_fixture
+    node, inputs = native_fixture()[:2] if native else egress_fixture()
+test/test_metric_start_observation.py:48: in fixture
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+<frozen importlib._bootstrap_external>:879: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1016: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x7fce4424e6b0>
+path = '/evidence/tools/simulation/ap06_world.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: '/evidence/tools/simulation/ap06_world.py'
+
+<frozen importlib._bootstrap_external>:1073: FileNotFoundError
+_ test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof[0.11--0.07-0.0-True] _
+
+dx = 0.11, dy = -0.07, yaw = 0.0, growth = True
+
+    @pytest.mark.parametrize('dx,dy,yaw,growth', [(-.00198534484739743,-.00006557910150495,0.,False),
+        (.11,-.07,0.,True), (.12,-.08,.03,True)])
+    def test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof(dx,dy,yaw,growth):
+>       node, inputs = referenced_fixture(native=True)
+
+test/test_metric_egress_reference.py:50: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test/test_metric_egress_reference.py:13: in referenced_fixture
+    node, inputs = native_fixture()[:2] if native else egress_fixture()
+test/test_metric_start_observation.py:48: in fixture
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+<frozen importlib._bootstrap_external>:879: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1016: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x7fce441dc430>
+path = '/evidence/tools/simulation/ap06_world.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: '/evidence/tools/simulation/ap06_world.py'
+
+<frozen importlib._bootstrap_external>:1073: FileNotFoundError
+_ test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof[0.12--0.08-0.03-True] _
+
+dx = 0.12, dy = -0.08, yaw = 0.03, growth = True
+
+    @pytest.mark.parametrize('dx,dy,yaw,growth', [(-.00198534484739743,-.00006557910150495,0.,False),
+        (.11,-.07,0.,True), (.12,-.08,.03,True)])
+    def test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof(dx,dy,yaw,growth):
+>       node, inputs = referenced_fixture(native=True)
+
+test/test_metric_egress_reference.py:50: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test/test_metric_egress_reference.py:13: in referenced_fixture
+    node, inputs = native_fixture()[:2] if native else egress_fixture()
+test/test_metric_start_observation.py:48: in fixture
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+<frozen importlib._bootstrap_external>:879: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1016: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x7fce441b3250>
+path = '/evidence/tools/simulation/ap06_world.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: '/evidence/tools/simulation/ap06_world.py'
+
+<frozen importlib._bootstrap_external>:1073: FileNotFoundError
+=========================== short test summary info ============================
+FAILED test/test_metric_pending_withdrawal.py::test_active_old_join_retains_original_identity_and_only_withdraws[gain-False]
+FAILED test/test_metric_pending_withdrawal.py::test_active_old_join_retains_original_identity_and_only_withdraws[gain-True]
+FAILED test/test_metric_pending_withdrawal.py::test_active_old_join_retains_original_identity_and_only_withdraws[obstacle-False]
+FAILED test/test_metric_pending_withdrawal.py::test_active_old_join_retains_original_identity_and_only_withdraws[obstacle-True]
+FAILED test/test_metric_pending_withdrawal.py::test_active_old_join_retains_original_identity_and_only_withdraws[unknown-False]
+FAILED test/test_metric_pending_withdrawal.py::test_active_old_join_retains_original_identity_and_only_withdraws[unknown-True]
+FAILED test/test_metric_pending_withdrawal.py::test_active_old_join_retains_original_identity_and_only_withdraws[growth-False]
+FAILED test/test_metric_pending_withdrawal.py::test_active_old_join_retains_original_identity_and_only_withdraws[growth-True]
+FAILED test/test_metric_pending_withdrawal.py::test_pending_withdrawal_never_heals_original_binding_or_source_guards[no_child-False]
+FAILED test/test_metric_pending_withdrawal.py::test_pending_withdrawal_never_heals_original_binding_or_source_guards[no_child-True]
+FAILED test/test_metric_pending_withdrawal.py::test_pending_withdrawal_never_heals_original_binding_or_source_guards[selection-False]
+FAILED test/test_metric_pending_withdrawal.py::test_pending_withdrawal_never_heals_original_binding_or_source_guards[selection-True]
+FAILED test/test_metric_pending_withdrawal.py::test_pending_withdrawal_never_heals_original_binding_or_source_guards[private-False]
+FAILED test/test_metric_pending_withdrawal.py::test_pending_withdrawal_never_heals_original_binding_or_source_guards[private-True]
+FAILED test/test_metric_pending_withdrawal.py::test_pending_withdrawal_never_heals_original_binding_or_source_guards[deadline-False]
+FAILED test/test_metric_pending_withdrawal.py::test_pending_withdrawal_never_heals_original_binding_or_source_guards[deadline-True]
+FAILED test/test_metric_pending_withdrawal.py::test_pending_withdrawal_never_heals_original_binding_or_source_guards[fractional-False]
+FAILED test/test_metric_pending_withdrawal.py::test_pending_withdrawal_never_heals_original_binding_or_source_guards[fractional-True]
+FAILED test/test_metric_pending_withdrawal.py::test_pending_withdrawal_never_heals_original_binding_or_source_guards[status_ahead-False]
+FAILED test/test_metric_pending_withdrawal.py::test_pending_withdrawal_never_heals_original_binding_or_source_guards[status_ahead-True]
+FAILED test/test_metric_pending_withdrawal.py::test_pending_withdrawal_never_heals_original_binding_or_source_guards[resolution-False]
+FAILED test/test_metric_pending_withdrawal.py::test_pending_withdrawal_never_heals_original_binding_or_source_guards[resolution-True]
+FAILED test/test_metric_pending_withdrawal.py::test_pending_withdrawal_never_heals_original_binding_or_source_guards[conservative-False]
+FAILED test/test_metric_pending_withdrawal.py::test_pending_withdrawal_never_heals_original_binding_or_source_guards[conservative-True]
+FAILED test/test_metric_pending_withdrawal.py::test_referenced_private_remainder_still_requires_exact_join[False]
+FAILED test/test_metric_pending_withdrawal.py::test_referenced_private_remainder_still_requires_exact_join[True]
+FAILED test/test_metric_pending_withdrawal.py::test_actual_parent_keeps_one_child_or_stops_on_withdrawn_authority[deadline_exhausted-False]
+FAILED test/test_metric_pending_withdrawal.py::test_actual_parent_keeps_one_child_or_stops_on_withdrawn_authority[deadline_exhausted-True]
+FAILED test/test_metric_map_lifecycle.py::test_new_content_requires_exact_status_join_then_valid_update_is_processed[raw_first]
+FAILED test/test_metric_map_lifecycle.py::test_new_content_requires_exact_status_join_then_valid_update_is_processed[status_first]
+FAILED test/test_metric_map_lifecycle.py::test_identical_content_pending_keeps_original_exact_join_and_deadline
+FAILED test/test_metric_egress_reference.py::test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof[-0.00198534484739743--6.557910150495e-05-0.0-False]
+FAILED test/test_metric_egress_reference.py::test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof[0.11--0.07-0.0-True]
+FAILED test/test_metric_egress_reference.py::test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof[0.12--0.08-0.03-True]
+34 failed, 148 passed in 13.16s

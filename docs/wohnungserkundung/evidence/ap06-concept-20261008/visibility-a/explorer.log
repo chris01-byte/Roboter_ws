@@ -1,0 +1,3 @@
+[INFO] [1791436680.650105783] [explore_node]: explore_node bereit. Map='/map', Nav='navigate_to_pose'. Erkundung starten via Action /explore_area.
+[INFO] [1791437113.197908989] [explore_node]: Karten-Ausrichtung Durchgang 1/3: Restfehler -0.6 Grad, Verbesserung 7.0 Grad.
+The following exception was never retrieved: cannot use Destroyable because destruction was requested

@@ -1,0 +1,311 @@
+...........F............................................................ [ 63%]
+..........................................                               [100%]
+=================================== FAILURES ===================================
+_ test_partial_followup_cannot_bypass_original_limits_or_sight[no_finite_view] _
+
+fault = 'no_finite_view'
+
+    @pytest.mark.parametrize('fault',['cooldown','exhausted','no_finite_view'])
+    def test_partial_followup_cannot_bypass_original_limits_or_sight(fault):
+        n,i,p,_,_=partial_data(elapsed_s=0. if fault=='cooldown' else 31.)
+        if fault=='exhausted':p.attempts['metric-task-4'].tries=3
+        if fault=='no_finite_view':
+            v=n._metric_observation_view();n._metric_observation_view=lambda:LidarView(v.mount,np.array([]),v.range_m,v.minimum_range_m)
+        before=copy.deepcopy(p.attempts)
+>       selected=n._metric_select(i,p,.3)
+
+src/explore/test/test_metric_retained_observation.py:109: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:2166: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1785: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7f0221679960>
+inputs = (nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=1791259321, nanosec=55503...lse],
+       [ True, False, False, ..., False, False, False],
+       [ True,  True,  True, ..., False, False, False]]))
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                selection_cache = getattr(self, '_metric_selection_cache', None)
+                task_policy = getattr(selection_cache, 'policy', None)
+                retained = () if task_policy is None else tuple(a.frontier_xy
+                    for a in task_policy.attempts.values()
+                    if not a.completed and a.reason == 'partially_observed'
+                    and a.tries < task_policy.retry_limit+1 and a.failures < task_policy.retry_limit)
+                kwargs = (dict(retained_anchors=retained,
+                    retained_radius_m=MAX_LOCAL_OBSERVATION_RADIUS_M) if retained else {})
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier, **kwargs)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontier.retained_observation = any(math.dist(sample.xy, anchor)
+                        <= MAX_LOCAL_OBSERVATION_RADIUS_M for anchor in retained)
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+        private_start_available = (getattr(self, '_metric_start_egress_enabled', False)
+            and not getattr(self, '_metric_egress_expired', True)
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress)
+            and self._metric_private_start_needed(inputs))
+        if not private_start_available:
+            inputs = self._metric_public_inputs(inputs)
+            if memo is not None:
+                memo['inputs'] = inputs
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        # Before expensive boundary detours, prefer one useful proved forward
+        # observation in the existing local search. Start from its far bound:
+        # RPP's 15-cm acceptance must not reduce every departure to a tiny hop.
+        # All positions derive from current pose, full contour and real sight.
+        if (policy is not None and live_view
+                and getattr(self, '_metric_start_egress_enabled', False)
+                and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
+                and private_start_available):
+            minimum = max(self._min_goal_dist_m,
+                policy.radius+.15+grid.info.resolution)
+            steps = int(math.ceil(self._goal_search_m/grid.info.resolution))
+            for step in range(steps, -1, -1):
+                if time.monotonic()-selection_started > self._map_timeout_s:
+                    raise ValueError('frontier_candidate_processing_budget_exhausted')
+                distance = minimum+min(step*grid.info.resolution,self._goal_search_m)
+                goal = (pose[0]+distance*math.cos(pose[2]), pose[1]+distance*math.sin(pose[2]))
+                route = self._metric_route(inputs, goal, pose[2])
+                if route is None:
+                    continue
+                view = self._metric_observation_view()
+                visible = visible_boundary_cells(grid, scope_mask,
+                    self._metric_rollout_stop_pose(inputs,route,pose[2]), view)
+                for f in frontiers:
+                    points = tuple(self._grid_to_world(c,r,grid.info) for r,c in sorted(visible)
+                        if math.dist(self._grid_to_world(c,r,grid.info),(f.cx,f.cy)) <= MAX_LOCAL_OBSERVATION_RADIUS_M)
+                    if not points:
+                        continue
+                    key = policy.identify((f.cx,f.cy), goal)
+                    local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
+                    if not policy.eligible(key, goal, time.monotonic(), correlation.fingerprint, local):
+                        continue
+                    length = sum(math.dist(a,b) for a,b in zip(route,route[1:]))
+                    cost = self._potential_scale*length-self._gain_scale*len(points)*grid.info.resolution
+                    candidates.append(MetricCandidate('',*goal,pose[2],(f.cx,f.cy),route,length,cost,
+                        correlation.fingerprint,correlation.map_revision,False,points))
+                if candidates:
+                    candidates = [min(candidates,key=lambda c:(c.cost,c.frontier_xy,c.x,c.y))]
+                    stats['bounded_start_observation'] = True
+                    break
+        # A fully public short view must not wait behind expensive unproved
+        # distant approaches. Its same 0.5-s search shares the original 5 s.
+        if (policy is not None and live_view
+                and getattr(self, '_metric_start_egress_enabled', False)
+                and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
+                and not any(not c.requires_nav2_plan for c in candidates)):
+            observed = self._metric_public_observation(
+                inputs, frontiers, policy, scope_mask, selection_started)
+            if observed is not None:
+                candidates = [observed]
+                stats['bounded_public_observation'] = True
+        public_deferred = not candidates and memo is not None and 'public_deferred_until' in memo
+        if public_deferred:
+            stats['bounded_public_observation_wait_s'] = max(0.,memo['public_deferred_until']-time.monotonic())
+            stats['deferred_or_served'] += 1
+        for f in (() if candidates or public_deferred else frontiers):
+            if time.monotonic()-selection_started > getattr(self, '_map_timeout_s', 5.):
+                raise ValueError('frontier_candidate_processing_budget_exhausted')
+            kwargs = {}
+            if getattr(self, '_metric_start_egress_enabled', False):
+                kwargs['search_mask'] = search_mask
+            direction = getattr(f, 'approach_direction', None)
+            if direction is not None:
+                kwargs['approach_direction'] = direction
+            goal = self._frontier_approach_goal(f, pose[:2], grid, **kwargs)
+            normal_deferred = False
+            if (goal is not None and policy is not None and live_view
+                    and getattr(self,'_metric_path_validation','conservative') == 'rpp_rollout'):
+                key = policy.identify((f.cx,f.cy),goal)
+                local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
+                if not policy.eligible(key,goal,time.monotonic(),correlation.fingerprint,local):
+                    normal_deferred = True
+            route = None if goal is None or normal_deferred else self._metric_route(inputs, goal)
+            proposal = False
+            if goal is not None and route is None and not normal_deferred:
+                # The historic circular clearance may admit the base centre
+                # while the rotated asymmetric front touches unknown. Search
+                # back from that real approach, within the existing local
+                # search radius; each alternative needs the entire route proof.
+                dx,dy = goal[0]-f.cx,goal[1]-f.cy
+                length = math.hypot(dx,dy)
+                if length > 1e-9:
+                    steps = int(math.ceil(self._goal_search_m/grid.info.resolution))
+                    for step in range(1,steps+1):
+                        distance = min(step*grid.info.resolution,self._goal_search_m)
+                        alternative = (goal[0]+distance*dx/length,goal[1]+distance*dy/length)
+                        alternative_route = self._metric_route(inputs,alternative)
+                        if (alternative_route is None
+                                and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'):
+                            alternative_route = self._metric_nav2_proposal(inputs, alternative)
+                            proposal = alternative_route is not None
+                        if alternative_route is not None:
+                            goal,route = alternative,alternative_route
+                            break
+            if (goal is not None and route is None and not normal_deferred
+                    and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'):
+                route = self._metric_nav2_proposal(inputs, goal)
+                proposal = route is not None
+            if ((route is None or proposal) and policy is not None and live_view
+                    and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
+                    and all(footprint_clear(*pose, g, allowed, self._world_to_grid,
+                        self._grid_to_world, self._metric_bounds,
+                        heading_half_angle=.05, center_deviation_m=.02)
+                        for g, allowed in ((grid, inputs[3]), (inputs[5], inputs[6])))):
+                side = self._metric_robot_side_observation(
+                    inputs, f, policy, scope_mask, selection_started)
+                if side is not None:
+                    candidates = [side]
+                    stats['robot_side_observation'] = True
+                    break
+            if normal_deferred:
+                stats['deferred_or_served'] += 1
+                continue
+            if route is None or math.dist(goal, pose[:2]) < self._min_goal_dist_m:
+                stats['unsafe'] += 1
+                reason=('approach_unavailable' if goal is None else
+                        self._metric_last_route_rejection if route is None else 'goal_too_near')
+                counts=stats['route_rejections'];counts[reason]=counts.get(reason,0)+1
+                continue
+            if (policy is not None and live_view and not proposal
+                    and getattr(self,'_metric_path_validation','conservative') == 'rpp_rollout'):
+                # Prefer a publicly known turning pocket inside the SAME
+                # original .3-m approach backoff. An admissible observation
+                # pose near a wall need not be a useful forward-only arrival.
+                # Keep the original if this local search cannot prove another;
+                # the native departure query still owns the final decision.
+                trajectory=self._metric_public_rollout(inputs,route)
+                refuge=(grid,correlation,trajectory[-1],*inputs[3:])
+                dx,dy=goal[0]-f.cx,goal[1]-f.cy
+                offset=math.hypot(dx,dy)
+                if offset>1e-9 and not self._metric_scan_geometry_ready(refuge):
+                    for step in range(1,1+int(self._goal_search_m/grid.info.resolution)):
+                        if time.monotonic()-selection_started > self._map_timeout_s:
+                            raise ValueError('frontier_candidate_processing_budget_exhausted')
+                        extra=step*grid.info.resolution
+                        alternative=(goal[0]+extra*dx/offset,goal[1]+extra*dy/offset)
+                        alternative_route=self._metric_route(inputs,alternative)
+                        if alternative_route is None:
+                            continue
+                        trajectory=self._metric_public_rollout(inputs,alternative_route)
+                        if self._metric_scan_geometry_ready((grid,correlation,trajectory[-1],*inputs[3:])):
+                            goal,route=alternative,alternative_route
+                            stats['known_turn_refuge_approach']=True
+                            break
+            heading = math.atan2(goal[1]-pose[1], goal[0]-pose[0])
+            error = abs(math.atan2(math.sin(heading-pose[2]), math.cos(heading-pose[2])))
+            if self._frontier_forward_cone_half_angle > 0 and error > self._frontier_forward_cone_half_angle:
+                stats['unsafe'] += 1
+                continue
+            length = sum(math.dist(a,b) for a,b in zip(route,route[1:]))
+            cost = self._potential_scale*length-self._gain_scale*f.size*grid.info.resolution+self._heading_scale*error
+            target_yaw = route_arrival_yaw(route, pose[2], grid.info.resolution)
+            points = ()
+            if view is not None:
+                if live_view:
+                    view = self._metric_observation_view()
+                view_pose = ((*goal, target_yaw) if proposal else
+                    self._metric_rollout_stop_pose(inputs,route,target_yaw))
+                visible = visible_boundary_cells(grid, scope_mask, view_pose, view)
+                # This anchor must have a visible nearby boundary; unrelated
+                # unknown cells on the other side of a wall grant no utility.
+                local_hits = [cell for cell in visible if math.dist(
+                    self._grid_to_world(cell[1], cell[0], grid.info), (f.cx, f.cy)) <= MAX_LOCAL_OBSERVATION_RADIUS_M]
+                if not local_hits:
+                    stats['unsafe'] += 1
+                    counts = stats['route_rejections']
+                    counts['no_visible_frontier'] = counts.get('no_visible_frontier', 0)+1
+                    continue
+                cost = self._potential_scale*length-self._gain_scale*len(local_hits)*grid.info.resolution+self._heading_scale*error
+                points = tuple(self._grid_to_world(c, r, grid.info) for r, c in sorted(local_hits))
+            candidates.append(MetricCandidate('',*goal,target_yaw,(f.cx,f.cy),route,length,cost,
+                                              correlation.fingerprint,correlation.map_revision,proposal,points))
+            # A live qualified pass needs one eligible task or planner query.
+            # Exhaustive proof of all alternatives can consume its fixed
+            # deadline before any task starts. Do not stop on a served or
+            # deferred neighbourhood. A proposal still needs the mandatory
+            # actual native plan/whole-controller proof before any dispatch.
+            memo, _ = self._metric_selection_memo(inputs)
+            policy = None if memo is None else memo.get('policy')
+            if (policy is not None and live_view
+                    and getattr(self, '_metric_start_egress_enabled', False)
+                    and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'):
+                key = policy.identify((f.cx,f.cy), goal)
+                local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
+                if policy.eligible(key, goal, time.monotonic(), correlation.fingerprint, local,
+                                   observation_points=candidates[-1].observation_points):
+                    if proposal:
+                        stats['proposal_search_stopped_on_eligible_task'] = True
+                        candidates = [candidates[-1]]
+                    else:
+                        stats['proof_search_stopped_on_eligible_task'] = True
+                        candidates = [c for c in candidates if not c.requires_nav2_plan]
+                    break
+        # The nearest centre with its shortest-raster arrival heading may be
+        # unsafe while another pose in the SAME approach search is usable.
+        # A public known-space start permits asking Nav2 for that alternative;
+        # it still grants no movement before its actual full path is proved.
+        def eligible_original(candidate):
+            key=policy.identify(candidate.frontier_xy,(candidate.x,candidate.y),
+                                observation_points=candidate.observation_points)
+            local=self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
+            return policy.eligible(key,(candidate.x,candidate.y),time.monotonic(),
+                candidate.fingerprint,local,observation_points=candidate.observation_points)
+        if (policy is not None and live_view and not public_deferred
+                and not any(eligible_original(candidate) for candidate in candidates)
+                and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
+                and all(footprint_clear(*pose,g,allowed,self._world_to_grid,
+                    self._grid_to_world,self._metric_bounds,
+                    heading_half_angle=.05,center_deviation_m=.02)
+                    for g,allowed in ((grid,inputs[3]),(inputs[5],inputs[6])))):
+            stats['deferred_or_served'] += len(candidates)
+            candidates = []
+            for f in frontiers:
+                side_checked = False
+                direction = getattr(f, 'approach_direction', None)
+                alternatives = self._frontier_approach_goal(f,pose[:2],grid,
+                    search_mask=search_mask,approach_direction=direction,return_choices=True) or ()
+                for goal in alternatives:
+                    if time.monotonic()-selection_started > self._map_timeout_s:
+>                       raise ValueError('frontier_candidate_processing_budget_exhausted')
+E                       ValueError: frontier_candidate_processing_budget_exhausted
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:2063: ValueError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_retained_observation.py::test_partial_followup_cannot_bypass_original_limits_or_sight[no_finite_view]
+1 failed, 113 passed in 20.57s

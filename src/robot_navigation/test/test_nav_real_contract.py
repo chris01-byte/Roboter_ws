@@ -1,5 +1,7 @@
 from pathlib import Path
 import sys
+import time
+from types import SimpleNamespace
 
 import pytest
 import yaml
@@ -9,6 +11,8 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PACKAGE_ROOT))
 
 from robot_navigation.cmd_vel_mission_gate import (  # noqa: E402
+    CmdVelMissionGate,
+    estop_motion_authorized,
     explore_direct_values_valid,
     explore_health_authorized,
     explore_motion_authorized,
@@ -17,7 +21,13 @@ from robot_navigation.cmd_vel_mission_gate import (  # noqa: E402
     localization_search_values_valid,
     localization_motion_authorized,
     room_motion_authorized,
+    stage3_diagnostic_authorized,
+    transform_motion_authorized,
 )
+from robot_interfaces.msg import NearFieldStatus  # noqa: E402
+from sensor_msgs_py.point_cloud2 import create_cloud_xyz32  # noqa: E402
+from std_msgs.msg import Bool, Header  # noqa: E402
+from builtin_interfaces.msg import Time  # noqa: E402
 
 
 def test_real_command_chain_contains_smoother_before_collision_monitor():
@@ -48,13 +58,151 @@ def test_mapping_launch_has_single_slam_owner_and_explicit_explore_gate():
     assert "'enable_auto_explore', default_value='false'" in source
     assert "'allow_explore_mission'" in source
     assert "'enable_real_explore': enable_auto_explore" in source
-    assert "'explore_params_overlay': explore_params_overlay" in source
+    # Explorer profile: the operator overlay unless self_healing:=true selects
+    # the self-healing profile (default false, see test below).
+    assert ("'explore_params_overlay': when_self_healing(\n"
+            "                    self_healing_explore_params, explore_params_overlay)") in source
     assert "period=4.0" in source
     assert 'nav2_map_server' not in source
     assert 'nav2_amcl' not in source
     assert 'static_transform_publisher' not in source
     assert "package='nav2_behaviors'" in source
-    assert "('cmd_vel', 'cmd_vel_recovery_blocked')" in source
+    # Recovery output stays disconnected from the drive chain by default; only
+    # the explicit self-healing profile routes it through gate/smoother/monitor.
+    assert ("remappings=[('cmd_vel', when_self_healing(\n"
+            "                    'cmd_vel_nav_raw', 'cmd_vel_recovery_blocked'))]") in source
+    assert "'self_healing', default_value='false'" in source
+    # The local costmap lives in the controller_server process; without
+    # self_healing nav_overlay is the base file again (no change).
+    assert ("name='controller_server', output='screen',\n"
+            "                parameters=[params, nav_overlay]") in source
+    assert ("'collision_params_overlay': when_self_healing(\n"
+            "                    self_healing_collision_overlay, mapping_collision_params)") in source
+
+
+def test_self_healing_slam_overlay_only_tightens_loop_closure_and_only_in_self_healing():
+    """Entscheidung 22.10.2026 (X7): strengere Ringschluss-Schwellen nur mit self_healing."""
+    lidar = PACKAGE_ROOT.parent/'amadeus_lidar_bringup'
+    base = yaml.safe_load((lidar/'config'/'slam_toolbox_amadeus.yaml').read_text())
+    overlay = yaml.safe_load((lidar/'config'/'slam_toolbox_self_healing.yaml').read_text())
+    assert overlay == {'slam_toolbox': {'ros__parameters': {
+        'loop_match_minimum_chain_size': 20,
+        'loop_match_minimum_response_coarse': 0.55,
+        'loop_match_minimum_response_fine': 0.65,
+        'loop_match_maximum_variance_coarse': 2.0,
+        'minimum_travel_distance': 0.25,
+        'minimum_travel_heading': 0.35}}}
+    basis = base['slam_toolbox']['ros__parameters']
+    streng = overlay['slam_toolbox']['ros__parameters']
+    assert basis['do_loop_closing'] is True                     # Ringschluss bleibt an
+    assert streng['loop_match_minimum_chain_size'] > basis['loop_match_minimum_chain_size']
+    assert streng['loop_match_minimum_response_fine'] > basis['loop_match_minimum_response_fine']
+    assert streng['loop_match_minimum_response_coarse'] > basis['loop_match_minimum_response_coarse']
+    assert streng['loop_match_maximum_variance_coarse'] < basis['loop_match_maximum_variance_coarse']
+    # SL-1 (02.11.2026): Knoten seltener, aber Drehungen legen weiter Knoten an
+    # (ODER-Logik der Basis, Humble-Fix #808), unter den slam_toolbox-Standards 0,5 m/0,5 rad.
+    assert basis['check_min_dist_and_heading_precisely'] is True
+    assert basis['minimum_travel_distance'] < streng['minimum_travel_distance'] <= 0.5
+    assert basis['minimum_travel_heading'] < streng['minimum_travel_heading'] <= 0.5
+    # Kartenraster und Aktualisierung bleiben (Nicht-Ziele SL-1: Türkontur, Kartenfrist).
+    assert 'resolution' not in streng and 'map_update_interval' not in streng
+    # Beide SLAM-Startwege laden das Overlay nach der Basis; Default ist die Basis selbst.
+    for name in ('slam_lidar.launch.py', 'slam_lidar_hwt601.launch.py'):
+        source = (lidar/'launch'/name).read_text(encoding='utf-8')
+        assert "'slam_params_overlay', default_value=slam_params," in source
+        assert "parameters=[slam_params, slam_params_overlay, {'scan_topic': scan_topic}]" in source
+    mapping = (PACKAGE_ROOT/'launch'/'nav_mapping.launch.py').read_text(encoding='utf-8')
+    assert mapping.count("'slam_params_overlay': when_self_healing(\n"
+                         "                    self_healing_slam_overlay, slam_base_params),") == 2
+
+
+def test_self_healing_nav2_overlay_changes_only_the_approved_values():
+    real = yaml.safe_load((PACKAGE_ROOT/'config'/'nav2_params_real.yaml').read_text())
+    overlay = yaml.safe_load(
+        (PACKAGE_ROOT/'config'/'nav2_params_self_healing.yaml').read_text())
+    assert set(overlay) == {'planner_server', 'controller_server', 'velocity_smoother',
+                            'behavior_server', 'local_costmap', 'global_costmap'}
+    # VL53 height limit (decision 16.10.2026): only the marking VL53 sources,
+    # base profile keeps 0.05 for every other mode. VL53 clearing starts at
+    # 0.45 m (decision 22.10.2026, X9): a 10-cm object closer than ~0.42 m lies
+    # under every VL53 row and 2D clearing over it erased its mark.
+    vl53 = {'vl53_left': {'raytrace_min_range': 0.45},
+            'vl53_right': {'raytrace_min_range': 0.45},
+            'vl53_left_mark': {'min_obstacle_height': -0.02},
+            'vl53_right_mark': {'min_obstacle_height': -0.02}}
+    assert overlay['global_costmap']['global_costmap']['ros__parameters']['obstacle_layer'] == vl53
+    # Local costmap: VL53 sources stay in obstacle_layer exactly as before; the
+    # normalised LiDAR has its OWN layer that marks and clears (decision
+    # 08.11.2026 after SH-7N: odometry drift left old wall marks displaced).
+    # Its rays never touch the VL53 layer, so low VL53 marks survive (X9).
+    local = overlay['local_costmap']['local_costmap']['ros__parameters']
+    assert local['plugins'] == ['obstacle_layer', 'lidar_layer', 'inflation_layer']
+    # KM-1 B (decision 10.11.2026, triggered by SH-8 13.11.2026): neither local
+    # obstacle layer clears under the footprint any more, so an obstacle in the
+    # padding band stays visible to RPP; the global costmap keeps the default.
+    assert local['obstacle_layer'] == dict(vl53, footprint_clearing_enabled=False)
+    assert local['lidar_layer'] == {
+        'plugin': 'nav2_costmap_2d::ObstacleLayer', 'enabled': True,
+        'footprint_clearing_enabled': False,
+        'observation_sources': 'lidar',
+        'lidar': {'topic': '/scan_normiert', 'data_type': 'LaserScan',
+                  'marking': True, 'clearing': True, 'min_obstacle_height': 0.0,
+                  'max_obstacle_height': 1.0, 'obstacle_max_range': 2.5,
+                  'raytrace_max_range': 3.0}}
+    base_local = real['local_costmap']['local_costmap']['ros__parameters']
+    assert base_local['plugins'] == ['obstacle_layer', 'inflation_layer']
+    for costmap in ('local_costmap', 'global_costmap'):
+        assert 'footprint_clearing_enabled' not in \
+            real[costmap][costmap]['ros__parameters']['obstacle_layer']
+    assert 'lidar' not in base_local['obstacle_layer']['observation_sources'].split()
+    # Global costmap: paths keep more distance (flatter, wider inflation); the
+    # passability limit stays the robot radius.
+    global_overlay = overlay['global_costmap']['global_costmap']['ros__parameters']
+    assert global_overlay['inflation_layer'] == {'inflation_radius': 0.60,
+                                                 'cost_scaling_factor': 2.5}
+    base_global = real['global_costmap']['global_costmap']['ros__parameters']
+    assert global_overlay['inflation_layer']['inflation_radius'] > \
+        base_global['inflation_layer']['inflation_radius'] > base_global['robot_radius']
+    for costmap in ('local_costmap', 'global_costmap'):
+        base = real[costmap][costmap]['ros__parameters']['obstacle_layer']
+        assert 'raytrace_min_range' not in base['vl53_left']
+        for source in ('vl53_left_mark', 'vl53_right_mark', 'vl53_left', 'vl53_right'):
+            assert base[source]['min_obstacle_height'] == 0.05
+        assert base['vl53_left_mark']['marking'] is True
+        assert base['vl53_left']['marking'] is False
+    planner = overlay['planner_server']['ros__parameters']
+    assert planner == {'GridBased': {'allow_unknown': True}}
+    smoother = overlay['velocity_smoother']['ros__parameters']
+    real_smoother = real['velocity_smoother']['ros__parameters']
+    # Tempo (decision 05.11.2026): forward +35 %, turning +25 % over the real
+    # profile, only RPP speed and the smoother caps; reverse only for the
+    # bounded own-track BackUp.
+    controller = overlay['controller_server']['ros__parameters']
+    real_follow = real['controller_server']['ros__parameters']['FollowPath']
+    assert controller == {'FollowPath': {'desired_linear_vel': 0.135,
+                                         'rotate_to_heading_angular_vel': 0.25}}
+    assert controller['FollowPath']['desired_linear_vel'] == pytest.approx(
+        real_follow['desired_linear_vel']*1.35)
+    assert controller['FollowPath']['rotate_to_heading_angular_vel'] == pytest.approx(
+        real_follow['rotate_to_heading_angular_vel']*1.25)
+    assert smoother['max_velocity'][0] == pytest.approx(real_smoother['max_velocity'][0]*1.35)
+    assert smoother['max_velocity'][2] == pytest.approx(real_smoother['max_velocity'][2]*1.25)
+    assert smoother['max_velocity'][1] == 0.0
+    assert smoother['min_velocity'] == [-0.05, 0.0, -smoother['max_velocity'][2]]
+    assert set(smoother) == {'max_velocity', 'min_velocity'}
+    # Far below the drive's own limits (base_hardware 0.30 m/s, 0.80 rad/s).
+    base = yaml.safe_load((PACKAGE_ROOT.parent/'base_hardware'/'config'/
+                           'base_hardware_params.yaml').read_text())
+    base = next(iter(base.values()))['ros__parameters']
+    assert smoother['max_velocity'][0] <= base['max_linear_speed_mps']/1.8
+    assert smoother['max_velocity'][2] <= base['max_angular_speed_radps']/2.5
+    # BackUp checks against the back-off contour (decision 08.11.2026, SH-7N).
+    assert overlay['behavior_server']['ros__parameters'] == {
+        'simulate_ahead_time': 2.0, 'footprint_topic': 'rueckfahr_kontur'}
+    assert real['behavior_server']['ros__parameters']['footprint_topic'] == \
+        'local_costmap/published_footprint'
+    # RPP itself never reverses.
+    assert real['controller_server']['ros__parameters']['FollowPath']['allow_reversing'] is False
 
 
 def test_real_smoother_and_controller_limits_are_conservative():
@@ -99,6 +247,26 @@ def test_real_planner_uses_measured_astar_configuration():
     assert planner['plugin'] == 'nav2_navfn_planner/NavfnPlanner'
     assert planner['use_astar'] is True
     assert planner['allow_unknown'] is False
+
+
+def test_partial_vl53_returns_mark_but_never_clear_unknown_costmap_space():
+    parameters = yaml.safe_load(
+        (PACKAGE_ROOT / 'config' / 'nav2_params_real.yaml').read_text()
+    )
+    for costmap in ('local_costmap', 'global_costmap'):
+        layer = parameters[costmap][costmap]['ros__parameters'][
+            'obstacle_layer']
+        sources = layer['observation_sources'].split()
+        for side in ('left', 'right'):
+            mark = f'vl53_{side}_mark'
+            clear = f'vl53_{side}'
+            assert mark in sources and clear in sources
+            assert layer[mark]['topic'] == f'/near_field/{side}/points'
+            assert layer[mark]['marking'] is True
+            assert layer[mark]['clearing'] is False
+            assert layer[mark]['obstacle_max_range'] <= .55
+            assert layer[clear]['topic'] == f'/near_field/{side}/points_costmap'
+            assert layer[clear]['clearing'] is True
 
 
 def test_real_footprint_fits_doors_without_hiding_platform_length():
@@ -174,6 +342,51 @@ def test_mission_gate_is_fail_closed():
     assert not room_motion_authorized(None)
 
 
+def test_estop_gate_needs_fresh_explicit_clear_and_stops_immediately():
+    now = time.monotonic()
+    assert estop_motion_authorized(True, now, now + .2, 1.0)
+    for clear, received in ((None, None), (False, now), (True, None),
+                            (True, now - 1.1), (True, now + .1)):
+        assert not estop_motion_authorized(clear, received, now, 1.0)
+    gate = CmdVelMissionGate.__new__(CmdVelMissionGate)
+    published = []
+    gate._publisher = SimpleNamespace(publish=published.append)
+    gate._on_estop(Bool(data=True))
+    assert gate._estop_clear is False
+    assert len(published) == 1
+    gate._on_estop(Bool(data=False))
+    assert gate._estop_clear is True
+    assert len(published) == 1  # Freigabe startet keinen alten Befehl.
+
+
+def test_stage3_diagnostic_gate_is_opt_in_one_shot_and_fails_closed():
+    now = 10.0
+    values = dict(
+        enabled=True, active=True, active_at=9.9, command_at=9.9,
+        mission_status={'state': 'idle', 'active_command': None},
+        mission_status_at=9.9, now=now, timeout_s=1.0,
+        health_ready=True, estop_clear=True, hwt_ready=True, tf_ready=True,
+    )
+    assert stage3_diagnostic_authorized(**values)
+    for changes in (
+            {'enabled': False}, {'active': False}, {'command_at': 8.9},
+            {'mission_status': {'state': 'running', 'active_command': None}},
+            {'mission_status': {'state': 'idle',
+                                'active_command': {'type': 'explore'}}},
+            {'health_ready': False}, {'estop_clear': False},
+            {'hwt_ready': False}, {'tf_ready': False}):
+        assert not stage3_diagnostic_authorized(**(values | changes))
+
+
+def test_mission_gate_rejects_missing_future_or_stale_map_base_transform():
+    now = 10_000_000_000
+    assert transform_motion_authorized(now - 100_000_000, now, .2)
+    assert not transform_motion_authorized(None, now, .2)
+    assert not transform_motion_authorized(0, now, .2)
+    assert not transform_motion_authorized(now + 1, now, .2)
+    assert not transform_motion_authorized(now - 201_000_000, now, .2)
+
+
 def test_explore_gate_requires_explicit_opt_in_phase_and_fresh_sensors():
     running = {
         'state': 'running',
@@ -197,6 +410,55 @@ def test_explore_gate_requires_explicit_opt_in_phase_and_fresh_sensors():
         allow_stale_map_for_scan=True)
     assert not explore_health_authorized(
         True, 9.0, 9.8, None, 9.8, 9.8, 10.0, 5.0, 0.8, 0.8)
+
+
+def test_gate_requires_fresh_matching_frame_health_not_full_target_coverage():
+    gate = CmdVelMissionGate.__new__(CmdVelMissionGate)
+    gate._explore_sensor_timeout = .8
+    gate._near_clouds = {'left': {}, 'right': {}}
+    gate._near_statuses = {}
+    gate.get_clock = lambda: SimpleNamespace(
+        now=lambda: SimpleNamespace(nanoseconds=10_000_000_000))
+    stamp = Time(sec=10)
+    left = create_cloud_xyz32(
+        Header(stamp=stamp, frame_id='vl53_left_link'), [(0.24, .02, 0.)])
+    right = create_cloud_xyz32(
+        Header(stamp=stamp, frame_id='vl53_right_link'), [])
+    gate._on_explore_left(left)
+    gate._on_explore_right(right)
+    assert not gate._near_quality_authorized(time.monotonic())
+    def quality_status(second, right_quality):
+        status = NearFieldStatus()
+        status.header.stamp.sec = second
+        status.header.frame_id = 'base_link'
+        status.left_quality = NearFieldStatus.QUALITY_VALID_NEAR
+        status.right_quality = right_quality
+        status.left_observed_columns = status.right_observed_columns = 255
+        status.left_frame_healthy = status.right_frame_healthy = True
+        return status
+
+    gate._on_near_status(quality_status(10, NearFieldStatus.QUALITY_VALID_FAR))
+    assert gate._near_quality_authorized(time.monotonic())
+    # If the producer omits a failed read, no fresh triplet replaces this one.
+    # The existing freshness budget must still close the gate.
+    assert not gate._near_quality_authorized(
+        time.monotonic() + gate._explore_sensor_timeout + .1)
+    partial = quality_status(10, NearFieldStatus.QUALITY_PARTIAL)
+    partial.right_observed_columns = 0
+    gate._on_near_status(partial)
+    assert gate._near_quality_authorized(time.monotonic())
+    # Even zero target returns do not imply a broken transport/frame. This
+    # authorizes the source, not free space; Nav2/Collision still own motion.
+    partial.right_quality = NearFieldStatus.QUALITY_INVALID
+    gate._on_near_status(partial)
+    assert gate._near_quality_authorized(time.monotonic())
+    partial.right_frame_healthy = False
+    gate._on_near_status(partial)
+    assert not gate._near_quality_authorized(time.monotonic())
+    gate._on_near_status(quality_status(9, NearFieldStatus.QUALITY_VALID_FAR))
+    assert not gate._near_quality_authorized(time.monotonic())
+    gate._on_near_status(quality_status(11, NearFieldStatus.QUALITY_VALID_FAR))
+    assert not gate._near_quality_authorized(time.monotonic())
 
 
 def test_explore_scan_input_is_rotation_only_and_bounded():
@@ -335,3 +597,38 @@ def test_mission_gate_tolerates_shutdown_context_race():
     source = (PACKAGE_ROOT / 'robot_navigation' /
               'cmd_vel_mission_gate.py').read_text(encoding='utf-8')
     assert 'except RCLError:' in source
+    assert 'except RuntimeError:' in source
+    assert 'if rclpy.ok():\n            raise' in source
+
+
+def test_back_off_contour_covers_exactly_what_a_straight_back_off_enters():
+    """SH-7N: BackUp refused to move away when the full padded outline touched."""
+    from robot_navigation.rueckfahr_kontur import STANDARD_PUNKTE, kontur_punkte
+    real = yaml.safe_load((PACKAGE_ROOT/'config'/'nav2_params_real.yaml').read_text())
+    local = real['local_costmap']['local_costmap']['ros__parameters']
+    footprint = yaml.safe_load(local['footprint'])
+    padding = local['footprint_padding']
+    front = max(x for x, _ in footprint)
+    rear = min(x for x, _ in footprint)
+    half = max(abs(y) for _, y in footprint)
+    points = kontur_punkte(STANDARD_PUNKTE)
+    xs, ys = [x for x, _ in points], [y for _, y in points]
+    # Rear edge with the full padding of the local costmap (direction of travel).
+    assert min(xs) == pytest.approx(rear - padding)
+    # Width just under the real half width: a wall along the flank (cell
+    # centres from 0.27 m in SH-7N) must not block the check at standstill.
+    assert max(abs(y) for y in ys) == pytest.approx(half - 0.01)
+    # The front ends well inside the robot: what touches the front never counts.
+    assert max(xs) < front - 0.2
+    for bad in ([0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 1.0, 0.0, 2.0, 0.0], [0.0, float('nan'), 1.0, 0.0, 0.0, 1.0]):
+        with pytest.raises(ValueError):
+            kontur_punkte(bad)
+
+
+def test_back_off_contour_node_starts_only_with_self_healing():
+    source = (PACKAGE_ROOT/'launch'/'nav_mapping.launch.py').read_text()
+    assert ("package='robot_navigation', executable='rueckfahr_kontur',\n"
+            "                name='rueckfahr_kontur', output='screen',\n"
+            "                condition=IfCondition(self_healing)),") in source
+    setup = (PACKAGE_ROOT/'setup.py').read_text()
+    assert "'rueckfahr_kontur = '" in setup

@@ -1,0 +1,19 @@
+# =====================================================================
+#  Overlay fuer den collision_monitor im selbstheilenden Betrieb
+#  Nur mit nav_mapping.launch.py self_healing:=true; wird NACH
+#  collision_monitor_mapping_params.yaml geladen und aendert nur diese Werte.
+#
+#  Entscheidung Projektinhaber 16.10.2026: jeder gueltige VL53-Treffer
+#  zaehlt. Die Wolke liegt geometrisch nie unter 0,084 m ueber Boden
+#  (0,50 m Reichweite, unterste Zeile -26,25 Grad, Sensor 0,305 m ueber
+#  Boden); -0,02 m ueber base_link = 0,07 m ueber Boden. Gemessen SH-1 v3:
+#  leerer Boden 0 Treffer. Konzept: docs/wohnungserkundung/
+#  KONZEPT_SELBSTHEILUNG.md Abschnitt 6.
+#  Rueckfall: self_healing:=false (Mappingprofil mit 0,05 unveraendert).
+# =====================================================================
+collision_monitor:
+  ros__parameters:
+    vl53_left:
+      min_height: -0.02
+    vl53_right:
+      min_height: -0.02

@@ -1,0 +1,409 @@
+import math
+import re
+from pathlib import Path
+
+import numpy as np
+import pytest
+import yaml
+
+from selbstheilung_stillstand_pruefen import (
+    KOERPER_STANDARD, NOT_SET, ODOMETRIE, Ergebnis, compare_params, eigenecho_zaehlung,
+    flatten_ros_params, height_report, im_polygon, lethal_cells_in_body,
+    lethal_cells_in_window, near_field_filters, normalize_topic, parse_footprint, polster,
+    row_elevations, scan_punkte, transform_points, values_match)
+
+
+REPO = Path(__file__).resolve().parents[2]
+
+
+def _params(relative):
+    return flatten_ros_params(yaml.safe_load((REPO / relative).read_text(encoding='utf-8')))
+
+
+def test_profiles_flatten_to_live_parameter_names():
+    explore = _params('src/explore/config/self_healing_params.yaml')['/explore_node']
+    assert explore['exploration_strategy'] == 'self_healing'
+    # Tempo +35 % / +25 % (Entscheidung 05.11.2026).
+    assert explore['self_healing_unknown_speed_mps'] == pytest.approx(0.08)
+    assert explore['initial_scan_angular_speed_radps'] == pytest.approx(0.10)
+    overlay = _params('src/robot_navigation/config/nav2_params_self_healing.yaml')
+    assert overlay['/planner_server'] == {'GridBased.allow_unknown': True}
+    assert overlay['/controller_server'] == {'FollowPath.desired_linear_vel': 0.135,
+                                             'FollowPath.rotate_to_heading_angular_vel': 0.25}
+    assert overlay['/velocity_smoother']['max_velocity'] == [0.162, 0.0, 0.3125]
+    assert overlay['/velocity_smoother']['min_velocity'] == [-0.05, 0.0, -0.3125]
+    assert overlay['/behavior_server'] == {'simulate_ahead_time': 2.0,
+                                           'footprint_topic': 'rueckfahr_kontur'}
+    assert explore['self_healing_free_back_m'] == pytest.approx(0.3)
+    assert explore['self_healing_track_back_slow_factor'] == pytest.approx(0.3)
+    vl53 = {'obstacle_layer.vl53_left_mark.min_obstacle_height': -0.02,
+            'obstacle_layer.vl53_right_mark.min_obstacle_height': -0.02,
+            'obstacle_layer.vl53_left.raytrace_min_range': 0.45,
+            'obstacle_layer.vl53_right.raytrace_min_range': 0.45}
+    # Wege mit mehr Abstand (Entscheidung 08.11.2026 nach SH-7N).
+    assert overlay['/global_costmap/global_costmap'] == {
+        **vl53, 'inflation_layer.inflation_radius': 0.60,
+        'inflation_layer.cost_scaling_factor': 2.5}
+    # Eigene LiDAR-Ebene, die raeumt (08.11.2026); VL53-Ebene wie nach X9.
+    # KM-1 B (13.11.2026): keine der beiden Ebenen loescht unter der Kontur.
+    assert overlay['/local_costmap/local_costmap'] == {
+        **vl53,
+        'plugins': ['obstacle_layer', 'lidar_layer', 'inflation_layer'],
+        'obstacle_layer.footprint_clearing_enabled': False,
+        'lidar_layer.footprint_clearing_enabled': False,
+        'lidar_layer.plugin': 'nav2_costmap_2d::ObstacleLayer',
+        'lidar_layer.enabled': True,
+        'lidar_layer.observation_sources': 'lidar',
+        'lidar_layer.lidar.topic': '/scan_normiert',
+        'lidar_layer.lidar.data_type': 'LaserScan',
+        'lidar_layer.lidar.marking': True,
+        'lidar_layer.lidar.clearing': True,
+        'lidar_layer.lidar.min_obstacle_height': 0.0,
+        'lidar_layer.lidar.max_obstacle_height': 1.0,
+        'lidar_layer.lidar.obstacle_max_range': 2.5,
+        'lidar_layer.lidar.raytrace_max_range': 3.0}
+    slam = _params('src/amadeus_lidar_bringup/config/slam_toolbox_self_healing.yaml')
+    assert slam == {'/slam_toolbox': {'loop_match_minimum_chain_size': 20,
+                                      'loop_match_minimum_response_coarse': 0.55,
+                                      'loop_match_minimum_response_fine': 0.65,
+                                      'loop_match_maximum_variance_coarse': 2.0,
+                                      'minimum_travel_distance': 0.25,
+                                      'minimum_travel_heading': 0.35}}
+    collision = _params('src/vl53_near_field/config/collision_monitor_self_healing_overlay.yaml')
+    assert collision == {'/collision_monitor': {
+        'vl53_left.min_height': -0.02, 'vl53_right.min_height': -0.02}}
+    nested = _params('src/robot_navigation/config/nav2_params_real.yaml')
+    assert '/local_costmap/local_costmap' in nested
+
+
+def test_values_match_is_strict_about_bool_and_tolerant_for_numbers():
+    assert values_match(True, True) and not values_match(True, 1)
+    assert values_match(0.06, 0.060000001) and values_match(1, 1.0)
+    assert not values_match(0.06, 0.08)
+    assert values_match([-0.05, 0.0], [-0.05, 0.0]) and not values_match([-0.05], [0.0])
+    assert not values_match('a', NOT_SET)
+    rows = compare_params({'a': 1, 'b': 'x'}, {'a': 1})
+    assert [(n, ok) for n, _, _, ok in rows] == [('a', True), ('b', False)]
+
+
+def test_near_field_filters_find_marking_sources_and_their_height_limit():
+    local = _params('src/robot_navigation/config/nav2_params_real.yaml')[
+        '/local_costmap/local_costmap']
+    sources = near_field_filters(local)
+    marking = {k: v for k, v in sources.items() if v['marking']}
+    clearing = {k: v for k, v in sources.items() if not v['marking']}
+    assert marking and clearing
+    assert all(v['topic'].endswith('/points') for v in marking.values())
+    assert {v['min'] for v in marking.values()} == {0.05}
+    monitor = _params('src/vl53_near_field/config/collision_monitor_mapping_params.yaml')[
+        '/collision_monitor']
+    assert {v['min'] for v in near_field_filters(monitor).values()} == {0.05}
+
+
+def test_low_object_seen_by_lowest_row_is_dropped_by_the_height_filter():
+    # Sensor wie montiert: 0,215 m ueber base_link, base_link 0,09 m ueber Boden.
+    rows = row_elevations(60.0)
+    el = rows[0]                                   # unterste Zeile, -26,25 Grad
+    forward = 0.42                                 # Vorderkante des Testobjekts
+    radial = forward / math.cos(el)
+    sensor = np.array([[radial*math.cos(el), 0.0, radial*math.sin(el)]])
+    assert radial < 0.50                           # innerhalb z_max des Treibers
+    base = transform_points(sensor, (0.29, 0.095, 0.215), (0.0, 0.0, 0.0, 1.0))
+    report = height_report(base, sensor, 0.05, 0.09, rows)
+    hit_floor = report['hoehe_ueber_boden_min_m']
+    assert 0.09 < hit_floor < 0.11                 # Objekt ~10 cm hoch wird getroffen ...
+    assert report['verworfen'] == 1                # ... aber unter 0,14 m verworfen
+    assert report['filter_ueber_boden_m'] == pytest.approx(0.14)
+    assert report['zeilen'][0]['zeile'] == 0
+
+
+def test_height_bands_count_points_by_floor_height():
+    base = np.array([[0.4, 0., z - 0.09] for z in (0.03, 0.08, 0.12, 0.20)])
+    report = height_report(base, base, 0.05, 0.09)
+    assert report['verworfen'] == 3 and report['behalten'] == 1
+    assert list(report['baender_ueber_boden'].values()) == [1, 1, 1, 1]
+    assert report['naechster_behaltener_x_base_link_m'] == pytest.approx(0.4)
+    # Selbstheilungsgrenze (-0,02 m ueber base_link = 0,07 m ueber Boden):
+    # gleiche Baender, nur noch der 3-cm-Punkt faellt unter den Filter.
+    lowered = height_report(base, base, -0.02, 0.09)
+    assert lowered['baender_ueber_boden'] == report['baender_ueber_boden']
+    assert lowered['verworfen'] == 1 and lowered['filter_ueber_boden_m'] == pytest.approx(0.07)
+
+
+def test_lethal_cells_are_counted_only_in_the_window_in_front_of_the_robot():
+    width = height = 60                                   # 3 m x 3 m, 5 cm cells
+    data = np.zeros(width*height, dtype=int)
+    grid = data.reshape(height, width)
+    grid[30, 40] = 100        # odom (2.025, 1.525): 0.525 m ahead of the robot
+    grid[30, 20] = 100        # 0.475 m behind the robot
+    grid[45, 40] = 100        # 0.75 m to the left
+    grid[31, 41] = 99         # inflation only
+    robot = (1.5, 1.5)                                    # base_link in odom, yaw 0
+    to_base = lambda pts: pts - np.array([robot[0], robot[1], 0.0])  # noqa: E731
+    assert lethal_cells_in_window(data, width, height, 0.05, (0.0, 0.0), to_base) == 1
+    # Robot turned by 180 degrees: now the former 'behind' cell is in front.
+    yaw180 = (0.0, 0.0, 1.0, 0.0)
+    turned = lambda pts: transform_points(pts - np.array([robot[0], robot[1], 0.0]),  # noqa: E731
+                                          (0, 0, 0), yaw180)
+    assert lethal_cells_in_window(data, width, height, 0.05, (0.0, 0.0), turned) == 1
+
+
+def test_transform_points_rotates_with_quaternion():
+    yaw90 = (0.0, 0.0, math.sin(math.pi/4), math.cos(math.pi/4))
+    moved = transform_points([[1.0, 0.0, 0.0]], (0.0, 0.0, 1.0), yaw90)
+    assert moved[0] == pytest.approx([0.0, 1.0, 1.0], abs=1e-9)
+
+
+def test_result_fails_only_on_false_checks():
+    result = Ergebnis()
+    result.add('X', 'Hinweis', None)
+    result.add('X', 'ok', True)
+    assert result.bestanden
+    result.add('X', 'kaputt', False)
+    assert not result.bestanden
+    assert normalize_topic('speed_limit') == '/speed_limit'
+
+
+def test_expected_odometry_owners_match_the_launch_files():
+    hwt = (REPO/'src/amadeus_lidar_bringup/launch/slam_lidar_hwt601.launch.py').read_text(
+        encoding='utf-8')
+    standard = (REPO/'src/amadeus_lidar_bringup/launch/slam_lidar.launch.py').read_text(
+        encoding='utf-8')
+    # HWT601 path: the EKF owns /odom, the base only feeds the fusion input.
+    assert "name='hwt601_mapping_ekf'" in hwt
+    assert "remappings=[('odometry/filtered', '/odom')]" in hwt
+    assert "'odom_topic': '/fusion/hwt601/wheel_odom_raw'" in hwt
+    assert ODOMETRIE['hwt601'] == {'require_hwt601_fusion': True,
+                                   'odom_publisher': '/hwt601_mapping_ekf'}
+    # Standard path: base_hardware publishes /odom itself.
+    assert "name='base_hardware'" in standard and "/fusion/hwt601" not in standard
+    assert ODOMETRIE['standard']['odom_publisher'] == '/base_hardware'
+
+
+def test_checker_stays_read_only():
+    source = (Path(__file__).with_name('selbstheilung_stillstand_pruefen.py')
+              .read_text(encoding='utf-8'))
+    for forbidden in ('create_publisher', 'ActionClient', 'send_goal',
+                      'SetParameters', 'set_parameters', 'call_async(Trigger'):
+        assert forbidden not in source
+    # Einzige Dienstaufrufe: GetParameters und ListParameters.
+    assert set(re.findall(r'self\._call\((\w+)', source)) == {'GetParameters', 'ListParameters'}
+
+
+class _Graph:
+    """Nachgebildeter ROS-Graph fuer die Verdrahtungspruefung."""
+    def __init__(self, scan_publisher=True, costmap_liest_scan=True, kontur=True,
+                 footprint_topic='rueckfahr_kontur'):
+        self.footprint_topic = footprint_topic
+        self.pubs = {'/cmd_vel_nav_raw': {'/controller_server', '/behavior_server'},
+                     '/cmd_vel': {'/collision_monitor'},
+                     '/scan_normiert': {'/scan_vereinheitlichen'} if scan_publisher else set(),
+                     '/rueckfahr_kontur': {'/rueckfahr_kontur'} if kontur else set()}
+        self.subs = {'/cmd_vel_nav_raw': {'/cmd_vel_mission_gate'},
+                     '/rueckfahr_kontur': {'/behavior_server'},
+                     '/speed_limit': {'/controller_server'},
+                     '/scan_normiert': ({'/slam_toolbox', '/local_costmap/local_costmap'}
+                                        if costmap_liest_scan else {'/slam_toolbox'})}
+
+    def publishers(self, topic):
+        return set(self.pubs.get(topic, set()))
+
+    def subscribers(self, topic):
+        return set(self.subs.get(topic, set()))
+
+    def action_servers(self, node):
+        return {'/backup'}
+
+    def get_params(self, node, names):
+        return {'speed_limit_topic': '/speed_limit', 'footprint_topic': self.footprint_topic}
+
+
+def test_wiring_requires_the_lidar_in_the_local_costmap_since_x9():
+    from selbstheilung_stillstand_pruefen import Ergebnis, pruefe_verdrahtung
+
+    def pruefe(**graph):
+        ergebnis = Ergebnis()
+        pruefe_verdrahtung(_Graph(**graph), ergebnis, {'self_healing_speed_limit_topic': '/speed_limit'})
+        return ergebnis
+
+    assert pruefe().bestanden
+    assert not pruefe(costmap_liest_scan=False).bestanden
+    zeilen = {z['pruefung']: z for z in pruefe(scan_publisher=False).zeilen}
+    assert zeilen['Publisher auf /scan_normiert']['ok'] is False
+    assert 'normalize_scan' in zeilen['Publisher auf /scan_normiert']['detail']
+    # Entscheidung 08.11.2026 (SH-7N): Rueckfahrkontur muss am Behavior-Server anliegen.
+    assert not pruefe(kontur=False).bestanden
+    assert not pruefe(footprint_topic='local_costmap/published_footprint').bestanden
+
+
+
+def test_hwt_launch_starts_exactly_one_encoder_reader():
+    from selbstheilung_stillstand_pruefen import ENCODER_SHADOW
+    hwt = (REPO/'src/amadeus_lidar_bringup/launch/slam_lidar_hwt601.launch.py').read_text(
+        encoding='utf-8')
+    base = hwt[hwt.index("executable='base_hardware'"):]
+    shadow = hwt[hwt.index("executable='encoder_shadow_reader'"):]
+    assert 'condition=IfCondition(active_drive)' in base[:200]
+    assert f"name='{ENCODER_SHADOW.lstrip('/')}'" in shadow[:200]
+    assert 'condition=UnlessCondition(active_drive)' in shadow[:200]
+
+
+def _motorpfad(odometrie, aktiv, knoten, base):
+    from selbstheilung_stillstand_pruefen import motorpfad_zeilen
+    return {name: ok for name, ok, _ in motorpfad_zeilen(odometrie, aktiv, set(knoten), base)}
+
+
+def test_motorless_hwt_path_needs_the_encoder_shadow_instead_of_base_hardware():
+    """SH-2 Lauf 1 (02.11.2026): D scheiterte, weil base_hardware dort nie startet."""
+    shadow, base = '/hwt601_encoder_shadow_reader', '/base_hardware'
+    assert _motorpfad('hwt601', False, {shadow, '/slam_toolbox'}, None) == {
+        'kein Motorschreiber (HWT-Weg ohne active_drive)': True}
+    # Ohne sichtbaren Shadow ist das Fehlen von base_hardware kein Beleg.
+    assert not all(_motorpfad('hwt601', False, {'/slam_toolbox'}, None).values())
+    # base_hardware im Graph, aber ohne Antwort: wie bisher FEHL, keine Abkürzung.
+    assert not all(_motorpfad('hwt601', False, {shadow, base}, None).values())
+    # base_hardware im HWT-Weg läuft: dieselben Dry-Run-Regeln wie im Standardweg.
+    trocken = {'dry_run': True, 'allow_rs485': False}
+    assert all(_motorpfad('hwt601', False, {base}, trocken).values())
+    assert not all(_motorpfad('hwt601', False, {base}, {'dry_run': False, 'allow_rs485': True}).values())
+    assert not all(_motorpfad('hwt601', False, {base, shadow}, trocken).values())
+
+
+def test_standard_path_and_active_order_still_require_base_hardware():
+    shadow, base = '/hwt601_encoder_shadow_reader', '/base_hardware'
+    scharf = {'dry_run': False, 'allow_rs485': True}
+    for odometrie in (None, 'standard'):
+        assert not all(_motorpfad(odometrie, False, {shadow}, None).values())
+        assert all(_motorpfad(odometrie, False, {base}, {'dry_run': True, 'allow_rs485': False}).values())
+    # Vor einer Laborfahrt (SH-3, HWT-Weg mit active_drive): Basis scharf, kein Shadow.
+    assert all(_motorpfad('hwt601', True, {base}, scharf).values())
+    assert not all(_motorpfad('hwt601', True, {shadow}, None).values())
+    assert not all(_motorpfad('hwt601', True, {base, shadow}, scharf).values())
+
+
+def test_standstill_check_passes_the_reported_sh2_graph():
+    from selbstheilung_stillstand_pruefen import pruefe_stillstand
+
+    class Knoten:
+        def create_subscription(self, *args):
+            return object()
+
+        def destroy_subscription(self, sub):
+            pass
+
+    class Leser:
+        node = Knoten()
+
+        def get_params(self, node, names):
+            return None                      # base_hardware läuft nicht
+
+        def knoten(self):
+            return {'/hwt601_encoder_shadow_reader', '/hwt601_mapping_ekf', '/collision_monitor'}
+
+        def spin_for(self, seconds):
+            pass
+
+    ergebnis = Ergebnis()
+    pruefe_stillstand(Leser(), ergebnis, 3.0, odometrie='hwt601')
+    assert ergebnis.bestanden, ergebnis.zeilen
+    ergebnis = Ergebnis()
+    pruefe_stillstand(Leser(), ergebnis, 3.0, odometrie=None)
+    assert not ergebnis.bestanden
+
+
+def _quellen(aktiv, odometrie, base_state, fusion):
+    from selbstheilung_stillstand_pruefen import quellen_zeilen
+    return {name: ok for name, ok, _ in quellen_zeilen(aktiv, odometrie, base_state, fusion)}
+
+
+BEREIT_BASE = {'encoder_feedback_ok': True, 'encoder_stale': False, 'encoder_feedback_age_s': .03,
+               'encoder_last_reason': 'ok', 'encoder_timing_recovery': {'state': 'ready', 'ready': True,
+                                                                        'current_reason': 'ok'}}
+BEREIT_FUSION = {'sources_ready': True, 'latched_fault': None, 'recovery_state': 'STARTUP',
+                 'last_fault': {'aggregate_reason': 'yaw_uncalibrated_or_faulted'}}
+
+
+def test_ready_sources_pass_before_an_active_run():
+    zeilen = _quellen(True, 'hwt601', BEREIT_BASE, BEREIT_FUSION)
+    assert zeilen and all(zeilen.values()), zeilen        # STARTUP vor der Mission ist normal
+
+
+def test_sh4_run3_encoder_fault_is_caught_before_the_mission():
+    """SH-4 Fahrt 3, erster Versuch: Vorprüfung „bestanden“, Roboter fuhr nie."""
+    base = {'encoder_feedback_ok': False, 'encoder_stale': True, 'encoder_feedback_age_s': 868.8,
+            'encoder_last_reason': 'encoderpaar_zeitfenster_ueberschritten',
+            'encoder_timing_recovery': {'state': 'fault_latched', 'ready': False,
+                                        'current_reason': 'encoderpaar_zeitfenster_ueberschritten'}}
+    fusion = {'sources_ready': False, 'latched_fault': None, 'recovery_state': 'STARTUP',
+              'last_fault': {'aggregate_reason': 'wheel_missing_stale_or_invalid'}}
+    zeilen = _quellen(True, 'hwt601', base, fusion)
+    assert zeilen['Encoder liefern frisch'] is False
+    assert zeilen['Encoder-Zeitwache bereit'] is False
+    assert zeilen['HWT-Fusion Quellen bereit'] is False
+
+
+def test_missing_status_or_latched_fusion_fault_fails_and_motorless_checks_skip_sources():
+    assert _quellen(True, 'hwt601', None, None) == {
+        'base_hardware meldet Zustand': False, 'HWT-Fusion meldet Zustand': False}
+    verriegelt = dict(BEREIT_FUSION, latched_fault='hwt_terminal')
+    assert _quellen(True, 'hwt601', BEREIT_BASE, verriegelt)['HWT-Fusion Quellen bereit'] is False
+    terminal = dict(BEREIT_FUSION, recovery_state='TERMINAL_FAULT')
+    assert _quellen(True, 'hwt601', BEREIT_BASE, terminal)['HWT-Fusion Quellen bereit'] is False
+    # Standard-Odometrie: keine Fusionszeile; ohne Zeitwache keine Wachenzeile.
+    ohne_wache = {k: v for k, v in BEREIT_BASE.items() if k != 'encoder_timing_recovery'}
+    assert _quellen(True, 'standard', ohne_wache, None) == {'Encoder liefern frisch': True}
+    # Motorlose Prüfungen (ohne --aktiv) verlangen keine Fahrquellen.
+    assert _quellen(False, 'hwt601', None, None) == {}
+
+
+# --- F Eigenechos (KM-1 B, 13.11.2026) -------------------------------------
+
+def test_body_matches_the_local_costmap_footprint_and_nav2_padding():
+    real = yaml.safe_load((REPO/'src/robot_navigation/config/nav2_params_real.yaml')
+                          .read_text(encoding='utf-8'))
+    local = real['local_costmap']['local_costmap']['ros__parameters']
+    assert parse_footprint(local['footprint']) == [tuple(p) for p in KOERPER_STANDARD]
+    # nav2 padFootprint: je Achse nach außen; ergibt x -0,13..0,33, y ±0,25.
+    assert polster(KOERPER_STANDARD, local['footprint_padding']) == pytest.approx(
+        [(0.33, 0.25), (0.33, -0.25), (-0.13, -0.25), (-0.13, 0.25)])
+    with pytest.raises(ValueError):
+        parse_footprint('[[0.1, 0.1], [0.2, 0.2]]')
+
+
+def test_point_in_polygon_inside_outside_and_padding_band():
+    pts = [(0.0, 0.0), (0.30, 0.22), (0.32, 0.0), (0.40, 0.0), (-0.12, 0.0), (0.0, -0.30)]
+    assert im_polygon(pts, KOERPER_STANDARD).tolist() == [True, True, False, False, False, False]
+    zaehlung = eigenecho_zaehlung([(x, y, 0.4) for x, y in pts], KOERPER_STANDARD, 0.02)
+    assert zaehlung['punkte'] == 6
+    assert zaehlung['im_gehaeuse'] == 2
+    assert zaehlung['im_polsterband'] == 2          # 0,32 vorn und -0,12 hinten
+    assert zaehlung['beispiele_gehaeuse_xy'] == [[0.0, 0.0], [0.3, 0.22]]
+
+
+def test_scan_points_skip_the_mast_mask_and_out_of_range_values():
+    # Mastsektor liefert NaN (gemessen 12.08.2026), dazu inf und zu nahe Werte.
+    pts = scan_punkte([1.0, float('nan'), float('inf'), 0.01, 2.0],
+                      angle_min=0.0, angle_increment=math.pi/2, range_min=0.03, range_max=25.0)
+    assert pts.shape == (2, 3)
+    assert pts[0] == pytest.approx([1.0, 0.0, 0.0])
+    assert pts[1] == pytest.approx([2.0*math.cos(2*math.pi), 2.0*math.sin(2*math.pi), 0.0],
+                                   abs=1e-9)
+
+
+def test_lethal_cells_count_only_deep_inside_the_body():
+    # 5-cm-Raster, base_link = Kartenursprung. Zelle (0,0) liegt mitten im
+    # Gehäuse; eine Zelle, deren Mitte 1 cm hinter der Frontlinie liegt
+    # (Hindernis 3–5 cm vor der Front), zählt nicht.
+    res, w, h = 0.05, 40, 40
+    origin = (-1.0, -1.0)
+    data = np.zeros((h, w), dtype=np.int16)
+
+    def setze(x, y, wert=100):
+        data[int((y - origin[1])/res), int((x - origin[0])/res)] = wert
+
+    setze(0.0, 0.0)            # Mitte 0,025 / 0,025: Eigenecho
+    setze(0.30, 0.0)           # Mitte 0,325: vor der geschrumpften Front
+    setze(0.05, 0.10, 99)      # nur „inscribed“, nicht tödlich
+    count = lethal_cells_in_body(data.ravel(), w, h, res, origin, lambda p: p,
+                                 KOERPER_STANDARD)
+    assert count == 1

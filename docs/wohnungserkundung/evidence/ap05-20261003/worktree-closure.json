@@ -1,0 +1,22 @@
+{
+  "Roboter_ws": {
+    "head": "05439c7a13d7a92e69b9eb4663e3a2a1b44626a1",
+    "clean": true
+  },
+  "Roboter_ws-ap01": {
+    "head": "45f268a24cfa6466e69bfc2ed801ee60ff779e16",
+    "clean": true
+  },
+  "Roboter_ws-ap02": {
+    "head": "875c7c4e8c71b94b2acfe9da2382482844ed414d",
+    "clean": true
+  },
+  "Roboter_ws-ap03": {
+    "head": "495b538b48ba3af7f89380c338606a0939a71c94",
+    "clean": true
+  },
+  "Roboter_ws-ap04": {
+    "head": "2532f1b6c374dec110300fd1e1a9e8a289fd27c8",
+    "clean": true
+  }
+}

@@ -8,7 +8,8 @@ from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, TimerAction)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.conditions import IfCondition, UnlessCondition
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
@@ -29,10 +30,51 @@ def generate_launch_description():
         'explore_params.yaml')
 
     active_drive = LaunchConfiguration('active_drive')
+    use_hwt601_odometry = LaunchConfiguration('use_hwt601_odometry')
+    hwt_development_contract = LaunchConfiguration('hwt_development_contract')
+    operator_stationary_confirmed = LaunchConfiguration('operator_stationary_confirmed')
     enable_auto_explore = LaunchConfiguration('enable_auto_explore')
+    start_explorer = LaunchConfiguration('start_explorer')
+    enable_stage3_motion_diagnostic = LaunchConfiguration(
+        'enable_stage3_motion_diagnostic')
+    start_stage3_motion_diagnostic = LaunchConfiguration(
+        'start_stage3_motion_diagnostic')
+    lab_external_hardware_halt_attested = LaunchConfiguration(
+        'lab_external_hardware_halt_attested')
     normalize_scan = LaunchConfiguration('normalize_scan')
     crop = LaunchConfiguration('crop')
     explore_params_overlay = LaunchConfiguration('explore_params_overlay')
+    self_healing = LaunchConfiguration('self_healing')
+    # Selbstheilender Betrieb (KONZEPT_SELBSTHEILUNG.md, 15.10.2026): nur mit
+    # self_healing:=true. Overlay nach nav2_params_real.yaml; ohne Profil wird
+    # die Basisdatei erneut geladen (wirkungsgleich zum bisherigen Stand).
+    self_healing_nav_overlay = os.path.join(
+        nav_pkg, 'config', 'nav2_params_self_healing.yaml')
+    self_healing_explore_params = os.path.join(
+        get_package_share_directory('explore'), 'config',
+        'self_healing_params.yaml')
+    self_healing_bt = os.path.join(
+        get_package_share_directory('explore'), 'behavior_trees',
+        'navigate_to_pose_self_healing.xml')
+    self_healing_collision_overlay = os.path.join(
+        get_package_share_directory('vl53_near_field'), 'config',
+        'collision_monitor_self_healing_overlay.yaml')
+    # Strengere Ringschluss-Schwellen nur im Selbstheilungsbetrieb
+    # (Entscheidung 22.10.2026); sonst die Basisdatei erneut = wirkungslos.
+    slam_base_params = os.path.join(
+        get_package_share_directory('amadeus_lidar_bringup'), 'config',
+        'slam_toolbox_amadeus.yaml')
+    self_healing_slam_overlay = os.path.join(
+        get_package_share_directory('amadeus_lidar_bringup'), 'config',
+        'slam_toolbox_self_healing.yaml')
+    safe_bt = os.path.join(
+        get_package_share_directory('explore'), 'behavior_trees',
+        'navigate_to_pose_no_recovery.xml')
+    def when_self_healing(enabled_value, default_value):
+        return PythonExpression([
+            "'", enabled_value, "' if '", self_healing, "' == 'true' else '",
+            default_value, "'"])
+    nav_overlay = when_self_healing(self_healing_nav_overlay, params)
 
     nav_cmd_remap = [('cmd_vel', 'cmd_vel_nav_raw')]
     smoother_cmd_remap = [
@@ -53,27 +95,64 @@ def generate_launch_description():
                 output='screen',
                 parameters=[{
                     'require_localization': False,
+                    'require_hwt601_fusion': ParameterValue(
+                        use_hwt601_odometry, value_type=bool),
+                    'hwt601_active_drive': ParameterValue(active_drive, value_type=bool),
+                    'hwt_development_contract': ParameterValue(hwt_development_contract, value_type=bool),
                     'allow_localization_search': False,
                     'allow_explore_mission': ParameterValue(
                         enable_auto_explore, value_type=bool),
+                    'allow_stage3_motion_diagnostic': ParameterValue(
+                        enable_stage3_motion_diagnostic, value_type=bool),
                 }],
             ),
             Node(
+                package='robot_navigation',
+                executable='stage3_motion_diagnostic',
+                name='stage3_motion_diagnostic',
+                output='screen',
+                parameters=[{
+                    'enabled': ParameterValue(
+                        enable_stage3_motion_diagnostic, value_type=bool),
+                    'scope_profile_path': explore_params_overlay,
+                    'required_scope_id': 'stage3-local-scope-20260925-after-r2',
+                    'lab_external_hardware_halt_attested': ParameterValue(
+                        lab_external_hardware_halt_attested, value_type=bool),
+                }],
+                condition=IfCondition(PythonExpression([
+                    "'", enable_stage3_motion_diagnostic, "' == 'true' and '",
+                    start_stage3_motion_diagnostic, "' == 'true'"])),
+            ),
+            # Die lokale Kostenkarte laeuft im controller_server-Prozess; das
+            # Overlay senkt dort nur die VL53-Hoehengrenze (self_healing).
+            Node(
                 package='nav2_controller', executable='controller_server',
                 name='controller_server', output='screen',
-                parameters=[params], remappings=nav_cmd_remap),
+                parameters=[params, nav_overlay], remappings=nav_cmd_remap),
             Node(
                 package='nav2_planner', executable='planner_server',
-                name='planner_server', output='screen', parameters=[params]),
+                name='planner_server', output='screen',
+                parameters=[params, nav_overlay]),
             # Humble laedt beim Aktivieren des BT-Navigators auch seinen
             # Standardbaum und erwartet deshalb die Recovery-Actions. Der
-            # Explorer selbst verwendet einen recovery-freien Baum. Falls
-            # dennoch eine Recovery aufgerufen wird, bleibt deren cmd_vel
-            # absichtlich von der realen Fahrkette getrennt.
+            # Standard-Explorer verwendet einen recovery-freien Baum; dessen
+            # Recovery-cmd_vel bleibt absichtlich von der Fahrkette getrennt.
+            # Nur mit self_healing:=true geht der Behavior-Server (BackUp fuer
+            # die Rueckfahrt entlang der eigenen Spur) ueber dieselbe Kette
+            # wie Nav2: Fahrtor -> velocity_smoother -> collision_monitor.
+            # Rueckfahrkontur fuer BackUp (Entscheidung 08.11.2026 nach SH-7N),
+            # nur mit self_healing:=true; das Overlay verweist den
+            # Behavior-Server darauf. Publiziert nur Geometrie.
+            Node(
+                package='robot_navigation', executable='rueckfahr_kontur',
+                name='rueckfahr_kontur', output='screen',
+                condition=IfCondition(self_healing)),
             Node(
                 package='nav2_behaviors', executable='behavior_server',
-                name='behavior_server', output='screen', parameters=[params],
-                remappings=[('cmd_vel', 'cmd_vel_recovery_blocked')]),
+                name='behavior_server', output='screen',
+                parameters=[params, nav_overlay],
+                remappings=[('cmd_vel', when_self_healing(
+                    'cmd_vel_nav_raw', 'cmd_vel_recovery_blocked'))]),
             Node(
                 package='nav2_bt_navigator', executable='bt_navigator',
                 name='bt_navigator', output='screen', parameters=[params]),
@@ -81,7 +160,7 @@ def generate_launch_description():
                 package='nav2_velocity_smoother',
                 executable='velocity_smoother',
                 name='velocity_smoother', output='screen',
-                parameters=[params], remappings=smoother_cmd_remap),
+                parameters=[params, nav_overlay], remappings=smoother_cmd_remap),
             Node(
                 package='nav2_lifecycle_manager',
                 executable='lifecycle_manager',
@@ -96,10 +175,31 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'active_drive', default_value='false',
             description='true bestromt die Basis; nur nach Hardwarefreigabe.'),
+        DeclareLaunchArgument('use_hwt601_odometry', default_value='false'),
+        DeclareLaunchArgument('hwt_development_contract', default_value='false',
+            description='Explicit metric LAB-1 contract: .05 s poll/.30 s data, 2 holds/60 s.'),
+        DeclareLaunchArgument('hwt601_accel_ms', default_value='2000'),
+        DeclareLaunchArgument('operator_stationary_confirmed', default_value='false'),
         DeclareLaunchArgument(
             'enable_auto_explore', default_value='false',
             description='Explizites zweites Opt-in fuer echte Explore-Missionen '
                         'und das cmd_vel-Fahrtor.'),
+        DeclareLaunchArgument(
+            'start_explorer', default_value='true',
+            description='false laesst den einzigen Explorer fuer aktuelle '
+                        'Karten-/Scopebindung noch ungestartet.'),
+        DeclareLaunchArgument(
+            'enable_stage3_motion_diagnostic', default_value='false',
+            description='Zusatzopt-in fuer genau einen festen 0,25-m-/15-Grad-'
+                        'HWT601-Diagnoselauf; Start ueber /stage3_motion_test/start.'),
+        DeclareLaunchArgument(
+            'start_stage3_motion_diagnostic', default_value='true',
+            description='false erlaubt frische Scopebindung vor getrenntem '
+                        'Start desselben einzelnen Diagnosenodes; kein Fahrbefehl.'),
+        DeclareLaunchArgument(
+            'lab_external_hardware_halt_attested', default_value='false',
+            description='Manuelle Vor-Ort-Bestaetigung des unabhaengigen '
+                        'Hardware-Halts; hebt keine ROS-Safety-Pruefung auf.'),
         DeclareLaunchArgument(
             'normalize_scan', default_value='true',
             description='STL-27L zwingend auf 2160 Strahlen normalisieren.'),
@@ -109,6 +209,12 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'explore_params_overlay', default_value=default_explore_params,
             description='Optionales begrenzendes Explorer-Profil.'),
+        DeclareLaunchArgument(
+            'self_healing', default_value='false',
+            description='true = selbstheilender Erkundungsbetrieb: Explorer-'
+                        'Profil self_healing, Planung durch Unbekanntes, '
+                        'Nav2-Baum mit leichter Recovery und begrenzte '
+                        'Rueckfahrt entlang der eigenen Spur.'),
 
         LogInfo(msg='Automatische Kartierung: OAK bleibt deaktiviert; '
                     'Hinderniskette ist dual-VL53 plus collision_monitor.'),
@@ -117,10 +223,28 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(_launch_file(
                 'amadeus_lidar_bringup', 'slam_lidar.launch.py')),
+            condition=UnlessCondition(use_hwt601_odometry),
             launch_arguments={
                 'active_drive': active_drive,
                 'normalize_scan': normalize_scan,
                 'crop': crop,
+                'slam_params_overlay': when_self_healing(
+                    self_healing_slam_overlay, slam_base_params),
+            }.items()),
+
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(_launch_file(
+                'amadeus_lidar_bringup', 'slam_lidar_hwt601.launch.py')),
+            condition=IfCondition(use_hwt601_odometry),
+            launch_arguments={
+                'active_drive': active_drive,
+                'operator_stationary_confirmed': operator_stationary_confirmed,
+                'hwt_development_contract': hwt_development_contract,
+                'hwt601_accel_ms': LaunchConfiguration('hwt601_accel_ms'),
+                'normalize_scan': normalize_scan,
+                'crop': crop,
+                'slam_params_overlay': when_self_healing(
+                    self_healing_slam_overlay, slam_base_params),
             }.items()),
 
         # Letzte reaktive Instanz vor /cmd_vel und laufende VL53-Daten.
@@ -129,6 +253,8 @@ def generate_launch_description():
                 'vl53_near_field', 'vl53_near_field.launch.py')),
             launch_arguments={
                 'collision_params_file': mapping_collision_params,
+                'collision_params_overlay': when_self_healing(
+                    self_healing_collision_overlay, mapping_collision_params),
             }.items()),
 
         # Software-BT-Sicht; der hardwired Not-Aus bleibt primaer.
@@ -141,8 +267,14 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(_launch_file(
                 'explore', 'explore.launch.py')),
+            condition=IfCondition(start_explorer),
             launch_arguments={
-                'explore_params_overlay': explore_params_overlay,
+                'explore_params_overlay': when_self_healing(
+                    self_healing_explore_params, explore_params_overlay),
+                'behavior_tree': when_self_healing(self_healing_bt, safe_bt),
+                'require_hwt601_fusion': use_hwt601_odometry,
+                'hwt601_active_drive': active_drive,
+                'hwt_development_contract': hwt_development_contract,
             }.items()),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(_launch_file(

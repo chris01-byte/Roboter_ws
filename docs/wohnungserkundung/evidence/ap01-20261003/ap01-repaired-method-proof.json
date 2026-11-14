@@ -1,0 +1,33 @@
+{
+  "published_stamp_ns": [
+    1010000000000,
+    1010010000000,
+    1010040000000
+  ],
+  "second": {
+    "stamp_ns": 1010010000000,
+    "received_monotonic_s": 10.01,
+    "correlation": {
+      "bracket_before_monotonic_s": 10.03,
+      "bracket_after_monotonic_s": 10.03,
+      "ros_clock_ns": 1010030000000,
+      "bracket_width_ns": 0,
+      "max_bracket_ns": 1000000,
+      "observed_offset_span_ns": [
+        1000000000000,
+        1000000000000
+      ],
+      "accepted_offset_span_ns": [
+        1000000000000,
+        1000000000000
+      ],
+      "classification": "clock_pair_valid",
+      "stamp_uncertainty_ns": 0,
+      "attempts": 2
+    }
+  },
+  "terminal_fault": null,
+  "transport_open": true,
+  "accepted": 3,
+  "rejected": 0
+}

@@ -1,0 +1,422 @@
+[
+  {
+    "goal": [
+      0.5697196344975095,
+      -0.5127819003312706,
+      0.18609226825192382
+    ],
+    "arrival_plan_valid": true,
+    "arrival_rejection": null,
+    "kind": "Original B76 coherent selection32; first and subsequent readonly native C++ plans at predicted stops, no motion or whole acceptance",
+    "projected_stop": [
+      0.69906499223494,
+      -0.4368538643408324,
+      -0.2139077317480762
+    ],
+    "path_endpoint": [
+      0.5697196344975095,
+      -0.5127819003312706
+    ],
+    "stop_goal_distance": 0.14998429323628906,
+    "scan_ready": true,
+    "departure_valid": true,
+    "following": [
+      {
+        "goal": [
+          2.05,
+          -0.495,
+          0.0
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          1.9066402389486135,
+          -0.46199173791964815,
+          -0.18175027208262515
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          2.05,
+          -0.495,
+          0.3
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          1.9042903541843375,
+          -0.46423090332991623,
+          -0.10000000000000006
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          2.05,
+          -0.495,
+          0.4
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          1.9040493093975763,
+          -0.46401488939437324,
+          2.7755575615628914e-17
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          2.05,
+          -0.525,
+          0.0
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          2.05,
+          -0.525,
+          0.3
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.05,
+          -0.525,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.05,
+          -0.54,
+          0.0
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.05,
+          -0.54,
+          0.3
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.05,
+          -0.54,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.295,
+          -0.495,
+          0.0
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.295,
+          -0.495,
+          0.3
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          2.151360913239709,
+          -0.46250698054339784,
+          -0.10000000000000006
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          2.295,
+          -0.495,
+          0.4
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          2.1511707200412835,
+          -0.4644264325508683,
+          8.326672684688674e-17
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          2.295,
+          -0.525,
+          0.0
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.295,
+          -0.525,
+          0.3
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.295,
+          -0.525,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.295,
+          -0.54,
+          0.0
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.295,
+          -0.54,
+          0.3
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.295,
+          -0.54,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.45,
+          -0.495,
+          0.0
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.45,
+          -0.495,
+          0.3
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.45,
+          -0.495,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.45,
+          -0.525,
+          0.0
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.45,
+          -0.525,
+          0.3
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.45,
+          -0.525,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.45,
+          -0.54,
+          0.0
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.45,
+          -0.54,
+          0.3
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.45,
+          -0.54,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          3.35,
+          -0.495,
+          0.0
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          3.35,
+          -0.495,
+          0.3
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          3.35,
+          -0.495,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          3.35,
+          -0.525,
+          0.0
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          3.35,
+          -0.525,
+          0.3
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          3.35,
+          -0.525,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          3.35,
+          -0.54,
+          0.0
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          3.35,
+          -0.54,
+          0.3
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          3.35,
+          -0.54,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      }
+    ],
+    "astar": "true"
+  }
+]

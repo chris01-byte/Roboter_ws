@@ -1,0 +1,94 @@
+{
+  "original_product": "/evidence/ap03-current-install/explore/lib/python3.10/site-packages/explore/explore_node.py",
+  "rows": [
+    {
+      "case": "ring",
+      "accepted": 0,
+      "rejections": {
+        "raw": 1,
+        "unsafe": 1,
+        "deferred_or_served": 0,
+        "accepted": 0,
+        "route_rejections": {
+          "approach_unavailable": 1
+        }
+      }
+    },
+    {
+      "case": "concave",
+      "accepted": 1,
+      "rejections": {
+        "raw": 1,
+        "unsafe": 0,
+        "deferred_or_served": 0,
+        "accepted": 1,
+        "route_rejections": {}
+      }
+    },
+    {
+      "case": "long",
+      "accepted": 0,
+      "rejections": {
+        "raw": 1,
+        "unsafe": 1,
+        "deferred_or_served": 0,
+        "accepted": 0,
+        "route_rejections": {
+          "goal_orientation_invalid": 1
+        }
+      }
+    },
+    {
+      "case": "blocked",
+      "accepted": 0,
+      "rejections": {
+        "raw": 1,
+        "unsafe": 1,
+        "deferred_or_served": 0,
+        "accepted": 0,
+        "route_rejections": {
+          "goal_orientation_invalid": 1
+        }
+      }
+    },
+    {
+      "case": "growth",
+      "accepted": 0,
+      "rejections": {
+        "raw": 1,
+        "unsafe": 1,
+        "deferred_or_served": 0,
+        "accepted": 0,
+        "route_rejections": {
+          "goal_orientation_invalid": 1
+        }
+      }
+    },
+    {
+      "case": "revisit",
+      "accepted": 0,
+      "rejections": {
+        "raw": 1,
+        "unsafe": 1,
+        "deferred_or_served": 0,
+        "accepted": 0,
+        "route_rejections": {
+          "goal_orientation_invalid": 1
+        }
+      }
+    },
+    {
+      "case": "no_semantics",
+      "accepted": 0,
+      "rejections": {
+        "raw": 1,
+        "unsafe": 1,
+        "deferred_or_served": 0,
+        "accepted": 0,
+        "route_rejections": {
+          "goal_orientation_invalid": 1
+        }
+      }
+    }
+  ]
+}

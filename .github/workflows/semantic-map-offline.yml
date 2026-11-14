@@ -58,14 +58,10 @@ jobs:
           PYTHONDONTWRITEBYTECODE: "1"
           PYTHONPATH: src/llm_planner
         run: python -m unittest discover -s src/llm_planner/test -v
-      - name: Bring-up contract
-        env:
-          PYTHONDONTWRITEBYTECODE: "1"
-        run: python -m unittest discover -s src/robot_bringup/test -v
       - name: Metric map regression
         env:
           PYTHONDONTWRITEBYTECODE: "1"
-          PYTHONPATH: src/robot_map_manager
+          PYTHONPATH: src/robot_map_manager:src/amadeus_map_identity
         run: python -m unittest discover -s src/robot_map_manager/test -v
       - name: Rosbridge semantic mock contract
         env:
@@ -74,6 +70,27 @@ jobs:
           python -m unittest discover
           -s ios/Robotersteuerung/Tools
           -p 'test_mock_rosbridge.py' -v
+
+  bringup-contracts:
+    runs-on: ubuntu-22.04
+    container:
+      image: ros:humble-ros-base-jammy
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install OAK rectifier test dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            python3-opencv ros-humble-cv-bridge
+      - name: Bring-up contract
+        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: src/robot_bringup
+        run: |
+          source /opt/ros/humble/setup.bash
+          python3 -m unittest discover -s src/robot_bringup/test -v
 
   swift-contracts:
     runs-on: macos-15

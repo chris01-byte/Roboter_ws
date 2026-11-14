@@ -1,0 +1,70 @@
+hwt601_mapping_ekf:
+  ros__parameters:
+    # Opt-in Karten-A/B-Profil. Es ersetzt weder den Encoder-Standard noch
+    # slam_toolbox: Der Filter besitzt nur /odom und odom -> base_link.
+    frequency: 30.0
+    sensor_timeout: 0.35
+    two_d_mode: true
+    transform_time_offset: 0.0
+    transform_timeout: 0.08
+    print_diagnostics: true
+    publish_acceleration: false
+    publish_tf: true
+
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: odom
+
+    # Die Basis liefert gemessene Encoderdaten, aber keinen TF. Fuer die
+    # Fusion wird nur die Vorwaertsgeschwindigkeit verwendet. Encoder-Gier
+    # bleibt im Roh-Topic sichtbar, darf aber den auf der Fuge nachgewiesenen
+    # chassisfesten HWT-Gierwert nicht verwischen.
+    odom0: /fusion/hwt601/wheel_odom_raw
+    odom0_config: [false, false, false,
+                   false, false, false,
+                   true,  false, false,
+                   false, false, false,
+                   false, false, false]
+    odom0_queue_size: 5
+    odom0_nodelay: false
+    odom0_differential: false
+    odom0_relative: false
+    odom0_twist_rejection_threshold: 5.0
+
+    # Der validierte Schattenadapter hat Gyro-Z bereits in base_link gedreht,
+    # beim Start kalibriert und danach den Bias eingefroren. Orientierung und
+    # Beschleunigung werden bewusst nicht erfunden oder fusioniert.
+    imu0: /shadow/hwt601/imu/yaw_rate
+    imu0_config: [false, false, false,
+                  false, false, false,
+                  false, false, false,
+                  false, false, true,
+                  false, false, false]
+    imu0_queue_size: 10
+    imu0_nodelay: false
+    imu0_differential: false
+    imu0_relative: false
+    imu0_twist_rejection_threshold: 5.0
+    imu0_remove_gravitational_acceleration: false
+
+    use_control: false
+
+    # Identisch zum zuvor praktisch getesteten Schattenfilter. Die kleinen
+    # Werte auf nicht beobachteten 2D-Achsen stammen aus dessen konservativem
+    # Startprofil; erst der Karten-A/B-Test darf diese Abstimmung veraendern.
+    process_noise_covariance: [0.001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.000001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.000001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.000001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.000001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.000001, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.000001, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.05, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.05, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.000001]

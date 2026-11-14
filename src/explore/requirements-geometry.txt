@@ -1,0 +1,2 @@
+# Reproducible AP-06 GEOS build; no GPU or ROS owner added.
+Shapely==2.0.7

@@ -1,0 +1,4 @@
+[INFO] [1791256877.696098453] [explore_node]: explore_node bereit. Map='/map', Nav='navigate_to_pose'. Erkundung starten via Action /explore_area.
+[ERROR] [1791256959.917739438] [explore_node]: WE-Kindziel: harte Quellenstoerung (hwt601_raw_missing_stale_or_invalid); Nav2-Abbruch
+The following exception was never retrieved: cannot use Destroyable because destruction was requested
+The following exception was never retrieved: cannot use Destroyable because destruction was requested

@@ -1,0 +1,5 @@
+{
+  "error": "Copy encountered unchanged root-owned test fixture; build completed 14 packages but pytest exited 4 because new tool test was not copied. This is not the final source/test validation.",
+  "source_copy_complete": false,
+  "pytest_tests_executed": 0
+}

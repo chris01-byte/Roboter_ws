@@ -1,0 +1,2 @@
+[INFO] [1791436674.058497356] [robot_map_manager]: robot_map_manager bereit: /map -> /evidence/ap06-concept-20261008/visibility-a/maps; Pose <aktueller Kartenframe>->base_link auf /robot_map_manager/robot_pose.
+[WARN] [1791436675.859398037] [robot_map_manager]: Pose map->base_link nicht verfügbar: "base_link" passed to lookupTransform argument source_frame does not exist. 

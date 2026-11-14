@@ -1,0 +1,94 @@
+{
+  "case": "door68_start_a",
+  "criteria_score": {
+    "applicable_to_case": true,
+    "failed": 4,
+    "met": 4,
+    "total": 8,
+    "unavailable": 0
+  },
+  "diagnostic_status": "criteria_not_met",
+  "hardware_qualified": false,
+  "harness_returncode": 1,
+  "identity_errors": [],
+  "measurements": {
+    "action_active_at_terminal": {
+      "/explore_area/_action/status": [],
+      "/navigate_to_pose/_action/status": []
+    },
+    "checkpoint_after_save": {
+      "map_id": "map-305405243e935abaedaabc7e8c245573ed49826e8e1bbdc98cebf56447311c66",
+      "outcome": "error",
+      "path": "/evidence/ap06-concept-20261008/revalidation-a/door68_start_a/checkpoints/amadeus/20261008T072325540920Z-305405243e93/state-00000001.json",
+      "state": "saved",
+      "version": "20261008T072325540920Z-305405243e93"
+    },
+    "command_values_at_terminal": {
+      "/cmd_vel": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_nav": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_nav_raw": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_smoothed": [
+        0.0,
+        0.0
+      ]
+    },
+    "manager_state": "failed",
+    "map_growth": true,
+    "map_oracle": {
+      "maximum_occupied_wall_error_m": 0.0249999712780119,
+      "reference_free_cells": 128256,
+      "reference_observed_cells": 94640,
+      "reference_observed_fraction": 0.7378992015968064
+    },
+    "map_save": {
+      "message": "Karte 'amadeus' als Version 20261008T072325540920Z-305405243e93 gespeichert.",
+      "success": true
+    },
+    "metric": {
+      "arrivals": 3,
+      "attempt": 5,
+      "attempts": 5,
+      "completion_blocker": "accessible_or_unresolved_work",
+      "failures": 0,
+      "observations": 3,
+      "reachable_boundary_cells": 742,
+      "state": "failed",
+      "unknown_cells_in_scope": 68130
+    },
+    "minimum_padded_clearance_m": 0.07928847134994876,
+    "rear_cleared": false,
+    "travel_m": 1.2449147985706635
+  },
+  "original_qualification": false,
+  "passed": false,
+  "positive_mission_criteria": {
+    "explorer_success": false,
+    "manager_success": false,
+    "map_growth": true,
+    "maximum_map_error": true,
+    "rear_cleared_both_doors": false,
+    "reference_observed_fraction": false,
+    "three_arrivals": true,
+    "three_observations": true
+  },
+  "profile": "finite-unmasked",
+  "raw_harness_passed": false,
+  "raw_manifest_compatible": false,
+  "raw_result_path": "/evidence/ap06-concept-20261008/revalidation-a/door68_start_a/result.json",
+  "raw_result_sha256": "f1efeceecfc8dcac175d6088e8dc99df25ff509997e9d566c7158601f73da11a",
+  "reasons": {
+    "completion_blocker": "accessible_or_unresolved_work",
+    "first_rejecting_predicate": "map_status_join_pending",
+    "harness": "AP06 acceptance not met: frontier_candidate_processing_budget_exhausted",
+    "terminal": "frontier_candidate_processing_budget_exhausted"
+  }
+}

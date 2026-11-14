@@ -1,0 +1,18 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_ test_candidate_geometry_cannot_borrow_alignment_from_an_unbound_native_path __
+
+    def test_candidate_geometry_cannot_borrow_alignment_from_an_unbound_native_path():
+        n,inputs,record,target=recorded()
+        route=n._metric_validate_nav_plan(inputs,path(record),target,public_only=True)
+        assert route is not None
+>       assert n._metric_standard_waypoints_clear(inputs,route,target.yaw) is None
+E       AssertionError: assert ((1.0550239564421577, -0.4299296381473631), (1.0800662371501417, -0.4349999902769923), (1.7700661072865245, -0.4349999...2483, -0.43500010471790773), (1.83006610594542, -0.43500010471790773), (1.8450661056101438, -0.43500021915882314), ...) is None
+E        +  where ((1.0550239564421577, -0.4299296381473631), (1.0800662371501417, -0.4349999902769923), (1.7700661072865245, -0.4349999...2483, -0.43500010471790773), (1.83006610594542, -0.43500010471790773), (1.8450661056101438, -0.43500021915882314), ...) = <bound method MetricFrontierRuntime._metric_standard_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7fe0c4ad1840>>([nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id... -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]), ...], ((1.0550239564421577, -0.4299296381473631), (1.0800662371501417, -0.4349999902769923), (1.7700661072865245, -0.4349999...2483, -0.43500010471790773), (1.83006610594542, -0.43500010471790773), (1.8450661056101438, -0.43500021915882314), ...), -0.0017521812078768622)
+E        +    where <bound method MetricFrontierRuntime._metric_standard_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7fe0c4ad1840>> = <explore.explore_node.ExploreNode object at 0x7fe0c4ad1840>._metric_standard_waypoints_clear
+E        +    and   -0.0017521812078768622 = MetricCandidate(task_id='recorded', x=3.236955819008617, y=-0.46507350400443115, yaw=-0.0017521812078768622, frontier_...8bbdd099a30d43446c926827eb4b38f32411bad', revision=1, requires_nav2_plan=False, observation_points=(), evidence_key='').yaw
+
+evidence/ap06-repo/src/explore/test/test_metric_public_alignment.py:35: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_public_alignment.py::test_candidate_geometry_cannot_borrow_alignment_from_an_unbound_native_path
+1 failed, 6 deselected in 1.40s

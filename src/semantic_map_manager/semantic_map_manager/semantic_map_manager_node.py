@@ -12,6 +12,7 @@ import time
 from typing import Any, Optional
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import (
     DurabilityPolicy,
@@ -649,8 +650,11 @@ def main(args: Optional[list[str]] = None) -> None:
     try:
         node = SemanticMapManager()
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except RuntimeError:
+        if rclpy.ok():
+            raise
     finally:
         if node is not None:
             node.destroy_node()

@@ -22,6 +22,7 @@ keinen Parameter.
 """
 import numpy as np
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 from sensor_msgs.msg import LaserScan
@@ -134,8 +135,11 @@ def main(args=None):
     n = ScanVereinheitlichen()
     try:
         rclpy.spin(n)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except RuntimeError:
+        if rclpy.ok():
+            raise
     finally:
         n.destroy_node()
         if rclpy.ok():

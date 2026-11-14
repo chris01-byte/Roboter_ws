@@ -1,0 +1,75 @@
+[
+  {
+    "label": "reference-c-v2",
+    "software_commit": "3f66d73",
+    "exit_code": 1,
+    "command": [
+      "docker",
+      "exec",
+      "ap03-nav2",
+      "bash",
+      "-c",
+      "source /opt/ros/humble/setup.bash && source /evidence/ap03-nav2-install/setup.bash && source /evidence/ap06-support-install/setup.bash && source /evidence/ap06-product-install/setup.bash && export AP06_SIMULATION=1 ROS_DOMAIN_ID=193 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 && python3 /evidence/ap06-repo/tools/simulation/ap06_closed_product.py --repo /evidence/ap06-repo --tf-probe /evidence/ap06-tf-probe-build/tf_ownership_probe --case door80_start_c --output /evidence/ap06-reference-20261005/reference-c-v2 --save-partial"
+    ]
+  },
+  {
+    "label": "reference-a",
+    "software_commit": "3f66d73",
+    "command": [
+      "docker",
+      "exec",
+      "ap03-nav2",
+      "bash",
+      "-c",
+      "source /opt/ros/humble/setup.bash && source /evidence/ap03-nav2-install/setup.bash && source /evidence/ap06-support-install/setup.bash && source /evidence/ap06-product-install/setup.bash && export AP06_SIMULATION=1 ROS_DOMAIN_ID=191 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 && python3 /evidence/ap06-repo/tools/simulation/ap06_closed_product.py --repo /evidence/ap06-repo --tf-probe /evidence/ap06-tf-probe-build/tf_ownership_probe --case door68_start_a --output /evidence/ap06-reference-20261005/reference-a --save-partial"
+    ],
+    "exit_code": 1,
+    "started": 1791193076.8913405,
+    "finished": 1791193118.6872113
+  },
+  {
+    "label": "reference-b",
+    "software_commit": "3f66d73",
+    "command": [
+      "docker",
+      "exec",
+      "ap03-nav2",
+      "bash",
+      "-c",
+      "source /opt/ros/humble/setup.bash && source /evidence/ap03-nav2-install/setup.bash && source /evidence/ap06-support-install/setup.bash && source /evidence/ap06-product-install/setup.bash && export AP06_SIMULATION=1 ROS_DOMAIN_ID=192 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 && python3 /evidence/ap06-repo/tools/simulation/ap06_closed_product.py --repo /evidence/ap06-repo --tf-probe /evidence/ap06-tf-probe-build/tf_ownership_probe --case door68_start_b --output /evidence/ap06-reference-20261005/reference-b --save-partial"
+    ],
+    "exit_code": 1,
+    "started": 1791193118.6882393,
+    "finished": 1791193161.3158226
+  },
+  {
+    "label": "reference-cancel",
+    "software_commit": "3f66d73",
+    "command": [
+      "docker",
+      "exec",
+      "ap03-nav2",
+      "bash",
+      "-c",
+      "source /opt/ros/humble/setup.bash && source /evidence/ap03-nav2-install/setup.bash && source /evidence/ap06-support-install/setup.bash && source /evidence/ap06-product-install/setup.bash && export AP06_SIMULATION=1 ROS_DOMAIN_ID=194 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 && python3 /evidence/ap06-repo/tools/simulation/ap06_closed_product.py --repo /evidence/ap06-repo --tf-probe /evidence/ap06-tf-probe-build/tf_ownership_probe --case cancel --output /evidence/ap06-reference-20261005/reference-cancel --save-partial"
+    ],
+    "exit_code": 0,
+    "started": 1791193161.316516,
+    "finished": 1791193200.0626624
+  },
+  {
+    "label": "reference-gyro-hold",
+    "software_commit": "3f66d73",
+    "command": [
+      "docker",
+      "exec",
+      "ap03-nav2",
+      "bash",
+      "-c",
+      "source /opt/ros/humble/setup.bash && source /evidence/ap03-nav2-install/setup.bash && source /evidence/ap06-support-install/setup.bash && source /evidence/ap06-product-install/setup.bash && export AP06_SIMULATION=1 ROS_DOMAIN_ID=195 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 && python3 /evidence/ap06-repo/tools/simulation/ap06_closed_product.py --repo /evidence/ap06-repo --tf-probe /evidence/ap06-tf-probe-build/tf_ownership_probe --case gyro_hold --output /evidence/ap06-reference-20261005/reference-gyro-hold --save-partial"
+    ],
+    "exit_code": 0,
+    "started": 1791193200.0632975,
+    "finished": 1791193248.818948
+  }
+]

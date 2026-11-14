@@ -1,0 +1,33 @@
+{
+  "case": "door68",
+  "ros_domain_id": 210,
+  "model": "wall-clock unicycle + 50ms first-order response",
+  "hardware_qualified": false,
+  "planner": "nav2_navfn_planner/NavfnPlanner",
+  "controller": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+  "controller_parameter_contract": true,
+  "own_route_accepted": true,
+  "previous_envelope_accepted": false,
+  "planner_status": 4,
+  "path_length_m": 1.821598323024561,
+  "geometry_rejection": null,
+  "narrow_rotation_rejected": true,
+  "alignment": [
+    "controller_owned",
+    0.0,
+    0.0,
+    0.0
+  ],
+  "controller_status": 4,
+  "tracking_position_max_m": 0.0020000692444380776,
+  "tracking_heading_max_rad": 0.00034256409568212944,
+  "padded_footprint_clearance_min_m": 0.08823543453168192,
+  "reverse_samples": 0,
+  "final_pose": [
+    0.7542515198923456,
+    0.003739033879281173,
+    -0.017122380431662823
+  ],
+  "observed_area_gain_m2": 0.0,
+  "passed": true
+}

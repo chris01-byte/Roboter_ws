@@ -1,0 +1,44 @@
+[INFO] [1791236923.128846775] [controller_server]: 
+	controller_server lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791236923.130992474] [controller_server]: Creating controller server
+[INFO] [1791236923.151340600] [local_costmap.local_costmap]: 
+	local_costmap lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791236923.151880527] [local_costmap.local_costmap]: Creating Costmap
+[INFO] [1791236923.912659218] [controller_server]: Configuring controller interface
+[INFO] [1791236923.912768520] [controller_server]: getting goal checker plugins..
+[INFO] [1791236923.912795770] [controller_server]: Controller frequency set to 20.0000Hz
+[INFO] [1791236923.912817863] [local_costmap.local_costmap]: Configuring
+[INFO] [1791236923.919344513] [local_costmap.local_costmap]: Using plugin "static_layer"
+[INFO] [1791236923.923939911] [local_costmap.local_costmap]: Subscribing to the map topic (/map) with transient local durability
+[INFO] [1791236923.925574024] [local_costmap.local_costmap]: Initialized plugin "static_layer"
+[INFO] [1791236923.925594324] [local_costmap.local_costmap]: Using plugin "inflation_layer"
+[INFO] [1791236923.926373856] [local_costmap.local_costmap]: Initialized plugin "inflation_layer"
+[INFO] [1791236923.935306820] [controller_server]: Created progress_checker : progress_checker of type nav2_controller::PoseProgressChecker
+[INFO] [1791236923.937005058] [controller_server]: Created goal checker : general_goal_checker of type nav2_controller::SimpleGoalChecker
+[INFO] [1791236923.937330509] [local_costmap.local_costmap]: StaticLayer: Resizing costmap to 189 X 96 at 0.030000 m/pix
+[INFO] [1791236923.937788706] [controller_server]: Controller Server has general_goal_checker  goal checkers available.
+[INFO] [1791236923.938822994] [controller_server]: Created controller : FollowPath of type nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791236923.943532209] [controller_server]: Controller Server has FollowPath  controllers available.
+[INFO] [1791236923.954665944] [controller_server]: Activating
+[INFO] [1791236923.954717861] [local_costmap.local_costmap]: Activating
+[INFO] [1791236923.954729368] [local_costmap.local_costmap]: Checking transform
+[INFO] [1791236923.954756188] [local_costmap.local_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[INFO] [1791236924.454986427] [local_costmap.local_costmap]: start
+[INFO] [1791236924.505311239] [controller_server]: Activating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791236924.505389885] [controller_server]: Creating bond (controller_server) to lifecycle manager.
+[INFO] [1791236927.523571488] [rclcpp]: signal_handler(signum=2)
+[INFO] [1791236927.523635333] [controller_server]: Running Nav2 LifecycleNode rcl preshutdown (controller_server)
+[INFO] [1791236927.523702472] [controller_server]: Deactivating
+[INFO] [1791236927.523719317] [controller_server]: Deactivating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791236927.523737884] [local_costmap.local_costmap]: Deactivating
+[INFO] [1791236927.555363636] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[INFO] [1791236927.565812120] [controller_server]: Cleaning up
+[INFO] [1791236927.565848644] [controller_server]: Cleaning up controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791236927.565887561] [local_costmap.local_costmap]: Cleaning up
+[INFO] [1791236927.582762466] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[INFO] [1791236927.589778249] [local_costmap.local_costmap]: Destroying
+[INFO] [1791236927.600652470] [controller_server]: Destroying

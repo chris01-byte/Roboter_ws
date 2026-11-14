@@ -1,0 +1,12 @@
+Ubuntu 22.04 / ROS Humble; architecture x86_64
+pytest 6.2.5
+numpy 1.21.5
+scipy 1.8.0
+PyYAML 5.4.1
+pyserial 3.5
+pymodbus 3.14.0
+colcon-core 0.21.3
+ros-humble-rclpy 3.3.22-1jammy.20260907.213431
+ros-humble-sensor-msgs-py 4.9.2-1jammy.20260907.220122
+ros-humble-tf2-geometry-msgs 0.25.23-1jammy.20260907.225741
+ros-humble-tf2-ros 0.25.23-1jammy.20260907.224752

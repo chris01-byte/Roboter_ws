@@ -1,0 +1,183 @@
+#!/usr/bin/env python3
+"""Opt-in LiDAR mapping A/B path with HWT601 yaw and encoder translation."""
+
+import os
+
+from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, OpaqueFunction, TimerAction
+from launch.conditions import IfCondition, UnlessCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
+
+
+def _require_stationary_confirmation(context):
+    if LaunchConfiguration('operator_stationary_confirmed').perform(context) != 'true':
+        raise RuntimeError('HWT-Start braucht aktuell bestaetigten realen Stillstand')
+    try:
+        acceleration = int(LaunchConfiguration('hwt601_accel_ms', default='2000').perform(context))
+    except ValueError as error:
+        raise RuntimeError('HWT-Anfahrrampe braucht einen ganzzahligen Registerwert') from error
+    if not 100 <= acceleration <= 2000:
+        raise RuntimeError('HWT-Anfahrrampe ausserhalb des LAB-Vergleichsbereichs 100..2000')
+    return []
+
+
+def generate_launch_description():
+    lidar_share = get_package_share_directory('amadeus_lidar_bringup')
+    state_share = get_package_share_directory('robot_state_estimation')
+    base_params = os.path.join(
+        get_package_share_directory('base_hardware'), 'config',
+        'base_hardware_params.yaml')
+    encoder_params = os.path.join(
+        get_package_share_directory('base_hardware'), 'config',
+        'encoder_shadow.yaml')
+    slam_params = os.path.join(
+        lidar_share, 'config', 'slam_toolbox_amadeus.yaml')
+    hwt_ekf_params = os.path.join(
+        state_share, 'config', 'ekf_hwt601_mapping.yaml')
+    hwt_observer_params = os.path.join(
+        state_share, 'config', 'amadeus_hwt601.yaml')
+
+    active_drive = LaunchConfiguration('active_drive')
+    normalize_scan = LaunchConfiguration('normalize_scan')
+    # Optionales zweites Parameterfile (Default: Basisdatei erneut = wirkungslos);
+    # nav_mapping setzt es nur mit self_healing:=true.
+    slam_params_overlay = LaunchConfiguration('slam_params_overlay')
+    dry_run = ParameterValue(
+        PythonExpression(["'", active_drive, "' != 'true'"]),
+        value_type=bool)
+    allow_rs485 = ParameterValue(
+        PythonExpression(["'", active_drive, "' == 'true'"]),
+        value_type=bool)
+    scan_topic = ParameterValue(
+        PythonExpression(
+            ["'/scan_normiert' if '", normalize_scan, "' == 'true' "
+             "else '/scan'"]),
+        value_type=str)
+
+    return LaunchDescription([
+        DeclareLaunchArgument(
+            'active_drive', default_value='false',
+            description='true bestromt die Basis; nur nach Hardwarefreigabe.'),
+        DeclareLaunchArgument(
+            'operator_stationary_confirmed', default_value='false',
+            description='Muss fuer die HWT-Startkalibrierung explizit true sein.'),
+        DeclareLaunchArgument('hwt_development_contract', default_value='false'),
+        DeclareLaunchArgument('hwt601_accel_ms', default_value='2000',
+            description='Explicit LAB acceleration-register comparison; legacy default retained, braking unchanged.'),
+        DeclareLaunchArgument(
+            'slam_params_overlay', default_value=slam_params,
+            description='Zusaetzliches slam_toolbox-Parameterfile nach der Basis; '
+                        'Default die Basis selbst (keine Aenderung).'),
+        DeclareLaunchArgument(
+            'normalize_scan', default_value='true'),
+        DeclareLaunchArgument(
+            'crop', default_value='true'),
+        DeclareLaunchArgument(
+            'encoder_shadow_start_delay_s', default_value='15.0',
+            description='Legacy argument name: the selected encoder owner starts after the import/start burst; no data is restamped.'),
+
+        OpaqueFunction(function=_require_stationary_confirmation),
+
+        LogInfo(condition=IfCondition(active_drive),
+                msg='ACHTUNG: HWT-Karten-A/B mit bestromten Motoren; Not-Aus bereithalten.'),
+        LogInfo(msg='HWT-Karten-A/B: Encoder liefert nur vx, HWT601 nur Gier; '
+                    'EKF besitzt /odom und odom->base_link; LiDAR-Matcher beobachtet nur.'),
+
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(os.path.join(
+                lidar_share, 'launch', 'stl27l.launch.py')),
+            launch_arguments={
+                'publish_static_tf': 'true',
+                'crop': LaunchConfiguration('crop'),
+            }.items()),
+
+        # Einzige Verbindung zum Antrieb. Im HWT-Modus darf die Basis weder
+        # /odom noch TF besitzen, sondern gibt nur ihre gemessenen Encoder aus.
+        # The active owner also exceeded the pair window during startup
+        # (239 ms after eight valid publications). Establish its first baseline
+        # after the same startup staging; do not extend freshness or rebase.
+        TimerAction(period=LaunchConfiguration('encoder_shadow_start_delay_s'),
+                    condition=IfCondition(active_drive), actions=[Node(
+            package='base_hardware', executable='base_hardware',
+            name='base_hardware', output='screen',
+            condition=IfCondition(active_drive),
+            parameters=[base_params, {
+                'odom_topic': '/fusion/hwt601/wheel_odom_raw',
+                'publish_tf': False,
+                'dry_run': dry_run,
+                'allow_rs485': allow_rs485,
+                'accel_ms': ParameterValue(LaunchConfiguration('hwt601_accel_ms'), value_type=int),
+                'encoder_timing_recovery_enabled': True,
+                # Only this explicit HWT path: DDS must not delay the sole
+                # serial/motor owner. Child publishes original bytes/stamps,
+                # owns no bus, and its loss permanently stops the parent.
+                'isolate_feedback_output': True,
+                'feedback_output_cpu_affinity': [-1],
+                'encoder_stale_timeout_s': .18,
+                'encoder_max_recovery_gap_s': .18,
+            }])]),
+
+        # Motorlos: echte FC03-Encoder statt synthetischer Dry-run-Odometrie.
+        # Exklusiver Ersatz, nie zweiter Leser neben base_hardware. Kein
+        # Command-Abonnent, keine Schreibfunktion, kein eigener TF.
+        # Measured full-stack startup produced a 197.7ms poll-start gap
+        # before the third pair. Start the passive reader after that import
+        # burst, rather than establishing then silently rebasing a baseline.
+        # Fusion remains unready until real pairs arrive.
+        TimerAction(period=LaunchConfiguration('encoder_shadow_start_delay_s'),
+                    condition=UnlessCondition(active_drive), actions=[Node(
+            package='base_hardware', executable='encoder_shadow_reader',
+            name='hwt601_encoder_shadow_reader', output='screen',
+            condition=UnlessCondition(active_drive),
+            parameters=[encoder_params],
+            remappings=[('/shadow/hwt601/wheel_odom_raw',
+                         '/fusion/hwt601/wheel_odom_raw')])]),
+
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(os.path.join(
+                state_share, 'launch', 'hwt601_shadow.launch.py')),
+            launch_arguments={
+                'operator_stationary_confirmed': LaunchConfiguration(
+                    'operator_stationary_confirmed'),
+                'hwt_development_contract': LaunchConfiguration('hwt_development_contract'),
+            }.items()),
+
+        Node(
+            package='robot_localization', executable='ekf_node',
+            name='hwt601_mapping_ekf', output='screen',
+            parameters=[hwt_ekf_params],
+            remappings=[('odometry/filtered', '/odom')]),
+
+        Node(
+            package='amadeus_lidar_bringup',
+            executable='scan_vereinheitlichen',
+            name='scan_vereinheitlichen', output='screen',
+            condition=IfCondition(normalize_scan),
+            parameters=[{
+                'eingang': '/scan',
+                'ausgang': '/scan_normiert',
+                'strahlen': 2160,
+            }]),
+
+        # Radunabhaengige Kontrollmessung. Kein TF und bewusst kein EKF-Input
+        # im ersten Kartenversuch, damit die Ursache einer Abweichung sichtbar
+        # bleibt statt von einer zweiten Korrektur verdeckt zu werden.
+        Node(
+            package='robot_state_estimation', executable='lidar_odometry',
+            name='hwt601_lidar_observer', output='screen',
+            parameters=[hwt_observer_params, {
+                'scan_input': scan_topic,
+                'odom_output': '/shadow/hwt601/lidar_odom',
+                'status_topic': '/shadow/hwt601/lidar_status_json',
+            }]),
+
+        # Einziger Besitzer von /map und map -> odom.
+        Node(
+            package='slam_toolbox', executable='async_slam_toolbox_node',
+            name='slam_toolbox', output='screen',
+            parameters=[slam_params, slam_params_overlay, {'scan_topic': scan_topic}]),
+    ])

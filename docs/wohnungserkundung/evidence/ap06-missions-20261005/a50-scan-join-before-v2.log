@@ -1,0 +1,201 @@
+FF..FF                                                                   [100%]
+=================================== FAILURES ===================================
+___ test_scan_join_preserves_angle_single_attempt_and_original_guards[none] ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f034cf0f280>
+fault = 'none'
+
+    @pytest.mark.parametrize('fault', ['none', 'budget', 'cancel', 'epoch', 'unsafe'])
+    def test_scan_join_preserves_angle_single_attempt_and_original_guards(monkeypatch, fault):
+        node, grid, clock, parent, terminal = parent_fixture(monkeypatch, 'tiny')
+        node._initial_scan_enabled = True
+        node._initial_scan_angle = 2*math.pi
+        node._metric_start_strategy = 'adaptive'
+        node._max_frontier_goals = 2
+        calls = []; stopped = []; resumed_at = []
+        original_confirm = node._metric_confirm_stop
+        def confirm(*args):
+            stopped.append(clock[0]); return original_confirm(*args)
+        node._metric_confirm_stop = confirm
+        def scan(stop_requested, *, angle_rad=None):
+            calls.append(angle_rad)
+            if len(calls) == 1:
+                newer = copy.deepcopy(grid)
+                newer.data[80*grid.info.width+80] = 30
+                if fault == 'unsafe':
+                    c, r = node._world_to_grid(*node._robot_pose_sample()[0][:2], grid.info)
+                    newer.data[r*grid.info.width+c] = 100
+                clock[0] += .2
+                newer.header.stamp.nanosec = int((clock[0]-10)*1e9)
+                node._on_map(newer)
+                if fault == 'budget': clock[0] += node._goal_timeout_s
+                if fault == 'cancel': parent.is_cancel_requested = True
+                assert stop_requested()
+                node._on_metric_map_status(status(newer, accepted=3, observed=3,
+                    when=100+clock[0]-10))
+                if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+                return 'interrupted', .8
+            resumed_at.append(clock[0])
+            assert len(stopped) >= 2  # initial and after interrupted scan
+            assert angle_rad == pytest.approx(2*math.pi-.8)
+            assert not stop_requested()  # genuine exact pair and geometry
+            clock[0] += .2
+            return 'success', angle_rad
+        node._scan_in_place = scan
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert not result.success and terminal
+        assert node._metric_status['attempts'] == 1
+        assert node._metric_status['arrivals'] == node._metric_status['observations'] == 0
+        assert node._wohnungserkundung_active_child is None
+        if fault == 'none':
+>           assert len(calls) == 2
+E           assert 1 == 2
+E            +  where 1 = len([None])
+
+evidence/ap06-repo/src/explore/test/test_metric_scan_join.py:60: AssertionError
+__ test_scan_join_preserves_angle_single_attempt_and_original_guards[budget] ___
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f034cdd3340>
+fault = 'budget'
+
+    @pytest.mark.parametrize('fault', ['none', 'budget', 'cancel', 'epoch', 'unsafe'])
+    def test_scan_join_preserves_angle_single_attempt_and_original_guards(monkeypatch, fault):
+        node, grid, clock, parent, terminal = parent_fixture(monkeypatch, 'tiny')
+        node._initial_scan_enabled = True
+        node._initial_scan_angle = 2*math.pi
+        node._metric_start_strategy = 'adaptive'
+        node._max_frontier_goals = 2
+        calls = []; stopped = []; resumed_at = []
+        original_confirm = node._metric_confirm_stop
+        def confirm(*args):
+            stopped.append(clock[0]); return original_confirm(*args)
+        node._metric_confirm_stop = confirm
+        def scan(stop_requested, *, angle_rad=None):
+            calls.append(angle_rad)
+            if len(calls) == 1:
+                newer = copy.deepcopy(grid)
+                newer.data[80*grid.info.width+80] = 30
+                if fault == 'unsafe':
+                    c, r = node._world_to_grid(*node._robot_pose_sample()[0][:2], grid.info)
+                    newer.data[r*grid.info.width+c] = 100
+                clock[0] += .2
+                newer.header.stamp.nanosec = int((clock[0]-10)*1e9)
+                node._on_map(newer)
+                if fault == 'budget': clock[0] += node._goal_timeout_s
+                if fault == 'cancel': parent.is_cancel_requested = True
+                assert stop_requested()
+                node._on_metric_map_status(status(newer, accepted=3, observed=3,
+                    when=100+clock[0]-10))
+                if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+                return 'interrupted', .8
+            resumed_at.append(clock[0])
+            assert len(stopped) >= 2  # initial and after interrupted scan
+            assert angle_rad == pytest.approx(2*math.pi-.8)
+            assert not stop_requested()  # genuine exact pair and geometry
+            clock[0] += .2
+            return 'success', angle_rad
+        node._scan_in_place = scan
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert not result.success and terminal
+        assert node._metric_status['attempts'] == 1
+        assert node._metric_status['arrivals'] == node._metric_status['observations'] == 0
+        assert node._wohnungserkundung_active_child is None
+        if fault == 'none':
+            assert len(calls) == 2
+            assert node._metric_status['scan_progress_rad'] == pytest.approx(2*math.pi)
+            assert resumed_at[0] < 10.02+node._goal_timeout_s
+        else:
+            assert calls == [None]
+>           assert node._metric_status['reason'] == {
+                'budget': 'budget_exhausted', 'cancel': 'user_canceled',
+                'epoch': 'map_epoch_changed', 'unsafe': 'initial_scan_footprint_invalid'}[fault]
+E           AssertionError: assert 'raw_map_stamp_stale' == 'budget_exhausted'
+E             - budget_exhausted
+E             + raw_map_stamp_stale
+
+evidence/ap06-repo/src/explore/test/test_metric_scan_join.py:65: AssertionError
+__ test_scan_join_preserves_angle_single_attempt_and_original_guards[unsafe] ___
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f034cf0f5b0>
+fault = 'unsafe'
+
+    @pytest.mark.parametrize('fault', ['none', 'budget', 'cancel', 'epoch', 'unsafe'])
+    def test_scan_join_preserves_angle_single_attempt_and_original_guards(monkeypatch, fault):
+        node, grid, clock, parent, terminal = parent_fixture(monkeypatch, 'tiny')
+        node._initial_scan_enabled = True
+        node._initial_scan_angle = 2*math.pi
+        node._metric_start_strategy = 'adaptive'
+        node._max_frontier_goals = 2
+        calls = []; stopped = []; resumed_at = []
+        original_confirm = node._metric_confirm_stop
+        def confirm(*args):
+            stopped.append(clock[0]); return original_confirm(*args)
+        node._metric_confirm_stop = confirm
+        def scan(stop_requested, *, angle_rad=None):
+            calls.append(angle_rad)
+            if len(calls) == 1:
+                newer = copy.deepcopy(grid)
+                newer.data[80*grid.info.width+80] = 30
+                if fault == 'unsafe':
+                    c, r = node._world_to_grid(*node._robot_pose_sample()[0][:2], grid.info)
+                    newer.data[r*grid.info.width+c] = 100
+                clock[0] += .2
+                newer.header.stamp.nanosec = int((clock[0]-10)*1e9)
+                node._on_map(newer)
+                if fault == 'budget': clock[0] += node._goal_timeout_s
+                if fault == 'cancel': parent.is_cancel_requested = True
+                assert stop_requested()
+                node._on_metric_map_status(status(newer, accepted=3, observed=3,
+                    when=100+clock[0]-10))
+                if fault == 'epoch': node._metric_fault = 'map_epoch_changed'
+                return 'interrupted', .8
+            resumed_at.append(clock[0])
+            assert len(stopped) >= 2  # initial and after interrupted scan
+            assert angle_rad == pytest.approx(2*math.pi-.8)
+            assert not stop_requested()  # genuine exact pair and geometry
+            clock[0] += .2
+            return 'success', angle_rad
+        node._scan_in_place = scan
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert not result.success and terminal
+        assert node._metric_status['attempts'] == 1
+        assert node._metric_status['arrivals'] == node._metric_status['observations'] == 0
+        assert node._wohnungserkundung_active_child is None
+        if fault == 'none':
+            assert len(calls) == 2
+            assert node._metric_status['scan_progress_rad'] == pytest.approx(2*math.pi)
+            assert resumed_at[0] < 10.02+node._goal_timeout_s
+        else:
+            assert calls == [None]
+>           assert node._metric_status['reason'] == {
+                'budget': 'budget_exhausted', 'cancel': 'user_canceled',
+                'epoch': 'map_epoch_changed', 'unsafe': 'initial_scan_footprint_invalid'}[fault]
+E           AssertionError: assert 'completion_r...observed_free' == 'initial_scan...print_invalid'
+E             - initial_scan_footprint_invalid
+E             + completion_raw_pose_not_observed_free
+
+evidence/ap06-repo/src/explore/test/test_metric_scan_join.py:65: AssertionError
+___ test_segmented_scan_uses_remaining_angle_without_configuration_mutation ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f034cf6a080>
+
+    def test_segmented_scan_uses_remaining_angle_without_configuration_mutation(monkeypatch):
+        clock = [0.]; rotations = []
+        import explore.explore_node as module
+        monkeypatch.setattr(module.time, 'monotonic', lambda: clock[0])
+        monkeypatch.setattr(module.time, 'sleep', lambda dt: clock.__setitem__(0, clock[0]+dt))
+        def rotate(angle, *args, **kwargs):
+            rotations.append(angle); clock[0] += .1; return 'success', angle
+        node = SimpleNamespace(_initial_scan_angle=2*math.pi, _initial_scan_segment_angle=.8,
+            _initial_scan_speed=.08, _initial_scan_timeout=280., _initial_scan_segment_pause=0.,
+            _rotate_in_place=rotate, _publish_scan_stop=lambda: None)
+>       assert ExploreNode._scan_in_place(node, angle_rad=1.1) == ('success', 1.1)
+E       TypeError: ExploreNode._scan_in_place() got an unexpected keyword argument 'angle_rad'
+
+evidence/ap06-repo/src/explore/test/test_metric_scan_join.py:80: TypeError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_scan_join.py::test_scan_join_preserves_angle_single_attempt_and_original_guards[none]
+FAILED evidence/ap06-repo/src/explore/test/test_metric_scan_join.py::test_scan_join_preserves_angle_single_attempt_and_original_guards[budget]
+FAILED evidence/ap06-repo/src/explore/test/test_metric_scan_join.py::test_scan_join_preserves_angle_single_attempt_and_original_guards[unsafe]
+FAILED evidence/ap06-repo/src/explore/test/test_metric_scan_join.py::test_segmented_scan_uses_remaining_angle_without_configuration_mutation
+4 failed, 2 passed in 0.76s

@@ -1,2331 +1,1501 @@
 # Projektgedächtnis
 
-Fortlaufendes Protokoll getroffener Entscheidungen. Jeder Eintrag nennt die
-**beobachtete Evidenz**, nicht nur die Entscheidung. Neue Einträge oben anfügen.
-
-Format:
-
-```text
-Datum:
-Entscheidung:
-Grund / beobachtete Evidenz:
-Betroffene Dateien und Hardware:
-Teststatus:
-Offene Risiken:
-Rückfallweg:
-```
-
----
-
-## 2026-08-26 — OAK-RGB-D-Dauerstream entkoppelt und selbstheilend
-
-**Entscheidung:** Die OAK-D-S2 liefert im Semantik-/SLAM-Profil real
-640 x 360 bei 10 Hz. Die RGB-Entzerrung laeuft ausserhalb des DepthAI-
-Komponentencontainers im eigenen `oak_rectifier`; Bild und CameraInfo werden
-unabhaengig mit Best-Effort/KEEP_LAST(1) empfangen. CameraInfo ist die stabile
-Kalibrierung und wird nicht mehr fuer jedes Bild per Exact-Sync erzwungen.
-
-Der KI-Server darf keine OAK-Rohbilder abonnieren. Ein lokaler
-`semantic_stream_relay` waehlt aus begrenzten Puffern nur frische, per
-Quellzeitstempel passende RGB-/Tiefenpaare und sendet 2 Hz als JPEG plus
-verlustfreies 16UC1-PNG. Server und Relay lehnen Bilder ueber 2 s sowie mehr
-als 0,20 s RGB-/Tiefenversatz fail-closed ab. DepthAIs geraeteinterne
-Synchronisierung bleibt aus, weil sie im Realtest wiederholt etwa 10 s lange
-RGB-Luecken erzeugte. Bleibt ein lokaler CycloneDDS-Bild- oder Tiefenendpunkt
-mehr als 3 s still, wird nur diese Best-Effort-Subscription mit 5 s Cooldown
-neu aufgebaut; jeder Eingriff steht gezaehlt im Status.
-
-**Grund / beobachtete Evidenz:** `i_width/i_height=640x360` skalierte beim
-Humble-Treiber nur Metadaten; `/oak/rgb/image_raw` blieb tatsaechlich
-1280 x 720. Erst der explizite ISP-Faktor 1/3 lieferte real 640 x 360. Direkte
-Offboard-Rohbildabonnenten drueckten den lokalen RGB-Pfad von rund 30 Hz auf
-unter 1 Hz. Im alten gemeinsamen Container fiel RGB nach 17 min 18 s mit
-`No Data` aus, ohne zeitgleichen Kernel-USB-Reset.
-
-Ein getrennt gestarteter Standard-`image_proc`-Rectifier verlor in einem
-weiteren A/B-Lauf nach rund 8,5 min dauerhaft nur seine Bildseite, waehrend
-dasselbe `/oak/rgb/image_raw` nachgemessen mit 10,0 Hz weiterlief. Der eigene
-Entzerrer ohne CameraSubscriber-Synchronisierung beseitigt diesen Pfad. Im
-anschliessenden langen Lauf blieb die OAK insgesamt 33 min 49 s aktiv; es gab
-nach dem absichtlichen USB-Neuaufbau beim Start keinen Reset, Disconnect oder
-DepthAI-Fehler. Das Vollbild war symmetrisch, 640 x 360 und enthielt das gesamte
-gemessene Sichtfeld. Feste OpenCV-Remap-Tabellen benoetigten im Jetson-Benchmark
-4,24 statt 5,38 ms pro Bild (21 % schneller).
-
-Der erste Relay-Endpunkt verlor nach rund 11 min nur Tiefe (`rgb_queue=80`,
-`depth_queue=0`), obwohl ein neu gestarteter Subscriber dasselbe Tiefentopic
-sofort mit 8--9 Hz empfing. Ein frisch erzeugter Relay lief danach real
-17 min 31 s ueber die fruehere Grenze: 2.068 publizierte Paare, 36 verworfene
-Timerzyklen, null stale RGB-/Tiefenframes, null Codecfehler, zuletzt 0,077 s
-Publikationsalter und `ready=true`. Zwei isolierte Wiederanlauftests pausierten
-jeweils Tiefe beziehungsweise RGB fuer 2,5 s. In beiden Faellen wurde exakt
-der betroffene Endpoint einmal neu aufgebaut und lieferte danach wieder Daten;
-der Endstatus war `ready=true` und ohne Codec-/Bildfehler.
-
-Der RTX-Knoten wurde fuer den Positivtest mit leerem Objektgedaechtnis gestartet.
-Die sichtbare Tasse wurde neu mit Konfidenz 0,694 erkannt und im motorlosen
-Testframe `base_link` plausibel bei `(1,259; 0,051; 0,831) m` projiziert. Das
-ist eine echte RGB-D-/CUDA-/TF-Projektion, keine globale Kartenlokalisierung.
-
-**Betroffene Dateien und Hardware:** OAK-Profile und `oak.launch.py` in
-`robot_bringup`; eigener Entzerrer samt Status; komprimierender Relay,
-Codec/Pairing und Servereingang in `semantic_perception`; OAK-D-S2, Jetson,
-WLAN und RTX 3090. Keine Karte oder Aufnahme liegt im Repository. Motor-,
-Nav2-, VL53- und Missionsknoten waren waehrend aller Tests aus.
-
-**Teststatus:** 24 direkte Semantiktests und 7 Bring-up-Tests bestanden,
-einschliesslich verlustfreier 16-Bit-Tiefe, Frische-/Skew-Grenzen,
-ISP-Vertrag, Aufloesungssperre und Watchdog-Zeitlogik. Beide Pakete bauten im
-isolierten Jetson-Overlay. Zusaetzlich bestanden die zwei realen, synthetisch
-unterbrochenen ROS-Wiederanlauftests, der 33:49-min-OAK-Lauf, der
-17:31-min-Relay-Lauf, Vollbildsichtkontrolle und die frische positive
-Tassenpose. Das Abschalten erfolgte per Einzelsignal an die Elternprozesse;
-DepthAI endete sauber. Das Produktionsdeployment ist getrennt im
-`ROBOT_TRANSFER.md` protokolliert. Dabei wurden beide Pakete als normale
-Kopien im Jetson-Produktions-Install und `semantic_perception` auf dem
-KI-Server installiert. Der Produktionsdienst und ein weiterer motorloser
-OAK-Start bestaetigten dieselben komprimierten Topics, 640 x 360, frische
-Statuswerte und den erwarteten fail-closed `map`-Service ohne Lokalisierung.
-
-**Offene Risiken:** 640 x 360 nutzt das volle Sichtfeld, aber nicht die volle
-Sensor-Pixelaufloesung. Eine spaetere hoehere Objekterkennungsaufloesung braucht
-einen eigenen Bandbreiten-, CPU-, Temperatur- und Dauertest. Ein
-`subscription_restarts`-Zaehler groesser null ist ein geheilter Transportfehler,
-aber weiterhin eine Diagnose, die beobachtet werden soll. Fuer eine Pose im
-`map`-Frame muss die reale Lokalisierung separat bestaetigt sein.
-
-**Rueckfallweg:** Relay mit `semantic_relay:=false` abschalten oder den Commit
-revertieren und beide Pakete neu bauen. Der KI-Server bleibt ohne frische
-komprimierte Bilder fail-closed. Bei einem Rueckfall auf den alten Rectifier
-muss dessen gemessener Spaetausfall einkalkuliert werden; OAK, Server und
-Navigation koennen weiterhin getrennt gestoppt werden.
-
----
-
-## 2026-08-25 — Deutsche Objektanfrage liefert reale OAK-3D-Pose
-
-**Entscheidung:** App, Behavior Tree und Service verwenden weiterhin die
-deutschen kanonischen Objektklassen (`Tasse`, `Flasche`, ...). Fuer
-YOLO-World/CLIP werden sie positionsgleich auf robuste englische Modell-Prompts
-(`cup`, `bottle`, ...) abgebildet. Die Zuordnung muss vollstaendig,
-eineindeutig und frei von Leerwerten sein; andernfalls startet der Node nicht.
-Die bestehende Konfidenzschwelle 0,35 bleibt unveraendert.
-
-**Grund / beobachtete Evidenz:** Auf demselben lokal gehaltenen 640-x-360-
-OAK-Bild war die rosa Tasse auf einem Stuhl klar sichtbar. Ein isolierter
-A/B-Lauf auf der RTX 3090 lieferte mit einem gemischten Vokabular fuer `cup`
-Konfidenz 0,322, fuer `Tasse` dagegen nur 0,029 und eine falsche, fast
-bildgrosse Box. Mit dem exakten englischen Betriebsvokabular stieg derselbe
-korrekte `cup`-Treffer auf 0,396. Das Problem war damit der Text-Prompt, nicht
-Tassenposition, Kamera, CUDA oder die bestehende Schwelle.
-
-Nach dem Softwarefix meldete der laufende Server wiederholt nur noch den
-fehlenden Transform `oak_rgb_camera_optical_frame -> map`. Damit waren
-2D-Treffer und gueltiger Tiefenwert bereits belegt. Fuer einen rein motorlosen
-Endtest lief kurz ein ausdruecklich kuenstlicher Identitaets-TF
-`map -> base_link`; zuvor waren weder Karten-TF noch Motor-, Nav2- oder
-Missionsknoten vorhanden. `GetObjectPose(Tasse)` antwortete danach mit
-`found=true`, Konfidenz 0,4048 und der Testkoordinate
-`(x=1,621; y=-0,308; z=0,555) m`. Hoehe und Entfernung waren fuer die Tasse
-auf dem Stuhl plausibel. Diese Pose beweist Projektion und TF-Kette, nicht die
-globale Roboterlokalisierung. Der Test-TF wurde sofort beendet und der
-KI-Dienst neu gestartet, damit die kuenstliche Pose nicht im Objektgedaechtnis
-bleibt. Der abschliessende Serviceaufruf lieferte ohne echten Karten-TF wieder
-fail-closed `found=false`.
-
-**Betroffene Dateien und Hardware:** `semantic_perception_node.py`, Parameter,
-neun Backend-/Prompt-Vertragstests, Paket-README, Inventar und
-Uebergabedokumentation. Real beteiligt waren OAK-D-S2, WLAN und RTX 3090.
-Keine Motor-, Navigations- oder Kartenkomponente lief; Kamerabild und
-Testkoordinaten wurden nicht als Datei ins Repository aufgenommen.
-
-**Teststatus:** Neun direkte Tests, Python-Kompilierung, YAML- und
-Whitespacepruefung sowie Colcon-Build auf Jetson/Python 3.10 bestanden. Auf
-dem KI-Server bestanden dieselben neun Tests und der normale Colcon-Build unter
-Python 3.12. Ein Symlink-Build ist dort mit der vorhandenen
-Setuptools-Kombination nicht kompatibel (`--editable`/`--uninstall`); der
-bewaehrte normale Installationsmodus baut das Paket sauber. Der Live-Test
-bestaetigte englisches Modellvokabular, echte OAK-Box, Tiefe, Kamera-TF,
-positive 3D-Serviceantwort und anschliessenden fail-closed Endzustand.
-
-Der anschliessende Dauerbetrieb deckte getrennt einen offenen Kamerafehler auf:
-Die 640-x-360-Pipeline war ab `22:19:39` bereit und meldete nach 17 min 18 s
-erstmals `Camera diagnostics error: No Data`. Danach kam die Meldung alle etwa
-fuenf Sekunden. Im Kernel-Log steht zum Fehlerbeginn weder USB-Reset noch
-Disconnect; der physische USB-Disconnect erschien erst beim spaeteren
-erzwungenen Prozessende. Der DepthAI-Komponentencontainer reagierte weder auf
-SIGINT noch SIGTERM und wurde vom Launch nach dessen normalen Fristen per
-SIGKILL beendet. Damit ist der positive Objekttest gueltig, ein stabiler
-640-x-360-Dauerstream aber noch nicht abgenommen. Ob DDS-Rueckstau,
-Treiber/Pipeline oder eine andere Lastkopplung die Ursache ist, ist nicht
-gemessen entschieden.
-
-**Offene Risiken:** Eine positive Pose im echten `map`-Frame verlangt
-gleichzeitig die reale, bestaetigte Lokalisierung. Die 640-x-360-Aufloesung war
-fuer die Referenztasse ausreichend, ist nach dem spaeten `No Data` aber noch
-nicht dauerstabil. Vor jeder Aufloesungserhoehung muss ein isolierter
-Dauer-A/B-Lauf lokalen Kamerabetrieb, Offboard-Subscriber und Inferenzlast
-trennen. Ein dauerhaftes semantisches Hochaufloesungsprofil ist noch nicht
-vermessen. 1920-x-1080-RGB plus
-ausgerichtete Tiefe ungefiltert ueber WLAN wuerden Bandbreite und Inferenzlast
-stark erhoehen. Das wird als getrennte Sensorkonfigurationsaenderung mit
-komprimierten oder bedarfsgesteuerten Schluesselbildern bewertet, nicht in
-diesen Prompt-Fix gemischt. Der Hintergrundscan fuehrt weiterhin eine
-Vorhersage je Klasse aus.
-
-**Rueckfallweg:** Den Prompt-Commit revertieren und `semantic_perception` im
-normalen Modus neu bauen. Kamera und KI-Dienst koennen getrennt beendet
-werden. Ohne echten Karten-TF bleibt die reale Antwort fail-closed; fuer
-Trockentests ist weiterhin ausschliesslich `model_backend: stub` zulaessig.
-
----
-
-## 2026-08-25 — OAK-zu-RTX-Wahrnehmung fail-closed und live verbunden
-
-**Entscheidung:** Ein reales `semantic_perception`-Backend darf bei fehlendem
-Bild, Tiefe, CameraInfo, TF, Modell oder einer leeren Detektion niemals auf die
-simulierte Stub-Pose zurueckfallen. Der Stub ist nur noch mit dem expliziten
-Parameter `model_backend: stub` aktiv. YOLO-World erhaelt die konfigurierten
-Klassen genau einmal vor dem ersten CUDA-Lauf; jede Antwort wird danach gegen
-die tatsaechliche Box-Klasse gefiltert. Jetson und KI-Server verwenden fuer
-Custom-Services dieselbe CycloneDDS-Middleware und feste WLAN-Peers.
-
-**Grund / beobachtete Evidenz:** Der laufende Server war auf `yoloworld`
-konfiguriert, meldete aber ohne einen einzigen Kamera-Publisher eine Tasse an
-der festen Stub-Pose `(1,0; 0,0; 0,5) m` mit Konfidenz 0,8 und fuehrte alle
-fuenf Klassen unter `seen`. Nach dem Fail-closed-Fix ergab dieselbe Anfrage
-`found=false`, Konfidenz 0 und `seen=[]`.
-
-Ein zweiter A/B-Test zeigte, dass ein Jetson-Client ueber Fast DDS beim
-benutzerdefinierten `GetObjectPose`-Service einen leeren Request am Server
-ausloeste und keine Antwort erhielt. Nach Installation von
-`rmw_cyclonedds_cpp` und Start mit demselben CycloneDDS-Profil wurde `Tasse`
-unveraendert uebertragen und die Antwort empfangen. Standardtopics allein
-hatten diesen Interoperabilitaetsfehler zuvor verdeckt.
-
-Im ersten echten OAK-Lauf kamen rektifizierte RGB-Bilder mit etwa 13 bis
-20 Hz auf dem Server an. Dabei wurden zunaechst die nicht deklarierte
-Ultralytics-CLIP-Abhaengigkeit und danach wiederholtes `set_classes()` als
-CPU/CUDA-Mischfehler sichtbar. CLIP ist nun auf Commit `68dce32140994dfcb645a1320c4ebdc034fc19fd`
-gepinnt; das gemeinsame Klassenvokabular wird einmalig gesetzt. Der finale
-Mehrzyklustest nutzte die RTX 3090 mit rund 2,1 GB VRAM ohne CLIP-,
-Auto-Install- oder Device-Fehler. Eine Live-Serviceanfrage antwortete in rund
-zwei Sekunden korrekt `found=false`, weil keine bestaetigte Tasse samt
-Karten-TF vorlag.
-
-Der getrennte LLM-End-to-End-Test schickte anschliessend die Anweisung
-`Erkunde bitte die Wohnung` ueber WLAN an Qwen 2.5/Ollama. Nach rund 2,4 s
-publizierte `llm_planner` exakt `{"type":"explore"}` und den Status
-`dispatched`. `/mission_manager/command_json` hatte dabei keinen Subscriber;
-auf dem Jetson liefen weiterhin keine Roboter- oder Fahrknoten. Damit sind
-Sprachmodell, Parser, Validator und DDS-Ausgabe belegt, nicht jedoch eine reale
-Missionsausfuehrung durch diesen Test.
-
-**Betroffene Dateien und Hardware:** `semantic_perception_node.py`, sieben
-Backend-/Klassenfiltertests, Paket-README, reproduzierbares Pixi-Beispiel im
-`robot_bringup` sowie dieses Projektgedaechtnis. Real beteiligt waren die
-OAK-D-S2 am Jetson, WLAN und die RTX 3090. Auf dem Jetson wurden das
-CycloneDDS-RMW-Paket und ein lokales Peer-Profil installiert; auf dem Server
-liegt die gepinnte CLIP-Abhaengigkeit in der Pixi-Konfiguration ausserhalb des
-Repositories. Keine Motor-, Karten- oder Navigationskomponente lief.
-
-**Teststatus:** Python-Kompilierung, sieben direkte Unittests, Build und
-Colcon-Test auf Jetson/Python 3.10 sowie KI-Server/Python 3.12 bestanden.
-Der motorlose Live-Test bestaetigte USB 3, OAK-D-S2, RGB/Depth/CameraInfo,
-passende Reliable-QoS, WLAN-Datenrate, CUDA-Modelllauf, fail-closed Service und
-sauberes Kamera-Shutdown. Eine frische Jetson-Shell waehlt persistent
-CycloneDDS und bestand den Custom-Service-Test; der KI-Dienst blieb aktiv.
-Der motorlose LLM-Vertrag bestand zusaetzlich Anweisung, Ollama-Antwort,
-Validierung, Auftrags-Topic und Status-Topic ohne Missionsempfaenger.
-
-**Offene Risiken:** Noch nicht abgenommen ist ein positiver Treffer mit real
-sichtbarem Referenzobjekt, gueltiger Tiefe und gleichzeitig vorhandenem
-`map -> base_link -> camera`-TF. Erst dieser Test darf eine reale 3D-Objektpose
-freigeben. Der Hintergrundscan fuehrt derzeit fuer jede der fuenf Klassen eine
-eigene Vorhersage aus; eine spaetere Ein-Pass-Auswertung kann die GPU-Last
-senken, darf aber den Klassenfilter nicht umgehen. Die realen Peer-IPs und
-systemd-/Pixi-Dateien bleiben absichtlich lokale Deploymentkonfiguration.
-
-**Rueckfallweg:** Den Wahrnehmungs-Fix revertieren und den Serverdienst neu
-bauen; fuer Trockentests stattdessen bewusst `model_backend: stub` setzen.
-Die Jetson-Shellvariablen lassen sich entfernen, ohne ROS-Pakete zu loeschen;
-ohne gemeinsames RMW sind benutzerdefinierte WLAN-Services jedoch nicht
-freigegeben. Kamera und KI-Server koennen jederzeit getrennt gestoppt werden;
-Navigation und Sicherheit laufen davon unabhaengig onboard.
-
----
-
-## 2026-08-25 — Offboard-Nodes unter CycloneDDS sauber beendet
-
-**Entscheidung:** `llm_planner` und `semantic_perception` behandeln beim
-externen Dienststopp neben `KeyboardInterrupt` auch
-`ExternalShutdownException`. `rclpy.shutdown()` wird nur noch aufgerufen,
-solange der Kontext aktiv ist.
-
-**Grund / beobachtete Evidenz:** Beim kontrollierten Neustart des
-KI-Server-Dienstes beendete CycloneDDS den ROS-Kontext vor dem Python-Spin.
-Beide Nodes meldeten deshalb erst `ExternalShutdownException` und danach einen
-zweiten Fehler fuer `rcl_shutdown already called`, obwohl der Neustart
-funktional gelang. Der Guard trennt diesen normalen Dienststopp von echten
-Laufzeitfehlern.
-
-**Betroffene Dateien und Hardware:** Einstiegspunkte von `llm_planner` und
-`semantic_perception`; keine Roboter-Hardware und keine Bewegungssteuerung.
-
-**Teststatus:** Python-Kompilierung, alle 15 Sprachplaner-Tests, erneuter Build
-beider Pakete und ein kontrollierter systemd-Neustart ohne Traceback bestanden.
-
-**Offene Risiken:** Fehler waehrend der eigentlichen Node-Ausfuehrung bleiben
-weiterhin sichtbar und fuehren zum Dienstneustart.
-
-**Rueckfallweg:** Diesen Commit revertieren; dadurch kehren nur die
-Shutdown-Tracebacks zurueck. ROS-Schnittstellen und Modellparameter bleiben
-unveraendert.
-
----
-
-## 2026-08-25 — LLM-JSON-Tiefenlimit unter Python 3.12 explizit gemacht
-
-**Entscheidung:** Der Offboard-Sprachplaner begrenzt verschachtelte
-LLM-JSON-Antworten jetzt unabhaengig von der Python-Laufzeit auf 64 Ebenen.
-Der Extraktor beruecksichtigt dabei Strings und Escape-Sequenzen, bevor er das
-erste vollstaendige JSON-Objekt an `json.loads` uebergibt.
-
-**Grund / beobachtete Evidenz:** Der vorhandene Negativtest mit 1.500
-Verschachtelungsebenen verliess sich indirekt auf `RecursionError`. Python 3.12
-akzeptierte dieselbe Struktur, sodass sie bis zur Auftragsvalidierung gelangte.
-Eine feste Grenze erhaelt den fail-closed-Vertrag ueber Python-Versionen hinweg.
-
-**Betroffene Dateien und Hardware:** `llm_planner_node.py` und dieser Eintrag.
-Nur der asynchrone Offboard-Planer ist betroffen; keine Aktoren oder
-Roboter-Hardware wurden angesprochen.
-
-**Teststatus:** Alle 15 direkten `llm_planner`-Tests unter Python 3.12 sowie
-Python-Kompilierung bestanden, einschliesslich tiefem JSON, ungueltigem Unicode
-und gueltigem JSON mit Praefixtext.
-
-**Offene Risiken:** Der Planer bleibt eine High-Level-Komponente. Jeder neue
-Auftragstyp muss weiterhin separat in `_validate()` freigegeben werden.
-
-**Rueckfallweg:** Diesen Parser-Commit revertieren. Dadurch gilt wieder das
-laufzeitabhaengige Rekursionsverhalten; Motor-, Navigations- und
-Sicherheitskonfigurationen bleiben unveraendert.
-
----
-
-## 2026-08-18 — Mehrraum-Uebergang erreicht; Portalwechsel robust gemacht
-
-**Entscheidung:** Der Explorer behandelt eine durch Inflation kuenstlich in
-zwei Costmap-Komponenten getrennte Tuer als begrenztes Portal. Normale,
-unprojizierte Frontier-Ziele bleiben immer vorrangig. Nur wenn alle
-Frontier-Ziele auf die aktuelle Komponente zurueckprojiziert werden, darf der
-Explorer ein benachbartes, ausreichend grosses Gebiet ueber eine begrenzte
-Bruecke anfahren. Vor einer direkten Bruecke sind weiterhin eine frische
-vollbreite LiDAR-Korridorpruefung, Missions-Gate, Geschwindigkeitsglaettung und
-Kollisionsmonitor vorgeschrieben; der reale Fortschritt wird aus einem
-eingefrorenen LiDAR-Referenzscan statt nur aus den auf Schwellen schlupfenden
-Radencodern bestimmt. Wird die Tuer waehrend der Nav2-Anfahrt durch neue
-Kartenevidenz regulaer verbunden, ist das kein Fehler mehr: Der urspruengliche
-Fernseitenpunkt muss nun exakt in der Roboterkomponente liegen, danach
-uebernimmt der normale Nav2-Pfad bis mindestens eine halbe Auslaufreserve
-hinter diesem Punkt. Ungeklaerte Frontiers oder Portale verhindern weiterhin
-`map_ready_to_save=true`.
-
-**Grund / beobachtete Evidenz:** Der erste scharfe Portallauf erkannte vor der
-Fahrt genau einen Uebergang: Zielgebiet 0,887 m2, Costmap-Luecke 0,488 m,
-Nav2-Anfahrt 0,454 m und begrenzte Bruecke 0,797 m. Nach 0,347 m realer
-Anfahrt wuchs die Karte. Die bislang getrennten Gebiete bildeten danach eine
-einzige 2,251-m2-Komponente; Roboter, alter Anfahrpunkt und alter Zielpunkt
-lagen alle in Label 1. Der alte Zielpunkt bei etwa `(1,001, 0,025) m` hatte
-Kosten 90 und war regulaer erreichbar. Die fruehere Prüfung deutete das
-Verschwinden des Portalobjekts trotzdem als `portal_geometry_changed` und
-stoppte bei 0 rpm. Das war ein falscher Fehlerzustand, nicht eine blockierte
-Tuer.
-
-Nach der Korrektur und einem motorlosen Start plante der echte Nav2-Stack aus
-der bereits vorgerueckten Position ein normales Frontier-Ziel bei
-`(1,05, 0,05) m` im Folgeraum. Im beaufsichtigten Realtest meldete Nav2 dieses
-Ziel als erreicht; der Explorer zaehlte eine besuchte Frontier. Die Basis
-endete bei Encoderpose `x=1,018 m`, `y=-0,102 m`, `yaw=0,398 rad`, beiden
-Motoren 0 rpm, fehlerfreiem RS485 und fehlerfreien Encodern. Die Karte wuchs
-waehrend der Fahrt deutlich; zum Stoppzeitpunkt waren 23,70 % der aktuellen
-sicheren Komponente durch die Fahrspur abgedeckt. Eine nur fuer diese Abnahme
-temporär aktivierte harte Vorwaertsbegrenzung verwarf danach drei seitliche
-Frontiers, weshalb die Gesamtmission korrekt als unvollstaendig endete. Diese
-Begrenzung gehoert nicht zum Wohnungsprofil und wurde wieder entfernt. Die
-sensorische Mehrraumfahrt ist damit nachgewiesen. Der anwesende Beobachter
-bestaetigte anschliessend, dass der Roboter die Schwelle vollstaendig verlassen
-und den Folgeraum real erreicht hatte. Damit stimmen Nav2-Erfolg, Sensorik und
-aeussere Sichtpruefung ueberein.
-
-**Betroffene Dateien und Hardware:** `explore_node.py`, neue Module
-`portal_planning.py` und `lidar_motion.py`, Explorer-Parameter und Tests,
-Missions-Gate-/Nav2-Vertraege sowie diese Dokumentation. Der Realtest nutzte
-STL-27L, beide VL53, SLAM, Nav2, Polygon-Footprint, Kollisionsmonitor,
-Encoder-Odometrie und beide ESS23-RS-Antriebe. Karte und Wohnungsgeometrie
-blieben ausschliesslich lokal.
-
-**Teststatus:** 58/58 Explorer-Tests bestanden, darunter synthetische
-Portalgeometrie, LiDAR-Korridor, eingefrorene Scanbewegung, Nav2-Uebergabe bei
-zusammengewachsener Costmap und fail-closed Gegenfaelle. Der gesamte aktuell
-registrierte Bestand meldet 165 Tests, 0 Fehler, 0 Fehlschlaege und 0
-Auslassungen. Vor der realen Fahrt: `dry_run=false`, `allow_rs485=true`,
-`rs485_ready=true`, Encoderfeedback frisch, 0 rpm, LiDAR 10,8 Hz und beide
-VL53 3,8 Hz. Nach der Fahrt erneut 0 rpm; der Stack wurde ueber genau ein
-Ctrl-C am Launch-Elternprozess beendet.
-
-**Offene Risiken:** Ein einzelner Wechsel beweist noch keine vollstaendige
-Wohnungserkundung. Als naechstes muss das unbeschraenkte Wohnungsprofil aus
-dem erreichten Folgeraum mehrere Frontiers und weitere Tueren bedienen. Die
-Portal-Direktbruecke wurde real noch nicht ausgefuehrt, weil die Live-Karte die
-Tuer rechtzeitig regulaer fuer Nav2 verband. Schwellen und Teppiche bleiben
-Schlupfquellen; deshalb darf der direkte Portalpfad nicht auf Encoderabschluss
-zurueckfallen.
-
-**Rueckfallweg:** `portal_crossing_enabled: false` deaktiviert nur die neue
-Portalbruecke; normale Frontier-Navigation bleibt erhalten. Der sicherste
-Funktionsrueckfall ist `enable_auto_explore:=false` oder
-`active_drive:=false`. Der neue Verbundenheitswechsel kann separat entfernt
-werden; dann stoppt ein waehrend der Anfahrt zusammengewachsenes Portal wieder
-fail-closed mit `portal_geometry_changed`.
-
----
-
-## 2026-08-18 — Vermessener, tuergaengiger Polygon-Footprint
-
-**Entscheidung:** Die lokale reale Nav2-Costmap verwendet die am 18.08.2026
-relativ zur mittigen Antriebsachse gemessene, asymmetrische Plattformkontur:
-Chassis vorn +0,27 m, hinten -0,11 m und seitlich +/-0,23 m. Weil die bekannten
-VL53-Frames bei x=+0,29 m liegen und ihr Modell bis +0,305 m reicht, umfasst die
-sichere Rechteckhuelle x=-0,11..+0,31 m und y=+/-0,23 m. Dazu kommen 0,02 m
-Padding. NavFn bleibt als bewaehrter 2D-Planer vorerst global kreisfoermig;
-sein Radius sinkt von 0,40 auf 0,28 m (halbe Breite plus 0,05 m Reserve). Der
-Kartierungs-`collision_monitor` uebernimmt dynamisch den lokalen
-Polygon-Footprint. Die
-Explorer-Ziel- und Abdeckungsmaske wird kreisfoermig statt mit einem
-quadratischen Fenster erodiert; die Abdeckungsreserve sinkt passend auf
-0,28 m. Die etablierte Frontier-Methode bleibt Grundlage der
-Wohnungserkundung; ein Raumgraph oder Smac State Lattice folgt nur nach einem
-reproduzierbaren Bedarf.
-
-**Grund / beobachtete Evidenz:** Der Wohnungslauf beendete sich formal mit
-86,21 %, obwohl der Roboter den Startraum nicht verlassen hatte. Es lag kein
-Motor-, Encoder-, Sensor- oder Nav2-Fehler vor. Die alte 0,40-m-Quadratmaske
-trennte die lokale Karte am Tuerbereich und zaehlte nur einen Teil des bereits
-kartografisch freien Raums als erreichbar. Auf demselben nur lokal gehaltenen
-Kartenschnappschuss vergroesserte die kreisfoermige 0,30-m-Maske die groesste
-zusammenhaengende sichere Komponente deutlich und verband zuvor getrennte
-Bereiche. Nav2 empfiehlt fuer nicht kreisfoermige Roboter den geometrischen
-Footprint; NavFn selbst bleibt jedoch ein 2D-Planer, weshalb lokales Polygon
-und globales Breitenmodell getrennt sind. Die nachgemessene schmalste Tuer ist
-0,68 m breit. Gegenueber der 0,50-m-gepaddeten Plattformbreite bleiben 0,18 m
-Gesamtreserve, gegenueber dem globalen 0,56-m-Kreis 0,12 m.
-
-**Betroffene Dateien und Hardware:** `nav2_params_real.yaml`,
-`collision_monitor_mapping_params.yaml`, `explore_node`, Explorer-Parameter
-und Tests sowie `docs/WOHNUNGSERKUNDUNG_STRATEGIE.md`. Der motorlose Live-Test
-startete STL-27L, beide VL53, SLAM, Nav2 und `collision_monitor`; RS485 und
-Antrieb blieben aus. Keine echte Karte wurde ins Repository uebernommen.
-
-**Teststatus:** 33 gezielte Footprint-/Explorer-Tests bestanden. Nachdem die
-vorhandenen Tests korrekt in `colcon test` registriert wurden, bestanden
-19/19 Explorer-, 31/31 Navigations- und 3/3 Bring-up-Tests, zusammen 53 Tests
-ohne Fehler, Fehlschlaege oder Auslassungen. Vier betroffene Pakete bauten erfolgreich;
-das Xacro ist gueltig. Im Jetson-Dry-run publizierte Nav2 exakt die gepaddeten
-Ecken `x=-0,13..+0,33 m`, `y=+/-0,25 m`; der Kollisionsmonitor publizierte
-dieselben vier Punkte im `base_link`-Frame. Globaler Radius sowie Explorer-
-Ziel- und Abdeckungsabstand waren zur Laufzeit jeweils 0,28 m.
-`base_hardware` meldete durchgehend `dry_run=true` und 0 rpm. Der Stack wurde
-danach ueber den Launch-Prozess beendet; danach waren keine Amadeus-Knoten
-aktiv. Abschliessend plante der reale NavFn-Stack auf einer temporaeren
-3-cm-Synthetikkarte geradlinig von x=-0,75 m nach x=+0,75 m durch eine 23
-Zellen beziehungsweise 0,69 m breite Tuer. Die `ComputePathToPose`-Action
-endete mit `SUCCEEDED` nach rund 0,7 ms; auch dabei blieb die Basis im Dry-run
-bei 0 rpm. Die temporaere Karte wurde danach geloescht.
-
-Der erste begrenzte Realtest am 18.08.2026 bestaetigte den 360,0-Grad-Rundblick,
-die Karten-Vorausrichtung mit 3,0 Grad Restfehler und die Uebergabe genau eines
-Nav2-Ziels. Die aeussere Beobachtung und das nachtraeglich ausgewertete Log
-zeigten jedoch einen bereits davor liegenden Zielwahlfehler: Die gewaehlte
-Frontier lag 30,6 Grad seitlich zur Startfront und fuehrte nicht zur Tuer.
-`heading_scale: 3.0` bevorzugte die Front nur weich und konnte dieses Ziel
-nicht ausschliessen. Amadeus fuhr rund 0,28 m in diese falsche Richtung, bevor
-der Controller zusaetzlich abbrach. Diese zweite Ursache war weder Footprint
-noch Planung: `map->odom` blieb unter Jetson-Last mindestens 0,95 s hinter der
-aktuellen Odometrie zurueck, waehrend der Controller nur 0,5 s Ausfall
-tolerierte. Das Ein-Ziel-Profil endete daraufhin wie vorgesehen nach dem ersten
-Fehlversuch; die Tuerdurchfahrt gilt damit noch nicht als bestanden. Der
-Controller toleriert nun 1,5 s. Der nachgeschaltete
-`velocity_smoother` bleibt unveraendert bei 0,5 s und setzt die Geschwindigkeit
-damit frueher auf null; ein dauerhaft fehlender TF fuehrt weiterhin zum
-Abbruch. 15 direkte und 31 registrierte Navigationstests bestanden. Im
-motorlosen Live-Stack waren `failure_tolerance=1.5`, `velocity_timeout=0.5`,
-`dry_run=true` und 0 rpm aktiv. Nach beiden Laeufen waren keine
-Amadeus-Knoten mehr aktiv.
-
-Nur das Tuerprofil setzt deshalb jetzt einen harten Vorwaertskorridor von
-+/-20 Grad (`frontier_forward_cone_half_angle_rad`). Ausserhalb liegende
-Frontier-Anfahrpunkte werden vor jeder Vorausrichtung und Translation
-verworfen. Gibt es keinen sicheren Kandidaten im Korridor, endet der Test
-explizit ohne Translation. Das normale Wohnungsprofil setzt den Wert auf null
-und behaelt seine unbeschraenkte Frontier-Auswahl. Der neue Auswahlvertrag
-bestand 20/20 Explorer-Tests. Der installierte motorlose Live-Stack bestaetigte
-den 20-Grad-Wert, ein Ziel/einen Fehlversuch, deaktivierte Coverage, 300 s,
-`dry_run=true`, `allow_rs485=false` und 0 rpm. Beide VL53 liefen mit rund
-3,5--3,9 Hz, der normierte LiDAR mit rund 10 Hz.
-
-Fuer die reale Einzelabnahme existiert zusaetzlich das explizite Profil
-`door_test_params.yaml`: Rundblick und Vorausrichtung bleiben aktiv, aber es
-sind hoechstens ein Frontier-Ziel, ein Fehlversuch, keine Coverage-Fahrt und
-300 s Gesamtdauer erlaubt. Der Parameter-Overlay wird von App-, Mapping- und
-Explorer-Launch durchgereicht. Im Dry-run waren alle Begrenzungen live aktiv,
-`allow_rs485=false` und 0 rpm. Ein VL53-Start schlug einmal rechts mit
-`VL53L5CXException: 0` fehl; der isolierte Wiederholungstest initialisierte
-anschliessend beide Sensoren und beide Punktwolken liefen stabil mit rund
-3,98 Hz. Jeder scharfe Start muss deshalb beide Topics erneut pruefen.
-
-**Offene Risiken:** Die abgeschraegten Vorderecken sind ohne gemessene
-Schraegentiefe absichtlich nicht ausgespart; die Rechteckhuelle ist sicherer,
-aber beim Drehen konservativer. Die Erkundung ist nur mit eingefahrenem Arm
-zulaessig. NavFn garantiert keine global kinematisch gueltige Route fuer
-Rechteckroboter; der lokale Polygonpruefer verhindert die Ausfuehrung einer
-unpassenden Route, kann aber zu einem Stillstand fuehren. Der Wohnungs-
-Abschlussvertrag muss noch um ungeloeste Portale und Kartenstabilitaet
-erweitert werden. Die neue TF-Ausfalltoleranz ist motorlos verifiziert; die
-reale Tuerdurchfahrt mit Vorwaertskorridor muss nach erneutem Aufstellen und
-neuer Fahrfreigabe wiederholt werden.
-
-**Rueckfallweg:** In `nav2_params_real.yaml` lokal/global wieder
-`robot_radius: 0.40` setzen, im Mapping-Kollisionsmonitor den 0,40-m-Kreis
-wiederherstellen und `coverage_clearance_m: 0.40` verwenden. Sicherer
-Funktionsrueckfall bleibt `enable_auto_explore:=false` oder
-`active_drive:=false`. Nur die TF-Ausfalltoleranz laesst sich separat durch
-`controller_server.failure_tolerance: 0.5` zuruecknehmen. Der Tuerkegel laesst
-sich separat mit `frontier_forward_cone_half_angle_rad: 0.0` deaktivieren.
-
----
-
-## 2026-08-17 — Adaptive Erkundung real bestanden und Frontier-Schleife gesperrt
-
-**Entscheidung:** Erfolgreich angefahrene Frontier-Umfelder werden fuer den
-Rest derselben Mission in einem Radius von 0,60 m nicht erneut als Ziel
-zugelassen. Zusaetzlich beendet ein hartes Limit von 20 Frontier-Zielen einen
-fehlerhaften Lauf fail-closed. Wegen der realen, durch die aktive
-VL53-SlowZone bis auf etwa 0,034 m/s reduzierten Fahrt gelten jetzt 150 s pro
-Nav2-Ziel und 1200 s fuer den gesamten Rundblick-, Frontier- und
-Abdeckungslauf.
-
-**Grund / beobachtete Evidenz:** Der erste Akku-Realtest mit 90 s pro Ziel und
-900 s Gesamtzeit endete waehrend Frontier 6 bei 82,72 % statt der geforderten
-85 %. Nach der Zeiterhoehung zeigte ein weiterer scharfer Lauf einen anderen
-Fehler: Nach zwei echten Frontier-Fahrten meldete Nav2 denselben bereits
-erreichten Anfahrbereich wiederholt sofort als Erfolg. Die Abdeckung blieb bei
-23,45 %, waehrend der Frontier-Zaehler ohne Bewegung bis 21 stieg. Der Auftrag
-wurde abgebrochen und der Roboter bei 0 rpm gestoppt. Ursache war, dass nur
-gescheiterte Ziele gesperrt wurden; erfolgreich bediente lokale
-Frontier-Umfelder blieben erneut waehlbar.
-
-Der beaufsichtigte Wiederholungslauf mit Sperre bestand in 732 s. Nach dem
-360-Grad-Rundblick wurden fuenf verschiedene Frontier-Ziele real bedient. Die
-Abdeckung stieg dabei nachvollziehbar von 3,69 ueber 6,47, 20,41, 35,01,
-54,01 und 72,81 auf 88,30 %. Die adaptive Phase plante zwischenzeitlich ein
-Abdeckungsziel; dessen Fahrt oeffnete neue Frontiers, worauf der Explorer
-korrekt zur Frontier-Phase zurueckwechselte. Abschlusswerte:
-`reachable_area_m2=5.0706`, `covered_area_m2=4.4775`,
-`frontiers_visited=5`, `frontiers_remaining=0` und
-`map_ready_to_save=true`.
-
-**Betroffene Dateien und Hardware:** `explore_node`, Explorer-Parameter und
--Tests sowie Kartierungs- und Uebergabedokumentation. Der Realtest lief auf
-Akku mit STL-27L, beiden VL53, Encoder-Odometrie, SLAM, Nav2,
-`collision_monitor`, Missions-Gate und realem Antrieb. Wohnungsgeometrie und
-Kartenbild liegen nur lokal unter `/tmp` und nicht im Repository.
-
-**Teststatus:** 92 Tests aus `explore`, `robot_navigation`,
-`mission_manager` und `robot_bringup` bestanden. Die vier Pakete `explore`,
-`robot_navigation`, `robot_bringup` und `smartphone_gui` bauten erfolgreich.
-Ein motorloser Gesamtstart bestaetigte die neuen Live-Parameter und brach bei
-unveraenderter physischer LiDAR-Szene erwartungsgemaess fail-closed ab. Vor
-dem scharfen Lauf waren Not-Aus frei, Odometrie 0/0, LiDAR und beide VL53
-frisch und `collision_monitor` der einzige `/cmd_vel`-Publisher zur Basis.
-Am Ende meldeten Explorer und Mission Erfolg, Odometrie 0/0 und die Basis
-wiederholt 0 rpm. Der gerenderte 3-cm-Kartenausschnitt hatte 139 x 236 Zellen
-(4,17 x 7,08 m), 16,99 m2 freie Zellen und keine offensichtlichen doppelten
-Wandzuege. Danach wurde der gesamte Stack beendet.
-
-**Offene Risiken:** Die Prozentzahl bezieht sich weiterhin auf die um 0,40 m
-erodierte, vom Start aus erreichbare Freiflaeche und einen 0,65-m-Korridor um
-die reale Fahrspur, nicht auf jede freie Karten- oder Bodenstelle. Die
-Kartenansicht muss vor dauerhaftem Speichern durch eine Person bestaetigt
-werden. Flache Kabel koennen unterhalb der Sensoren liegen. Die bekannten
-Shutdown-Ausnahmen von LiDAR, `base_hardware` und VL53 traten erst nach
-Nullkommando beim Strg-C-Beenden auf.
-
-**Rueckfallweg:** `frontier_revisit_radius_m` und `max_frontier_goals` koennen
-auf den vorherigen Commit zurueckgesetzt werden; fuer einen sicheren
-Funktionsrueckfall `coverage_enabled:false`, `enable_auto_explore:=false`
-oder `active_drive:=false` verwenden. Ein laufender Auftrag wird mit
-`{"type":"cancel"}` beendet.
-
----
-
-## 2026-08-16 — Frontier-Erkundung um adaptive Flaechenabdeckung und App-Preflight erweitert
-
-**Entscheidung:** Die reale Raumkartierung besitzt nun drei Phasen: den
-odometriegeprueften 360-Grad-Rundblick, die vorhandene Frontier-Erkundung und
-anschliessend eine adaptive Abdeckungsfahrt. Die dritte Phase misst nicht den
-bekannten Kartenanteil, sondern projiziert die tatsaechlich im Kartenframe
-gemessene Fahrspur auf die zusammenhaengende sicher befahrbare Freiflaeche.
-Nach Ende der Frontiers wird jeweils der geodaetisch am weitesten entfernte,
-noch nicht abgedeckte sichere Punkt angefahren. Damit waechst die Zahl der
-Ziele mit Raumgroesse und Grundriss statt mit einer festen Vierer-Liste.
-
-Der Startwert fuer einen erfolgreichen Abschluss ist 85 % Abdeckung bei
-0,65 m Besuchsradius, 0,40 m Kartenabstand, mindestens 0,70 m Zielentfernung,
-hoechstens 14 Abdeckungszielen und 900 s Gesamtzeit. Abrupte
-`map->odom`-Korrekturen ueber 0,35 m werden als neue Messpunkte gespeichert,
-aber nicht als vermeintlich gerade gefahrene Strecke interpoliert. Ein
-Zeitlimit oder fehlender sicherer Folgekandidat unterhalb 85 % meldet Fehler
-und niemals „Karte fertig".
-
-`explore_node` sendet einen 1-Hz-Heartbeat auf `/explore/status_json` mit
-Phase, realer Abdeckung, Zielwert, befahrbarer/abgedeckter Flaeche,
-Frontier-/Abdeckungszielen und `map_ready_to_save`. iOS- und Web-App schalten
-„Erkundung starten" nur frei, wenn Missionsstatus, Not-Aus und Explorerstatus
-frisch sind, `explore_execution=bt_explicit_opt_in` gilt und der Explorer
-bereit ist. Der neue `robot_bringup/app_mapping.launch.py` startet SLAM,
-Nav2, Missionskette, beide Kartenmanager, rosbridge und den optionalen
-Web-Fallback genau einmal. `start_app_erkundung.sh` prueft zusaetzlich auf
-bereits laufende passive App-Knoten und bricht vor einem Doppelstart ab.
-
-**Grund / beobachtete Evidenz:** Im beaufsichtigten Frontier-Lauf erreichte
-der Roboter vier sichere Ziele, befuhr nach Beobachtung aber nur etwa 40 % des
-Raums. Das ist kein Fehler der festen Zielzahl — der Explorer hatte keine
-Vierer-Liste. Ein LiDAR-Rundblick macht sichtbaren Boden bereits kartografisch
-bekannt; die Frontier-Methode sucht danach nur noch Grenzen zwischen bekannt
-und unbekannt. „Keine Frontier" beweist deshalb keine physische
-Raumabdeckung. Der neue Pfadvertrag trennt beide Groessen.
-
-Der erste Gesamt-Dry-run zeigte ausserdem zwei bereits laufende passive
-Kartenmanager aus der vorherigen App-Sitzung. `roboterknoten.py --still`
-erlaubt diese absichtlich; der neue Starter erkennt sie nun separat und
-verhindert doppelte Knotennamen. In einer isolierten ROS-Domaene liefen
-anschliessend genau je ein `/map`-, Explorer-, Missionsmanager-, Kartenmanager-
-und rosbridge-Besitzer. `base_hardware` meldete durchgehend `dry_run=True` und
-0 rpm. Ein echter WebSocket-Client erhielt den vollstaendigen Explorerstatus,
-`explore_execution=bt_explicit_opt_in` und `/safety/estop=false`. Ein ueber
-denselben rosbridge-Pfad gesendetes `explore` wurde auf Mission und Explorer
-als `running` bestaetigt; `cancel` endete auf beiden Ebenen mit `canceled` und
-`map_ready_to_save=false`.
-
-**Betroffene Dateien und Hardware:** `explore`,
-`robot_bringup/app_mapping.launch.py`, `tools/kartierung`, native iOS-App,
-Web-Fallback und Simulator-Mock. Der Test startete STL-27L und beide VL53;
-die Antriebe blieben im Dry-run unbestromt. Keine Wohnungsdaten wurden
-eingecheckt.
-
-**Teststatus:** 15 Explorer- und 3 Bringup-Vertragstests, 13 Navigationstests, 45
-Missionsmanager-Tests und 6 Simulator-Mock-Tests bestanden. Vier geaenderte
-ROS-Pakete bauten erfolgreich. JavaScript-Syntax, Python-Kompilierung,
-Launch-Aufloesung, Einzelbesitzer, 1-Hz-Heartbeat und der komplette
-rosbridge-Start-/Abbruchpfad wurden auf dem Jetson motorlos geprueft. Swift
-und Xcode sind auf dem Jetson nicht installiert; die zwei neuen Swift-
-Protokolltests muessen auf dem Mac/Xcode-Lauf noch ausgefuehrt werden.
-
-**Offene Risiken:** Die adaptive Zielwahl ist noch nicht real gefahren. Der
-85-%-Wert bezieht sich auf den um 0,40 m erodierten, zusammenhaengenden
-Freiraum und einen 0,65-m-Korridor um die gemessene Spur, nicht auf jeden
-Quadratzentimeter Boden. Dynamische Kartenexpansion kann den Prozentsatz
-voruebergehend senken. Kabel unterhalb der Sensorsicht bleiben ein reales
-Risiko. Die bekannten Shutdown-Ausnahmen von LiDAR, `base_hardware` und VL53
-traten erneut erst nach Nullkommando beim Beenden auf und gehoeren nicht zu
-dieser Aenderung.
-
-**Rueckfallweg:** `coverage_enabled:false` stellt das alte Frontier-Ende
-wieder her. Ohne `app_mapping.launch.py` bleibt der bisherige
-`start_automatische_kartierung.sh` nutzbar. `enable_auto_explore:=false`
-sperrt App-Auftrag und Fahrtor, `active_drive:=false` haelt die Basis im
-Dry-run. Ein laufender Auftrag wird mit `{"type":"cancel"}` beendet.
-
----
-
-## 2026-08-16 — Automatische LiDAR-Kartierung real abgenommen und LiDAR-Handedness korrigiert
-
-**Entscheidung:** Die automatische Kartierung beginnt nicht mehr sofort mit
-einem Fahrziel. Der Explorer fuehrt zuerst einen kontrollierten 360-Grad-
-Rundblick mit 0,12 rad/s aus und misst den tatsaechlich erreichten Winkel aus
-der Encoder-Odometrie. Erst nach bestaetigtem Stillstand werden Frontiers auf
-der frisch erweiterten 3-cm-SLAM-Karte gesucht. Sichere Anfahrpunkte bleiben
-im bekannten Freiraum, besitzen 0,35 m Abstand zu Wand und unbekanntem Raum
-und werden nach Distanz, Groesse und aktueller Blickrichtung bewertet. Vor
-jedem groesseren Richtungswechsel richtet ein begrenzter, encodergepruefter
-Drehpfad den Roboter aus; das Nav2-Ziel wird erst nach erneuter Messung im
-Kartenframe freigegeben.
-
-Der STL-27L wird ROS-konform gegen den Uhrzeigersinn ausgegeben. Der dazu
-gehoerende, gemeinsam verifizierte Montagevertrag ist
-`laser_scan_dir: true` plus `tf_yaw: +1.5708`. Diese beiden Werte duerfen
-nicht unabhaengig voneinander geaendert werden. Wenn nach mindestens einem
-erreichten Ziel nur noch Frontiers ohne sicheren Anfahrpunkt im bekannten
-Freiraum verbleiben, endet die Mission als `safe_complete` statt als Fehler.
-
-Die reale Erkundung verlangt weiterhin zwei getrennte Opt-ins:
-`active_drive:=true` fuer die Basis und `enable_auto_explore:=true` fuer
-Missionsmanager und Fahrtor. Der Launch sendet selbst keinen Auftrag. OAK ist
-aus dieser Kette entfernt; STL-27L, beide VL53, Odometrie, SLAM-Karte,
-`collision_monitor`, Missionsstatus und das dedizierte Fahrtor muessen
-fortlaufend vorhanden sein. Nav2-Recovery-Bewegungen sind nicht mit der
-Hardware verbunden.
-
-**Grund / beobachtete Evidenz:** Der erste reale Explore-Versuch erzeugte nur
-eine kurze, langsame Bewegung und keine systematische Raumabdeckung. Die alte
-Logik fuhr unmittelbar eine Frontier an und lieferte damit weder einen
-definierten ersten Raumueberblick noch eine getrennte Messung, ob Basis oder
-Nav2 die beobachtete Langsamkeit verursachten.
-
-Beim ersten realen Vorausrichtungstest drehte die Encoder-Odometrie um
--96,9 Grad, waehrend der Kartenwinkel mit entgegengesetztem Vorzeichen lief:
-Aus einem erwarteten kleinen Restfehler wurden +161,4 Grad; `map->odom` lag
-bei etwa -172,7 Grad. Die SLAM-Daten enthielten keine Loop-Closure-Kanten, der
-Sprung war daher keine falsche Wiedererkennung. Der Treiberquelltext zeigte
-die Ursache: `laser_scan_dir: false` liess die nativen Uhrzeigersinn-Bins
-stehen, publizierte aber weiterhin einen positiven `angle_increment`, den
-ROS-Verbraucher als Gegen-Uhrzeigersinn interpretieren. Das alte
-Winkelmesswerkzeug spiegelte dieses Vorzeichen vor der Betragsregression und
-hatte den Fehler dadurch verborgen.
-
-Nach der gekoppelten Korrektur meldete der isolierte Sensortest 2172 Strahlen,
-Treibrichtung `Counterclockwise` und einen maskierten Mastbogen von
-56,0 bis 123,9 Grad mit Zentrum bei 90 Grad im Sensorframe; durch den
-+90-Grad-TF liegt der Mast korrekt hinten. Vorne, links und rechts waren
-gueltig. Im echten Drehtest stimmten dann Odometrie (+99,10 Grad) und
-Kartenwinkel (+98,10 Grad) in Vorzeichen und Betrag ueberein. Ein motorloser
-Fehlertest liess den Kartenrestfehler absichtlich von +21,8 auf +22,5 Grad
-steigen; das Fahrtor brach vor jeder Nav2-Translation ab. Damit ist der
-Kartenframe-Abgleich nachweislich fail-closed.
-
-Im anschliessenden motorlosen Gesamttest starteten LiDAR, `slam_toolbox`,
-Basis im `dry_run`, beide VL53, Kollisionsmonitor, Explorer, Mission, Fahrtor
-und Nav2 als eine Kette. Der Explorer kommandierte ausschliesslich eine
-Drehung, akkumulierte ueber den +-Pi-Uebergang 360,4 Grad Odometriewinkel,
-bestaetigte den Stopp und plante danach frisch. Er fand drei sichere
-Frontier-Kandidaten und uebergab genau ein Nav2-Ziel. Ein expliziter Abbruch
-stornierte das Kindziel, sperrte das Fahrtor und fuehrte Soll- und
-Istkommando auf 0,000 m/s und 0,000 rad/s.
-
-Der Test deckte zwei Startfallen auf. `slam_toolbox` publiziert eine
-unveraenderte Karte im Stillstand nicht laufend neu; deshalb darf nur der
-dedizierte, streng auf reine Drehung begrenzte Rundblick eine bereits
-empfangene, aber nicht mehr frische Karte verwenden. Jede Nav2-Fahrt verlangt
-weiterhin eine frische Karte. Ausserdem wurde die
-`IsEstopClear`-Subscription erst mit dem Missionsbaum angelegt und konnte beim
-allerersten Tick noch leer sein. Eine einsekundige Vorlaufzeit vor dem ersten
-BT-Tick behebt dieses Rennen, ohne eine Action vor der Sicherheitspruefung zu
-starten; ein fehlendes oder aktives Not-Aus-Signal bleibt danach fail-closed.
-
-Der beaufsichtigte Realtest bestand anschliessend den 360,2-Grad-Rundblick und
-erreichte vier nacheinander neu geplante Frontier-Ziele. Die erste
-Vorausrichtung endete bei nur -2,5 Grad Kartenrestfehler und -3,5 Grad bei der
-Uebergabe. Ein unter Jetson-Last kurz veralteter `map->odom`-Transform brach
-ein Ziel sicher ab; der begrenzte Neuversuch richtete erneut aus und setzte
-ohne Recovery-Bewegung fort. Am Ende blieb nur eine Frontier ohne sicheren
-Anfahrpunkt im bekannten Freiraum. Die daraus gerenderte Karte war ein
-zusammenhaengender Grundriss ohne doppelte Waende oder getrennte Teilkarten:
-195 x 221 Zellen bei 3 cm, 5,85 x 6,63 m Ausdehnung und 16,1 m2 freie Flaeche.
-Karte und Diagnosebild bleiben lokal und werden nicht eingecheckt.
-
-**Betroffene Dateien und Hardware:** `explore`, `robot_navigation`,
-`mission_manager`, `bt_orchestrator`, `amadeus_lidar_bringup`, die
-Odometrie-Messwerkzeuge sowie
-`tools/kartierung/start_automatische_kartierung.sh`; real betroffen waren
-STL-27L, beide VL53L7CX und beide ESS23-RS-Antriebe. Wohnungsgeometrie,
-ROS-Bags und Diagnosebilder werden nicht eingecheckt.
-
-**Teststatus:** Python-Kompilierung und `git diff --check` bestanden. 156
-direkt ausgefuehrte Python-Vertrags-, Algorithmus- und Hardwaretests sowie 72
-Colcon-Tests liefen ohne Fehler; der gemeinsame Build aller sieben geaenderten
-ROS-Pakete bestand. Motorlos bestanden Rundblick, Neuplanung,
-Kartenframe-Gate und Abbruch. Real bestanden Rundblick, Vorausrichtungen, vier
-Frontier-Fahrten, ein fail-closed TF-Neuversuch und der abschliessende
-Stillstand bei 0 rpm.
-
-**Offene Risiken:** Ein flaches Kabel unterhalb der VL53- und LiDAR-Sicht kann
-weiterhin unentdeckt bleiben; die beaufsichtigte freie Fahrflaeche und der
-hardwired Not-Aus bleiben notwendig. Unter hoher Jetson-Last kann ein
-Karten-Transform kurz veralten; die Kette stoppt dann und versucht nur
-begrenzt neu. Die bekannten Shutdown-Ausnahmen des LiDAR-Treibers sowie von
-`base_hardware` und `vl53_near_field` treten erst nach bestaetigtem
-Nullkommando auf und sind separat zu bereinigen.
-
-**Rückfallweg:** Den neuen Kartierungslaunch nicht starten oder
-`enable_auto_explore:=false` belassen; dann nimmt das Fahrtor keine
-Explore-Bewegung an. `active_drive:=false` haelt die Basis im Dry-run. Ein
-laufender Auftrag wird mit `{"type":"cancel"}` beendet; danach blockiert das
-Fahrtor sofort und Nav2 muss sein Kindziel terminal stornieren.
-LiDAR-Richtung und Montage-Yaw nur als gekoppeltes Paar zurueckrollen; ein
-einseitiger Rueckbau spiegelt den Scan erneut.
-
----
-
-## 2026-08-16 — A* und aktiver VL53-Schutz fuer reale Raumfahrt abgenommen
-
-**Entscheidung:** Der reale Navfn-Planer verwendet `use_astar: true`. Bei
-Zielfahrten bleiben beide VL53-Quellen in lokaler/globaler Costmap und im
-`collision_monitor` aktiv. Die OAK-Punktwolke bleibt vorlaeufig aus der
-Laufzeit heraus, bis ihre Fehlmarkierungen getrennt korrigiert sind.
-
-**Grund / beobachtete Evidenz:** Auf derselben unveraenderten 3-cm-Karte brach
-Dijkstra mit `Failed to create a plan from potential` ab. Der rein lesende
-A/B-Test zeigte dennoch eine zusammenhaengende begehbare Zellenmenge. A* fand
-bei weiterhin aktiven VL53-Obstacle-Layern sofort einen Pfad. Mit zusaetzlich
-aktiver OAK-Punktwolke wurde dagegen selbst das freie Raumziel als Kostenwert
-253 markiert und die begehbare Verbindung getrennt; das ist ein Sensorfilter-
-und kein Kartenaufloesungsproblem.
-
-Nach einem frischen Build und Neustart lud der Planer A* aus der persistenten
-Konfiguration und plante denselben Pfad erneut erfolgreich. Der anschliessende
-beaufsichtigte Realtest erreichte das semantische Raumziel mit maximal
-0,100 m/s. Missionsstatus war `success/angekommen`; Lokalisierung blieb
-freigegeben. Danach meldeten Soll- und Istgeschwindigkeit sowie beide Motoren
-0, Encoderfeedback war frisch und fehlerfrei, Modbus-Lesefehler blieben 0.
-Beide VL53 lieferten vor der Fahrt fortlaufend Punktwolken; im freien
-Nahbereich waren 0 Punkte das erwartete Ergebnis. Der `collision_monitor` war
-aktiv und alleiniger Publisher auf den Hardware-Eingang `/cmd_vel`.
-
-**Betroffene Dateien und Hardware:** `robot_navigation`-Planerkonfiguration
-und Vertragstest, beide VL53L7CX, STL-27L, Nav2 sowie beide ESS23-RS-Antriebe.
-Echte Karte und Raumgeometrie bleiben lokal.
-
-**Teststatus:** 9 gezielte Navigationstests, YAML-Vertragspruefung,
-Colcon-Build, motorloser Neustart mit persistentem A*, read-only Pfadplanung
-und eine reale Zielfahrt bestanden. Vor dem Realtest waren Vollscan-Score
-0,978, Lokalisierung, RS485, Encoder, VL53 und Kollisionskette bereit. Nach
-dem Test wurden alle scharfen Prozesse beendet.
-
-**Offene Risiken:** Der Schutz wurde aktiv mitgefuehrt, aber noch nicht durch
-ein absichtlich eingebrachtes Hindernis zum Bremsen ausgeloest. Die
-OAK-Punktwolke darf bis zur Korrektur des Boden-/Hoehenfilters nicht als
-Obstacle-Quelle aktiviert werden. Die bekannten Shutdown-Ausnahmen bleiben
-reine Aufraeumfehler nach bestaetigtem 0-rpm-Stillstand.
-
-**Rückfallweg:** `use_astar` auf `false` zuruecksetzen oder den realen
-Lokalisierungs-/Navigationslaunch nicht starten. A* veraendert weder
-Geschwindigkeitsgrenzen noch die fail-closed Fahrtor- und Kollisionskette.
-
----
-
-## 2026-08-16 — Globaler Kaltstart und autonome Raumfahrt reproduzierbar abgenommen
-
-**Entscheidung:** Der native Humble-Dienst
-`/reinitialize_global_localization` wird im Normalstart nicht mehr aufgerufen.
-Stattdessen eroeffnet der `localization_guard` einen eindeutig an Karte,
-Generation und 128-Bit-ID gebundenen Vollscan-Zyklus. Zwei separat berechnete
-Scans muessen innerhalb 0,20 m und 8 Grad dieselbe Pose liefern; erst dann
-setzt `global_scan_localizer` `/initialpose`. AMCL muss diesen Treffer
-rueckbestaetigen, bevor das Fahrtor oeffnet. AMCL startet vier Sekunden nach
-Karte/Basis/LiDAR, Guard und Matcher nach sieben Sekunden, um den Jetson beim
-Lifecycle-Start zu entlasten.
-
-**Grund / beobachtete Evidenz:** Bei einem realen Kaltstart war der AMCL-Dienst
-bereits erreichbar, obwohl AMCL intern noch keine Karte verarbeitet hatte.
-Der Humble-Callback reicht in diesem Zustand einen Null-Kartenzeiger an
-`pf_init_model` weiter; direkt nach dem Dienstaufruf starb AMCL mit
-`exit code -11`. Ein weiterer gleichzeitiger Vollstart verlor zudem eine
-Fast-DDS-Antwort auf `/amcl/change_state` und liess AMCL inaktiv. Der
-kartenfeste Initialpose-Pfad und die zeitliche Staffelung beseitigen beide
-beobachteten Startfehler, ohne einen Grenzwert zu lockern.
-
-Drei anschliessende motorlose Kaltstarts an der unveraenderten, vom
-Beobachter bestaetigten Pose bestanden. Die Treffer streuten hoechstens
-3 cm und 1 Grad; Score `0,9787..0,9789`, Wandtrefferquote
-`97,36..97,50 %` und Bestenabstand `1,155..1,168`. Jeder Start benoetigte
-genau zwei konsistente Scans, AMCL wurde `active`, `/localization/ready` wurde
-`true`, und `base_hardware` blieb `dry_run=true` bei 0 rpm.
-
-Der danach ausdruecklich freigegebene End-to-End-Lauf lokalisierte erneut
-motorlos im Stand und fuhr anschliessend das karten- und revisionsgebundene
-Ziel `Arbeitszimmer` an. Nav2 meldete `success`, der Missionsmanager
-`angekommen`. Der Karten-Endfehler betrug 0,133 m und 6,28 Grad und lag damit
-innerhalb der Abnahmegrenzen 0,15 m/0,40 rad. Der Encoderweg betrug 1,024 m;
-der Fahrbefehl blieb bei hoechstens 0,100 m/s. Nach dem terminalen Status
-wurden wiederholt Soll- und Istgeschwindigkeit sowie beide Motoren mit 0 rpm
-bestaetigt. Lokalisierung, Encoder und Modbus blieben fehlerfrei.
-
-**Betroffene Dateien und Hardware:** `robot_navigation` (Startstaffelung,
-Guard, Initialisierungsvertrag, Zwei-Scan-Konsens, Tests), STL-27L, Nav2/AMCL
-und beide ESS23-RS-Antriebe. Die beiden VL53-Datenstroeme und der aktive
-`collision_monitor` wurden vor der Fahrt geprueft, danach auf ausdruecklichen
-Wunsch nur fuer diesen beaufsichtigten Lauf zur Laufzeit deaktiviert. Diese
-Deaktivierung ist nicht persistent. Echte Karten, Raumgeometrie und
-Diagnosebilder bleiben lokal.
-
-**Teststatus:** 30 gezielte Python-Tests, Python-Kompilierung,
-`git diff --check`, Colcon-Build und Colcon-Test des Pakets bestanden. Dazu
-bestanden drei vollstaendige motorlose Kaltstarts, eine read-only
-Nav2-Pfadplanung und die reale semantische Zielfahrt. Vor und nach der Fahrt
-gab es genau einen Karten-, Semantik-, Missions-, AMCL- und `cmd_vel`-Pfad;
-alle scharfen Knoten wurden anschliessend beendet.
-
-**Offene Risiken:** Die heutige Wiederholung belegt drei Neustarts an einer
-extern bestaetigten Position und einen vollstaendigen Ziellauf. Fuer eine
-breitere statistische Aussage bleiben weitere deutlich getrennte
-Startpositionen und Raumkonfigurationen sinnvoll. VL53 und OAK waren waehrend
-des eigentlichen Ziellaufs deaktiviert; Hinderniserkennung ist damit fuer
-diesen Lauf nicht abgenommen. Die bekannten Shutdown-Meldungen des
-STL-27L-Treibers sowie die doppelte `rclpy.shutdown()`-Exception von
-`base_hardware` und `vl53_near_field` bleiben getrennte Aufraeumfehler nach
-bestaetigtem Stillstand.
-
-**Rückfallweg:** `nav_localized.launch.py` nicht starten und
-`enable_real_go_to_room:=false` verwenden. Dadurch bleiben globale
-Lokalisierung und reale semantische Raumfahrt ohne Fahrwirkung. Der alte
-AMCL-Globaldienst darf wegen des belegten Null-Kartenfensters nicht wieder in
-den automatischen Kaltstart aufgenommen werden.
-
----
-
-## 2026-08-16 — Selbstsichere AMCL-Fehlpose durch globalen Vollscan-Gate behoben
-
-**Entscheidung:** Eine kleine AMCL-Kovarianz reicht nicht mehr zur ersten
-Fahrfreigabe. Der neue `global_scan_localizer` sucht motorlos mit einem
-stationaeren Vollscan ueber alle freien Kartenpositionen und Blickrichtungen.
-Er bewertet Wandendpunkte und freie Strahlwege und akzeptiert nur einen
-absolut guten sowie gegen die zweitbeste getrennte Hypothese eindeutigen
-Treffer. Jeder AMCL-Global-Reset erhaelt eine zufaellige 128-Bit-ID. Der
-`localization_guard` verlangt einen frischen Treffer fuer exakt
-Kartenfingerabdruck, Generation und Reset-ID und prueft anschliessend, dass
-AMCL hoechstens 0,30 m/12 Grad von diesem Startwert abweicht. Erst danach
-gelten die bisherigen Kovarianz- und TF-Stabilitaetsgrenzen.
-
-**Grund / beobachtete Evidenz:** AMCL meldete nach einer beaufsichtigten
-Suchdrehung die Pose `(0,704; 0,379; -123,6 Grad)` mit nur
-`0,122/0,123 m` und `9,54 Grad` Standardabweichung. Die vom Beobachter in der
-Karte markierte reale Position lag jedoch rund 1,95 m entfernt. Ein
-unabhaengiger Scan/Karten-Abgleich widerlegte die scheinbar sichere Pose: nur
-39,6 % der Endpunkte lagen innerhalb 15 cm einer Kartenwand, Medianabstand
-0,190 m.
-
-Die globale Vollscansuche fand ohne Bewegung konsistent den Bereich
-`x=1,245..1,305 m`, `y=-1,135 m`, `yaw=38..39 Grad`. Im ersten Diagnoselauf
-erreichte der beste Treffer Score 0,980, 99,17 % Wandtreffer und Faktor 1,283
-zur zweitbesten getrennten Hypothese. Drei vollstaendige motorlose Starts
-lieferten erneut denselben Bereich. Der finale Kaltstart erreichte Score
-0,973, 98,75 % Wandtreffer, Faktor 1,245 und wurde von AMCL bei
-`(1,237; -1,147; 39,4 Grad)` bestaetigt. Die unabhaengige Nachpruefung legte
-98,27 % der aktuellen Scanpunkte innerhalb 15 cm an Kartenwaende; Median
-0,030 m, 90-%-Quantil 0,060 m. Das ist die gemessene A/B-Trennung gegen die
-falsche AMCL-Pose, nicht nur eine kleinere Kovarianz.
-
-**Betroffene Dateien und Hardware:** `robot_navigation` (Matcher-Kern,
-ROS-Knoten, Launch, Guard und Vertrag), `tools/kartierung` (rein lesende
-Diagnose) und STL-27L. Beide ESS23-RS-Antriebe blieben durchgehend im
-`dry_run`; keine reale Karte und kein Diagnosebild wird eingecheckt.
-
-**Teststatus:** 22 gezielte `robot_navigation`-Tests, Python-Kompilierung,
-`git diff --check` und Colcon-Build bestanden. Der synthetische Test trennt
-eine korrekte von einer falschen Pose ueber Wand- und Freistrahlscore. Live
-wurden bei drei Neustarts jeweils eine neue Reset-ID, ein Treffer im selben
-Positionsbereich, Guard-Verifikation, `ready=true`, `dry_run=true` und
-Motorwerte 0 rpm bestaetigt. Ein erwartbarer AMCL-Loghinweis zur wenige
-Millisekunden juengeren Initialpose erscheint unmittelbar vor dem dennoch
-erfolgreichen `Setting pose`; Rueckdatieren und Nullstempel veraenderten ihn
-nicht und wurden deshalb nicht als Scheinloesung uebernommen.
-
-**Offene Risiken:** Die reale Blickrichtung muss noch vom anwesenden
-Beobachter bestaetigt werden; die eingezeichnete gruene Pfeilrichtung koennte
-auch nur ein Positionszeiger sein. Vorfuehrreife verlangt danach mindestens
-zwei weitere motorlose, deutlich getrennte Startpositionen und erst dann eine
-beaufsichtigte reale Zielfahrt. Die festen Qualitaetsgrenzen sind mit der
-aktuellen Zimmerkarte klar bestanden, aber noch nicht statistisch ueber viele
-Raumkonfigurationen validiert. Bei offener Tuer oder starker dynamischer
-Verdeckung darf der Matcher korrekt ablehnen; das Fahrtor bleibt dann zu.
-
-**Rückfallweg:** `nav_localized.launch.py` nur motorlos mit
-`require_global_scan_match:=false` starten oder auf den vorherigen Commit
-zurueckgehen. Eine reale Fahrt ohne den Vollscan-Gate ist nach dem belegten
-1,95-m-Fehler nicht freigegeben.
-
----
-
-## 2026-08-15 — Ursache der nicht wiederholbaren AMCL-Lokalisierung gefunden
-
-**Entscheidung:** Vor jedem LiDAR-/AMCL-Start prueft
-`karte_fuer_nav2_pruefen.py` die tatsaechliche Nav2-Trinary-Interpretation von
-PGM und YAML. Der Start bricht ab, wenn die von ROS `map_saver` als Grauwert
-205 gespeicherten unbekannten Zellen durch den Schwellwert vollstaendig zu
-freiem oder belegtem Raum werden. Die echte Karte wurde lokal, verlustfrei
-mit `free_thresh: 0.196` neu versioniert; Original und alte Version bleiben
-unveraendert. Das semantische Overlay wurde nur wegen identischer
-PGM-Geometrie explizit an den neuen Fingerabdruck gebunden.
-
-**Grund / beobachtete Evidenz:** Die bislang verwendete PGM-Datei besitzt
-20.543 freie, 3.561 belegte und 29.320 unbekannte Zellen. Ihr altes YAML mit
-`free_thresh: 0.25` klassifizierte den Unbekannt-Wert 205 jedoch als frei.
-Der live geladene und anschliessend korrekt gespeicherte OccupancyGrid besass
-deshalb 49.863 freie Zellen, keine unbekannte Zelle und 44,88 m² scheinbare
-Freiflaeche statt 18,49 m². AMCL musste damit in physisch unmoeglichen
-Aussenbereichen suchen. Die korrigierte Live-Karte enthaelt wieder exakt
-20.543/3.561/29.320 Zellen und den Fingerabdruck
-`528a0b020fe89624da1c55925421aecba948a13f6f27f84087725d0ad79c701f`.
-Schon im Stillstand sank die globale AMCL-Streuung gegenueber der
-verfaelschten Karte von etwa 1,73/2,06 m auf 1,36/1,43 m; eine physische
-Beobachtungsfahrt ist fuer die Konvergenz weiterhin erforderlich.
-
-Dabei wurde ein zweiter Vertragsfehler korrigiert: `/amcl_pose` wird im
-Stillstand nicht periodisch publiziert. Ein pauschaler Nachrichten-Timeout
-haette eine einmal korrekt lokalisierte, stehende Pose wieder gesperrt. Der
-Guard verlangt stattdessen eine Pose nach dem kartenbezogenen Global-Reset
-und sichert deren Fortbestand ueber den frischen dynamischen `map -> odom`-TF.
-
-**Betroffene Dateien und Hardware:** `tools/kartierung`,
-`robot_navigation/localization_guard.py`, STL-27L und lokale Kartenablage.
-Keine echte Karte oder semantische Raumgeometrie liegt im Repository.
-
-**Teststatus:** Die Pruefung lehnt die alte reale YAML/PGM-Kombination mit
-29.320 verlorenen Zellen ab und akzeptiert die korrigierte Version mit
-18,49 m² frei und 26,39 m² unbekannt. Vier synthetische Positiv-/Negativtests
-bestehen. Der korrigierte ROS-OccupancyGrid und die neue semantische Bindung
-wurden motorlos live bestaetigt.
-
-Der reale End-to-End-Lauf nach freiem Versetzen bestand am selben Tag. Ein
-erster Global-Reset mit 360,3 Grad Suchdrehung und 0,243 m begrenzter
-Vorwaertsfahrt verbesserte die Streuung auf 0,111/0,152 m und 20,88 Grad. Das
-0,35-m-Fahrtorlimit schloss 7 mm vor dem angeforderten Weg. Nach dem deshalb
-erforderlichen Stack-Neustart wurde AMCL am veraenderten Standort erneut
-global verteilt. Auf 180,2 Grad Beobachtungsdrehung folgten 20 standardisierte
-stationaere `/request_nomotion_update`-Messungen; sie trennten die
-verbliebenen Winkelhypothesen. Die Freigabe erfolgte bei 0,095/0,118 m und
-7,83 Grad Standardabweichung. Die erste
-Raumfahrt wurde bei erneut auf 15,69 Grad gestiegener Winkelunsicherheit
-korrekt abgebrochen; Fahrtor und Motoren gingen auf null. Nach 20 weiteren
-stationaeren Messungen lag AMCL bei 0,019/0,077 m und 4,50 Grad. Der erneute
-`go_to_room`-Auftrag meldete `success/angekommen`; Abschlusswerte waren
-0,051/0,078 m und 6,08 Grad, korrekter Kartenfingerabdruck und 0 rpm. Die
-TF-Zielabweichung betrug rund 0,148 m und 21,7 Grad und lag damit innerhalb
-der konfigurierten Nav2-Toleranzen 0,15 m/0,40 rad.
-
-Der Lokalisierungshelfer fordert die stationaeren AMCL-Nachmessungen nun nach
-garantiertem Stop selbst an. Dadurch wird nicht die 10-Grad-Grenze gelockert,
-sondern es werden im Stillstand weitere LiDAR-Beobachtungen ausgewertet. Die
-Einzelschritte sind real belegt; die nun zusammengefuehrte Ein-Aufruf-Variante
-bedarf beim naechsten versetzten Start noch eines Wiederholungslaufs.
-
-**Offene Risiken:** Ein realer, frei versetzter End-to-End-Lauf ist bestanden;
-mehrere unabhaengige Startpositionen fehlen noch fuer eine statistische
-Wiederholbarkeitsaussage. Eine Raumfahrt kann bei voruebergehend steigender
-Winkelunsicherheit weiterhin sicher abbrechen und muss erst nach erneuter
-Lokalisierungsfreigabe neu beauftragt werden. Die konkrete Schwelle 0.196 gilt
-fuer diese map_saver-PGM; andere Karten muessen durch die Pruefung bewertet
-und duerfen nicht automatisch umgeschrieben werden.
-
-**Rückfallweg:** Den korrigierten lokalen Kartenstand nicht verwenden und den
-Lokalisierungs-Launch motorlos lassen. Das Original ist unveraendert vorhanden;
-die Startpruefung kann separat rueckgaengig gemacht werden, ohne Kartendaten
-oder Motorparameter anzufassen.
-
----
-
-## 2026-08-15 — Globale AMCL-Lokalisierung: Sicherheitskette real bewiesen, Wiederholbarkeit noch offen
-
-**Entscheidung:** Reale semantische Raumfahrt wird an eine explizite globale
-AMCL-Freigabe gebunden. Der `localization_guard` prueft Kartenfingerabdruck,
-Publisher-Eindeutigkeit, eine Pose nach dem Global-Reset, Scan-/TF-Frische,
-AMCL-Kovarianz und die Stabilitaet von `map -> odom`. Die erstmalige Freigabe bleibt streng bei
-0,20 m Standardabweichung in x/y, 10 Grad in yaw sowie 0,08 m/5 Grad
-TF-Bewegung im Drei-Sekunden-Fenster. Nach einer bestaetigten Freigabe gelten
-Hysteresen von 0,30 m/15 Grad fuer die Kovarianz und 0,20 m/12 Grad fuer die
-TF-Bewegung.
-
-Ein Verlust von `/localization/ready` sperrt das `cmd_vel`-Gate weiterhin
-sofort. Nur der irreversible Missionsabbruch hat eine Nachfrist von 0,8 s:
-Kurze AMCL-Korrekturen stoppen den Roboter, lassen die laufende Nav2-Action
-aber bestehen; anhaltender Verlust bricht sie ab. Die erste Zielannahme hat
-keine Nachfrist.
-
-**Grund / beobachtete Evidenz:** Nach freiem Versetzen gelang eine globale
-AMCL-Lokalisierung nach einer vollstaendigen Drehung einmal mit
-0,118/0,135 m und 8,65 Grad Standardabweichung. Die anschliessende reale
-`go_to_room`-Fahrt kam bis auf rund 0,03 m an das semantische Ziel. Eine
-0,59 s lange `map -> odom`-Korrektur wurde durch die neue Missionsnachfrist
-korrekt ueberstanden. Eine zweite Instabilitaet dauerte 2,20 s; der
-Mission Manager brach deshalb wie vorgesehen ab und beide Motoren wurden bei
-null bestaetigt. Nav2 selbst meldete dabei keinen Planer- oder Reglerfehler.
-
-Die alte TF-Haltegrenze 0,08 m/5 Grad war fuer normale AMCL-Korrekturen zu
-eng. Eine begrenzte langsame Kurvenfahrt mit 0,04 m/s und 0,15 rad/s lieferte
-640 TF-Proben; im Drei-Sekunden-Fenster traten maximal 0,1601 m und 8,32 Grad
-auf. Daraus wurden die Haltegrenzen 0,20 m/12 Grad mit Messreserve abgeleitet,
-waehrend die strengeren Erstfreigabegrenzen unveraendert bleiben.
-
-Nach einem weiteren Neustart und erneutem Versetzen war die globale Pose trotz
-vollstaendiger Drehung und begrenzter Suchboegen nicht wieder eindeutig. Der
-beste spaetere AMCL-Stand lag unter anderem bei 0,146/0,117 m, aber 11,33 Grad
-und bestand den Vertrag absichtlich nicht. Ein Laufzeitversuch mit
-2.000 bis 10.000 Partikeln endete bei 0,141/0,113 m und 13,39 Grad; diese
-Parameter wurden deshalb nicht uebernommen. Einzelscan-Hypothesen waren wegen
-der unvollstaendigen/offenen Karte und Raumsymmetrien mehrdeutig. Eine
-zunaechst scheinbar gute Hypothese lag bei korrekter Nav2-Geometrie
-(0,40 m Roboterradius) sogar in einer unzulaessigen Zelle. Deshalb wird weder
-die 10-Grad-Grenze gelockert noch eine einzelne Scan-Uebereinstimmung als
-globale Pose akzeptiert.
-
-**Betroffene Dateien und Hardware:** `robot_navigation` (AMCL-Launch,
-Lokalisierungsvertrag und -Guard, Missions-Gate, Realprofil und Starthelfer),
-`mission_manager` (Freigabepruefung und 0,8-s-Abbruchnachfrist),
-`robot_bringup` (Joystick-Konfliktvermeidung), STL-27L und beide ESS23-RS-
-Antriebe. Die echte Karte, semantische Raumdaten, Diagnoserenderings und
-Messprotokolle bleiben lokal ausserhalb des Repositories. Die VL53-Zonen und
-beide Costmap-Obstacle-Layer wurden auf ausdruecklichen Wunsch nur fuer die
-beaufsichtigten Testlaeufe zur Laufzeit deaktiviert; daraus folgt keine
-persistente Konfigurationsaenderung.
-
-**Teststatus:** Colcon-Build von `robot_navigation` und `mission_manager`, 60
-gemeinsame Tests ohne Fehler, Python-Kompilierung und Whitespacepruefung
-bestanden. Der motorlose Preflight bestaetigte `dry_run:true`, gesperrtes
-RS485, 0 rpm und die aktiven Acquire-/Maintain-Grenzen. Real bestanden sind
-der unmittelbare Gate-Stopp, das Ueberstehen des 0,59-s-Aussetzers, der sichere
-Abbruch nach 2,20 s und die lokale Nav2-Annaeherung bis 0,03 m. Nicht bestanden
-und damit offen ist eine nach beliebigem Versetzen wiederholbar eindeutige
-globale Selbstlokalisierung mit anschliessender vollstaendiger Zielerreichung.
-
-**Offene Risiken:** Die aktuelle Zimmerkarte ist bei offener Tuer und in
-symmetrischen Bereichen fuer eine einzelne LiDAR-Beobachtung mehrdeutig.
-AMCLs globaler Reset plus einfache Dreh-/Bogensuche garantiert noch keine
-Konvergenz zur richtigen Hypothese. Als naechster Schritt ist ein
-Mehrbeobachtungs-Initialisierer mit zeitlich getrennter Scanbewertung oder eine
-messgestuetzte AMCL-Suchstrategie erforderlich. Vor jeder weiteren Fahrt nach
-manuellem Verschieben muss die Pose neu ermittelt werden; eine alte Pose darf
-nicht fortgeschrieben werden.
-
-**Rückfallweg:** `nav_localized.launch.py` beziehungsweise den
-Lokalisierungshelfer nicht starten und `enable_real_go_to_room:=false`
-verwenden. Dann bleibt semantische Raumfahrt ohne reale Fahrwirkung. Fuer den
-vorherigen kontrollierten statischen Testbezug kann `nav_real.launch.py` nur
-unter den dort dokumentierten engen Testbedingungen verwendet werden; er ist
-kein Ersatz fuer globale Lokalisierung.
-
----
-
-## 2026-08-15 — Reale semantische Raumfahrt fail-closed abgenommen
-
-**Entscheidung:** `go_to_room` darf ein echtes Nav2-Ziel nur nach dem separaten
-Opt-in `enable_real_go_to_room:=true` senden. Der Standard bleibt Simulation.
-Der reale Pfad verwendet einen Recovery-freien Behavior Tree und diese Kette:
-
-```text
-Nav2 -> cmd_vel_mission_gate -> velocity_smoother -> collision_monitor
-     -> base_hardware
-```
-
-Das Gate gibt nur einen frischen `running`-Status derselben `go_to_room`-
-Mission frei. Terminaler, fehlender, veralteter oder ungueltiger Status
-erzwingt null. Der Glätter arbeitet `OPEN_LOOP`; die Encoder-Odometrie bleibt
-unveraendert die Nav2-Rueckmeldung. Der Fortschrittspruefer verlangt 0,10 m in
-20 s.
-
-**Grund / beobachtete Evidenz:** Die Antriebsvorzeichen wurden mit einer
-begrenzten Rechtsdrehung isoliert bestaetigt. Der erste Reglerlauf bog trotzdem
-ab, weil `CLOSED_LOOP` die bereits vorhandene 2000-ms-Motorrampe ein zweites
-Mal nachregelte: Nach drei Sekunden lagen nur 3,5 mm Encoderweg und etwa
-0,007 m/s Sollgeschwindigkeit an. `OPEN_LOOP` beseitigte diese Doppelkopplung.
-
-Ein zweiter, sicherheitsrelevanter Befund war Nav2s bisheriger
-`default_server_timeout` von 20 ms. Die Unterzielannahme kam real erst nach
-rund 590 ms; der Behavior Tree meldete vorher Fehler, waehrend der Controller
-das verspaetet angenommene Unterziel weiterfuhr. Der Timeout steht nun auf
-2000 ms, und das zusaetzliche Missions-Gate blockiert einen solchen verwaisten
-Befehl unabhaengig vom Nav2-Actionzustand. Eine nach erfolgreichem Trockenlauf
-absichtlich injizierte Rohgeschwindigkeit bewirkte hinter dem Gate exakt
-0,000 m virtuelle Bewegung.
-
-Der erste reale Lauf mit der neuen Kette wurde nach 15 s als festgefahren
-abgebrochen: Die sanfte Hardware-Rampe hatte zu diesem Zeitpunkt rund 0,19 m
-statt der damals geforderten 0,30 m erreicht. Das war kein Schlupf und kein
-Encoderfehler. Mit der daraus gemessenen Schwelle 0,10 m/20 s erreichte der
-abschliessende beaufsichtigte Lauf sein semantisches Ziel. Gemessen wurden
-1,084 m Encoderweg, maximal 0,14 Grad Abweichung im langen Geradeausabschnitt
-und 3,28 Grad beim finalen Einlenken. Roh-, Gate-, Glätter- und Sicherheits-
-Ausgang blieben bei hoechstens 0,100 m/s und 0,149 rad/s. Nach dem
-Terminalstatus war der maximale verwaiste Rohbefehl 0,000; Gate und beide
-Motoren wurden bei null bestaetigt. Beide VL53-Datenstroeme blieben frisch,
-Encoder und Modbus meldeten keinen Fehler.
-
-**Betroffene Dateien und Hardware:** `mission_manager` (expliziter Nav2-Pfad,
-Recovery-freier Baum, Action-Abbruch), `robot_navigation` (Realprofil,
-Missions-Gate, Open-Loop-Glättung, Fortschrittspruefer), beide ESS23-RS-
-Antriebe und beide VL53L7CX. Keine Karte, Raumgeometrie oder Zielkoordinate
-wurde ins Repository aufgenommen.
-
-**Teststatus:** Colcon-Build von `mission_manager` und `robot_navigation`, 44
-gemeinsame Python-Tests, Python-Kompilierung, XML-/YAML-Pruefung und
-`git diff --check` bestanden. Gate-Fehlerinjektion bestand fehlenden,
-laufenden, terminalen und veralteten Status. Der vollstaendige Trockenlauf und
-die verwaiste-Rohbefehl-Injektion bestanden. Der abschliessende reale Lauf
-bestand Zielerreichung, Geschwindigkeitsgrenzen, Sensorfrische und gemessenen
-Stillstand.
-
-**Offene Risiken:** Dies ist noch keine allgemeine Selbstlokalisierung. Der
-abgenommene Lauf verwendete einen bewusst gesetzten statischen `map -> odom`-
-Startbezug; nach freiem Versetzen oder Neustart muss die Pose weiterhin
-zuverlaessig lokalisiert werden. Der Recovery-freie Baum bricht bei Planungs-
-oder Regelfehlern absichtlich ab und umfährt nichts selbstständig. H5 der
-Encoder-Odometrie und ein realer VL53-Hindernis-Abbruch waehrend dieser
-Raumfahrt bleiben offen. `base_hardware` und `vl53_near_field` melden beim
-gemeinsamen SIGINT weiterhin eine bereits bekannte doppelte
-`rclpy.shutdown()`-Exception, nachdem der Stillstand erreicht ist; das neue
-Gate endet dagegen sauber.
-
-**Rückfallweg:** `enable_real_go_to_room:=false` verwenden oder weglassen;
-dann bleibt `go_to_room` ohne Fahrwirkung in der bisherigen Simulation. Den
-Real-Launch nicht starten. Motorparameter, Encodergeometrie und semantische
-Kartendaten werden durch diesen Rückfall nicht verändert.
-
----
-
-## 2026-08-14 — Beschleunigungsrampe 2000 ms real abgenommen
-
-**Entscheidung:** `accel_ms` wird von 100 auf **2000** erhöht. Bremsen bleibt
-bewusst bei 400 ms, die Startdrehzahl bei 5 rpm. Damit wird normales Anfahren
-sanfter, ohne den Bremsweg des Nahbereichs- und Notstopps zu verlängern.
-
-**Grund / Evidenz:** Bei der ersten vollständigen manuellen LiDAR-Runde
-wackelte der hohe Aufbau beim Anfahren stark. Die 100-ms-Einstellung war der
-Wert, den die Hardware zuvor ohnehin fuhr; sie war ausdrücklich nur der
-unveränderte H2/H3-Ausgangspunkt. Beide realen Antriebe akzeptieren und
-bestätigen 2000, während 2500 weiterhin mit Modbus Exception 7 abgelehnt wird.
-Der Knoten prüft jeden Schreibzugriff und verweigert bei Ablehnung die
-Fahrfreigabe.
-
-Ein begrenzter Bodenversuch mit 1,0 s bei 0,12 m/s ergab **0,0439 m** absoluten
-Encoderweg und **0,000°** Kursänderung. Der Nutzer bewertete das Anfahren als
-„gut sanft“. Das widerlegt die bisherige Dokumentationsannahme, die
-Rampenzeit werde gegen 3000 rpm skaliert und wirke bei Kartiergeschwindigkeit
-nur rund 0,12 s: Sie wirkt real wesentlich stärker und offenbar weitgehend
-direkt auf die Sollwertänderung.
-
-Die anschließende geschlossene manuelle LiDAR-Runde hatte eine offene
-Zimmertür und ist deshalb in Fläche und Ausdehnung nicht A/B-vergleichbar. Der
-geometrieunabhängigere Wanddickenanteil blieb praktisch gleich (**37,0 % →
-36,7 %**); die weichere Rampe verschlechterte die Karte also nicht, ein
-messbarer Kartenqualitätsgewinn ist mit diesem einen Lauf aber nicht belegt.
-Der Scan-Normalisierer setzte 4467/4467 Scans auf 2160 Strahlen um; keine
-Verwerfung wegen wechselnder Strahlenzahl und kein RS485-/Encoderfehler während
-der Fahrt. Karte, Posegraph und Laufprotokoll bleiben ausschließlich lokal.
-
-**Betroffene Dateien und Hardware:** `base_hardware_params.yaml`, Defaultwert
-im Basis-Node, Vertragsprüfung und Dokumentation; beide ESS23-RS-Antriebe.
-
-**Teststatus:** 60/60 Base-Hardware-Tests, Build, Python-Kompilierung, Flake8
-F/E9 und Diff-Check bestanden. Registerprüfung ohne Bewegung, begrenzter
-Bodentest und vollständige manuelle Kartenrunde real bestanden. Nach dem
-Joystick-Stopp bestätigte der Watchdog fortlaufend 0 rpm. Eine einzelne
-Modbus-Fehlermeldung trat erst beim gemeinsamen SIGINT-Herunterfahren auf,
-nachdem der Roboter bereits rund eine Minute stillstand.
-
-**Offene Risiken:** Die exakte Rampenfunktion des ESS23-RS ist noch nicht aus
-mehreren Impulsdauern identifiziert. Bremsen bleibt absichtlich ruppiger; ein
-Komfort-Smoother muss später vor dem `collision_monitor` liegen, damit dessen
-Sicherheitsstopp nicht verzögert wird. Ein erneuter externer H4-Laservergleich
-war für diese reine Beschleunigungsänderung nicht Teil des Laufs.
-
-**Rückfallweg:** `accel_ms: 100` wiederherstellen und `base_hardware` neu
-bauen. Encoderwerte, Geometrie und Bremsrampe sind von diesem Rückfall
-unberührt.
-
----
-
-## 2026-08-14 — DKMS-Aufraeumen: ein "rm" ohne --force haette den Treiber beim naechsten Boot gekillt
-
-**Entscheidung:** Festgehalten als Warnung. Beim Bereinigen der
-DKMS-Dopplung entstand kurzzeitig ein Zustand, in dem der Treiber nach dem
-naechsten Neustart nicht mehr geladen haette.
-
-**Grund / Evidenz:** `dkms status` meldete
-`installed (WARNING! Diff between built and installed module!)` — in
-`/lib/modules` lag noch ein handgebautes Modul, DKMS hatte ein eigenes gebaut.
-Der Versuch, das mit `rm` der alten Datei plus `dkms install` zu loesen, ging
-schief: **DKMS haelt sich laut eigenem Status fuer installiert und ueberspringt
-den Einbau.** Ergebnis:
-
-```text
-Modul im Speicher : laeuft weiter  -> alles schien in Ordnung
-Datei in /lib/modules : FEHLT
-modules.dep       : 0 Eintraege
-modules.alias     : kein Alias
-```
-
-Im laufenden Betrieb war nichts zu merken. Erst ein Neustart haette den
-Nahbereichsschutz stillschweigend getoetet — dieselbe Klasse von Fehler, die
-den ganzen Tag gekostet hat.
-
-**Behebung:** `dkms uninstall --all` bringt die Buchfuehrung mit der Realitaet
-in Einklang, danach installiert `dkms install` wirklich. Ein reines
-`dkms install` nach einem `rm` reicht **nicht**.
-
-**Endzustand geprueft:** `installed` ohne Warnung; Modul unter
-`/lib/modules/5.15.199-tegra/updates/dkms/` (DKMS-eigenes Verzeichnis, hat
-Vorrang); `modules.dep` 1 Eintrag; Alias `usb:v1A86p5512… → ch34x_mphsi_master`
-wieder da; installierte Datei identisch mit dem DKMS-Build; Startpruefung
-vollstaendig gruen.
-
-**Lehre:** Beim Hantieren an Kernelmodulen sagt der laufende Betrieb **nichts**
-ueber die Bootfaehigkeit. Nach jedem Eingriff sind drei Dinge zu pruefen, nicht
-nur `lsmod`: die **Datei** in `/lib/modules`, der Eintrag in **`modules.dep`**
-und der **Alias** in `modules.alias`. Genau das prueft
-`tools/kartierung/nahbereich_pruefen.py` inzwischen mit ab.
-
-**Betroffen:** kein Projektcode.
-
-**Rueckfallweg:** Modul neu bauen ueber
-`tools/kartierung/setup_ch34x_treiber.sh`, dann DKMS wie oben.
-
----
-
-## 2026-08-14 — CH341-Treiberquelle gepinnt und DKMS eingerichtet
-
-**Entscheidung:** Der WCH-Treiber wird wie der STL-27L-Treiber und
-`slam_toolbox` als **gepinntes Vendor-Manifest** gefuehrt:
-`vendor_ch34x_mphsi.repos`, Commit `f33863f` von
-`WCHSoftGroup/ch34x_mphsi_master_linux`. Aufbau ueber
-`tools/kartierung/setup_ch34x_treiber.sh`.
-
-**Grund / Evidenz:** Die Quellen lagen unversioniert in `~/`. Waeren sie
-verschwunden, haette niemand mehr gewusst, welcher Stand gebaut war — und nach
-dem naechsten Kernel-Update waere der Nahbereichsschutz erneut lautlos
-ausgefallen. Geprueft: Quellcode gegenueber `f33863f` **unveraendert**, einzige
-Ergaenzung ist die `dkms.conf`.
-
-DKMS ist eingerichtet und greift ueber `/etc/kernel/postinst.d/dkms` bei jeder
-Kernel-Installation; `AUTOINSTALL="yes"` meldet unser Modul dafuer an. Damit
-baut es sich kuenftig selbst neu.
-
-**Betroffen:** `vendor_ch34x_mphsi.repos` (neu),
-`tools/kartierung/setup_ch34x_treiber.sh` (neu).
-
-**Teststatus:** Skript erkennt den vorhandenen gepinnten Stand, baut fehlerfrei
-gegen 5.15.199-tegra und prueft das `vermagic` gegen den laufenden Kernel. Die
-root-Schritte werden bewusst nur ausgegeben, nicht ausgefuehrt.
-
-**Offene Risiken:** `/usr/src/ch34x-mphsi-1.0` ist ein Symlink ins
-Home-Verzeichnis. Wird es verschoben, kann DKMS nach einem Kernel-Update nicht
-mehr bauen. Das Manifest erlaubt dann aber, den Stand wiederherzustellen.
-
-**Rueckfallweg:** `sudo dkms remove -m ch34x-mphsi -v 1.0 --all`; das Modul fuer
-5.15.185 liegt weiterhin unter `/lib/modules/5.15.185-tegra/`.
-
----
-
-## 2026-08-14 — Startpruefung: der Nahbereichsschutz kann nicht mehr lautlos fehlen
-
-**Entscheidung:** `tools/kartierung/nahbereich_pruefen.py` prueft den
-Nahbereichsschutz, und `start_lidar_slam.sh` verweigert den Start mit
-`active_drive:=true`, wenn die Pruefung durchfaellt. Bewusst **nicht** in
-`base_hardware` eingebaut — dessen Motorcode hat gerade die H0-bis-H4-Abnahme
-bestanden, dort kommt jetzt keine neue Abhaengigkeit hinein.
-
-**Grund / Evidenz:** Der Ausfall vom 14.08.2026 war lautlos. `vl53_near_field`
-starb beim Start, der `collision_monitor` aktivierte sich trotzdem sauber und
-reichte **jeden** Fahrbefehl durch. Kein Fehler beim Booten, keine Warnung —
-nur ein Sicherheitssystem, das zur Attrappe geworden war. Aufgefallen ist es
-allein, weil zufaellig jemand hinsah.
-
-Die Pruefung prueft vier Dinge, und Punkt 3 ist der entscheidende:
-
-1. Kernelmodul `ch34x_mphsi_master` geladen;
-2. CH341-I2C-Bus vorhanden;
-3. **beide Punktwolken-Topics veroeffentlichen tatsaechlich** — ein laufender
-   Knoten beweist nichts, ein laufender Monitor erst recht nicht;
-4. `collision_monitor` laeuft.
-
-**Teststatus:** Alle vier Faelle am Geraet geprueft. Fehlerfall meldet
-namentlich, was fehlt, und gibt 1 zurueck. Gutfall gibt 0 zurueck. Der
-Startversuch mit `active_drive:=true` bei abgeschaltetem Schutz brach ab, ohne
-einen einzigen Knoten zu starten. Ohne `active_drive` greift das Tor nicht —
-`dry_run=True, allow_rs485=False` wie zuvor.
-
-**Bewusster Ausweg:** `AMADEUS_OHNE_NAHBEREICH=1` schaltet den Start ohne Schutz
-frei — fuer beaufsichtigte Fahrten mit Not-Aus in der Hand, wie sie den ganzen
-13. und 14.08. gefahren wurden. Der Weg ist absichtlich umstaendlich und muss
-je Aufruf gesetzt werden.
-
-**Was die Pruefung NICHT leistet:** Sie sagt nicht, ob der Monitor auch bremst —
-dafuer braucht es ein Hindernis in der Zone. Und leere Wolken sind kein Fehler:
-Der Schutz wirkt nur innerhalb von 50 cm.
-
-**Betroffen:** `tools/kartierung/nahbereich_pruefen.py` (neu),
-`tools/kartierung/start_lidar_slam.sh`,
-`src/vl53_near_field/config/ch34x_dkms.conf.example` (neu). Keine Motoren
-bestromt.
-
-**Offene Risiken:** Die Pruefung laeuft beim Start, nicht dauerhaft. Faellt der
-Sensor waehrend der Fahrt aus, faengt sie das nicht. Ein laufender Waechter
-waere der naechste Schritt.
-
-**Rueckfallweg:** Das Tor greift nur bei `active_drive:=true`; entfernen liesse
-es sich durch Loeschen des Blocks in `start_lidar_slam.sh`.
-
----
-
-## 2026-08-14 — Nahbereichsschutz wieder in Betrieb: Kernel-Update hatte den Treiber verwaist
-
-**Entscheidung:** Das Out-of-Tree-Modul `ch34x_mphsi_master` wurde gegen den
-laufenden Kernel neu gebaut und bootfest installiert. Der Nahbereichsschutz ist
-wieder nachweislich funktionsfähig.
-
-**Grund / Evidenz:** Am 13.08.2026 war hier notiert, der Schutz sei
-„funktionslos" und der WCH-Treiber müsse erst gebaut werden. **Das war eine
-Fehldiagnose.** Der Hinweis des Nutzers auf die früheren VL53-Abnahmen
-(`1f48b2c`, `6ee8c62`, `6a6b397`) führte zur wahren Ursache:
-
-```text
-Modul gebaut fuer : 5.15.185-tegra
-laeuft gerade     : 5.15.199-tegra
-DKMS              : nicht installiert
-```
-
-Ein **Kernel-Update** hat das Modul verwaist. Ohne DKMS wird es nicht neu
-gebaut, deshalb lud es seit dem Update nicht mehr. Der Projektcode war nie
-kaputt.
-
-Nach `make` gegen die Header von 5.15.199 und `sudo make install`: `i2c-10 —
-ch34x-mphsi-i2c` erscheint, der Multiplexer `0x70` antwortet, der Knoten findet
-den Bus selbst. Mit einem Objekt in ~20 cm melden **beide Sensoren 64 von 64
-Zonen** bei 0,18–0,26 m, `target_status` 5 durchgehend, alle vier Filter
-passiert.
-
-**Bremsnachweis ohne Motorstrom** — `collision_monitor` ohne `base_hardware`
-betrieben, Fahrbefehl hinein, Ausgang beobachtet:
-
-| Zustand | Ergebnis |
-|---|---|
-| Objekt in der Zone | **2914 von 2914** auf null gebremst |
-| freie Bahn | **133 von 165** unverändert mit 0,100 m/s durchgereicht |
-
-**Drei Fallen, damit sie niemanden erneut kosten:**
-
-1. `z_min`/`z_max` heißen so, sind aber **Distanzgrenzen**. Der Schutz wirkt nur
-   innerhalb von 50 cm; „0 Punkte" im freien Raum ist korrekt. Der Boden
-   erscheint bei 0,60–0,72 m und wird bewusst weggefiltert.
-2. `stop_pub_timeout: 2.0` — nach einem Stopp publiziert der Monitor noch zwei
-   Sekunden Nullen und schweigt dann. Ausbleibende Nachrichten heißen „Stopp
-   hält an", nicht „Monitor tot".
-3. Eigene Diagnosewerkzeuge brauchen zwei Dinge, die der ROS-Knoten schon tut:
-   `VL53L5CX_COMMS_CHUNK_SIZE = 32` (sonst `OSError(5)` beim Firmware-Upload,
-   der CH341A schafft nur ~32 Byte je Transaktion) und `set_resolution(64)`
-   (sonst bleibt der Sensor im 4×4-Modus und nur 16 der 64 Zellen tragen Daten —
-   das sah kurz wie ein Projektfehler aus, war aber einer im Prüfwerkzeug).
-
-**Betroffen:** kein Projektcode; `~/ch34x_mphsi_master_linux/driver` neu gebaut
-und installiert. Keine Motoren bestromt, keine Bewegung.
-
-**Teststatus:** Treiber geladen, Bus erkannt, beide Sensoren geprüft, Bremsen
-und Durchreichen je einzeln nachgewiesen.
-
-**Offene Risiken:** **Ohne DKMS bricht das beim nächsten Kernel-Update erneut.**
-Unverändert bestehen die beiden physischen blinden Flecken: maskierter
-Mastsektor nach hinten, LiDAR-Scanebene auf 75 cm.
-
-**Rückfallweg:** `sudo make uninstall` im Treiberverzeichnis; das für 5.15.185
-gebaute Modul liegt als Sicherung unter
-`/tmp/ch34x_mphsi_master_5.15.185.ko.bak`.
-
----
-
-## 2026-08-14 — Semantische Räume auf Jetson und echtem iPhone abgenommen
-
-**Entscheidung:** Der passive semantische Kartenpfad ist auf dem realen Jetson
-und einem physischen iPhone für die nächste Stufe freigegeben. Diese Freigabe
-umfasst Kartenanzeige, manuelles Speichern, Raum-Overlay, Revisionen und
-Persistenz, aber ausdrücklich keine Raumfahrt.
-
-**Grund / beobachtete Evidenz:** Vor dem Start waren auf dem Jetson keine ROS-,
-Motor- oder Navigationsknoten aktiv und der Workspace war sauber. Der Branch
-`feature/semantic-map-editor` wurde ohne Überschreiben lokaler Änderungen
-übernommen. Der ROS-2-Humble-Build der sechs Pakete `robot_map_manager`,
-`semantic_map_manager`, `mission_manager`, `llm_planner`,
-`semantic_perception` und `robot_bringup` bestand. Anschließend bestanden alle
-**162/162 Python-Vertragstests** auf dem Jetson.
-
-Für den fahrbewegungsfreien End-to-End-Test liefen ausschließlich die statische
-`testwohnung`, eine statische TF, `robot_map_manager`, `semantic_map_manager`
-und rosbridge. `/cmd_vel` existierte nicht. Die nativ signierte Amadeus-App
-wurde auf dem echten iPhone installiert und verband sich über WLAN. Der Nutzer
-speicherte die Karte bewusst in der App und zeichnete den Raum `Test` mit vier
-Eckpunkten und einem inneren Zielpunkt. Kartenmanager, App und Semantikmanager
-verwendeten denselben Fingerabdruck; das Overlay wechselte von Revision 0 auf
-1 und erschien im Katalog. Nach einem echten Neustart des Semantikmanagers
-wurde Revision 1 aus `~/.local/share/amadeus/semantic_maps/` wiederhergestellt.
-Nach Neustart der App verband sie sich ohne erneute URL-Übergabe, womit die
-gespeicherte rosbridge-Adresse ebenfalls bestätigt ist.
-
-Die passiven Negativtests wurden anschließend ebenfalls auf dem echten Jetson
-ausgeführt. Nach Abschalten von `robot_map_manager` und rosbridge sperrte der
-Semantikmanager den unverändert gespeicherten Raum nach mehr als sechs
-Sekunden mit `ok:false` und `editable:false`. Nach Wiederanlauf derselben Karte
-wurde Revision 1 ohne Datenverlust wieder editierbar. Ein absichtlich mit
-`base_revision:0` gesendetes Update gegen Revision 1 wurde als veraltet
-abgelehnt; `current.json` blieb auf Revision 1. Ein temporär allein ergänzter
-`mission_manager` löste `go_to_room` für `Test` ausschließlich als
-`simulation_only_no_navigation` auf. Vor und nach diesem Versuch existierte
-kein `/cmd_vel`-Topic.
-
-Der erste Geräte-Start zeigte außerdem, dass der bisherige App-Standard
-`roboter.local` im realen WLAN nicht auflösbar war. Der vorhandene Jetson-
-Hostname `p-desktop.local` löste dagegen stabil auf und wurde für den Test
-einmalig übergeben. Die App verwendet ihn nun als Standard für frische
-Installationen; eine bereits vom Nutzer gespeicherte Adresse behält Vorrang.
-
-Beim Neustarttest wurde ein doppelter `rclpy.shutdown()` nach SIGINT sichtbar:
-Der Node war bereits beendet, meldete aber fälschlich Exitcode 1. Der Einstieg
-fängt `KeyboardInterrupt` nun ab und ruft Shutdown nur bei `rclpy.ok()` auf;
-ein Quellvertragstest schützt diesen Pfad.
-
-**Betroffene Dateien und Hardware:**
-`semantic_map_manager_node.py`, sein Vertragstest und diese Übergabedokumente;
-`RobotController.swift` und das iOS-Gedächtnisprotokoll; Jetson `p-desktop` und
-physisches iPhone. Die Testkarte und der Raum liegen nur im lokalen Amadeus-
-Datenspeicher und nicht im Repository.
-
-**Teststatus:** Jetson: sechs Pakete gebaut, **162/162 Python-Tests** grün,
-ROS-Topics und Persistenz live geprüft. iPhone: Gerätebuild, Installation,
-App-/Karten-WebSocket, manuelles Save, Raum-Upsert und App-Neustart bestanden.
-Der SIGINT-Fix wurde zusätzlich durch erneuten Build, Test und kontrolliertes
-Beenden auf dem Jetson geprüft. Stale-Sperre, Wiederanlauf, veraltete Revision
-und simulierte Raumzielauflösung bestanden als reale, fahrbewegungsfreie
-Negativtests.
-
-**Offene Risiken:** Getestet wurde bewusst die statische Testkarte, nicht eine
-neue reale Wohnungskarte. Ein tatsächlicher Kartenwechsel auf eine andere
-Geometrie und der vollständige Editorlauf auf dieser Wohnungskarte bleiben
-offen. Rosbridge bleibt im lokalen WLAN unverschlüsselt und unauthentifiziert.
-Reale Navigation sowie VL53-/Collision-Schutz sind weiterhin gesperrt.
-
-**Rückfallweg:** Die passiven Testprozesse beenden;
-`start_semantic_map_manager:=false` oder `use_dynamic_catalog:=false` setzen.
-Die versionierten lokalen Overlay-Dateien nicht löschen; sie sind unabhängig
-vom Git-Workspace.
-
-## 2026-08-14 — Manuelle semantische Räume vollständig implementiert
-
-**Entscheidung:** Die erste semantische Ausbaustufe besteht ausschließlich aus
-vom Nutzer in der nativen Amadeus-App gezeichneten Räumen. Jeder Raum wird als
-Polygon mit ID, Name, Farbe und einem inneren Navigationspunkt gespeichert und
-unveränderlich an den SHA-256-Fingerabdruck einer gespeicherten metrischen
-Karte gebunden. Gegenstände und automatische Raumsegmentierung bleiben eine
-spätere, getrennte Ausbaustufe. `go_to_room` löst den Punkt nur auf und bleibt
-hart im Simulationsmodus; es existiert in diesem Stand kein Nav2-/`cmd_vel`-
-Pfad für Raumziele.
-
-**Grund / beobachtete Evidenz:** Die vorhandene OccupancyGrid-Karte besitzt
-Geometrie, aber keine stabilen Raumnamen. Ein separates Overlay lässt die SLAM-
-Karte unverändert und verhindert über Fingerabdruck, Geometrie und Revision,
-dass Räume nach einem Kartenwechsel still auf die falsche Wohnung angewendet
-werden. App, Backend und Kartenmanager berechnen denselben Fingerabdruck. Ein
-Erst-Overlay ist erst nach einem bestätigten manuellen Kartenspeichern erlaubt;
-ein vorhandenes Overlay darf bei identischem Fingerabdruck nach Neustart wieder
-aktiv werden. Stale Statusdaten, verlorene ACKs, Revisionskonflikte und fremde
-Karten sperren Bearbeitung fail-closed.
-
-Während des Cross-Contract-Reviews wurde zusätzlich ein alter Replaypfad im
-`robot_map_manager` gefunden: Eine idempotente Wiederholung konnte einen
-historischen Vollstatus erneut auf dem globalen Statustopic publizieren. Der
-Cache enthält nun nur noch unveränderliche Kommandoergebnisfelder; Karte,
-Speicher, Pose, Zeit und Zähler werden bei jedem Replay aus dem aktuellen
-Zustand aufgebaut. Dasselbe Prinzip gilt im `semantic_map_manager`.
-
-Das Cross-Contract-Review trennte außerdem manuelle Räume von den bereits
-realen Missions-Allowlists: Der dynamische Katalog darf ausschließlich Räume
-liefern. Objekte, Ablageziele und `pick_and_place`-Räume bleiben statisch;
-ein gezeichnetes Polygon kann deshalb keine reale Behavior-Tree-Mission
-freischalten. Semantikstatus müssen `editable:true` sein und verfallen im
-Missionsmanager nach sechs monotonic gemessenen Sekunden. Alle JSON-Eingänge
-sind gegen Größe, Rekursion und ungültiges Unicode begrenzt.
-Da die Prüfung einfacher Polygone Kantenpaare vergleicht, begrenzen Backend,
-Mission, App und Mock zusätzlich jeden Raum auf 64 und das Gesamtdokument auf
-4.096 Polygonpunkte. So kann ein formal gültiger Extremstatus keine ROS-
-Callbackverarbeitung über viele Sekunden blockieren.
-Die App verlangt für Save, Overlay, Mutation und ACK zusätzlich einen aktuellen
-Kartenmanagerstatus mit `ok:true`; ein Fehlerstatus mit noch passender Summary
-kann die Bearbeitung nicht kurzzeitig offenhalten.
-
-**Betroffene Dateien und Hardware:** neues Paket `src/semantic_map_manager/`;
-iOS-Raumeditor in `ios/Robotersteuerung/`; read-only Semantikkonsumenten in
-`mission_manager` und `llm_planner`; passiver Bring-up-Include; getrennter
-Wahrnehmungskatalog; Replay-Härtung im `robot_map_manager`; vollständiger
-Vertrag in `docs/SEMANTIC_MAP_INTEGRATION.md`. Keine Hardware wurde bewegt und
-keine echten Wohnungsdaten liegen im Repository.
-
-**Teststatus:** Auf dem Entwicklungs-Mac bestanden **162 Python-Vertragstests**
-(51 Semantik-Backend, 38 Mission, 15 LLM-Planer, 51 Kartenmanager, 2 Bring-up,
-5 zustandsbehafteter rosbridge-Mock) und **39 Swift-Tests**. Mypy, Flake8
-`F/E9`, Python-Kompilierung, YAML/XML, fünf isolierte Python-Wheels und
-`git diff --check` waren grün. Der vollständige unsigned iOS-Simulator-Build
-für arm64/x86_64 bestand mit Swift-/Clang-Warnungen als Fehler; App und Mock
-starteten im iPhone-17-Pro-Simulator. Der nachfolgende Jetson-/iPhone-Test ist
-im unmittelbar darüberstehenden Eintrag protokolliert.
-
-**Offene Risiken:** Reale Raumfahrt bleibt gesperrt, bis Kartenladen,
-Lokalisierung, Costmap-Freiraum, Planbarkeit, Abbruchpfade und insbesondere der
-derzeit fehlende VL53-/CH341-Nahbereichsschutz separat bestanden sind. Die
-erste Stufe prüft den Zielpunkt geometrisch im Polygon, aber noch nicht gegen
-belegte/unbekannte Zellen oder Erreichbarkeit. Polygonüberlappungen sind
-erlaubt; Objekte und automatische Segmentierung fehlen bewusst. Rosbridge ist
-im aktuellen lokalen Netz weder authentifiziert noch verschlüsselt.
-
-**Rückfallweg:** `start_semantic_map_manager:=false` lässt den passiven Node
-beim Bring-up aus. `use_dynamic_catalog:=false` stellt die statischen
-Kataloglisten wieder her. Ohne passenden Semantikstatus bleibt der bestehende
-Karten-Tab reine Anzeige und sendet keine Raumänderung. Diese Rückfälle
-aktivieren keine Fahrt.
-
-## 2026-08-13 — H4 bestanden: der feste Versatz je Fahrt ist weg
-
-**Entscheidung:** Der Encoderpfad (`odometry_source: encoder_position`) bleibt
-scharf. Der über Wochen reproduzierte feste Odometrieversatz je Fahrt ist
-beseitigt.
-
-**Grund / Evidenz:** Fahrtest mit dem **Lasermessgerät** als externer Referenz,
-Positionen auf dem Maßband abgelesen (0,395 → 1,219 → 1,443 → 1,674 → 1,907 m):
-
-| Fahrt | Laser | Odometrie | Abweichung |
-|---|---|---|---|
-| 1× 0,80 m | 824,0 mm | 825,9 mm | **−1,9 mm** |
-| Etappe 1 | 224,0 mm | 223,6 mm | +0,4 mm |
-| Etappe 2 | 231,0 mm | 231,7 mm | −0,7 mm |
-| Etappe 3 | 233,0 mm | 231,1 mm | +1,9 mm |
-| Etappe 4 | 227,0 mm | 226,6 mm | +0,4 mm |
-| **4× 0,20 m gesamt** | **915,0 mm** | **913,0 mm** | **+2,0 mm** |
-
-**Das Abnahmekriterium der Übergabe ist damit erfüllt.** Der Zusatzfehler der
-drei weiteren Start-Stopp-Vorgänge sank von **+51,9 mm auf +3,9 mm**, also um
-92 %. Der Skalenfehler beträgt +0,23 % und die Kursabweichung +0,04° bis
-+0,27° — beides unverschlechtert.
-
-**Je Fahrt +0,5 mm statt der bisherigen +17,3 bis +20,1 mm.** Jede einzelne
-Fahrt stimmt auf unter 2 mm. Der Skalenfehler beträgt −0,23 % auf 0,824 m, die
-Kursabweichung lag bei +0,04° und +0,27° — beides unverschlechtert.
-
-Der Mechanismus ist im Detail sichtbar: Eine kommandierte 0,20-m-Etappe meldet
-über den Encoder 0,224 bis 0,233 m, und der Laser bestätigt genau diese Werte.
-Der Roboter fährt also tatsächlich weiter als kommandiert, weil er ausrollt —
-der Drehzahlpfad verschluckte exakt diesen Weg.
-
-**WICHTIG für künftige Kalibrierungen: Der LiDAR-Wandvergleich taugt dafür
-nicht.** Bei Lauf 1 meldete er 0,8025 m gegen 0,8240 m laut Laser, also
-**21,5 mm daneben** — bei einer eigenen Streuung von nur 1,7 mm. Über alle
-Encoder-Läufe streute er zwischen −23,4 und +5,6 mm, während der Laser
-durchweg unter 2 mm blieb. Seine geringe Streuung täuscht eine Genauigkeit vor,
-die er nicht hat.
-
-**Betroffene Dateien und Hardware:** keine Codeänderung in diesem Schritt; beide
-Motoren, fünf Fahrten von zusammen rund 1,7 m auf dem Boden.
-
-**Teststatus:** H0 bis H4 bestanden. Vier unabhängige Fahrt-für-Fahrt-Vergleiche
-gegen das Lasermessgerät.
-
-**Offene Risiken:** Die vier `odom_*_variance`-Werte sind weiterhin konservative
-Startwerte; ihre Kalibrierung verlangt laut Übergabe mehr Wiederholungen als
-hier gefahren. H5 (Fehler- und Wiederanlaufpfade) steht aus.
-
-**Der Nahbereichsschutz ist derzeit funktionslos.** Der `collision_monitor`
-startet und aktiviert sich sauber, aber `vl53_near_field` stirbt beim Start mit
-„Kein CH341/CH34x-I2C-Bus gefunden (WCH-Treiber geladen?)". Der USB-Adapter
-`1a86:5512` steckt, das Kernelmodul `ch34x` ist nicht geladen. Ein Monitor ohne
-Sensordaten reicht alles durch. Für autonomes Fahren muss das zuerst in Ordnung
-sein; bei diesem Fahrtest ersetzte die Aufsicht der anwesenden Person ihn.
-
-**Rückfallweg:** `odometry_source: speed` stellt den alten Pfad her — mitsamt
-seinem Versatz von rund 18 mm je Fahrt.
-
----
-
-## 2026-08-13 — H2 und H3 bestanden; Encoderpfad ist scharf
-
-**Entscheidung:** `encoder_counts_per_motor_revolution: 1000.0`,
-`encoder_expected_segment: 1000`, `encoder_expected_resolution: 4000`. Der
-Encoderpfad ist damit entriegelt und läuft. Zusätzlich `accel_ms: 2500 -> 100`,
-weil der Antrieb 2500 zurückweist (siehe unten).
-
-**H2, gemessen am aufgebockten Roboter mit freien Rädern.** Verfahren ohne
-Abweichung von der Übergabe: Encoderstand strikt lesend vor und nach einem
-befristeten Motorlauf; Lesewerkzeug und `base_hardware` liefen **nie**
-gleichzeitig. Bodenreferenz war eine Radmarkierung, vom Nutzer in **beiden**
-Richtungen mit genau 5 Radumdrehungen bestätigt.
-
-| Lauf | M1 | M2 | Counts/Motorumdrehung |
-|---|---|---|---|
-| vorwärts 65,3 s | +50040 | −50045 | 1000,8 / 1000,9 |
-| rückwärts 65,3 s | −50009 | +50017 | 1000,2 / 1000,3 |
-
-Richtungsunterschied 0,062 % (M1) und 0,056 % (M2). Ein dritter Lauf über
-65,0 s ergab konsistent +49804/−49810. Die Gegenrechnung über die kommandierte
-Motordrehzahl (46 rpm) ergab 999,4 bis 999,5 — ein völlig anderer Weg, dasselbe
-Ergebnis. Der Wert deckt sich mit `0x0011`, wurde aber **nicht** von dort
-übernommen.
-
-**H3, aufgebockt:** `/odom` +0,2442 m bei 8 s × 0,03 m/s (erwartet 0,240) und
-dabei nur 0,01° Gierwinkel; rückwärts symmetrisch 0,2443 m; Drehung auf der
-Stelle 93,33° bei **0,0001 m** Translation (erwartet 91,7°). Null Fehler, null
-verworfene Updates, `/odom` mit 16,7 Hz, Watchdog greift. Vorzeichen und
-Montageinvertierung stimmen.
-
-**BEFUND MIT EIGENSTÄNDIGEM GEWICHT — die Anfahrrampe war nie wirksam.** Der
-neue Branch verweigerte zunächst jede Fahrt: `Anfahrparameter Motor 1, Reg
-0x001E nicht bestaetigt`, danach Dauerreconnect ohne einen einzigen Fahrbefehl.
-Ursache: Der Antrieb weist `2500` mit
-`ExceptionResponse(function_code=134, exception_code=7)` zurück. Abgetastet
-liegt die Obergrenze beider Rampenregister bei **2000**.
-
-Ausgelesen standen in `0x001E` auf beiden Motoren **100** — weder die früher
-eingetragenen 800 noch die 2500. `0x001F` (400) und `0x0020` (5) stimmten
-dagegen. Schreibzugriffe funktionieren also, nur dieser Wert wurde nie
-angenommen.
-
-Sichtbar wurde das erst, weil der Encoder-Branch die **Rückgabewerte** der
-Schreibvorgänge prüft. Der vorherige Code rief `_write_register` dreimal ohne
-jede Auswertung auf. Das erklärt rückwirkend den Eintrag vom 28.07.2026, die
-Solldrehzahl sei „nach ~110 ms zu 90 % erreicht, trotz 800-ms-Rampe" — die
-Rampe stand nie auf 800.
-
-Eingetragen sind jetzt 100, also exakt der Wert, den die Hardware ohnehin fährt:
-Der Schreibvorgang gelingt, der Knoten startet, das Fahrverhalten ändert sich
-nicht. Eine wirklich weichere Rampe wäre mit bis zu 2000 möglich und entspräche
-der ursprünglichen Absicht — das ist aber eine echte Verhaltensänderung am
-Antrieb und gehört nach AGENTS.md 7 in einen eigenen Schritt.
-
-**Betroffene Dateien und Hardware:** `base_hardware_params.yaml`,
-`test_base_hardware_node_contract.py`; ESS23-RS IDs 1/2. Beim Messen drei
-Motorläufe zu je 65 s und drei zu je 8 s, Roboter aufgebockt, Räder frei.
-
-**Teststatus:** 59 base_hardware-Tests und 12 Werkzeugtests grün. Der Test
-`test_unknown_counts_fail_closed` prüfte wörtlich die Inbetriebnahme-Nullen;
-er nagelt jetzt das H2-Ergebnis fest. Die fail-closed-Logik im Node blieb
-unverändert — wer wieder 0 einträgt, verriegelt den Pfad erneut.
-
-**Offene Risiken:** Einzelne Räder ließen sich nicht getrennt ansteuern, weil
-`cmd_vel` immer beide bedient; H3 deckt diesen Punkt daher nur gemeinsam ab.
-Fehler- und Wiederanlaufpfade (H5) wurden nicht provoziert. H4, also die
-Bodenfahrt mit A/B gegen die alten 51,9 mm, steht aus. Ob der Encoder
-Handschieben erfasst, ist weiterhin unbeantwortet — die Antriebe halten die
-Welle auch ohne jeden Master am Bus, ein Handversuch ist damit ausgeschlossen.
-
-**Rückfallweg:** `odometry_source: speed`, oder die drei Encoderwerte wieder
-auf 0. `accel_ms` zurück auf 2500 würde den Startfehler erneut auslösen.
-
----
-
-## 2026-08-13 — Encoder-Fix auf dem Jetson geprüft: Offline-Tests und H1 bestanden
-
-**Entscheidung:** Der Branch `fix/encoder-position-odometry` (`9f7d339`) ist auf
-dem Jetson gebaut, offline geprüft und die read-only Registerprobe H1 ist
-bestanden. `encoder_counts_per_motor_revolution` bleibt bei `0` — der reale
-Positionsmodus ist damit weiterhin verriegelt.
-
-**Grund / Evidenz:** Der geforderte eigene Jetson-Lauf (Mac- und CI-Ergebnisse
-zählen dafür ausdrücklich nicht):
-
-- `colcon build --packages-select base_hardware` fehlerfrei;
-- 59 base_hardware-Tests bestanden;
-- 12 Tests des read-only Inbetriebnahmewerkzeugs bestanden;
-- `colcon test-result --verbose`: 59 Tests, 0 Fehler, 0 Fehlschläge.
-
-Die gepinnten Abhängigkeiten waren bereits erfüllt: Pymodbus **3.14.0** und
-Pyserial **3.5** sind installiert, exakt wie in `requirements-modbus.txt`
-gefordert. Es musste nichts nachinstalliert werden, der laufende Antrieb blieb
-also unberührt.
-
-**H0:** keine Amadeus-Knoten aktiv, `/dev/ttyUSB_BASE` von keinem Prozess
-gehalten, Arbeitskopie sauber auf `9f7d339`.
-
-**H1, ausschließlich lesend:** Beide Motoren antworten stabil per FC03 mit rund
-5 ms je Zugriff. Beidseitig identisch gelesen:
-
-```text
-Motor 1: 0x0011=1000, 0x0019=0 (high/low), 0x0101=4000
-Motor 2: 0x0011=1000, 0x0019=0 (high/low), 0x0101=4000
-```
-
-Ausgangspositionen M1 `+48955`, M2 `−49028`; die gegenläufigen Vorzeichen passen
-zur spiegelbildlichen Montage. Über 40 Proben je Motor blieb das Delta **exakt
-null** — die Position ist im Stillstand nicht nur „innerhalb erklärbarer
-Grenzen" stabil, sondern bitgenau konstant.
-
-**Betroffene Dateien und Hardware:** keine Codeänderung; ESS23-RS IDs 1/2 auf
-`/dev/ttyUSB_BASE`, ausschließlich lesend.
-
-**Teststatus:** H0 und H1 bestanden. H2 bis H5 offen.
-
-**Offene Risiken:** `0x0011=1000` und `0x0101=4000` sind exakt die
-Handbuchvorgaben. Sie dürfen laut Übergabe **nicht** als Positionseinheit je
-Motorumdrehung übernommen werden — das ist genau die Messung, die H2 leistet.
-
-**Praktisches Hindernis für H2:** Die Antriebe halten die Welle mit Moment. Am
-13.08.2026 konnte der Nutzer die Räder von Hand nicht drehen, weder nach dem
-Stoppbefehl noch bei Solldrehzahl 0. Für eine Handmessung muss der Motor
-elektrisch freigegeben werden; ohne Versorgung antwortet er aber nicht mehr auf
-Modbus. Wie freigegeben wird, entscheidet laut Übergabe ausdrücklich die
-anwesende Person — ein Agent sendet kein Freigabekommando.
-
-**Rückfallweg:** `odometry_source: speed`; für vollständigen Rollback den
-Commit `9f7d339` revertieren.
-
----
-
-## 2026-08-13 — Absolute Encoderposition statt Drehzahlintegration
-
-**Entscheidung:** Die reale Odometrie wird auf die kumulierten ESS-RS-Positionen
-`0x000A/0x000B` umgestellt. `0x000C` bleibt Diagnose; bei Lesefehlern wird im
-realen Betrieb niemals mehr der Sollwert integriert.
-
-**Grund / Evidenz:** Der reproduzierte feste Fehler betrug 17,3 mm pro
-zusätzlichem Stop/Start. 50-Hz-Speed-Polling änderte ihn nicht. Beim Bremsen
-meldete `0x000C` zeitweise 0 rpm und später wieder 16 rpm. Die neue Software
-erhält jede in `0x000A/0x000B` tatsächlich registrierte Bewegung. Ob diese
-Register Handschieben im vorgesehenen Betriebszustand erfassen, ist H2-offen.
-Ein einzelner normaler FC03-Fehler behält Client und Baseline; die
-Transportfehlerschwelle führt zu Stopp und Reconnect, Ausnahmen/API-Fehler
-sofort. Stale Rückmeldung sperrt und stoppt immer, reconnectet aber nur bei
-einem zugrunde liegenden Transportfehler.
-Ein semantisch ungültiges Paar oder eine Konfigurationsabweichung sperrt und
-stoppt dagegen sofort ohne Reconnect. Ein unplausibles Delta wird verworfen und
-im Tracker kontrolliert rebased.
-Jeder tatsächlich neue Client verwirft die alte Baseline bewusst. Im
-Encoderpositionsmodus entsteht `/odom` nur zu einem neuen gültigen Paar
-(Ziel etwa 20 Hz), während `state_json` im 50-Hz-Node-Takt weiterläuft.
-Der Watchdog nutzt monotone Echtzeit; scharfes RS485 mit `use_sim_time` ist
-verboten. `/cmd_vel` hat Queue-Tiefe 1, nicht-endliche Werte fordern Stopp an,
-und nur ein nach RPM-Quantisierung darstellbarer Befehl darf starten.
-
-Pymodbus 3.14.0 und Pyserial 3.5 sind in
-`src/base_hardware/requirements-modbus.txt` fest gepinnt; interne Modbus-Retries
-sind null. Die vier Odometrie-Kovarianzen sind konservative Startwerte und erst
-in H4 durch wiederholte externe Referenzmessungen zu kalibrieren.
-
-**Betroffene Dateien/Hardware:** `base_hardware_node.py`,
-`encoder_odometry.py`, Parameter, ESS23-RS IDs 1/2 auf `/dev/ttyUSB_BASE`.
-
-**Teststatus:** Auf dem Entwicklungs-Mac bestanden 59
-Base-Hardware-Regressionstests und 12 Tests des strikt read-only
-Inbetriebnahmewerkzeugs; Syntax geprüft. Keine Motoren aktiviert. Der erneute
-Build-/Testlauf auf dem Jetson sowie reale Counts pro Motorumdrehung,
-Wortfolge/Vorzeichen und A/B-Fahrt sind offen.
-Der Workflow `.github/workflows/encoder-odometry-offline.yml` kompiliert und
-testet dieselben Python-Komponenten zusätzlich auf Ubuntu 22.04/Python 3.10;
-CI und Mac-Lauf ersetzen die Jetson- und Hardwareabnahme nicht.
-
-**Offene Risiken:** `0x0011` meldet standardmäßig 1000 Unterteilungen,
-`0x0101` standardmäßig 4000 Encoder-Counts. Die Einheit der Positionsregister
-darf nicht geraten werden. Deshalb blockieren `counts=0` sowie
-`encoder_expected_segment=0` oder `encoder_expected_resolution=0` den realen
-Positionsmodus. Nach H2 müssen die erwarteten Werte mit den beidseitig
-bestätigten read-only Werten aus `0x0011`/`0x0101` verriegelt werden.
-
-**Rückfallweg:** `odometry_source: speed`; auch dort kein Sollwertfallback.
-Für vollständigen Code-Rollback diesen Commit revertieren.
-
----
-
-## 2026-08-12 — Root Cause für fehlende LiDAR-Kartenupdates bei reiner Drehung
-
-**Entscheidung:** Der offizielle `slam_toolbox`-Fix aus PR #808 wird als
-minimaler Patch auf einen fest gepinnten Humble-Commit zurückportiert und in
-einem separaten Overlay unter `~/amadeus_slam_toolbox_ws` gebaut. Aktiviert wird
-er projektspezifisch mit `check_min_dist_and_heading_precisely: true`. Die
-apt-Installation unter `/opt/ros/humble` bleibt unverändert.
-
-**Grund / beobachtete Evidenz:** Im selben Lauf veränderte eine 360°-Drehung
-**0 von 29.640** Kartenzellen, eine anschließende 40-cm-Translation dagegen
-**2.410**. Odometrie/TF drehten korrekt, Mapping-Parameter waren aktiv und
-LiDAR, USB sowie Totzonenfilter blieben stabil. Die Humble-Implementierung von
-`SlamToolbox::shouldProcessScan()` prüft vor Karto nur
-`Pose2::SquaredDistance`, also x/y-Translation. Dadurch erreicht eine reine
-Drehung Kartos korrekte Distanz-oder-Winkel-Prüfung nicht. Das entspricht
-[Issue #807](https://github.com/SteveMacenski/slam_toolbox/issues/807); der
-offizielle Fix wurde in [PR #808](https://github.com/SteveMacenski/slam_toolbox/pull/808)
-als Commit `649a50eae698396c40352619c95cd20e2ea1790a` gemergt, fehlt aber im
-Humble-Zweig.
-
-**Betroffene Dateien und Hardware:**
-`vendor_slam_toolbox_humble.repos`,
-`patches/slam_toolbox_humble_pure_rotation.patch`,
-`tools/kartierung/build_slam_toolbox_humble_overlay.sh`,
-`tools/kartierung/slam_knoten_beobachten.py`,
-`tools/kartierung/slam_graph_marker.py`,
-`tools/kartierung/test_slam_knoten_beobachten.py`,
-`src/amadeus_lidar_bringup/config/slam_toolbox_amadeus.yaml`; Jetson und
-STL-27L. Die bestehende Fahrwerkskalibrierung wird nicht verändert.
-
-**Teststatus:** Root Cause durch Quellcode und Messung bestätigt. Backport und
-Build-/Stillstandsverfahren sind in `docs/SLAM_TOOLBOX_ROTATION_FIX.md`
-dokumentiert. Test am echten Jetson, reine Drehung, Translation und geschlossene
-Runde stehen noch aus; keine Aktoren ohne ausdrückliche Freigabe.
-
-**Offene Risiken:** Der LiDAR-Zeitstempel liegt am Ende eines ungefähr 100-ms-
-Scans und für diesen Pfad ist kein beamweises Deskew nachgewiesen; schnelle
-Drehung kann daher Wände verschmieren, erklärt aber nicht das Null-Update. Im
-Odometrie-Drehtest sind Korrekturformel und Korrelationsvorzeichen vor einer
-weiteren Kalibrierung für CW und CCW zu verifizieren. Ein synthetischer
-Yaw-only-Regressionstest fehlt noch.
-
-**Rückfallweg:** Launch beenden und in einer frischen Shell nur
-`/opt/ros/humble/setup.bash` sowie `~/roboter_ws/install/local_setup.bash`
-sourcen.
-Das separate Overlay wird dadurch ohne Löschung deaktiviert.
-
----
-
-## 2026-08-13 — Fester Versatz je Fahrt bestätigt, Ursache eingegrenzt
-
-**Entscheidung:** Noch keine. Der Befund wird festgehalten, die Ursache ist
-eingegrenzt, aber nicht bewiesen. Es wurde nichts an `base_hardware` geändert.
-
-**Grund / Evidenz:** Der feste Versatz je Fahrt lässt sich **ohne äußeres
-Messmittel** nachweisen, indem dieselbe Gesamtstrecke einmal am Stück und
-einmal in Etappen gefahren wird — der Skalenanteil ist dann in beiden Fällen
-gleich, der feste Anteil fällt einmal beziehungsweise N-mal an:
-
-| | Odometrie | LiDAR | Abweichung |
-|---|---|---|---|
-| 1× 0,80 m | 0,8019 m | 0,8305 m | +28,6 mm |
-| 4× 0,20 m | 0,8215 m | 0,9020 m | +80,5 mm |
-
-Drei zusätzliche Fahrten kosten 51,9 mm, also **17,3 mm je Fahrt**. Die
-Wandabstände wurden über 15 Scans gemittelt; ihre Streuung lag bei 1,0 bis
-3,4 mm, der Effekt ist also weit außerhalb des Messrauschens.
-
-**Was die Ursache NICHT ist:** Die Odometrie integriert sehr wohl die gemessene
-Ist-Drehzahl, nicht den Sollwert — 153 Motor-rpm ergeben rechnerisch
-0,09999 m/s, was in der Anzeige als 0,1000 erscheint und einen zunächst in die
-Irre führt. Quantisierung (0,65 %) wäre ein Skalenfehler und steckt bereits im
-Radradius. Ein reiner Zeitverzug hebt sich über eine Fahrt aus dem Stillstand
-mathematisch exakt auf.
-
-**Was auffällt:** Während der Bremsphase ist die Rückmeldung unbrauchbar. Nach
-einem Stoppbefehl bei t=3,04 s meldete das Register bei t=3,12 s **null**, bei
-t=3,47 s dann wieder **16 rpm** — die Räder drehten also noch. Dazu passt, dass
-`feedback_period_s: 0.1` nur 10 Stützstellen je Sekunde liefert, während mit
-50 Hz integriert wird; über eine Bremsung bleiben vier Werte.
-
-**Zusätzlicher Codebefund, unabhängig davon:** Schlägt eine Modbus-Leseanfrage
-fehl, setzt `_poll_speed_feedback` `feedback_ok = False`, und `_update` fällt
-**stillschweigend auf den KOMMANDIERTEN Wert zurück**. Während eines Stopps ist
-das Kommando null — ein Lesefehler genau dort lässt die Odometrie also exakt den
-Weg verlieren, den der Roboter noch ausrollt, ohne jede Warnung. Das ist
-unabhängig vom Hauptbefund ein Mangel.
-
-**Betroffen:** noch nichts geändert. Neue Werkzeuge:
-`tools/kartierung/odometrie_versatz_messen.py` und
-`tools/kartierung/start_lidar_slam.sh`.
-
-**Teststatus:** Der Versatz ist reproduziert und quantifiziert, die Ursache
-nicht bewiesen.
-
-**Nächster Schritt:** `feedback_period_s` von 0.1 auf 0.02 setzen und dieselbe
-A/B-Messung wiederholen. Schrumpft der Versatz deutlich, war die Unterabtastung
-die Ursache. Dafür muss der Roboter zuvor umgesetzt werden — vor ihm sind nur
-noch rund 0,9 m frei, und rückwärts ist er blind.
-
-**Offene Risiken:** Der Versatz wirkt sich bei vielen kurzen Fahrten stärker aus
-als bei wenigen langen. Für Nav2 mit häufigen Stopps ist das relevant.
-
----
-
-## 2026-08-12 — Odometrie neu kalibriert; ein Teil des Fehlers ist kein Radiusfehler
-
-**Entscheidung:** `wheel_radius_m: 0.0624` und `wheel_separation_m: 0.3845`
-(vorher 0.0612 / 0.3755). Der verbleibende Fehler von rund 15 mm je Fahrt ist
-**kein Kalibrierproblem** und wird nicht über die Radgeometrie ausgeglichen.
-
-**Grund / Evidenz:** Acht Fahrten mit dem Lasermessgerät, jede in Radumdrehung
-umgerechnet, weil zwischendurch der Radius verstellt wurde:
-
-```text
-echte Strecke = 15 mm + 0.0625 m * Radumdrehung [rad]
-                ^^^^^   ^^^^^^^^
-                je FAHRT konstant, unabhaengig von der Laenge
-```
-
-Ausgleich über alle acht Fahrten (Hebel 5,1 bis 40,4 rad): wirksamer Radius
-0,06252 m, fester Versatz 15,1 mm, größte Restabweichung 8,2 mm. Der gesetzte
-Wert 0,0624 liegt 0,2 % darunter — unter dem Messrauschen, deshalb belassen.
-
-**Der Weg dorthin ist die eigentliche Lehre.** Aus den ersten vier Fahrten
-(alle zwischen 0,41 und 1,01 m) kamen je nach Auswertung Radien zwischen 0,0621
-und 0,0631 heraus; eine daraus abgeleitete Vorhersage wurde anschließend
-widerlegt. Fester Versatz und Skalenfaktor sind stark korreliert, solange alle
-Fahrten ähnlich lang sind. Erst der Hebel aus einer **kurzen und einer langen**
-Fahrt (0,30 m gegen 2,50 m) trennt beide: bei 0,30 m macht ein 15-mm-Versatz
-5 % aus, bei 2,50 m nur 0,6 %. Zwei unabhängige Auswertungen — der Gesamtausgleich
-und der Hebel allein — lagen danach 0,13 % auseinander.
-
-Dass der Versatz **je Fahrt** anfällt, wurde getrennt belegt: zweimal 0,50 m
-einzeln gefahren ergab zusammen 1,068 m bei 1,021 m gemeldet, dieselbe Strecke
-am Stück nur 1,044 m bei 1,012 m. Vorhergesagt waren 1,072 m für „Versatz je
-Fahrt" gegen 1,053 m für „nur einmal". Die abschließende Verifikationsfahrt über
-2,00 m sagte 2,021 m voraus, gemessen wurden 2,030 m.
-
-**Historischer Verdacht zum damaligen Messzeitpunkt, nicht bestätigt:** Beim
-Anfahren könnten sich die Räder vor einer brauchbaren Ist-Drehzahl-Rückmeldung
-drehen. Der spätere 50-Hz-Test widerlegte reine Unterabtastung; der interne
-Mechanismus von `0x000C` blieb offen. Der aktuelle, getrennte Encoderpfad steht
-im Eintrag vom 13.08.2026 am Dokumentanfang.
-
-**Warum das früher niemand fand:** Eine Winkelmessung bestimmt nur das
-Verhältnis r/W, nie die Spurweite allein. Radius und Spurweite waren beide rund
-2 % zu klein, aber im fast gleichen Verhältnis — die Drehung stimmte auf 0,4 %,
-die Strecke lag 2,5 % daneben. Nur eine Streckenmessung kann das aufdecken.
-
-**Der LiDAR-Wandvergleich taugt nicht als alleinige Referenz.** Bei der
-Verifikationsfahrt meldete er 2,006 m gegen 2,030 m per Laser — 24 mm daneben,
-bei einer sonstigen Streuung von ±5 mm. Der Roboter endete dort 0,94 m vor der
-Wand, deutlich näher als sonst. Für Kalibrierentscheidungen immer das
-Lasermessgerät heranziehen.
-
-**Betroffen:** `src/base_hardware/config/base_hardware_params.yaml`. Beim Messen
-beide Motoren, acht Fahrten zwischen 0,30 und 2,50 m.
-
-**Teststatus:** Verifikationsfahrt über 2,00 m innerhalb der Ablesegenauigkeit
-getroffen. Kursabweichung über alle Fahrten zwischen −0,51° und +0,28°.
-
-**Offene Risiken:** Der feste Versatz von 15 mm je Fahrt bleibt bestehen und
-wirkt sich bei vielen kurzen Fahrten stärker aus als bei wenigen langen. Die
-wirksame Spurweite liegt 6,5 mm über der abgemessenen — plausibel durch
-Aufstandspunkt und Reifenradieren, aber nicht unabhängig bestätigt.
-
-**Rückfallweg:** `wheel_radius_m: 0.0612` und `wheel_separation_m: 0.3755` in
-`base_hardware_params.yaml`, dann `colcon build --packages-select base_hardware`.
-
----
-
-## 2026-08-12 — Winkelfehler war ein Messartefakt; Phase 4a bestanden
-
-**Entscheidung:** Der Winkelfehler der Odometrie wird künftig mit
-`tools/kartierung/odometrie_winkel_messen.py` bestimmt, nicht mehr mit
-`odometrie_drehtest.py`. Die Kalibrierwerte bleiben unverändert.
-
-**Grund / Evidenz:** Die zuvor über vier Läufe reproduzierten −4,98° bis −6,50°
-je Umdrehung waren ein Artefakt des Messverfahrens. `odometrie_drehtest.py`
-vergleicht nur Anfangs- und Endscan, liest `/scan` mit schwankender
-Strahlenzahl und summiert die Odometrie nicht über die Bremsphase. Der zweite
-Punkt wiegt am schwersten: da nur gleich lange Scans vergleichbar sind, blieben
-im Versuch **22 von rund 250 Messpunkten** übrig, bei einer Vergleichsgüte von
-0,70 m statt 0,03 m — die Verfolgung verlor zwischen den Scans die Spur und
-lieferte einen Skalenfaktor von 0,80, also 20 % Fehler. Offensichtlich Unsinn.
-
-Kontinuierlich gemessen auf `/scan_normiert`, je eine volle Umdrehung bei
-0,25 rad/s:
-
-| Richtung | Messpunkte | Skalenfaktor | R² |
-|---|---|---|---|
-| gegen den Uhrzeigersinn | 283 | 0,99628 | 0,9973 |
-| im Uhrzeigersinn | 283 | 0,99564 | 0,9974 |
-
-Beide Richtungen stimmen auf 0,00064 überein — das Verhalten eines echten
-Skalenfehlers, kein richtungsabhängiger Effekt. **−1,45° je Umdrehung**, also
-0,4 %. Der Widerspruch zu den 0,50° aus `9e8c06f` ist damit aufgelöst.
-
-Wichtig für spätere Kalibrierungen: Die Winkelmessung bestimmt nur das
-**Verhältnis** von Radradius zu Spurweite, nicht die Spurweite selbst. Der
-Streckentest über 0,40 m ergab 0,411 m gemeldet gegen 0,427 m per LiDAR
-(+3,9 %). Zusammen mit dem Winkelfaktor folgt daraus eine um 4,3 % größere
-Spurweite — nicht die 0,4 %, die der Winkel allein nahelegt. Beide Werte
-gehören gemeinsam gesetzt und gemeinsam geprüft.
-
-**Phase 4a bestanden:** 0,40 m Translation erzeugte 20 neue Knoten, die Karte
-blieb einwandig, Kursabweichung +0,18°, Nebenachse 3,85 m gegen real 3,80 m.
-
-**Betroffen:** `tools/kartierung/odometrie_winkel_messen.py` (neu),
-Dokumentation. Beim Messen beide Motoren, drei volle Umdrehungen und 0,40 m
-Fahrt.
-
-**Teststatus:** Zwei Messläufe je Richtung, seitlicher Versatz 0,0–0,1 cm.
-
-**Offene Risiken:** Der Radradius ist ungeprüft; die +3,9 % beruhen auf einer
-einzigen LiDAR-Wandmessung und brauchen eine Gegenmessung mit dem
-Lasermessgerät. Ein Deskew fehlt weiterhin.
-
-**Nicht gefahren:** die geschlossene Runde aus Phase 4. Es ist kein Joystick
-angeschlossen, und weder `collision_monitor` noch Nav2 laufen in dieser
-Startdatei. Ohne Hindernisabsicherung und mit einem Sensor, der Schwellen und
-Kabel grundsätzlich nicht sieht, wird nicht blind durch die Wohnung gefahren.
-
-**Rückfallweg:** Es wurde nichts an der Kalibrierung geändert; der Stand ist
-unverändert fahrbereit.
-
----
-
-## 2026-08-12 — Duplizierte Wände: Karto verwarf drei Viertel aller Scans
-
-**Entscheidung:** Zwischen Treiber und `slam_toolbox` läuft ab sofort der Knoten
-`amadeus_lidar_bringup/scan_vereinheitlichen`. Er setzt jeden Scan auf ein
-festes Winkelgitter (2160 Strahlen) um und veröffentlicht ihn als
-`/scan_normiert`. Der Launch-Schalter `normalize_scan` steht auf `true`.
-
-**Grund / Evidenz:** Die versetzt duplizierten Wände kamen weder vom fehlenden
-Deskew noch vom Odometrie-Winkelfehler — beide Vermutungen waren falsch. Karto
-merkt sich die Strahlenzahl des **ersten** verarbeiteten Scans und bricht bei
-jedem abweichenden Scan sofort ab: `LaserRangeFinder::Validate` gibt false
-zurück, `Mapper::Process` kehrt daraufhin ohne Knoten und ohne Kartenbeitrag
-zurück (`lib/karto_sdk/src/Karto.cpp` Zeile 213 ff., `Mapper.cpp` Zeile 2722).
-Die Meldung geht auf **stdout**, nicht ins ROS-Log — deshalb war sie so lange
-unsichtbar.
-
-Der STL-27L liefert keine feste Strahlenzahl: über 424 Scans am stehenden
-Roboter **19 verschiedene Werte zwischen 2145 und 2176**, der häufigste deckt
-nur 25,7 % ab. Die Winkel sind dabei korrekt, der Treiber zieht
-`angle_increment` mit, sodass `(N-1)·increment` immer 360° ergibt.
-
-Die Rechnung geht auf: etwa 42 winkelgetriggerte Annahmen je Umdrehung mal
-25,7 % sind knapp 11 — gemessen wurden 10.
-
-A/B am realen Roboter, identischer Ablauf, nur der Schalter umgelegt:
-
-| | verworfene Scans | neue Knoten | Wand/frei | Nebenachse (real 3,80 m) |
-|---|---|---|---|---|
-| ohne | 31 | 10 | 0,125 | 5,39 m |
-| mit | 0 | 41 | 0,098 | 3,83 m |
-
-**Kennzahlenfalle, die fast zur falschen Entscheidung geführt hätte:** „dicke
-Wände" stieg von 3,2 % auf 24,0 % — bei der *besseren* Karte. Die Kennzahl misst
-Erosionsüberleben und belohnt dünne Linien. Konsistent aus 41 Richtungen
-eingetragene Wände sind bei 3-cm-Zellen zwei bis drei Zellen dick; verschmierte
-Karten bestehen aus dünnen Fragmenten an vielen Versätzen und schneiden
-scheinbar besser ab. Erst das Rendern entschied.
-
-Zwei weitere Korrekturen: Die Mastmaske funktioniert — der Treiber maskiert mit
-**NaN**, nicht mit 0 wie in `stl27l.yaml` behauptet. Eine Prüfung auf `== 0.0`
-findet sie nicht; genau das führte kurzzeitig zu der falschen Vermutung, der
-Mast sei unmaskiert. Und `amadeus_lidar_bringup` brauchte eine `setup.cfg`, die
-console_scripts nach `lib/<paket>` umleitet, sonst findet launch sie nicht.
-
-**Betroffen:** `src/amadeus_lidar_bringup/` (neuer Knoten, `scan_gitter.py`,
-Test, `setup.cfg`, `setup.py`, Launch, `stl27l.yaml`), Dokumentation. Beim
-Fahrtest beide Motoren.
-
-**Teststatus:** Zwei saubere Durchläufe mit Vorbedingungsprüfung und
-verifiziertem Abschalten. Ohne Normalisierer exakt reproduziert (31 Verwürfe,
-10 Knoten), mit Normalisierer 0 und 41. Sechs Unittests der Winkelabbildung.
-
-**Offene Risiken:** Der Odometrie-Winkelfehler von −6,3° bis −6,5° je Umdrehung
-bleibt ungeklärt und widerspricht den 0,50° aus `9e8c06f`. Ein Deskew fehlt
-weiterhin. Beide sind vom Normalisierer unabhängig.
-
-**Betriebsfalle, die real Schaden anrichten kann:** `kill -INT` auf die
-`ros2 launch`-PID beendet nur den Elternprozess; die Knoten können weiterlaufen.
-Dadurch liefen zeitweise **zwei vollständige Stapel gleichzeitig**, mit zwei
-`map->odom`-Publishern und zwei scharfen `base_hardware`-Knoten auf demselben
-RS485-Bus. Die betroffene Messung war unbrauchbar und wurde verworfen. Nach dem
-Beenden immer die Knotenprozesse nachzählen, die eigene PID ausnehmen.
-
-**Rückfallweg:** `normalize_scan:=false` startet wieder ohne den Knoten; der
-Treiberpfad bleibt unverändert. Die Karte ist dann wieder verschmiert, der
-Roboter aber fahrbereit.
-
----
-
-## 2026-08-12 — Backport abgenommen; er legt einen zweiten Fehler frei
-
-**Entscheidung:** Der gepinnte `slam_toolbox`-Backport (Upstream `649a50e`,
-PR #808) wird auf dem Jetson als Overlay `~/amadeus_slam_toolbox_ws`
-betrieben. Phase 1 bis 3 der Abnahme sind bestanden, **Phase 4 bleibt
-gesperrt**, bis die neu sichtbare Wandverschmierung eingegrenzt ist.
-
-**Grund / Evidenz:** Der Kern ist doppelt belegt. Synthetisch, ganz ohne
-Hardware (`tools/kartierung/test_reine_drehung_synthetisch.py`): dieselben
-Eingangsdaten, nur der Schalter umgelegt, ergaben **37 gegen 0** neue Knoten bei
-einer 360°-Drehung — die `false`-Variante reproduziert das Fehlerbild aus #807
-exakt, nicht ungefähr. Am realen Roboter: 1 → 11 Knoten, freie Fläche 10,8 →
-23,2 m². Vorher waren es null.
-
-Dass wirklich der gepatchte Code läuft, ist über das Binärpaket belegt, nicht
-über einen Pfad: `check_min_dist_and_heading_precisely` kommt im Overlay-`.so`
-genau einmal vor, im apt-Paket gar nicht — und der Parameter ist am laufenden
-Knoten abfragbar.
-
-**Der wichtigere Befund ist der zweite:** Die Nachher-Karte zeigt versetzt
-mehrfach eingetragene Wände. Wand/frei stieg von 0,041 auf 0,115 (Richtwerte
-0,091 vor und 0,052 nach der Odometrie-Kalibrierung), dicke Wandzellen von
-0,0 % auf 3,1 %. Solange reine Drehungen verworfen wurden, konnte eine Drehung
-die Karte auch nicht verschmieren — der Backport hat das Problem nicht erzeugt,
-sondern sichtbar gemacht. Zwei Kandidaten, **keiner gemessen bestätigt**:
-fehlendes Deskew (bei 0,30 rad/s dreht der Roboter je 100-ms-Scan um 1,72°) und
-ein Winkelfehler der Odometrie (gemessen −4,98° je Umdrehung gegen die in
-`9e8c06f` dokumentierten 0,50°, bei nur 0,1 cm seitlichem Versatz).
-
-Zwei Prüfungen des Übergabeprotokolls erwiesen sich als untauglich:
-`colcon test` meldet Rückgabewert 0 bei **0 Tests**, weil der Testblock im
-gepinnten Upstream auskommentiert ist. Und `slam_knoten_beobachten.py` las seine
-Grundlinie über 30 `spin_once`-Aufrufe ein — die kehren aber zurück, sobald
-irgendein Callback lief, und der TransformListener liefert ~50 TF/s. Die
-Schleife war nach Sekundenbruchteilen durch, während der Graph nur alle 1 s
-publiziert; der Initialknoten wurde dadurch der Bewegung zugerechnet und ein
-reiner Stillstandslauf meldete „Die Drehung erzeugt Knoten".
-
-**Betroffen:** `docs/SLAM_TOOLBOX_ROTATION_FIX.md`, `docs/ROBOT_TRANSFER.md`,
-`tools/kartierung/slam_knoten_beobachten.py`,
-`tools/kartierung/test_reine_drehung_synthetisch.py`; Overlay
-`~/amadeus_slam_toolbox_ws`; beim Fahrtest beide Motoren.
-
-**Teststatus:** Phase 0–3 bestanden bis auf das Kriterium „keine versetzt
-duplizierten Wände". `/scan` stabil 9,99 Hz, genau ein Publisher für
-`map -> odom`, `slam_toolbox` beendet sauber.
-
-**Offene Risiken:** Wandverschmierung ungeklärt. Die Drehung erzeugte nur 10
-statt der theoretisch möglichen ~42 Knoten, synthetisch waren es 37 — Ursache
-nicht gemessen. Karto verwarf 31 von rund 2100 Scans wegen schwankender
-Strahlenzahl (2146–2174 statt fest 2172); klein, aber unerklärt. Der
-LiDAR-Treiber stirbt beim Herunterfahren mit Exit −6, `base_hardware` mit
-Exit 1 (`rcl_shutdown already called`) — beides auf dem Weg nach unten und
-unabhängig vom Backport.
-
-**Nächster Schritt, bewusst eine Messung und keine Parameteränderung:** dieselbe
-Drehung bei 0,20 rad/s wiederholen und die Kartenkennzahlen vergleichen. Das
-trennt Deskew von Odometrie, ohne eine Hypothese vorwegzunehmen.
-
-**Rückfallweg:** Neue Shell öffnen und das Overlay nicht sourcen; dann gilt
-wieder das unveränderte apt-Paket unter `/opt/ros/humble`. Gegengeprüft. Es
-werden keine Dateien verändert und nichts gelöscht.
-
----
-
-## 2026-08-10 — Import in ein privates GitHub-Repository
-
-**Entscheidung:** Der getestete Jetson-Stand wird nach
-`github.com/chris01-byte/Roboter_ws` (privat) übertragen; `ios/` und
-`integration/` werden vom USB-Stick ergänzt.
-
-**Grund / Evidenz:** Jetson und Stick waren divergent — der Jetson trug 27
-Commits mit der getesteten Robotersoftware, der Stick 4 Commits mit der iOS-App
-und den Transferwerkzeugen. `git merge-base --is-ancestor` bestätigte, dass
-keiner den anderen enthält. Vor dem Push geprüft: keine Treffer auf Schlüssel-,
-Token- oder Passwortmuster; größte Datei 836 KB; keine Provisioning-Profile.
-`testwohnung.pgm` ist synthetisch (240×200 Zellen, **null** unbekannte
-Bereiche) und damit unbedenklich — eine echte SLAM-Karte hat immer unbekannte
-Zonen.
-
-**Betroffen:** gesamtes Repository, `.gitignore`
-
-**Teststatus:** Push erfolgreich, Inhalt auf GitHub gegengeprüft (privat, keine
-Token-Funde).
-
-**Offene Risiken:** Ein leeres Repository `amadeus-robot-ws` ist bei der
-Einrichtung entstanden und konnte nicht automatisch entfernt werden.
-
-**Rückfallweg:** Repository ist privat und kann gelöscht werden; der lokale
-Stand auf dem Jetson bleibt unabhängig davon bestehen.
-
----
-
-## 2026-07-28 — Anfahrverhalten geglättet (Commit `f3a9094`)
-
-**Entscheidung:** `base_hardware` schreibt Startdrehzahl und Rampen bei jedem
-Verbindungsaufbau: `0x0020` = 5 rpm, `0x001E` = 800 ms, `0x001F` = 400 ms.
-
-**Grund / Evidenz:** Der Roboter nickte beim Anfahren sichtbar. Bei einer Kamera
-auf 1,34 m verschieben schon 2° Nicken den gemessenen Boden auf 3 m Entfernung
-um rund 10 cm — Boden wird dann als Wand kartiert. Auslesen der Register ergab
-**Startdrehzahl 30 rpm**, ein Rest aus dem Richtungstest vom 24.07., der
-persistent im Motor gespeichert war. Bei Fahrdrehzahlen um 46 rpm setzte der
-Antrieb damit sofort mit 65 % der Zielgeschwindigkeit ein. Messung bestätigte:
-Solldrehzahl nach ~110 ms zu 90 % erreicht, **trotz** 800-ms-Rampe — die Rampe
-war nie das Problem.
-
-**Betroffen:** `base_hardware_node.py`, `base_hardware_params.yaml`; beide
-Motoren.
-
-**Teststatus:** Vom Nutzer am Gerät bestätigt („alles passt"). Bremswert von 250
-auf 400 ms nachjustiert, weil 250 ms zu ruppig und 800 ms zu weich war
-(Nachlaufen).
-
-**Offene Risiken:** 5 rpm Startdrehzahl könnte bei höherer Last zu wenig
-Anlaufmoment bieten. Register `0x0021` steht auf 100, Bedeutung unbekannt.
-
-**Rückfallweg:** Werte in `base_hardware_params.yaml` zurücksetzen; der Antrieb
-läuft mit jedem Wert, nur weniger sanft.
-
----
-
-## 2026-07-28 — Lokalisierung ohne Vorwissen nachgewiesen (Commit `e136871`)
-
-**Entscheidung:** Neues Launch-Argument `start_at_origin` und der Test
-`lokalisierung_kidnapped.py` als verbindliches Prüfverfahren.
-
-**Grund / Evidenz:** Zwei naheliegende Prüfungen beweisen **nichts**:
-(1) „`map→odom` ist nicht die Identität" — RTAB-Map lädt beim Start die zuletzt
-gespeicherte Pose, der Roboter steht dann sofort „richtig" da.
-(2) „`/localization_pose` wird publiziert" — im Lokalisierungsmodus kommen
-Meldungen in **jedem** Verarbeitungstakt (71 Stück bei ~120 s und 1 Hz),
-unabhängig vom Erfolg. Belastbar ist nur: ohne Vorwissen starten **und** von
-mehreren Standorten prüfen, ob der gemeldete Positionsunterschied dem echten
-entspricht.
-
-**Betroffen:** `slam.launch.py`, `tools/kartierung/`
-
-**Teststatus:** Zwei Läufe: 1,25 m ermittelter Abstand gegen 1,4 m von Hand
-gemessen (11 % Abweichung). Gegenprobe mit einer schlechteren Karte fiel
-korrekt durch (0,000 m Versatz).
-
-**Offene Risiken:** Geometrische Genauigkeit nur handgemessen.
-
-**Rückfallweg:** `start_at_origin:=false` stellt das alte Verhalten her.
-
----
-
-## 2026-07-28 — Wörterbuch-Verlust: Ursache korrigiert (Commit `390fcec`)
-
-**Entscheidung:** SIGINT geht **nur an den ros2-launch-Prozess**, nie an die
-Prozessgruppe; beim Start `sigterm_timeout:=120 sigkill_timeout:=180`.
-
-**Grund / Evidenz:** Die bisherige Projekterklärung lautete, nur `kill -9`
-zerstöre das visuelle Wörterbuch. Gemessen: Auch ein SIGINT an die
-**Prozessgruppe** tut es — rtabmap bekommt das Signal doppelt (direkt vom Kernel
-und weitergereicht von launch), das zweite bricht das Speichern ab. Ergebnis
-war eine Datenbank mit 831 Knoten und **0 Wörtern**, rtabmap starb mit
-`exit code -2`. Zusätzlich eskaliert launch nach 5 s selbsttätig auf
-SIGTERM/SIGKILL, was für große Karten zu knapp ist.
-
-**Betroffen:** `slam.launch.py` (Dokumentation), `tools/kartierung/stop_slam.sh`
-
-**Teststatus:** Mehrfach bestätigt — seither wird das Wörterbuch zuverlässig
-geschrieben (bis 271.805 Wörter).
-
-**Rückfallweg:** Entfällt; ohne den Fix ist die Karte unbrauchbar.
-
----
-
-## 2026-07-28 — RS485-Selbstheilung repariert (Commit `390fcec`)
-
-**Entscheidung:** Der alte Modbus-Client wird vor einem Neuaufbau geschlossen.
-
-**Grund / Evidenz:** Ein einziger Timeout im Startgewitter (OAK, VL53, RTAB-Map
-am USB-Bus) legte die Motoren dauerhaft still. Die Selbstheilung legte einen
-neuen Client an, ohne den alten zu schließen; dessen exklusives Port-Lock ließ
-jeden weiteren Versuch an `[Errno 11] Could not exclusively lock port`
-scheitern.
-
-**Betroffen:** `base_hardware_node.py`; RS485-Bus
-
-**Teststatus:** 0 RS485-Fehler über alle folgenden Fahrten.
-
-**Rückfallweg:** Vorheriger Commit; dann ist ein Neustart des Knotens nach
-jedem Timeout nötig.
-
----
-
-## Grundsätzliches (übernommen aus früheren Sitzungen)
-
-- Amadeus nutzt eine **OAK-D-S2** auf hohem Mast; ein Wechsel auf OAK 4 D Pro
-  Wide FF ist vorgesehen. Der Treiber erkennt das Modell selbst.
-- Für robuste 2D-Navigation ist ein **separater 2D-Lidar** vorgesehen. Kamera
-  und Lidar haben unterschiedliche Aufgaben: die Kamera liefert visuelle
-  Lokalisierung und Semantik, der Lidar die horizontale Navigationskarte.
-- **Maststeifigkeit, Sensor-Frames und Odometrie** sind für die Kartenqualität
-  genauso wichtig wie der Sensor selbst — belegt durch den Nick-Befund oben.
-- **Spiegel und Glas** erzeugen optische Ausreißer und werden softwareseitig
-  gefiltert, nicht als reale Wände interpretiert. Offener Punkt: Die
-  Strahlartefakte vom 28.07. (74,6 % der scheinbaren Freifläche) sind
-  vermutlich darauf zurückzuführen; `tools/kartierung/karte_bereinigen.py`
-  entfernt die Folge, die Ursache ist ungeklärt.
-- Die **VL53-Sensoren decken flache Bodenobjekte nicht ab**: Sie sitzen auf
-  0,305 m und schauen waagerecht; ihr Kegel trifft den Boden erst bei ~0,53 m,
-  jenseits ihrer Reichweite. Kabel und Schwellen sieht kein Sensor.
+## 11.10.2026 – tatsächliche erneute Encoderbindung nach Maskenentzug
+
+Live Geometriekorrektur verbessert 578 Eingangsprüfungen auf 85/116 ms
+Median/p95, aber ein Frischeausreißer verbleibt: neue Probe vor 48-ms-
+Maskenentzug gebunden, danach 148-ms-Egressprüfung, am Ende 201/209 ms alt.
+Einmalige neue tatsächliche Radprobe nun nach reiner Maskenarithmetik gegen
+dasselbe gemessene TF-Paar wählen; 20 mm/0,05 rad und finale Alter erhalten.
+Echter DDS-Gegenfall mit vollständiger originaler Methode negativ, aktuelle
+Fassung positiv; 149 betroffene und drei verstärkte Paarfälle bestanden.
+Kein Live-Folgenachweis dieser zweiten Korrektur oder Gesamtmissionserfolg.
+Der vorherige Lauf endet regulär mit 0,526 m/einer Beobachtung am Auswahlbudget;
+Kinder/Kommandos terminal null. Rückfall nur Bindungsreihenfolge. Evidenz STATUS.
+
+## 11.10.2026 – reine Eingangsgeometrie innerhalb unveränderter Frischebudgets
+
+Live Prüfung alterte eine erneut gebundene Encoderprobe auf 201/212 ms bei
+180-ms-Vertrag. Profilierung mit tatsächlichem v10-Kern identifiziert ganze
+Körperraster und Known/Safe-Distanzrechnung als vermeidbare reine Arbeit.
+Körperarithmetik jetzt im konservativen Radiusfenster bitgleich; genau eine
+Known/Safe-Berechnung an vollständigen Inhalt, Geometrie, Kontext, Scope,
+Körpermasken und Clearance gebunden. Caller erhält eigene Kopien. Quellen-
+und Endfrische, Egress/Costmap/Route bleiben aktuell und ungecached. Getrennte
+Rechenbudget-Bezeichnung übernimmt bisherigen Wert; keine Frist erhöht.
+Eingefrorene reine Rechnung ~52,5 → 28 ms, 298 Fälle bestanden. Alte Delay-
+Injektionsstelle war bei Cachetreffern wirkungslos: Delay an aktueller Grenze
+prüft nun Treffer/Miss mit unveränderten Ablehnungskriterien. ROS-Lastvergleich
+und Gesamtmission noch offen. Evidenz/Originalfehler im STATUS. Rückfall:
+ur diese Geometrie-/Messänderung, Bestandsinstallation erhalten.
+
+## 11.10.2026 – VL53-Veröffentlichungsfenster während Beobachtungspause
+
+Der instrumentierte Ablauf aus 34fbad1 scheiterte nach einer vorherigen
+Verarbeitungsalter-Ablehnung und Routenverwerfung terminal an getrennt
+ankommenden Status-/Cloud-Stempeln während einer bereits stehenden Pause.
+Keine harte Quellenstörung gemeldet. Die Pause wartet bei genau diesem Grund
+nun wie der bestehende äußere Ablauf weiter, ohne Match oder Bewegungsrecht;
+Cancel/HOLD, harte Quellenfehler und ursprüngliche Fristen bleiben geprüft.
+Zwei negative Gegenfälle vor Korrektur, 34 Wartefälle danach positiv. Kein
+Gesamtmissionserfolg oder neue Hardwarewirkung. Evidenz im STATUS; Rückfall
+nur dieser Warteübergang, bestehende Installation unverändert.
+
+## 11.10.2026 – echte adaptive Auswahl wartet vor erneuter Startentscheidung
+
+Aufgezeichnete synthetische A-Geometrie liefert einen Gegenfall mit echter
+Policy/Startentscheidung/Zielsuche: drei adaptive Suchen während einer Pause
+gegen eine im konfigurierten Pfad. Warteprüfung vor adaptive Entscheidung
+verschoben, nach aktuellen Schutz-/Quellen-/Budgetprüfungen. 214 betroffene
+Fälle positiv, einschließlich Originalpausenablauf mit echter neuer Auswahl,
+Kontextwechsel, Cancel, HOLD und Quellenverlust in beiden Strategien.
+Keine Friständerung, keine alte Bewegungsautorität. Kein neuer Gesamt- oder
+Realpositivbeleg; Folgemessung im gleichen instrumentierten A-Aufbau als
+nächster Schritt im STATUS. Rückfall: eigener Reihenfolgecommit bzw. Overlay.
+
+## 11.10.2026 – aktuellen AP-06-Entwicklungsstand auf Nutzerauftrag veröffentlicht
+
+Nach Auskunft über den fehlenden Upload beauftragt der Nutzer ausdrücklich die
+Repository-Aktualisierung. Den diagnostizierten Wartephasen-Arbeitsstand samt
+Tests als `09f866d` gesichert; bekannte adaptive Reihenfolgelücke unverändert
+offen. GitHub-Branch `feature/ap06-closed-product-validation` ohne Force-Push
+von `e14ca312` auf `09f866d` übertragen und Remote-SHA überprüft. Plan/Analyse
+aus `79cd784` enthalten. Gängige Geheimnismuster in neuen Datei-/Historienobjekten
+ohne Treffer; reale Aufzeichnungen bleiben lokal. Kein neuer Test-/Fahrerfolg
+aus dem Upload abgeleitet, kein Main-Merge oder Installwechsel. Aktueller
+Status/Veröffentlichungsbeleg und genau nächster Korrekturschritt im STATUS.
+
+## 11.10.2026 – Ablauf-Audit statt weiterer isolierter Timeout-Korrektur
+
+Codeprüfung des uncommitteten Wartephasenstands zeigt: adaptive Startentscheidung
+ruft Auswahl vor der Warteprüfung auf; neue Eltern-Wartetests laufen mit
+`configured_scan`. Die 196 grünen gezielten Fälle belegen damit nicht den
+adaptiven Produktübergang. Instrumentierter Source-A erreicht zwei Beobachtungen,
+endet aber negativ; eine einzige Ursache aller Abbrüche ist nicht bewiesen.
+Der vom Nutzer verlangte strukturierte Plan steht im bestehenden AP-06-
+AGENTENAUFTRAG unter MASTERPLAN v1.3: zuerst echten adaptiven Gegenfall,
+dann Übergänge/Zeitarbeit/Folgeplanung, gemeinsame Originalabnahme, reale Folge.
+Keine neue Architektur, höhere Fristen oder abgeschaltete Schutzprüfung.
+GitHub-Abgleich: Entwicklungsbranch noch `e14ca312`, lokale Folgesoftware
+nicht veröffentlicht. Analyse/Plan lokal dokumentiert; kein Push-/Merge- oder
+Hardwarevorgang. Aktueller Stand, Auditbeleg und genau nächster Schritt im STATUS.
+
+## 11.10.2026 – v10 vollständig negativ qualifiziert; originale Pause messen
+
+Gemeinsamer `2d93f2b`: 14 Pakete und 2.867 Produktfälle positiv, ursprüngliche
+A/B/C weiter 0/3 am Auswahlbudget, je eine Beobachtung; C nur teilweise.
+Aufgezeichneter A-Folgeinput beweist volle Vorwärtsgeometrie und reale mögliche
+neue Sicht, aber vorhandene 30-s-Pause verhindert momentane Eligibility. Nach
+unverändertem Cooldown sind 5/8/9 Ansichten zulässig. Nächste Entscheidung:
+begrenzt bewiesene wartende Privatabfahrt ohne alte Bewegungsautorität behandeln;
+keine Frist-/Budgetänderung, keine Geometrie-/Quellenlockerung. Bisher kein
+Wartephasendiff gebaut oder reale Folge gefahren. Rückfall: private Runtime
+stoppen und Bestandsinstall verwenden; zukünftigen einzelnen Diff revertieren.
+Aktueller vollständiger Befund ausschließlich im STATUS.
+
+
+## 11.10.2026 – gleiche Distanzfelder mit geringerem Aufwand rückverfolgen
+
+Originalprofil: 615 Rückverfolgungen kosten 1,17 s, skalare Zellprojektionen
+weitere 0,64 s. Native reine Geometrie erhält jede Zelle, strikten Abstandstest,
+Eckensperre und (Score, Reihe, Spalte)-Tie. GIL während kurzer Bufferlesung
+behalten; dieselben Gewichte aus Python, keine Quellen-/Bewegungsentscheidung
+im Kernel. Batchprojektion erhält bitgleiche Zentren. 279 gezielte Fälle positiv;
+eigene Testdomain/Int8-Testannahmen korrigiert, Originalnegative erhalten.
+Eingefrorener A-Folgeinput vollständig in 4,69 s statt Budgetabbruch, weiterhin
+kein zulässiges Ziel. Gemeinsamer v10-/Originalbeleg offen. Rückfall: nur Wegdiff
+revertieren oder privaten Kandidaten stoppen und Bestandsinstall verwenden.
+Keine reale Bewegung daraus, aktueller vollständiger Befund im STATUS.
+
+
+## 11.10.2026 – unveränderte physische Egress-Region wiederverwenden
+
+v9 `9fbf085` vollständig gebaut, 2.776 Produktfälle grün; Original A/B/C 0/3,
+C mit weniger Fortschritt als v8. Subzelliger Refresh prüft unveränderte feste
+Zellpolygone bisher erneut. Nur bei vollständiger Extentdeckung ohne tatsächlichen
+Beobachtungs-/Scopeentzug dieselbe Region und feste Zellmaske behalten; aktuelle
+Projektion, volle Historie und Quellenendfristen unverändert. 80 gezielte Fälle
+und vier verstärkte Historien-/Entzugstests bestanden. Eingefrorener ungültiger
+Gegenfall bleibt identisch ungültig, Refresh 55,61 → 38,38 ms. Privater Source-A
+0,282465 m / eine Beobachtung, weiterhin Auswahlbudget. Kein neuer gemeinsamer
+Build oder Realbeleg. Rückfall: nur diesen Regionsdiff revertieren bzw. privaten
+Kandidaten stoppen und Bestandsinstall verwenden. Aktueller Befund im STATUS.
+
+
+## 11.10.2026 – bestätigte ganzzahlige Egress-Lage direkt projizieren
+
+Gemessene fast null TF-Referenzen erzwingen bisher GEOS: Roh-Refresh etwa
+120 ms, Zweitbeweis über 180 ms. Direkte Indizes nur bei bestätigter physischer
+und vorheriger Map-Lattice; neue Beobachtung aus Originalrastern bestimmen,
+Referenzkorrektur allein entfernt keine Fakten. Ganzer Rastereckenvergleich
+strenger als bestehende numerische Polygon-Toleranz, sonst exakter bisheriger
+Pfad. Feste Fakten/Historie, Original-TF und alle Fristen bleiben erhalten.
+76 gezielte Fälle bestanden, einschließlich 36 exakten Polygonvergleichen.
+Privater Source-A erreicht eine Beobachtung bei 0,293160 m ohne Frischefehler,
+endet weiterhin am Auswahlbudget. Gemeinsamer Build/Originalabnahme offen.
+Rückfall: nur Rasterdiff revertieren bzw. privaten Kandidaten stoppen und
+Bestandsinstall verwenden; keine reale Bewegung oder Deployment daraus.
+
+
+## 11.10.2026 – beim begrenzten Nachcheck ein aktuelles vollständiges Bewegungspaar wählen
+
+v8 vollständig gebaut und 2.735 Produktfälle positiv; ursprüngliche A/B/C
+weiter 0/3. Bestehender Nachcheck erhielt neueres echtes Rad, verglich es
+aber mit alter pre-processing-TF-Pose. Aktuelle gekoppelte TF/Referenz/Rad-
+Auswahl korrigiert diesen Fehler; nur Entzug der ursprünglichen Körper- und
+Clearancezellen, festes Ankerobjekt, keine Heilung abgelaufener Maske. Ganze
+Egress-Historie erneut und alle originalen Endfristen prüfen; weiterhin
+genau eine Nachprüfung. 29 gezielte Fälle positiv, eigener falscher Testmount
+korrigiert und negatives Original erhalten. Privater Source-A-Vergleich ohne alten Rad/TF-Fehler bleibt bei 0,109633 m
+an Frische/Zweitbeweis und Auswahlbudget negativ; keine neue Gesamtfreigabe.
+Gemeinsamer Build und ursprüngliche
+Gesamtqualifikation noch ausstehend, keine reale Bewegung. Rückfall: nur diesen
+Kopplungsdiff revertieren oder privaten Kandidaten stoppen und Bestandsinstall
+verwenden. Aktueller WE-Befund ausschließlich im STATUS.
+
+## 11.10.2026 – identische lokale Connectorprüfung mit geringerem Aufwand
+
+Original-ARM-Profile zeigen unnötige Sortierung stationärer Egress-Ledger
+und globale Rasterprojektion für Startconnectoren mit begrenztem Radius.
+Exakte Dictionary-Kopien erhalten inhaltliche Invalidierung; umschließender
+Rasterkasten mit zusätzlichem Rand erhält die ursprüngliche skalare
+Projektion, Reihenfolge, Linien-/Heading-/Distanz- und volle Routenprüfung.
+121 gezielte Fälle, finale Kopie zusätzlich geprüft. Gefrorene Original-
+Geometrie A/C sinkt von 1,731/1,769 auf 1,366/1,199 s bei identischen
+Zielen/Beobachtungspunkten/Ranking/Evidenz. Keine Frist, Quelle oder
+Bewegungshülle geändert; Frozenset-Zwischenfassung verworfen. Neuer gemeinsamer
+Build/Originalmissionen folgen. Rückfall: gezieltes Revert dieses Auswahldiffs,
+privaten Kandidaten stoppen und erhaltene Bestandsinstallation verwenden.
+
+## 11.10.2026 – originale TF-Empfänge vor Auswahl der radgebundenen Pose
+
+Original-v7-A/B/C bleiben 0/3; Encoder gültig, Auswahlbudget erschöpft.
+Zusätzlich gemessener Rad-/TF-Versatz 22,4–26,1 mm. Tatsächlicher DDS-
+Pausengegenfall: ältere Bufferpose verwirft aktuelle Radprobe mit 29,9 mm;
+Empfang wartender Original-TF über vorhandene Listener-Subscriptions und
+Callbacks gleicht beide ab. Keine neue Quelle, kein Datumssetzen, unveränderte
+20-mm-/0,05-rad- und Frischegrenzen. Takefehler sperrt, Senderverlust altert
+weiter. 25 gezielte Fälle bestanden einschließlich paralleler tatsächlicher
+Callbacks und zerstörtem Handle. Privater A-Vergleich erreicht eine
+Beobachtung ohne bisherigen TF-Abbruch, bleibt später am Auswahlbudget
+negativ. Gemeinsamer Build/Originalqualifikation dieses Fixes noch ausstehend.
+Rückfall: private Runtime stoppen und erhaltenen Install verwenden oder nur
+diesen TF-Empfangsdiff gezielt zurücknehmen. Kein neuer realer Fahrbeleg.
+
+## 11.10.2026 – vorhandenen Ausgabehelper für passive IMU wiederverwenden
+
+Native IMU-Schreibpause kann im gemeinsamen ARM-Prüfstand die echte Encoder-
+Erfassung über 180 ms anhalten. Neuer expliziter, schreibgeschützter Start-
+Opt-in `isolate_sensor_output` verwendet denselben vorhandenen Ausgabehelper,
+ursprüngliche IMU-/Status-QoS und unveränderte Messbytes/Stempel. Spawn und
+Serializer vor Erfassung; Kind ohne Bus/Aktor, keine neue Transportimplementierung.
+Kindverlust verriegelt Erfassung und schließt Transport. Tatsächlicher 350-ms-
+GIL-Gegenfall rot/grün und 15 gezielte Fälle bestanden. Gemeinsamer v7-Build
+`f8cedc1`, 14 Pakete/154 Quelle-Installgleiche/755 Installhashes. Vollprüfung
+2.717 Fälle mit einer negativen DDS-Cancel-Testbarriere; unveränderte Datei
+4/4 erneut positiv. Tatsächlich ebenfalls gesperrten nativen Wait-Set-Aufbau
+im Prüfversuch berücksichtigt und zusätzlich erzwungen: 5/5, insgesamt
+2.718 unterschiedliche Fälle positiv nachgeprüft, Erstnegativ erhalten.
+Reiner Prüfungsnachtrag, keine SDK-/Produkt-/Friständerung; Originalmissionen
+ausstehend. Default und Bestandsinstall
+unverändert, keine neue reale Fahrt. Geometrieprozess-Prototyp verworfen;
+gebundener Transfer bleibt an Frische negativ, kein Sensor-/SDK-Defekt bewiesen.
+Rückfall: privates Overlay geordnet stoppen, Bestandsinstall oder vorherigen
+privaten Stand wählen; neuer Opt-in gezielt zurücknehmbar. Aktueller WE-Stand
+und genau nächster Schritt ausschließlich im STATUS.
+
+## 11.10.2026 – Quellenpause und GIL-Konkurrenz getrennt nachweisen
+
+Der neue ursprüngliche ARM-A/B/C-Vergleich mit reinem Prüfstandnachtrag
+`6c50cf5` bleibt 0/3; Produktbuild `cdf95b6` und seine 2.715 bestandenen
+Fälle unverändert. Auch die direkte native IMU-Ausgabe pausiert 323–343 ms
+und hält den gemeinsamen Prüfstand-Radinterpreter mit auf. Asynchroner
+nativer DDS-Vergleich allein genügt nicht: Basispause weiterhin 189 ms.
+Private Wiederverwendung des vorhandenen Ausgabehelpers für IMU mit originalem
+QoS erhält 2.058 gültige Basiszustände; noch keine Produktintegration daraus.
+Separater Fehler der zusätzlichen CPU-Aufzeichnung korrigiert und erhalten.
+Auswahlmessung: 5,389 s Wandzeit / 2,053 s eigener Thread-CPU, gleichzeitig
+1,703 s CPU im ROS-Dispatcher. Quellenqualität und rechtzeitige Verarbeitung
+sind verschiedene Prüfungen. CPU-/Empfangs-/Dispatcherdiagnosen nicht als
+Qualifikation oder weitere reale Fahrt zählen; Grenzen nicht lockern.
+Aktueller nächster Schritt und vollständige Nachweise ausschließlich im WE-STATUS.
+Reale FC03 um 00:31:31 UTC: unveränderte Positionen, Null-RPM; alle 1.048
+Bestandsinstallhashes erneut gleich. Keine Hardware-/Autostartwirkung dieser
+Diagnosen. Rückfall bleibt Stoppen des privaten Kandidaten und Bestandsinstall.
+
+## 11.10.2026 – DDS-Ausgabe im ARM-Prüfstand von der Erfassung trennen
+
+Der vollständige private v6-Build (14 Pakete, 154 Quelle/Install identische
+Produktdateien) und 2.715 Produktfälle bestehen; ursprüngliche Gesamtmissionen
+bleiben 0/3. Native Thread-Diagnose lokalisiert eine 307–314-ms-Pause im
+Status-Publizieren der Basis; IMU und Plant teilen ihren Interpreter und stehen
+mit. Vorhandenen, bereits real qualifizierten `isolate_feedback_output`-Pfad
+auch im gerätefreien Prüfstand verwenden; originale Produktionsknoten,
+Byte-Endpunkte, Stempel und sämtliche Fristen bleiben erhalten. Geerbte
+CPU-Affinität benötigt keine zusätzliche `/sys`-Freigabe in der Isolation.
+Tatsächlicher 350-ms-Schreiberpausegegenfall mit gehaltenem GIL: vorher
+Encoderverwerfung, danach gültige Erfassung ohne Positionsänderung. 28 betroffene
+Prüfstandfälle bestanden. Lieferung kann während einer Pause tatsächlich
+Frames verlieren; keine durchgehende DDS-Lieferung oder volle Mission behaupten.
+Geometrie-/Auswahlfehler sind weiter offen, kein autonomer Realstart daraus.
+Keine Hardware-/Autostartwirkung; Produktinstall des v6-Builds unverändert.
+Rückfall: nur diesen Prüfstandpfad gezielt zurücknehmen, private Prozesse
+geordnet direkt stoppen und bewahrte Bestandsinstallation verwenden.
+
+## 10.10.2026 – echten aktuellen Radframe an die Geometrieentscheidung binden
+
+Der Original-ARM-Lauf blieb bei gültigem Encoderproduzenten nach Geometrie
+am alten Health-Callback hängen. Neuer echter DDS-Gegenfall hält den
+Consumerexecutor 280 ms zurück, während ein tatsächlicher Publisher weiter
+sendet: alter Code lehnt ab. Die vorhandene metrische Messbindung übernimmt
+nun einmal über dieselbe bereits existente Subscription deren tatsächlich
+wartenden jüngsten Radframe, bevor sie ihn bewertet. Unveränderte Original-
+Quellstempel, 180-ms-Frist, Validität, Frames und 20-mm-/0,05-rad-TF-Abgleich
+bleiben verbindlich. Kein Polling, Publisher oder nachträgliches Datumssetzen.
+Senderausfall läuft weiter ab und ändert auch beim erneuten Aufruf keine
+Messzeiten. 18 gezielte Fälle bestanden einschließlich des echten Rot/Grün-
+Nachweises, fehlendem Sender, ungültigen/duplizierten/alten Daten und
+ursprünglicher voller Egress-Neuprüfung. Gemeinsamer Folge-Build und
+Originalgesamtfälle ausstehend. Hardwarewirkung: vorhandene echte aktuelle
+Daten werden vor Geometrieentscheidung empfangen; ungültige Quellen sperren
+weiter. Rückfall: privaten Kandidaten stoppen, Originalinstallation oder
+vorherigen privaten Stand verwenden; keine Autostartumstellung.
+
+## 10.10.2026 – unabhängigen Simulationssensor vor der Encoder-Baseline starten
+
+ARM-Negativlauf: Sensor-Spawn nach Start der drei Quellenexecutor-Threads
+suspendierte sie etwa 347–350 ms bei nur 2–5 ms Thread-CPU; echte FC03-Paare
+blieben etwa 2 ms, die reale Baseline-Lücke war 352 ms und wurde korrekt
+gesperrt. Der gerätefreie Prüfstand startet diesen vorhandenen Prozess jetzt
+vor Baseline und Live-Timern. Nachprüfung: 1.818 tatsächliche Basisstatuswerte
+alle encoder-gültig, null verworfene Updates, längstes Paar 1,903 ms; elf
+Geräteisolation-/Namespacefälle bestanden, einschließlich echter blockierender
+Interpreterpause und originaler endlicher Sensorstempel. Originalwelt,
+Taktzeiten und Missions-/Sensorfristen bleiben unverändert. Der anschließende
+Original-A-Lauf ist weiterhin negativ am Radbezug nach Geometrieverarbeitung;
+kein Gesamtpositivnachweis. Produktdateien des gemeinsamen Kandidaten
+936a1d0 unverändert; reine Prüfstand-Startreihenfolge. Keine Hardwarewirkung.
+Rückfall: dieses Prüfstanddelta gezielt revertieren; reale Installation bleibt
+unberührt. Verworfenes Digest-Aufschieben und die nicht qualifizierte CPU-
+Zuordnung bleiben ausschließlich in privaten Diagnosebelegen.
+
+## 10.10.2026 – gemessene ARM-Auswahlkosten innerhalb der vorhandenen Frist verteilen
+
+Fünf unveränderte Originalfälle scheiterten im gemeinsamen ARM-Kandidaten:
+Cool-/Retry-gesperrte lokale Vorschläge verbrauchten unnötige Sweep-Arbeit;
+der öffentliche Nahbeobachter erschöpfte seine 0,5-s-Teilfrist vor einer
+bereits geometrisch möglichen Sicht und fiel auf einen unbewiesenen Fernvorschlag
+zurück. Profilierter Originalfall: 2,244 s, 175 Routenprüfungen, 1,643 s
+Routenarbeit. Der notwendige History-Vorfilter liest vorhandene IDs und Limits
+ohne neue Aufgabe; volle Eligibility bleibt anschließend erforderlich. Der
+einmalige öffentliche Nahsuchlauf erhält maximal 2 s innerhalb derselben
+5-s-Gesamtfrist mit 0,25-s-Restreserve. Keine neue Karten-/Sensorlebensdauer,
+Scope- oder Historyausnahme. Andere Einzelbeobachter behalten 0,5 s.
+Alle 16 ursprünglichen Nahstart-/Public-Observation-Fälle auf ARM bestanden
+mit Source-Python und unveränderter installierter nativer Erweiterung; dies
+ist ein Diagnosebeleg. Neuer gemeinsamer Build, komplette Regression und
+Original-Gesamtmissionen folgen. Rückfall: separaten Kandidaten stoppen,
+Originalinstallation oder vorherigen privaten Kandidaten verwenden.
+
+## 10.10.2026 – Anlaufprofil durch reale Register-/Encoder-/LiDAR-Messung auswählen
+
+Register 2000 zeigte im tatsächlichen Antrieb etwa 1,48 Motor-RPM/s und über
+21 s bis 25 cm. Genau ein Startimpuls je Motor und Phase ist bestätigt;
+periodische Rampenneustarts als Ursache widerlegt. Expliziter Vergleich mit
+100 bei unverändertem Bremswert 400 und Startwert 5: 25 cm in 4,185 s bis
+Stopphase, 6,109 s bis bestätigt ruhend; Steady-State etwa 0,079 m/s bei
+0,08 m/s Soll. RPM-Skalierung 1 stimmt dazu und bleibt bestehen. Tatsächlicher
+Encoder-Endweg 29,850 cm, unabhängige LiDAR-Registrierung ohne Radprior
+30,066 cm; 3,85-mm-Fitresiduum. Ausrollen nach letztem Vor-Stop-Sample 4,411 cm
+unter vorhandener 12,8-cm-Hülle. 46 Registerschreibungen alle bestätigt,
+zwei Startimpulse; je Motor 1.970 nachfolgende FC03-Proben unverändert/null.
+Komponentenprüfung positiv, neue LAB-Laufzeit verwendet explizit 100;
+Default 2000 bleibt bis Gesamtqualifikation erhalten. Keine Firmwareformel
+aus der nominellen Millisekundenbeschriftung ableiten. Raw-Bag-Lücke während
+Translation bleibt offen ausgewiesen; späterer Stillstands-LiDAR-Vergleich
+ersetzt keinen vollständigen bewegten Sensorbeleg. Originalinstallation bleibt
+Rückfall, keine Autostartumstellung.
+
+## 10.10.2026 – Kartenverarbeitungskapazität ausdrücklich mit dem Scope binden
+
+Eine stationäre reale 1-cm-Karte hatte 648×423 = 274.104 Zellen; das feste
+262.144-Zellen-Verarbeitungslimit lehnte sie ab. Dies ist eine Speicher-/
+Arbeitsgrenze, kein Hindernis oder belegte Sensorstörung. Das vorhandene
+Bindungswerkzeug akzeptiert jetzt optional eine explizite Kapazität, prüft
+weiter die gemeinsame harte Obergrenze von vier Millionen Zellen und
+übernimmt exakt dieselbe Kapazität in Nachweis und Explorerprofil. Default
+bleibt unverändert. Für die begrenzte reale Folgeprobe werden 524.288 gewählt.
+Keine Rastervergröberung, freie Zellen, Scopeerweiterung oder neue Sensorzeiten.
+27 Werkzeug-/TF-Fälle bestanden; synthetischer Gegenfall bewahrt die echte
+Unknown-/Occupied-Belegung und den unveränderten Fingerprint. Laufzeitkosten
+und Frischewirkung sind weiterhin tatsächlich zu prüfen.
+
+## 10.10.2026 – aktuelle Quellstatusmeldungen vor der Fahrentscheidung empfangen
+
+Bei gültigen aktuellen IMU-/Radmessungen verriegelte das Tor wegen 1,196 s
+alter raw/yaw-Status-Callbacks. Status und Entscheidungs-Timer teilten eine
+Callbackgruppe. Der explizite metrische Empfangspfad verwendet jetzt auch
+für jede der drei tatsächlichen Statussubscriptions eine eigene exklusive
+Gruppe und zuverlässige Tiefe eins. Vor derselben Entscheidung übernimmt er
+die wirklich eingegangene jüngste Nachricht; ohne Nachricht bleibt das
+ursprüngliche Empfangsalter bestehen. Fehler beim Take liefern ausdrücklich
+ungültigen Status. Keine Gesundheitswerte erfunden, keine Ein-Sekunden-
+Frist geändert, keine neue Subscription/Quelle. Der übrige Altpfad bleibt
+unverändert. 18 gezielte Tests einschließlich echter DDS-Verarbeitungspause,
+fehlendem Sender und ungültigem JSON bestanden, separater Build ebenfalls.
+Neue passive Hardwareprobe und aktive Nullprobe jeweils über drei Sekunden
+bestanden; anschließende begrenzte negative Drehung mit Register 100 beendet:
+−17,755° einschließlich Ausrollen, gültige Encoder, frischer Null-RPM-Stop.
+Dies ist eine Komponentenprobe, keine autonome Gesamtqualifikation.
+
+## 10.10.2026 – Encoder-Serialisierung vor die erste Baseline legen
+
+Beim expliziten Vergleich im separaten Checkout brauchte die erste tatsächliche
+Humble-Serialisierung von Odometry 195,9 ms, Folgeaufrufe etwa 0,2 ms; String
+anfangs 79,6 ms. Der isolierte DDS-Ausgabeprozess beseitigte zwar blockierende
+Publikation, doch die erste Serialisierung im seriellen Elternprozess lud
+Nachrichtenbibliotheken weiterhin nach der Baseline. Ein lesender Nachcheck
+verlor direkt nach seiner ersten Odometrieausgabe 199 ms Kontinuität. Identitäts-
+prüfungen waren im gemessenen Lauf höchstens 3,52 ms; bloße CPU-Trennung löste
+den Startfehler nicht. EncoderPublication initialisiert deshalb alle tatsächlich
+verwendeten Nachrichtenserialisierer im Konstruktor vor Timer/Baseline. Die
+Bytes werden lokal verworfen; keine Aufwärmmessung oder neue Zeitstempel
+publizieren. Fristen, echte Kontinuität, Ausgabeverlust-Halt und Originaldaten
+bleiben unverändert. 128 explizit gegen die Source aufgelöste Base-Fälle grün.
+Lesender Vorlauf 180,009 s: 3.230 aufgezeichnete gültige Radproben, keine
+verworfen, längstes tatsächlich gemessenes Paar 31,386 ms, größte Headerlücke
+63,896 ms; beide Antriebe danach weiterhin 0 RPM und unveränderte Positionen.
+Recorder- und Anlaufverzögerungen bleiben gesondert im privaten Nachweis.
+
+Ein anderer Nachcheck überschritt mit 130 ms das 120-ms-Paarfenster; auch dieser
+Gegenbeleg bleibt erhalten. Die Folge 1–4 ist noch in Punkt 1. Keine Gesamt-
+oder Kundenabnahme daraus ableiten. Detailnachweis und aktuelle Folge im
+Wohnungserkundungs-STATUS, reale Messdateien nur im privaten Diagnosebereich.
+
+## 10.10.2026 – LAB-Diagnose: echte Kartenepoche, Quellenempfang und Recovery
+
+Eine wachsende Karte erhält neue Inhaltsfingerprints; der Region-Shadow behält
+die ursprüngliche Session-/Kartenepoche. Die feste LAB-Diagnose verglich beide
+im Idle fälschlich auf Gleichheit und verweigerte einen zweiten Start nach
+bereits gemessener Bewegung. Bei unveränderlichem, ursprünglich gemessenem
+Rad-/Scopeanker verlangt sie jetzt dieselbe verifizierte Ausgangsepoche,
+Session und Map-Frame sowie frische, revisionsgleiche tatsächliche Kartenquelle.
+Der aktuelle Inhaltsfingerprint bleibt im Nachweis erhalten. Der physische
+Scope wird nach Bewegung nicht neu relativ zum Roboter erzeugt. Fehlende,
+hier unbenutzte Portalbestände werden nicht als fehlende Karte ausgelegt und
+auch nicht künstlich ergänzt. Der ungebundene Altpfad bleibt streng gebunden.
+
+Fahrtor und Diagnose empfangen vor TF-Entscheidungen die tatsächlich bereits
+eingegangenen TF-CDRs über den vorhandenen Listener; Stempel und TF-Besitzer
+bleiben unverändert. Ein frischer Idle-Missionsstatus darf einen bereits durch
+alle Schutzprüfungen freigegebenen Diagnosebefehl nicht periodisch auf Null
+unterbrechen. Abbruch/Stop einer noch unbenutzten Diagnose publiziert keine
+scheinbare Aktivierung. Reale Aktivierung bleibt dagegen dauerhaft in der
+Historie. Nach erfolgreich behobenem HOLD quittiert der explizite Diagnose-
+Recovery-Trigger ausschließlich die Fortsetzungssperre bei frischen Quellen,
+gemessenem Stillstand und gesundem Recoveryzustand; er bewegt nichts und setzt
+weder Fehlerbudgets noch Journal zurück. Beim einzelnen Austausch des Tores
+wurden diese Historie und Zähler übernommen, aber keine Quellenproben,
+Status-Gesundheitswerte oder Fahrbefehle wiederhergestellt.
+
+Die Anhalteprüfung betrachtet auch vorzeichenbehaftete tatsächlich gemessene
+Restgeschwindigkeit bei Drehungen; deren vollständige Hülle muss im Scope
+bleiben. Diagnosekommandos bleiben vorwärts bis 0,08 m/s und |w| bis 0,10 rad/s.
+86 erste Regressionen einschließlich echter DDS-TF-Frische bestanden.
+Der private Testmonitor bewahrt die rohe Winkelvariation, begrenzt aber die
+Summe der Winkelspannen der getrennt überwachten Phasen: häufige kleine
+Encoderquantisierung bei nahezu gerader Fahrt ist keine kumulierte Drehung.
+Vier Gegenproben einschließlich echter Abbruchwiedergabe bestanden. Hardware-
+Tracking und autonome Gesamtmissionen werden dadurch nicht als bestanden erklärt.
+
+Ein nachfolgender Realversuch zeigte 1,3–1,4 s gemeinsame Verarbeitungslücke
+in Diagnose und Monitor. Im unabhängigen Bag liefen die realen Quellen weiter:
+Wheel-Headerlücke höchstens 72,502 ms, IMU 54,589 ms, Nahstatus 306,612 ms im
+betroffenen Zeitfenster. Die Diagnose verarbeitet deshalb vor ihrer Entscheidung
+je Quelle die jüngste tatsächlich queued Originalnachricht über ihren bestehenden
+Callback, in einer eigenen Callbackgruppe. Maximal zehn Nachrichten je Quelle,
+kein blockierendes Warten, keine Nachricht bedeutet keine Altersauffrischung.
+TF-Kanten werden weiterhin vollständig über den separaten Listener verarbeitet.
+Der private Monitor verwendet denselben Originalempfang. 87 verschiedene
+gezielte Fälle bestanden; der neue echte DDS-Fall überschreitet eine Sekunde
+Callbackpause und belegt danach auch unveränderte Stempel und Ausfallalter.
+Ein Testsender-Typfehler wurde vor Aktivierung behoben und nachgeprüft.
+
+R17 absolvierte anschließend die gesamte reale feste Sequenz mit drei
+gemessenen Stillständen: 0,275685 m Encoderweg einschließlich Ausrollen und
+kleiner Drehanteile, keine Modbus-Lesefehler oder Encoderverriegelung. Keine
+Frist oder physische Schutzgrenze wurde für dieses Ergebnis angehoben.
+
+## 10.10.2026 – Leeren Missionsstatus und unbenutzten Diagnose-Start unterscheiden
+
+Der reale Mission Manager meldet im Stillstand `active_command: {}`. Das Tor
+wertete dies bisher als begonnene Mission; nach einer erfolgreich behobenen
+Startlücke wartete es dadurch auf eine Explorer-Fortsetzung ohne vorausgegangene
+Mission. Leeres Objekt und `None` gelten jetzt ausschließlich bei `state=idle`
+als fehlender Auftrag. Eine tatsächlich begonnene Mission bleibt in der Historie.
+Der explizite, noch unbenutzte LAB-Diagnosemodus kann die vorhandene automatische
+Start-Erholung nutzen, aber nur mit aktuellen gemessenen Null-RPM, gültigem
+Encoder-Twist, unaktivierter Diagnose und frischem Idle-Explorer. Aktivierung der
+Diagnose markiert den Beginn dauerhaft; spätere HOLDs werden nicht so quittiert.
+Frischegrenzen, Fehlerbudgets und Not-Halt bleiben bestehen.
+
+Im Diagnosemodus war außerdem der vorhandene Empfang der neuesten tatsächlichen
+Wheel-/IMU-Probe nur bei freigegebener Explorer-Mission aktiv. Das Tor sah deshalb
+335 ms alte Wheel-Daten bei einer 15 ms alten tatsächlichen Probe. Die ausdrückliche
+Diagnose nutzt jetzt denselben geprüften Empfang, mit ursprünglichen Stempeln.
+DDS-Abfragen liegen vor dem Health-Mutex; die Bewertung samt Statusaufnahme
+bleibt eine gemeinsame atomare Entscheidung. Das verhindert die gegenseitige
+Behinderung eines bereits gestarteten Quellen-Callbacks und der Entscheidung.
+
+## 10.10.2026 – Aktive Encoder-Erfassung von DDS-Ausgabe trennen
+
+Nach dem unabhängigen Jetson-Neustart lag zwischen aktiven Abfragen eine Lücke
+von 319,610 ms; das zugehörige FC03-Paar benötigte nur 17,386 ms. Null Modbus-
+Lesefehler, beide Motor-RPM und Positionen null. Es handelt sich nicht um einen
+belegten Encoder-Hardwaredefekt. Der HWT-Opt-in gibt daher Base-Odometrie und
+Status über einen separaten, per `spawn` gestarteten DDS-Prozess aus. Nur die
+Basis besitzt den Bus und schreibt Motorregister. Queue je Topic auf eins
+begrenzt, kein Warten im Motorprozess, ursprüngliche Messbytes und Stempel;
+ältere Queue-Einträge werden verworfen, nicht verjüngt. Ausgabeprozessverlust
+fordert sofort Halt an und sperrt weitere Bewegung dauerhaft. Allgemeine Base-
+Defaults bleiben unverändert. Die aktive Frischegrenze bleibt 180 ms.
+
+Der erste isolierte aktive Vorlauf erreichte frische Fahrbereitschaft mit maximal
+27,349 ms Paarzeit. Während der anschließenden Vorbereitung sah das Tor dennoch
+211,452 ms alte Daten und beendete seine reale Erholung mit einem gelatchten
+Fehler. Kein Start-Trigger und kein Fahrbefehl wurden gesendet. Dieser Gegenbeleg
+bleibt erhalten; die zusätzliche Sperrreihenfolge-Korrektur, Prozessaffinität im
+privaten Laufprofil und Ausgabe-Zeitmessung werden separat real geprüft.
+177 gezielte Tests bestanden; vier bereits separat getestete passive DDS-Fälle
+waren in diesem Lauf abgewählt. AP-06-Kundenqualifikation wird daraus nicht abgeleitet.
+
+
+## 10.10.2026 – Startreserve unabhängig von Rasterrundung prüfen
+
+Unabhängiger Polygonschnitt des gespeicherten realen Starts zeigt: physischer
+und gepaddeter Körper im Polygon, aber bereits zusätzliche 10-mm-Reserve ohne
+Zellhalbdiagonale teilweise außerhalb und über unbekannter Rohfläche. Kein
+belegter Rundungsfehler; Reserve nicht allein für einen grünen Start entfernen.
+Vier Ausfahr-/Schutzregressionen grün, keine Fahrt. LAB-Freigabe liegt vor;
+fehlende Startabdeckung ist ein technischer Befund. Quelle: letzter AP-06-
+Vorlaufnachtrag und private exact-start-reserve-Nachweise.
+
+## 10.10.2026 – Unveränderliche Scope-Projektion, reale Bereichsgrenze getrennt
+
+Im separaten AP-06-Checkout entfielen offline rund 60 % der Geometriezeit auf
+wiederholte identische Scope-Rasterisierung. Vier Einträge für unveränderliche
+Polygon-/Rastergeometrie, Validierung vor Lookup und Kopie pro Aufrufer verkürzen
+die Arbeit ohne Belegungs-/Frischecache. 240 gezielte Tests grün; sechs passive
+reale Eingangsprüfungen ohne Frischefehler. Kein Nachweis einer Fahrt.
+Die bestätigte hintere Grenze am unaufgepolsterten Roboter ist zu knapp für
+den reservierten Footprint: 108 Zellen außerhalb. Keine Scopeerweiterung erfinden. Nutzerpräzisierung im selben Gespräch:
+die pauschale 50-cm-Nachfrage zurückgezogen; keine weitere Freigaberunde.
+Startabdeckung technisch nachweisen (105 der 108 Randzellen unbekannt).
+Quelle und Grenzen: letzter Nachtrag in wohnungserkundung/JETSON_VORLAUF_AP06_20261010.md.
+
+## 10.10.2026 – jüngster Hardwarebefund: Source-Empfänger repariert, Geometrie sperrt Fahrt
+
+Die bestehende Latest-Wheel-DDS-Übernahme auf HWT roh/yaw übertragen: eigene
+exklusive Gruppen, Puffer eins, nichtblockierendes Take vor Entscheidung;
+Originalstempel, echte Verluste und alle Fristen bleiben wirksam. 351 Tests,
+separates Overlay. Prozesslokale CPU-Aufteilung plus Encoder-GC-Vorlauf liefert
+im letzten 180-s-passiven und 300-s-aktiven Bag gesunde Encoder (max. 50,396 /
+40,041 ms). Nicht als allgemeine Echtzeitgarantie interpretieren.
+
+Privater Stillstandswächter darf kontinuierliche `/cmd_vel`-Nullnachrichten
+nicht voraussetzen: Collision Monitor schweigt nach Halt. Frische reale
+Basis-/Encoder-Rückmeldung und Null-Sollwerte prüfen, frischen Nichtnullbefehl
+weiter abweisen (6 Fälle). Erster echter Explore-Auftrag endet vor Bewegung
+wegen zu alter Scan-Geometrie (677 ms Verarbeitung, 771 ms Gesamtalter > 500 ms),
+zusätzlich Startreferenz Hindernis/Scope ungültig. Das ist kein Encoderfehler;
+Fahrt bleibt 0 m. Nächster Schritt und Belege im aktuellen
+[STATUS](wohnungserkundung/STATUS.md) und [Bericht](wohnungserkundung/JETSON_VORLAUF_AP06_20261010.md).
+
+## 10.10.2026 – Vorbereitung erster Realfahrt: gültige Quellen vor Bewegung
+
+Nutzer autorisiert ausdrücklich den ersten realen Labortest; keine neue
+allgemeine Freigabe fehlt. Neue Stillstandsprüfung zeigt zwei getrennte
+Softwarebefunde: Bereichscollector empfängt TF zu langsam neben Karten-/Graph-
+arbeit; aktive Basis legt ihre Encoderbaseline im Startburst an. Lesenden
+TF-Empfang entkoppelt und vorhandenen 15-s-Startversatz auf den jeweils
+gewählten Encoderbesitzer angewandt. Quellen-/Stoppfristen unverändert.
+181 betroffene Tests und isolierter Build bestanden. Aktiver Folgelauf
+zunächst gesund, später 181,212-ms-Kontinuitätsverstoß; kein Fahrkommando.
+Freigabe, Hardwareantwort und tatsächliche Softwarebereitschaft bleiben
+unterschiedliche Nachweise. Keine reale Fahrabnahme behaupten. Ein eigener
+Explorer-Startfehler bei fehlendem Profil ist im Bericht erhalten und der
+vorbereitete Start entsprechend abgesichert. Bestandsinstallation unverändert.
+Aktueller Befund/ein nächster Schritt im [STATUS](wohnungserkundung/STATUS.md).
+
+## 10.10.2026 – historische VL53-Regel korrigiert Diagnose, Encoder-DDS entkoppelt
+
+Auf ausdrücklichen Folgeauftrag ältere WE-Erkenntnisse geprüft. Der finale
+VL53-Vertrag vom 25.09. ist bereits im Code: gesunde/frische gepaarte
+PARTIAL-Frames dürfen leere Nahwolken haben; keine 64/64-Forderung und kein
+automatischer Freiraumbeleg. Frühere Einordnung als Hardwareblocker korrigiert.
+615 heutige Tripel offline mit unveränderten Gate-Callbacks bestätigt.
+
+Encoder-Grenzen/Identitätscache/Anlauf/Recovery waren ebenfalls schon umgesetzt.
+Neu gemessene Ursache: DDS-Ausgabe blockiert den Lese-Callback. Ausgaben im
+separaten Kandidaten per begrenztem Prozesskanal entkoppelt; Thread-/ASYNCHRONOUS-
+Gegenversuche negativ und verworfen. 170 Tests bestanden. Zwei passive 180-s-
+Aufnahmen: zunächst Paarzeitfehler 169,8 ms, danach 3.200 Publikationen ohne
+Readerfehler und Quellen am Ende bereit. Recorderlatenz bis 329,1 ms bleibt;
+keine vollständige Fehlerbehebung behaupten. Bestandsinstall unverändert.
+Aktueller Befund/ein nächster Schritt im [STATUS](wohnungserkundung/STATUS.md),
+vollständige Belege im [Vorlaufbericht](wohnungserkundung/JETSON_VORLAUF_AP06_20261010.md).
+
+## 10.10.2026 – AP-06 erstmals separat auf diesem Jetson gebaut und passiv gemessen
+
+Übergabecommit `e14ca31276b26be2d88397b310301dad3c4e9600` wurde in einem
+unabhängigen Checkout und Release gebaut; keine Bestandsinstallation ersetzt.
+Die 1.048 vorhandenen Install-Dateien sind SHA-256-identisch geblieben.
+Explizite Quellenbindung war nötig, weil CMake zunächst einzelne gepinnte
+Bibliotheken aus Humble statt aus dem Release wählte. Lokale Buildanpassungen
+und alle negativen Testresultate bleiben nachvollziehbar dokumentiert.
+
+Zwei passive Dreiminutenaufnahmen belegen keine Quellen-/Sichtabnahme:
+Encoderkontinuität verriegelt, Scope-TF-Zeitprüfung abgebrochen, Nahbereichswolken
+leer. Korrektur nach historischem Abgleich: Gesunde PARTIAL-Frames mit leeren
+Nahwolken erfüllen bei Frische/Paarbindung den finalen Health-Vertrag vom
+25.09.; vollständige Spalten sind keine pauschale Sensor-Health-Bedingung.
+Fortlaufender EKF-/Kartenoutput ersetzt keine frischen echten Radmessungen.
+Im ursprünglichen Vorlauf kein Produktcode
+oder Grenzwert geändert; kein Aktorschreibprozess und keine Mission gestartet.
+
+Aktueller WE-Befund und genau ein nächster Schritt ausschließlich im
+[STATUS](wohnungserkundung/STATUS.md), Messungen und Builddetails im
+[Vorlaufbericht](wohnungserkundung/JETSON_VORLAUF_AP06_20261010.md).
+
+## 08.10.2026 – AP-06-Konzeptstand, lokale Ausführung durch den Nutzer
+
+Der Nutzer übernimmt den lokalen Jetson-Lauf; keine erneute Zugangs- oder
+pauschale Freigabefrage. Produktkandidat `c5d2a9c` korrigiert belegte Dreh-,
+Kartenfortsetzungs- und Frische-Wiederprüfungsabläufe und ergänzt die passive
+Scopevorbereitung. 1.808 registrierte Explorer-Tests am letzten Stand grün.
+Geschlossene Konzeptläufe bleiben negativ; eine erfolgreiche Wiederprüfung
+mit anschließender Beobachtung ist belegt, drei Gesamtmissionen sind es nicht.
+Originalqualifikation **0/3**, Kundenlösung offen. Nicht durch längere Fristen,
+frisch gestempelte alte Daten oder gelockerte Abnahmekriterien umdeuten.
+
+Aktueller Befund und genau ein nächster Schritt in
+[STATUS](wohnungserkundung/STATUS.md); überprüfbare lokale Übergabe in
+[JETSON_KONZEPTTEST_AP06](wohnungserkundung/JETSON_KONZEPTTEST_AP06.md).
+Erst separater Build und passiver Quellen-/Sichtnachweis, anschließend dessen
+Auswertung. Softwarepaket und negative synthetische Belege werden gehasht
+übergeben; keine Hardwarefahrt, dauerhafte Installation oder Shutdown des
+Cloud-Hosts ausgeführt.
+
+## Historie und aktueller Einstieg
+
+Die vollständige bisherige Datei bis zum veröffentlichten Commit `99d21c012dfe4c28d8263f7cd5e16505b07736d6` ist [hier bytegleich erhalten](wohnungserkundung/archive/20260930-v1.1/PROJECT_MEMORY.md). Sie enthält auch alle anderen Projektbereiche; nichts daraus ist gelöscht. Für ältere Entscheidungen gezielt dort lesen. Relative Links beziehen sich auf den ursprünglichen Pfad docs/PROJECT_MEMORY.md; [Archivzuordnung](wohnungserkundung/archive/20260930-v1.1/README.md).
+
+Aktuelle Wohnungserkundung ausschließlich aus [MASTERPLAN](wohnungserkundung/MASTERPLAN.md), [STATUS](wohnungserkundung/STATUS.md) und [AGENTENAUFTRAG](wohnungserkundung/AGENTENAUFTRAG.md) ableiten. Ältere „nächste Schritte“ sind keine parallelen Aufträge. Inventar und tatsächliche ROBOT_TRANSFER-Historie bleiben erhalten; dieser Eintrag ändert keine Runtime.
+
+## 03.10.2026 – AP-05: belegter Beobachtungsfortschritt und konsistente Wiederaufnahme
+
+**Nutzerentscheidung:** Nach AP-05-Übergabe ausdrücklich „gut mache weiter“. Saubere AP-04-Basis `2532f1b`, Branch `feature/metric-observation-persistence`, Software `090762d`; MASTERPLAN v1.3 unverändert, AP-04-Auftrag bytegleich archiviert.
+
+**Entscheidung:** Im vorhandenen Explorer Ankunft, tatsächliche neue lokale Beobachtung und Erledigung trennen. Neue lokale Evidenz kann dieselbe räumliche Aufgaben-ID begrenzt wieder öffnen; keine Neustart-/Kartenstempel-/ID-Budgetresets. Gesamterfolg über vorab festes gültiges Restfreiheitsfenster, raw-erreichbare Aufgaben vor Filter/Blacklist. Vorhandenen Kartenmanager/Sidecar weiterverwenden, keinen neuen Speicher-/Missionsbesitzer. Resume verlangt zusätzlich zum expliziten neuen Auftrag die aktuelle vorhandene verifizierte Lokalisierungsfreigabe der gespeicherten Karte; TF allein beweist keine Relokalisierung. Additiver versionierter Ergebnisstatus, Action-Wire unverändert, vorhandene App konsistent angepasst.
+
+**Nachweis und Grenzen:** Kern/Persistenz/ROS-Verträge software_geprüft; 65 neue Vertragsfälle, 225 installierte / 1.751 betroffene / 1.664 colcon-Tests bestanden (Überlappung), echter Zehnpaketbuild plus finaler Explorer-Neubuild. Rote Original-Ankunfts- und verspätete Beobachtungsverarbeitungs-Gegenproben, Source-/Installidentität und Originalbelege ausschließlich im [STATUS](wohnungserkundung/STATUS.md). Native iOS-Build/Laufzeit mangels Apple-Werkzeugen unter WE-M7 separat offen, wie MASTERPLAN ausdrücklich erlaubt. Keine Hardware, Deployment, Push/Merge, Jetson-Wirkung oder vollständige AP-06-Gesamtkette behauptet. Keine Reserve-/Fristlockerung. Eigene AP-05-Commits gezielt revertierbar; AP-01–04 und fremde Arbeit erhalten. AP-06 nur vorbereitet, nicht ausgeführt.
+
+## 03.10.2026 – AP-04: tatsächliche Randpunkte und begründete Kernwahl
+
+**Nutzerentscheidung:** AP-04 ausdrücklich „gut dann mach mit 04 weiter“. Saubere AP-03-Basis `495b538`, Branch `feature/frontier-candidate-core`, Software `5ee313b`. MASTERPLAN v1.3 unverändert; AP-03-Auftrag bytegleich archiviert.
+
+**Entscheidung:** Exakten `mertgulerx/frontier_exploration_ros2`-Pin unverändert bauen/vergleichen, ohne dessen Missions-/Dispatchschicht. Gleiche Eingaben, endliche Sicht, Geometrie, Planer und Budgets. Seine einzelne Ringroute scheitert, langer Rand bleibt mit einer Sichtposition unzureichend erschlossen. Gemäß ausdrücklich erlaubter Planalternative die eigene Gewinnung begrenzt korrigieren: echte freie Randzellen in räumlichen Teilbereichen, bekannte Annäherungsseite, gültige reale Scan-/Montage-/Masken-/Reichweitensicht. Keine externe Runtimebibliothek, keine dritte Software; historische Schwerpunktquelle als read-only Prozessstart-Rückfall erhalten.
+
+**Evidenz/Grenzen:** Alle sieben Pflichtfälle und elf Kartenstände; native volle Pfadprüfung belegt Ringalternativen und 5,9 m gegenüber 1,9 m sichtbaren Rasterrand. 27 neue Fälle, 1.636 betroffene / 165 installierte / 1.604 colcon-Tests (Überlappung), frische aktuelle/native Builds und bytegleiche Installation. Unzulässige native Zielgeometrien sowie korrigierte Prüferfehler sichtbar. Lizenz/Pin, Originalnachweise und exakter Umfang im [STATUS](wohnungserkundung/STATUS.md). Sichtmöglichkeit ist kein gemessener Fortschritt; missionseigene Erledigung/Wiederbeobachtung ausdrücklich AP-05. Keine Frist-/Kontur-/Unknown-Lockerung, Hardware, Deployment, Push/Merge oder Jetson-Installwechsel. AP-05 nur vorbereitet; physische und vollständige Kettenabnahme AP-06. Rückfall gezielt eigene AP-04-Commits revertieren, AP-01–03 und fremde Arbeit erhalten.
+
+## 03.10.2026 – AP-03: tatsächlicher Bewegungspfad und autonomer Bootstrap
+
+**Nutzerentscheidung:** AP-03 nach AP-02 ausdrücklich beauftragt; Basis `875c7c4`, Branch `fix/nav2-bootstrap-geometry`, Software `c3115ff`. MASTERPLAN v1.3 unverändert, abgeschlossener AP-02-Auftrag bytegleich archiviert.
+
+**Entscheidung:** Ein verworfener kürzester Eigenpfad darf einen zulässigen längeren tatsächlichen Nav2-Pfad nicht blockieren. Vorschlag und Bewegungsfreigabe trennen, im vorhandenen Explorer bleiben und NavFn A*/RPP anhand echter geschlossener Messungen weiterverwenden. Rollout-Profil ausdrücklich simulationsqualifiziert, schreibgeschützt und mit enger geprüfter Vorausrichtungsübergabe; konservativer Default und sämtliche gemessenen Chassis-/Raster-/Goalreserven erhalten. Gemeinsamer [Bewegungsvertrag](wohnungserkundung/BEWEGUNGSVERTRAG.md); konkrete Sensorabdeckung separat nur vorbereitet.
+
+**Evidenz/Grenzen:** Acht echte Nav2-Fälle einschließlich 68/80 cm, Umfahrung, autonomer erster Frontier-Beobachtung und sicher gesperrten Negativfällen. 22 neue Regressionen; aktuelle AP-02-Laufzeit besteht 1.609 betroffene, 138 installierte und 1.577 colcon-Tests (Überlappung), echte isolierte Builds. Ein enger unveränderter DDS-Test schwankte im älteren Nav2-Prüfimage; Originalfehler und Gegenproben erhalten. Ergebnis, Bedingungen und Rückfall ausschließlich im [STATUS](wohnungserkundung/STATUS.md). Keine Fristlockerung, Hardwarewirkung, Deployment oder Push/Merge. Reale Motor-/Sensor-/Stopplast bleibt offen; AP-04 nur durch eigenen nächsten Auftrag.
+
+## 03.10.2026 – AP-02: Kartenarbeit und Quellenvertrag
+
+**Nutzerentscheidung:** Nach abgeschlossenem AP-01 ausdrücklich AP-02 beauftragt.
+Saubere Basis `45f268a`, Branch `fix/map-lifecycle-source-contract`, Software
+`96bbd4d`. MASTERPLAN v1.3 bytegleich; früheren Auftrag bytegleich archiviert.
+
+**Entscheidung:** Räumliche Startausnahmen an beobachtete Rasteridentität binden
+und dauerhaft vor inkompatiblen Arrayoperationen invalidieren. Genau verbundene
+Rohkarte/Status verwenden; Inhaltsrevision allein beendet gültige, erneut
+geprüfte Weltziele nicht. Beobachtete Kontext-/Auflösungswechsel und Rückwechsel
+machen alte Arbeit unwirksam. Produzent zählt exakte Duplikate nicht als neue
+Beobachtung und ignoriert alte positive Quellstempel ohne Frischeerneuerung.
+Verarbeitungszeit gehört in bestehende Frischebudgets.
+
+**Evidenz/Grenzen:** Gemeinsame aktive/passive HWT-/Encoder-/TF-/Gate-/Explorer-
+Budgetzuordnung [hier](wohnungserkundung/QUELLENVERTRAG.md), Softwareprüfung und
+Originalbelege ausschließlich im [STATUS](wohnungserkundung/STATUS.md).
+55 neue Fälle; 1.587 betroffene, 116 installierte und 1.555 colcon-Tests
+bestanden (Überlappung); echte Zehnpaketauflösung. Keine Fristlockerung oder
+neue Freiraumannahme. Keine Hardware, Jetson-Runtimeänderung, Deployment oder
+Push/Merge. AP-03 getrennt vorbereiten, nicht automatisch implementieren;
+aktive Jetsonlast bleibt AP-06. Rückfall nur eigene AP-02-Commits revertieren,
+AP-01 und fremde Arbeit erhalten.
+
+## 03.10.2026 – MASTERPLAN v1.3 und begrenzter AP-01-Softwareauftrag
+
+**Entscheidung:** Nutzer hat die angehängten MASTERPLAN v1.3 und AGENTENAUFTRAG ausdrücklich beauftragt. Plan kanonisch übernommen; bisherige vier WE-Dateien bytegleich mit Commit-/Blobbeleg archiviert. AP-01 ausschließlich gerätefrei bis Softwareprüfung, keine Ausführung historischer Fahrt-/Deploymentaufträge. AP-04 hebt die reine Offline-Fremdcodegrenze gezielt für einen geprüften Frontier-Kandidatenkern auf; kein neuer Gesamtstack. Historischer Schwerpunktkern bleibt Vergleichsreferenz.
+
+**Evidenz/Basis:** Remote `feature/hwt-hold-recovery-resume` am 03.10.2026 auf `08a4b9a` bestätigt; sauberer isolierter Worktree/Branch `fix/hwt-clock-correlation`. Älteres main `05439c7` wird nicht als Implementierungsbasis verwendet. Zeitkorrelationsfehler aus Gegenprüfung an Originalmethoden reproduziert und repariert; historischer Roboterabbruch damit nicht abschließend erklärt.
+
+**Betroffene Dateien/Hardware:** WE-Dokumente, AGENTS und Gesamtstrategie; danach ausschließlich HWT-Rawpfad, Tests und notwendiger Clockvertrag. Keine Hardware/Roboternetzverbindung/Runtimeänderung; ROBOT_TRANSFER nicht fortgeschrieben. **Softwareabschluss:** `c797442` repariert den an Originalmethoden belegten Projektionsfehler durch ≤1-ms-Offsetspannen; unsichere Proben altern ohne Reconnect, erkannte Quellen-/Zeitbasisänderungen bleiben hart. 443 betroffene Regressionen, 58 Installimporttests und 381 registrierte colcon-Tests bestanden; Achtpaketbuild. Mengen überlappen. Originalbelege, Clockvertrag und Python-3.12-JSON-Baselinefehler ausschließlich im aktuellen STATUS. AP-01 software_geprüft, reale Abnahmen offen; AP-02 nur vorbereitet.
+
+**Grenzen/Rückfall:** Sensor-/Start-/Geometrieabnahme offen, keine Fristlockerung. Eigene getrennte Dokument-/Softwarecommits gezielt revertieren, keine Rücksetzung unbekannter Arbeit. AP-02-Übergabe vorbereitet, nicht automatisch ausgeführt.
+
+## 30.09.2026 – Metrische Erkundung vor verpflichtender Portal-/Raumsemantik
+
+**Nutzerentscheidung:** Christopher beauftragt Masterplan v1.2 und den nächsten Softwareauftrag. Ziel ist die fortlaufende Schleife aus Beobachtung, erreichbarem Frontier-/Beobachtungsziel, realer Navigation, neuen Messungen und erneuter Aufgabenwahl. Keine dritte vollständige Robotersoftware.
+
+**Wiederverwendung:** Historischer Frontier-/Annäherungskern um `1d91229` plus aktuelle Sensor-/HWT601-/Encoder-/EKF-, Mission-/BT-, Einzelkind-/Cancel-/HOLD- und metrische Validierungsbausteine. Ein Navigator, kein zusätzlicher Motor-/Goalbesitzer. Kein pauschaler Altbranch-Rollback.
+
+**Architekturpräzisierung:** Metrische Ziele innerhalb des gültigen Scopes benötigen keine bestätigte Tür, Region oder Pflicht-PortalMemory. Semantik kann passiv beitragen. Geometrische Durchfahrtsprüfung, notwendige aktuelle Quellen/Pose, Schutzkette, bestätigter Stillstand vor Wiederanfahrt und Budgets bleiben verbindlich. Keine Dummy-Portale/Regionen und kein künstlich gesunder Status. Nicht erreichte Aufgabe ist nicht automatisch Hardwaredefekt; unbekannte sicherheitsrelevante Zustände bleiben bewegungssperrend.
+
+**Bekannte Grenzen:** Der letzte ausgewertete reale Lauf auf `492ef20` endete ohne Ziel-/Türerfolg. SlowZone, fehlende Portalhypothese und unaufgeklärte Timeout-Erstentscheidung bleiben echte Befunde. Aus neuem Plan keine historische Ursache oder neue Abnahme ableiten. Der bisherige Diagnoseauftrag wird als eigenständiger nächster Auftrag abgelöst; benötigte Diagnose und Gegenfälle gehen in das funktionale Softwarepaket ein.
+
+**Betroffene Dokumente:** AGENTS-Einstieg, MASTERPLAN, STATUS, AGENTENAUFTRAG, Gesamtstrategie, Meilensteinpräzisierung und dieses Journal. Frühere umfangreiche Plan-/Status-/Auftrags-/Strategie-/Meilenstein-/Journalfassungen wurden unter ihrer Original-Blobidentität archiviert, damit die aktiven Referenzen nur einen aktuellen Auftrag enthalten. Keine Code-, YAML-, Treiber- oder Hardwareänderung.
+
+**Nachweise dieses Eintrags:** Dokumentationsabgleich; keine neuen Softwaretests oder Realversuche. Akzeptierte frühere HWT-Teilnachweise bleiben erhalten. Neues metrisches Backend erst beauftragt, nicht umgesetzt.
+
+**Nächster Auftrag:** metrischen Kern gerätefrei implementieren und im verbundenen Produktgraph ohne Pflicht-Semantik prüfen: mehrere echte Folgeziele, blockierte Aufgabe mit zulässiger Alternative, HOLD/Cancel und harte Gegenfälle, ehrlicher Abschluss. Danach genau einen begrenzten Realnachweis vorbereiten, nicht automatisch starten.
+
+**Git/Privatsphäre:** LAB-1 unverändert. Reale Karten/Bilder/Bags und private lokale Berichtscommits nicht mitpushen, auch nicht als Vorfahren. Nur Remote-Dokumentbasis veröffentlicht; keine lokale Jetson-Arbeitskopie umgeschaltet. Kein Merge und kein dauerhafter Installwechsel. Rückfall: gezieltes Revert der Dokumentationsänderung ohne Roboterruntime-Eingriff.
+
+## 30.09.2026 – metrischer Kern implementiert, gerätefrei verbunden geprüft
+
+**Entscheidung und Modulgrenze:** `exploration_strategy` ist read-only und standardmäßig `existing`; `metric_frontier` wird ausschließlich bewusst mit eigenem Overlay gewählt. Zwei kleine Module im vorhandenen Explore-Paket verbinden historische Cluster-/Annäherungs-/Bewertungshelfer mit aktuellen Kartenidentitäts-, Scope-, Quellen-, Nav2-Einzelkind-, Scan-/Vorausrichtungs- und HOLD-/ACK-Verträgen. Kein Pflicht-Portal-/Regionsfeed, keine künstliche Region, kein zweiter Navigator. Alte semantische Policy/Navigation, direkte Brücken, Coverage und Rückkehr sind in diesem Modus ausgeschlossen.
+
+**Geometrieentscheidung mit Messgrund:** bekannte freie Rohkarte/Scope und aktuelle Costmap zuerst; anschließend vollständige gepaddete asymmetrische Fahrzeugkontur einschließlich Drehungen, danach Nutzen. Rastertreppen werden mit dem bestehenden freien Segmenthelfer vereinfacht; keine unnötige Drehung an jeder Zelle. Im synthetischen Blockadefall berührte die gedrehte Front am alten kreisgeprüften Annäherungspunkt unbekannte Zellen. Innerhalb des bereits bestehenden lokalen Suchradius werden nun zurückliegende Annäherungen und deren vollständige Routen geprüft. Gezielt getestet: beide zulässigen Alternativen entstehen, wirklich gesperrter Weg bleibt gesperrt. Keine Kontur-/Kollisions-/Frischegrenze gelockert. Initialscan prüft die Kontur auch während laufender Kartenänderungen. Ein im verbundenen Scan gemessenes kurzzeitiges `vl53_triplet_unmatched` wird wie in der Navigation durch das echte Gate gesperrt, ohne sofortigen terminalen Scanabbruch; tatsächlich ungültige/stale Quellen bleiben wirksam. Kartensperre während Scan separat als Gegenfall geprüft.
+
+**Fortsetzungsvertrag:** Nav2-Terminalzustand plus frischer stabiler Encoderstillstand und konsistenter Betriebssnapshot vor anderer Aufgabe. Timeout/Abort bei sonst gesunden Quellen lautet `task_unreached_cause_unproven`, keine erfundene lokale Hindernisursache und kein pauschaler Hardwaredefekt. Räumliche Historie verhindert Retry über neue UUID/Revision; Cooldown, geänderte Kartenevidenz und Versuchsbudget nötig. Erfolgreiche Nachbarschaften bleiben für dieselbe Mission bedient. Absolute Aufgabenfrist umfasst Vorausrichtung, Kindwechsel und HOLD; kleine Drehungen setzen nichts zurück.
+
+**Schutzkorrektur:** bestehender gemeinsamer Nav2-Client merkt ausstehende Annahme und fehlenden Terminalbeleg; neue Elternaufträge bleiben gesperrt. Eine nach Timeout verspätete Annahme wird automatisch gecancelt. Kurze HWT-Lücken werden unabhängig von teurer Routenarbeit mit dem bestehenden HOLD-Vertrag geprüft; wiederholte Störung verlängert die Frist nicht, Stillstand und Gate-ACK bleiben Pflicht.
+
+**Statusmigration:** additive `strategy`/`metric_exploration`-Felder, aktive Auswahl, Route, Retry, Filter und Snapshot sowie begrenzte Ergebnis-/Folgezielkette. Kein ExploreArea-Gesamterfolg, keine automatische Speicherfreigabe; semantische Vollständigkeit/Bodenabdeckung/Wohnung ausdrücklich ungeprüft. Selbst vollständig bekannter Scope ergibt höchstens einen metrischen Abschlusskandidaten/Teilstand.
+
+**Belege:** isolierter Sechspaketbuild; 1.342 pytest-Regressionen und registrierte colcon-Tests ohne Fehler. Verbundener echter Mission-Manager/BT/Explorer/Kartenmanager/HWT/Gate-Graph, synthetische Raster/physische Eingangsmeldungen/Nav2-Gegenstelle. Pflichtfallmatrix, drei autonom erreichte Rasterziele, Alternative nach unerreichter Aufgabe, offene Verbindung ohne Türlabel, HOLD/Cancel, harte Quellen-/Aktuator-/Posefälle und ehrlicher Teilstand in STATUS §4. Keine Geräte-/Sensorprozesse, keine reale Fahrt. Nach einem Umgebungsneustart verschwanden temporäre Tests; Abschlussbuild und Logs deshalb lokal dauerhaft unter `~/.local/share/amadeus/tests/metric-frontier-20260930/software-final/`, außerhalb Git.
+
+**Offline-Grenze:** je drei lokal gespeicherte historische/aktuelle Snapshots nur lesend verglichen. Alte/neue Kandidaten historisch 15/7/11 gegenüber 0/4/11, aktueller Fehllauf 10/13/12 gegenüber 0/0/0. Rastergrenzen-Scope nur zur Analyse, keine Live-Gesundheit oder reale Fahrabnahme. Unzulässige Rohkarten-/Footprint-/Routenlage bleibt ein Blocker; keine Kartenverbesserung oder behobene historische Ursache behauptet.
+
+**Git, Runtime und Rückfall:** unabhängiger Checkout auf veröffentlichtem `1dbbdaa` in derselben PR-#105-Linie; laufendes `~/roboter_ws` unverändert, keine privaten Berichts-Vorfahren, keine Rohdaten in Git, kein Merge oder permanenter Installwechsel. Rückfall: metrisches Overlay abwählen, geordnet ohne Mission mit `existing` starten; sichere Betriebsgrenze weiterhin `active_drive=false`, `enable_auto_explore=false`. Genau ein begrenzter Realnachweis vorbereitet in AGENTENAUFTRAG §7, nicht gestartet. Stufe 3 bleibt offen.
+
+
+## 01.10.2026 – Mast-Eigenkörpervertrag und begrenzte passive Encoderheilung
+
+**Betreiberinformation:** Der rückwärtige graue Keil ist der OAK-Kameramast.
+Die vorhandene native 236–304°-NaN-Maske, ROS-CCW und gemessener +90°-TF werden
+weiterverwendet; aktuelles Install, Scanverbraucher und Laufdaten geprüft.
+Keine neue Maskierung oder Außenraumfreigabe.
+
+**Entscheidung:** Nur ganze unbekannte Zellen im ungepaddeten gemessenen Körper
+werden privat auf erste korrelierte Pose/Fingerprint begrenzt behandelt.
+Dieser Beleg folgt nicht der Bewegung und erlischt bei Fingerprintänderung.
+Belegte Zellen, unbekannter Außenraum, Padding und Rasterreserve bleiben gesperrt;
+voller Fahrzeug-/Drehsweep auf Rohkarte und Costmap erhalten. Positive Regression
+mit versetztem LiDAR und tatsächlich belegtem Außenraum; die reale aktuelle
+Geometrie bleibt trotz korrekter Eigenkörpertrennung unzulässig.
+
+**Encodervertrag:** vorhandene gemeinsame FC03-Blöcke erhalten. USB-Pfadsuche
+vermeiden, tatsächliche Identität/Exklusivität/CRC und Messzeitbezug erhalten.
+Nach ≥20 gesunden Paaren ein isolierter vollständiger Timing-Ausreißer bei
+belegter 180-ms-Kontinuität: ungültiges Paar zurückhalten, unbereit/HOLD,
+zwei neue plausible vollständige Paare, alle Zähleränderungen erhalten.
+120-/180-ms-Grenzen unverändert; harte Fehler erfordern neue belegte stationäre
+Initialisierung und Karten-/Odometriezuordnung, kein Faultflag-Reset.
+Passiver Readerstart 15 s staffeln. Passive Gate-Quellencallbacks unabhängig
+vom normalen seriellen Callback verarbeiten; aktiven Pfad separat erhalten.
+
+**Grenze/Nachweis:** 1.340 Regressionen und synthetischer `mast_start` bestanden;
+Achtpaketinstall temporär. Letzter realer Reader 4.284 gültige Paare, keine
+120-ms-Überschreitung; Gate nach echter HWT-Kurzstörung zunächst recovered,
+später Radfrische terminal. Die Softwarekorrektur beweist keine vollständige
+reale Verbraucherrobustheit. Keine Mission/Fahrt, A/B/C offen. Zahlen, Zellklassen,
+Zeitverteilungen und einziger gemeinsamer Startnachweis im WE-STATUS; technische
+Jetson-Wirkung im ROBOT_TRANSFER. Kein Masterplanwechsel, keine privaten Daten
+oder Berichts-Vorfahren veröffentlicht, kein Merge/Hauptinstallwechsel.
+
+
+## 01.10.2026 – Radentscheidung atomar, DDS-Übernahme und reale Geometrie präzisiert
+
+Ausgang `cf55cea`, Funktionskandidat `8f5eeb4`, bestehende PR #105.
+Jeder neue Fehlerübergang erhält seinen eigenen Originalzustand; first_fault
+bleibt historische erste Störung, letzte Wheelentscheidung enthält vorherige
+Recovery. Diagnose-JSON/DDS bounded außerhalb Stopptimer. Uhrbezug am tatsächlichen
+ROS-/Monotonic-Bracket statt Callbackeintritt vermeidet doppeltes Präemptionsalter.
+
+Zwei aktuelle Consumerfehler exakt reproduziert: 215,948 bzw. 186,344 ms alte
+Wheelprobe trotz neueren Recorderreceipts. Recorderzeit nicht mit Gatecallback
+gleichsetzen. Passive eigene Radgruppe allein reicht nicht. Nichtblockierender
+Take derselben tatsächlichen Depth-1-Subscription direkt vor Gateentscheidung,
+Callbackgruppenschutz, ursprüngliche Stempel und harte Gegenfälle erhalten.
+Aktiver Basispfad bleibt seriell und separat regressiert; keine neue Quelle.
+Aliaslinks/Gerätegenerationen und echte USB-Attribute weiterhin pro FC03 prüfen,
+nur voller Pfadwalk an Bindung. 120-/180-ms-Verträge bleiben unverändert.
+
+Ganze Körperzellen über exakte Projektion statt pauschalen Zellendiagonalradius:
+bei erhaltenem aktuellem Start 14 echte Fehlablehnungen entfernt. Keine teilweise
+überlappende Zelle, kein Außen-/Padding-/Reserveraum freigegeben. Scan während
+Kartenarbeit gegen danach erfasste Zeit prüfen. Finale Geometrie 211 unbekannte
+Rundblickzellen  / 0,188420 m² Außenanteil ; 139 Costmap-Zellen darin, keine Addition.
+Das beweist erforderliche zusätzliche stationäre LiDAR-Außenbeobachtung, keinen
+hardwarefreien Softwareweg zur Freigabe. Manuelles Umsetzen bei deaktivierten
+Antrieben ist eine getrennte äußere Bedienhandlung.
+
+1.469 Regressionen und isolierte Builds bestanden. Gerätefreier kurzer Scan/
+Vorausrichtung / drei Folgeziele positiv, volle 2π-Dauerprobe mit Quellenpausen negativ
+und erhalten. Vier begrenzte 720-s-Realfenster nach konkreten Korrekturen;
+letztes nach zwei echten HWT-Recoveries erneut negativ, jetzt echte
+120,874-ms-Readerpaarverletzung, Gate 212,127 ms stale, keine zulässige neue Probe.
+Keine unbewiesene Encoder-/Kabel-/Kernelursache aus Phasenzeiten. Weitere
+Transport-/Runtime-Latenzabsicherung separat begrenzen; keine automatische
+Neustartserie.0 Missionen / 0 Nav2-Kinder, FC03-Endwerte null, Prozesse und Handles frei.
+Private Einzelzellen/Bags/Manifeste lokal, Hauptkopie unverändert, kein Merge/
+permanenter Installwechsel; Rückfall temporäre neue Overlays abwählen. Stufe 3 offen.
+
+## 01.10.2026 – adaptiver Bootstrap und begrenzter Auftragserhalt bei Encoder-Timing
+
+Nutzerpräzisierung im MASTERPLAN v1.2/AGENTENAUFTRAG §10; Ausgang `d9894d2`,
+Funktionskandidat `fd883fd`, bestehender Branch/PR #105. `metric_frontier`
+startet mit unveränderlichem `metric_start_strategy=adaptive`: zulässiger
+nützlicher Rundblick, sonst berechnete Beobachtungsfahrt, sonst begründeter
+Teilstand. `existing` bleibt Default; Scan bleibt verfügbar/eingeschaltet.
+Kein manuelles Vorkartieren/Umsetzen als autonomer Nachweis. Unbenutzte 360°-
+Fläche darf keine andere sichere Bewegung sperren; die tatsächlich beanspruchte
+Anfangskontur, Vorausrichtung, Controllerkurve, Route und Zielrotation dagegen
+vollständig prüfen. Tatsächlicher Nav2-Plan/13 RPP-/Goalcheckerparameter sind
+Voraussetzung. Ein unbekanntes Padding wird nicht zum Eigenkörper erklärt.
+Körperbeleg ist an Anfangsraum/Karten-Odometriebezug gebunden: normale Raster-
+inhaltsupdates verkleinern ihn nur; neuer Kontext/Raster/Bezug lässt ihn
+verfallen, niemals mitwandernde Blase. Dies präzisiert ältere pauschale
+Fingerprint-/Vollrundblickanforderungen; historische Messungen bleiben erhalten.
+
+Messvalidität 120 ms, Frische/Integration 180 ms und begrenzter Auftragserhalt
+sind getrennt. Gemeinsamer Core in passivem Reader/aktiver HWT-Basis: 2 s
+Diagnosefrist, zwei Versuche je Readerlebensdauer, keine verworfenen Odomdaten,
+Rebase oder verlorenen Zählerdeltas. Verbraucher maximal 5 s / zwei Recoveries
+je HWT-/Radquelle. Resume nur mit belegter Kontinuität, Originalstempeln,
+Stillstand/Fusion/Route/Kindterminal/Gate-ACK. Alte 120,874265-ms-Paarverletzung
+mit 212,127149-ms-alter Gateprobe exakt reproduziert: Erstgrund Readerzeitfenster,
+danach Kontinuität unbewiesen. Spätere gute Paare/0 RPM heilen das nicht.
+
+1.493 Regressionen, isolierter Fünfpaketbuild und verbundene A–H-Fälle im
+dokumentierten Umfang bestanden. Mehrere autonome synthetische Folgeziele,
+später nach neuer Karte zulässiger Scan, Timing-HOLD und getrennte HWT-/Rad-
+ereignisse. Historische und neue vollständige 2π-Dauerprobe bleiben negativ:
+neuer 259,27-s-Versuch mit bis 515,70 ms Rohquellenlücke/Budgeterschöpfung;
+kurze positive Zulassungstests beweisen keinen abgeschlossenen Vollscan.
+
+Genau ein neues reales 720-s-Messfenster mit gleichem installierten Kandidaten:
+HWT-Recoveries bei 162,718/401,729 s, dritte Rawdriverstörung nach 583,261 s
+terminal `hwt_recovery_attempt_limit` (`Zeitueberschreitung nach 0/14 Bytes`).
+Radreader am Fensterende 13.921 Paare ohne Timingfehler, größtes Paar 108,118 ms;
+kein realer Encoder-Recoveryfall. Geometrie separat negativ: 33 unbekannte
+Startkonturzellen / 0,021089 m² Außenanteil, kein berechneter Startkandidat.
+Die optionale Rundblickentscheidung löst diese beiden Grenzen nicht.
+Kein aktiver Wechsel, 0 Missionen/Nav2-Kinder, ausschließlich Nullbefehle.
+Messprobe beendet bei 720,016 s; rein lesender Abschluss-/Stoppnachlauf noch
+185,994 s offen ausgewiesen. Danach alle manifestierten Prozesse/Handles frei,
+zwölf frische FC03-Paare Position/RPM null. Kein weiterer Neustart/Fahrversuch,
+keine unbewiesene Hardwareursache. Private Belege in
+`~/.local/share/amadeus/tests/metric-adaptive-start-20261001/`, Hauptkopie
+unverändert, Stufe 3 offen, **System eingeschaltet lassen**.
+
+## 01.10.2026 – HWT-Pollzustand und feste Start-Egress-Geometrie getrennt
+
+Nutzerauftrag auf `2a0e19d`, Funktionsstand `a6f31bf` im bestehenden PR #105.
+Explizites Entwicklungsopt-in setzt 50-ms-Antwortfrist/300-ms-Rohfrische.
+Frischer Originalwert bleibt bei transientem Pollfehler nutzbar; verspätete
+Antwort verworfen, kein Restempeln. Zwei echte HWT-HOLDs im rollenden 60-s-
+Fenster, jeder absolut 5 s; keine Task-ID-Rücksetzung. Noch frischer korrigierter
+Originalwert kann nach verworfener Grenzmessung erhalten bleiben; kein
+Integrieren der Lücke, keine Änderung der 100-ms-/800-Sample-Kalibrierung.
+Legacy 30/200 ms, Encoder 120/180 ms und harte Fehler bleiben erhalten.
+
+Start-Egress im bestehenden Explorer: fester unbekannter Ausgangsbestand
+beider Raster, keine neue Beanspruchung/Annäherung/Wiederbetretung; ganzer
+reservierter Körper entlang tatsächlicher RPP-Kurve und strenge Zieltoleranzen.
+Anker-/Raster-/Kontextwechsel entzieht die Ausnahme endgültig. Nach nominalem
+Verlassen bleibt der Bewegungsbeleg gekoppelt, solange eine Drehung noch den
+Bestand berühren könnte. Keine globale 33-Zellen-Liste oder fahrende Blase.
+
+1.564 Regressionen sowie gerätefreier Drei-Ziel- und HOLD/ACK/Resume-Graph
+bestanden. Reale kurze Schlussmessung nach gemessener Portprüfungsoptimierung:
+HEALTHY 36,379 s, terminale hostseitige Messzeitprüfung 54,880 s innerhalb
+60,008-s-Fenster. Zwei vorherige Pollfehler nur degraded, null echte HOLDs.
+Keine bewiesene Hardwareursache. Aktuelle Karte unabhängig: 22 Kandidaten
+alle unzulässig; keine reale Mission oder Ziel-/Passagenabnahme. Historischer
+720-s-/33-Zellen-/2π-Negativbefund bleibt separat erhalten.
+
+Isolierter Build, 100 Bytevergleiche und native Parameter gesichert;
+Live-Explorer-Abfrage während Initialisierung nicht verfügbar. Endzustand
+ROS beendet, Gerätehandles frei, zwölf FC03-Paare Position/RPM null,
+Hauptkopie unverändert. Private Daten ausschließlich lokal unter
+`~/.local/share/amadeus/tests/metric-egress-hwt-20261001/`. Rückfall Overlay
+weglassen/Opt-ins beim gestoppten Start deaktivieren; kein Installwechsel
+oder automatischer weiterer Realversuch. Nutzerklärung ausdrücklich:
+**ROS-Stack beenden, Rechner eingeschaltet lassen.** Details im aktuellen
+[STATUS-Abschluss](wohnungserkundung/STATUS.md#aktueller-abschluss-hwt-entwicklungsvertrag-und-start-egress-01102026).
+
+## 04.10.2026 – AP-06 native Integration und ehrliche Gesamtgrenze
+
+MASTERPLAN v1.3 beibehalten. Originaler Mission-/C++-BT-/Explorer-/Nav2-/SLAM-/EKF-Pfad mit realen Scan-/Safety-Knoten auf einem ausdrücklich gerätefreien Modell geprüft. Gezielte Integrationskorrekturen: aktuelle statt zukünftiger SLAM-TF, passweise identische Geometrieprüfung, Ziel-/Startbeweis getrennt und Vororientierung am tatsächlichen RPP-Carrot, ursprünglicher Planabbruchgrund erhalten. Begrenzte VL53-Räumendpunkte markieren keine Hindernisse; unveränderte getrennte Messwolken behalten diese Rolle. Eine bloße numerische Reichweitenlücke war wegen nativer Rasterrundung kein sicherer Rollentrenner. Native Rot/Grün-Gegenprobe bewahrt nahe Hindernisse.
+
+Bestehender Startadapter darf unter unverändertem Egress-/RPP-/Scope-/Sichtbeweis die erste nützliche nahe Vorwärtsposition prüfen, innerhalb vorhandener Suche/Frist und anschließend mit wirklichem Nav2-Plan. Keine feste Wegpunktliste, bewegte Weißblase oder neue Navigation. Die tatsächliche erste SLAM-Aktualisierung entzieht danach noch die feste Referenz; kein stilles Re-Ankern zur grünen Abnahme. Vollständiger Zustand und genau nächster AP-06-Schritt ausschließlich im [STATUS](wohnungserkundung/STATUS.md). Build/Regressionen sind grün, drei vollständige Gesamtmissionen negativ; Dokumentation/Komponentenprüfung bedeuten keine Realabnahme.
+
+App-Projekt auf lokalem Jetson und tatsächlich erreichbarer Ausführungsbackend sind getrennt: diese Werkzeuge bleiben in x86-Cloud ohne Roboterzugang. Keine neue LAB-1-Standardfreigabe nötig, technische Voraussetzungen weiter maßgeblich. Keine Jetson-/Install-/Autostartwirkung, ROBOT_TRANSFER unverändert; AP-01–05/Main/fremde Arbeit erhalten.
+
+## 05.10.2026 – AP-06 feste Referenz statt erneuter Rastererfassung
+
+Nutzer beauftragt gezielt Referenzreparatur und unveränderte Szenarien. `e54c954`/`3f66d73` erhalten die erste Odometriefläche und monotone Historie, lesen Pose/Korrektur zur gemeinsamen TF-Zeit und prüfen frische begrenzte Rasterprojektion plus ganzen Körper. Vollständige Zelldeckung und konservative Beobachtungsentnahme verhindern neue Unknown-Autorität; ungebundener AP-02-Fallback bleibt streng. Rechenzeit zählt in den ursprünglichen Quellenfristen; reine Geometriememoisierung ist keine Gesundheitsfreigabe. Bestehende Architektur/MASTERPLAN v1.3 und alle Schutzreserven erhalten.
+
+Software-/Regressionsprüfung grün, drei unveränderte Gesamtmissionen weiter negativ. Ursprünglicher Referenzablauf verschwunden, subzellige Deckungsverluste und echte Explorer-Verbrauchsfrischefehler bleiben sichtbar; keine vollständige autonome Erkundung/Realabnahme daraus ableiten. Einziger aktueller Befund und nächster AP-06-Schritt im [STATUS](wohnungserkundung/STATUS.md).
+
+Nutzer autorisiert nun ausdrücklich Jetson-Shutdown nach Abschluss; diese neuere Anweisung ersetzt den früheren Shutdown-Ausschluss. App-Lokalität und Befehlsbackend bleiben verschieden; fehlender tatsächlicher Jetson-Zugriff verhindert nur abhängige Zielsystemarbeit und Shutdown. Kein Cloud-Rechner-Shutdown, Deployment/Install-/Autostartwechsel, keine ROBOT_TRANSFER-Wirkung. Eigene Testprozesse/Container gestoppt; AP-01–05/Main/fremde Arbeit erhalten.
+
+## 05.10.2026 – laufende Reparatur der drei Gesamtmissionen
+
+Nutzer beauftragt die tatsächliche Behebung von 0/3. Bestehender AP-06-Branch,
+Basis `1b93694`, ursprüngliche Manifestfälle und MASTERPLAN v1.3 erhalten.
+Native Quellen-/DDS-/Geometriegegenproben, unabhängiges Gate-HOLD und
+gleichzeitige Positions-/Winkelprüfung des Goalcheckers reparieren weitere
+gemessene Integrationsfehler. Der gleiche begrenzte Approach-Suchbereich kann
+eine sichere alternative Zielpose liefern; allein der vollständig geprüfte
+wirkliche Native-Pfad erlaubt anschließend Bewegung. Keine Quellenfrist,
+Konturreserve, Unknown-Autorität, Budget- oder Abnahmelockerung.
+
+Neun native Komponentenfälle und mehrere gezielte Rot-/Grün-Regressionen
+bestanden; C32-Diagnose mit fünf Beobachtungsaufgaben/ganzer Passage ist wegen
+Restarbeit weiterhin negativ. Endgültige drei positive Missionen stehen aus.
+Einziger aktueller Arbeitsbefund und nächster Schritt im
+[STATUS](wohnungserkundung/STATUS.md), erhaltene Originalbelege dort verlinkt.
+Keine Hardwarefahrt, Deployment oder neuer AP; Jetson-Shutdown bleibt nur bei
+nachgewiesenem tatsächlichem Zielsystemkanal autorisiert.
+
+Die spätere A53-Auswahl ergänzt kurze öffentliche Beobachtungspositionen im
+bestehenden lokalen Suchraum und ursprünglichen 0,5-s-/5-s-Budget. Nur tatsächlich
+endliche unbekannte Grenzpunkte, ganzer Körper/Eigenweg und anschließende native
+Hin-/Abfahrtsprüfung erlauben den vorhandenen Navigationsbesitzer. Kein
+Startkörperprivileg, keine neue Erledigung, kein Reset erschöpfter Aufgaben.
+A53 selbst bleibt ein negativer Gesamtlauf; Komponentenbelege ersetzen ihn nicht.
+
+Private Start-Egress-Gültigkeit und Ablauf seiner Karten-/Sitzungsidentität
+sind unterschiedliche Zustände. A53–55-Regressionen halten den ungültigen
+privaten Bestand bei weiterhin gültiger Identität fest. Eine vollständig
+öffentliche kurze Beobachtung benötigt ausschließlich ihre aktuelle reguläre
+Geometrie/Sicht/Policy und nachfolgende native Planung, keinen Ablauf einer
+unbenutzten privaten Erlaubnis. Schutzprüfungen und Originalfristen bleiben.
+Nachtest-Fixtures enthalten zusätzlich den echten Kosten-Zentrumsfilter;
+diese Vergleichskorrektur erklärt den Stillstand nicht.
+
+
+Neue Rohkarte vor zugehörigem Status darf keine neue Freiraumautorität erteilen.
+Während eines bestehenden vollständig öffentlichen Nav2-Kinds ist eine
+Fortsetzung auf dem alten exakten Paar innerhalb des originalen Joinfensters
+zulässig, wenn die neue frische Rohkarte nur bisherige Freigaben entzieht.
+Originalstempel/Identität bleiben, ganzer Körper und aktuelle Route werden
+auf der verkleinerten Freifläche erneut geprüft. Private Anfangsbestände,
+neue Ziele und Receipts sind ausgeschlossen. B58-Diagnose zeigte andernfalls
+drei Abbrüche derselben Anfahrt; 190 betroffene Tests beweisen die begrenzte
+Reparatur, keine Gesamt-/Hardwareabnahme.
+
+
+Beobachtungsaufgaben gehören zu endlichen Grenzpunkten, nicht ausschließlich
+zu einem nahen schon besuchten Beobachterstandort. Nur aktuelle Sichtpunkte
+jenseits alter begrenzter Beobachtungsfläche einschließlich Revisit-Marge
+verhindern die Zielnähen-Zuordnung zu einer erledigten anderen Grenze.
+Gleiche Grenzidentität, benachbarte Try-/Fehlerkappen und Cooldown bleiben.
+Voll geprüfte öffentliche Sicht darf bei ausschließlich ausstehendem originalem
+Cooldown warten, statt unbewiesene Alternativen bis zum Auswahlfehler zu
+verarbeiten. Restaufgaben, Missionzeit und anschließende native Pfadprüfung
+bleiben; keine Abschlusserklärung aus Kandidaten oder bloßem Warten.
+## 06.10.2026 – AP-06: private Aufstellzellen sind kein öffentlicher Freiraum
+
+Die originale B60-Auswahl enthält 82 virtuell freigegebene, roh unbekannte Anfangszellen; ein nach der Abfahrt gewähltes Rückziel berührt 44 davon. B62 bestätigt drei reale Fahrtabbrüche nach einer einzigen qualifizierten Ankunft, ohne Passage. Bei gebundener TF-Referenz blieben alte private Anfangszellen entgegen dem Bewegungsvertrag nach gemessener Abfahrt freigegeben. Die Reparatur schneidet das feste erste Zellinventar monoton mit dem aktuellen vollständigen ungepaddeten Körper, erhält Anker/Referenz/Historie und verhindert Wiederfreigabe. Öffentliche Suche/Native-Abfahrt nutzen nur tatsächlich beobachtete Rohzellen. Tatsächliche Roh-Unknown-Berührung der aktuellen reservierten Kontur verlangt den ursprünglichen privaten monotone Egress-Beweis; ein vollständig beobachteter Körper erhält keine erste Abfahrtsausnahme. Fünf neue rote/grüne Regressionen und 235 betroffene grüne Fälle. Gesamtmissionsabnahme weiterhin separat nachweisen; keine Grenz-/Frist-/Historienlockerung, kein Hardwareinstall. Rückfall gezielter Revert ausschließlich eigener Reparatur, der die belegte alte Freigabelücke wiederherstellt.
+
+
+## 06.10.2026 – AP-06: native Zellmitten und pfadgebundene öffentliche Vorausrichtung
+
+B63 liefert echte NavFn-Pfade entlang der Zellkante statt der zugehörigen Costmap-Zellmitte. Der gepinnte NavFn-Patch paart Floor-Zellzuordnung mit Halbzellenrücktransformation; 492 direkt gegen die tatsächliche C++-Bibliothek ausgeführte Prüfungen zeigen 388 alte Fehler und anschließend keinen Fehler. Originaler Planerradius 0,28 m und Rohdaten bleiben unverändert. Der bestehende Dreheigner darf zusätzlich nur eine vollständig roh- und costmapbeobachtete reservierte Vorausrichtung auf den tatsächlichen 0,4-m-Controller-Carrot ausführen, wenn die gesamte native Folgefahrt einschließlich Stoppdrehung geprüft ist. Private Abfahrt und ein bereits aktives Nav2-Kind dürfen keine hypothetische zusätzliche Ausrichtung benutzen. Kandidatenchords sind kein tatsächlicher Native-Pfad und erhalten diese Zusatzannahme nicht. B64 und die ausdrücklich nicht abnahmefähige B65-Profilingdiagnose bleiben negative Gesamtläufe; grüne Komponenten- und Regressionstests belegen noch keinen Gesamtabschluss. Rückfall: eigene Reparatur gezielt revertieren beziehungsweise ausschließlich temporäres eigenes NavFn-Overlay abwählen. Kein Zielsysteminstall.
+
+## 06.10.2026 – tatsächliche Beobachter-Stopppose und öffentliche Drehreserve
+
+AP-06-Kandidat `d9ade6e`: echte B65-Wahl verspricht 24 endliche Sichtpunkte am Idealziel, Native-Stoppmodell erreicht keinen davon. Kandidatenchancen deshalb am modellierten Goalchecker-Stopp berechnen; nach tatsächlicher Native-Pfadbindung gegen unveränderten ursprünglichen Rohkarten-/Sichtpunktbestand nochmals prüfen. Prognose bleibt Potential, ausschließlich gemessene neue Rasterzellen zählen als Beobachtung. Begrenzte öffentliche Nahpositionen dürfen seitlich vor einer Engstelle liegen; vorhandenes 0,5-s-Hilfsbudget, vollständiger Weg/Drehbeweis und alle Nachbar-/Cooldown-/Trylimits bleiben erhalten. Räumliche Historie gilt an tatsächlicher Beobachterposition, nicht 15 cm weiter am Idealziel. Echte C++-Native-Komponentengegenprobe bestätigt einen gültigen Anfahr-/Abfahrweg mit 18 ursprünglichen Sichtpunkten; kein Gesamt- oder Realpositiv daraus. Radius-/Inflations-/Lookahead-Hypothesen negativ gemessen und nicht übernommen.
+
+## 06.10.2026 – Quellen-Callbackdispatch vor Health serialisieren
+
+B67 belegt Explorer-Rawprobe frisch, aber neuer Callback erreicht Guard vor dem älteren bereits dispatchten Callback. Eintrittszeiten werden erst im Guard erfasst und bilden damit eine Executorüberholung als vermeintlichen Sensorzeit-Rücklauf ab. `7a2b09e`: Sample-Callbacks je Quelle exklusiv, Quellen untereinander unabhängig; vorhandene explizite Wheelgruppe erhalten. Echte Zeitrückläufe bleiben hart, keine neuen Health-/Stempel-/QoS-/Fristregeln. Drei native ROS-Überholungsfälle rot/grün plus drei echte Timestamp-Rückläufe und unabhängige zweite Quelle belegt; 155 betroffene Tests grün. Vollständige Abnahmestufe ausschließlich STATUS.
+
+V17-Vollprüfung deckt zu breite Gruppenänderung in `7a2b09e` auf: zwei echte Gate-Callbacktests negativ. `b8189a9` beschränkt Quellenserialisierung auf tatsächlich reentrante Besitzer, erhält bereits serielle Gate-/Statuskopplung und explizite Wheelgruppen. Alle 160 gezielten Fälle einschließlich beider Gegenbeispiele grün; Original-V17-Fehllog erhalten.
+
+
+## 06.10.2026 – AP-06: Validierung des tatsächlichen Arbeitsstands
+
+Auf Nutzerwunsch aktuellen Dirty-Stand separat von HEAD/v18 geprüft. Ein grüner historischer Komponentenlauf qualifiziert spätere Teilbeobachtungsänderungen nicht; v19 belegt eine Regression der Planalternativenfreigabe. Produktcode in dieser Validierung erhalten, konkrete Behebung vor neuer Gesamtqualifikation. Originalrote Tests, HEAD-Gegenprobe, Install-/Quellhashes und Missionsteilstände dokumentiert; maßgeblicher aktueller Befund und nächster Schritt ausschließlich im [STATUS](wohnungserkundung/STATUS.md).
+
+## 06.10.2026 – AP-06: Lösungskonzept für die gemeinsame Missionsabnahme
+
+Auf Nutzerwunsch das Lösungskonzept im bestehenden [STATUS](wohnungserkundung/STATUS.md) konkretisiert. Neue v19-Regression und älterer Missionsstillstand werden kausal getrennt. Teilbeobachtung bleibt bis zum Gegenfall auf ursprünglichen Entscheidungsdaten eine Hypothese für den Stillstand. Aufgabenhistorie, aktuelle Restarbeit und geometrisch zulässige Folgeziele gemeinsam prüfen; ursprüngliche Schutz- und Versuchslimits erhalten. Finale Missionsergebnisse müssen einem identischen Softwarestand zugeordnet sein, mit vorab ausreichendem Speicherbudget. Konzeptarbeit ohne Produktänderung oder neuen Abnahmenachweis; keine zweite Roadmap.
+
+## 06.10.2026 – AP-06: belegte Restbeobachtung erhalten
+
+Nutzer beauftragt Umsetzung bis zu gemeinsamer 3/3-Abnahme. Kandidat `17fba88` behebt die neue Planalternativenregression und zwei auf ursprünglichen B70-Daten belegte Folgefehler: echter Teilgewinn wurde vollständig erledigt, sein kleiner aktueller Rest anschließend weggefiltert. Teilaufgaben behalten ID, Versuche, Cooldown und Fehlerhistorie; nur ihr vorhandener lokaler Rand erhält begrenzte Tangentialblicke. Ein späterer kompletter frischer Scope-Beweis darf sie im bisherigen Abschlussfenster auflösen, ohne Fortschrittszähler zu erfinden. Lossless Observerstream und Kapazitätsvorlauf sichern die vollständigen Originalereignisse und unveränderte 512-MiB-Mapsave-Reserve. Gegenproben und 2.134 direkte/2.116 registrierte Tests ohne Skips sowie Zwölfpaketbuild grün. Vollständige Missionen bleiben bis zur tatsächlichen Durchführung offen; aktueller Fortschritt ausschließlich STATUS. Rückfall gezielter Revert dieses Reparaturcommits; keine Hardware-/Installfreigabe daraus.
+
+## 06.10.2026 – AP-06: mehr Sichtpotential innerhalb derselben zulässigen Aufgabe
+
+`ea63493` verbessert ausschließlich eine bereits original zulässige öffentliche Zielwahl im Rest desselben 0,5-s-Hilfsfensters. Beide Positionen müssen lesend derselben vorhandenen Task-ID entsprechen; höhere endliche Punktzahl und niedrigere Originalkosten sowie voller Weg/Stopp/Drehbeweis sind zwingend. Kein neuer ID-, Try-, Cooldown- oder Fehlerreset. Der ursprüngliche A51-Erschöpfungsfall lehnt eine zuvor zu breite Umsetzung ab und bleibt in der finalen Prüfung grün. Tatsächlicher Gewinn bleibt gemessene Beobachtung, Potentialpunkte erzeugen keinen Receipt. 2.138 direkte/2.120 registrierte Tests ohne Skips und Zwölfpaketbuild grün; echte Original-Native-Hin-/Abfahrt der B73-Alternative separat belegt. Noch keine vollständige Gesamtpositive. Rückfall gezielter Revert ausschließlich dieses Commits; aktueller Gesamtfortschritt ausschließlich STATUS.
+
+
+## 06.10.2026 – AP-06: kostengerechte Reihenfolge innerhalb der ursprünglichen Nahzielhilfe
+
+Die B76-Auswahl 32 zeigt eine bisher nicht im ursprünglichen 0,5-s-Fenster erreichte seitliche Beobachtung mit 9 statt 4 endlichen Punkten und niedrigeren Originalkosten. Native C++-Anfahrt, reservierter Goalchecker-Stopp und ursprüngliche vollständige Abfahrt bestehen. Nur die vier bereits vorhandenen Randrichtungen werden nach dem absoluten Lenkwinkel zur tatsächlichen Pose sortiert. Kein neuer Kandidatenradius, Deadline, Taskbudget, Geometrie-/Quellenprivileg oder Plannerwechsel. Original-Gegenprobe rot und 46 gezielte Regressionen grün; Gesamtmissionen weiterhin offen, tatsächlicher vollständiger Nachweis ausschließlich im STATUS. B79/B86-Smac-Vergleiche negativ für vollständige Abfahrt und nicht übernommen. Rückfall: ausschließlich diesen eigenen Reihenfolge-Commit revertieren; frühere AP-06-Korrekturen erhalten. Hardwarewirkung wäre nur eine andere Wahl ohnehin vollständig geprüfter Beobachtungsziele; kein Install/Deployment am Roboter durchgeführt.
+
+## 07.10.2026 – AP-06 Quellenbindung und exakte Arithmetik
+
+Die aktuelle Korrektur bewahrt echte alte/neue Messungen getrennt: eine durch
+Verarbeitung veraltete Wheelbindung darf genau einmal durch eine bereits
+vorliegende neuere, zur TF-Pose passende Messung mit erneutem vollständigem
+Geometriebeweis ersetzt werden. Ein tatsächlicher Encoderkontinuitätsverlust
+bleibt gesperrt (B221: 197 ms, Gyro225: 330 ms bei unverändert 180 ms Grenze).
+
+Unbeweisbare lokale Restarbeit bleibt offen. Tatsächlich beobachteter Fortschritt
+kann einen bereits vollständig öffentlich belegten ausstehenden Rundblick vor
+weiteren Zielabfragen priorisieren. Keine Beobachtungen/Zähler erfunden.
+
+Native Mathematik ist ausschließlich optionaler Rechenkern mit separatem NumPy-
+Oracle, kein Motion-/Frischebesitzer: Fläche und Kontaktvertices exakt erhalten,
+Originalinventare und Historie bleiben bindend. A227-Eingang vorher >5 s,
+mit Distanz- und Clippingkorrektur 4,195 s und geprüftes Startziel. Dies ersetzt
+keine ganze Mission; verbindlicher aktueller Abschlussstand steht im STATUS.
+
+Die neu vorgezogene private Nahsuche (`5612878`) repariert den tatsächlichen
+A227-Auswahlgegenfall auf 0,964 s statt >5 s; alle V45-Tests/native Fälle grün.
+Whole-Matrix bleibt 0/3: robuste Startfläche und reale Quellen-/Posekette sind
+separate ungelöste Grenzen. A244 lokalisiert 138 fehlende äußere Rohzellen des
+ursprünglichen Trackingbands. MASTERPLAN AP-03 verlangt dafür konstruktive
+Abdeckungsvorbereitung statt identischer Fehlstartserien; separates Paket
+`wohnungserkundung/AP06_STARTBEOBACHTUNG_BLOCKER.md` erstellt. Keine gefälschten
+Freiraum-/Frischewerte oder nachträgliche Abnahmesenkung.
+
+2e5e1fd: Encoder-/TF-Abweichung nimmt nach terminalem Child und bestätigtem
+Stillstand am vorhandenen begrenzten Neuprüfpfad teil. Grenzwerte und Historie
+unverändert; Originalgegenfälle 3 rot/9 grün, V46 2371 direkte/2353 registrierte
+Tests und 9/9 native Fälle grün. C248 nutzt den Pfad tatsächlich, scheitert danach
+an Geometrie und endet regulär nach 900 s. Cancel249/Gyro250 bestehen. Keine
+Gesamtabnahme. Tatsächlich abgelehntes Paar wird statt späterer Beobachterwerte
+gesichert. Bericht: wohnungserkundung/REPARATUREN_AP06_20261007.md.
+
+
+## 10.10.2026 – kontinuierlicher Startprüfer als lesender Ersatzkandidat
+
+Nutzer beauftragt Ersatz der nicht nutzbaren Startprüfung. Neue reine Geometrie
+prüft vollständigen geraden Vorfahrtkorridor mit analytischer Headinghülle und
+exakten Zellschnitten; keine reine Entfernung von Raster-/Interpolationsreserve.
+Aktive Startprüfung bleibt bis realer Quellen-/Regler-/Historienqualifikation
+unverändert. Neuer Kandidat ist nur in der Offline-Startdiagnose eingebunden.
+47 gezielte Fälle und separater Zweipaketbuild bestanden. Original-Realproben
+bestehen ideal gerade, mit deklarierter Abweichung weiterhin nicht. Dieses
+Ergebnis ist weder Hardwarequalifikation noch erfüllter aktiver Ersatzauftrag.
+Rückfall ausschließlich neues Modul/Test und Diagnoseintegration abwählen;
+vorherige Korrekturen erhalten. Details im aktuellen STATUS/Vorlaufbericht.
+
+
+## 10.10.2026 – begrenzte Fahrt vorbereitet; gemessenen Stillstand verwenden
+
+Private Start-/Bindungs-/Missions-/Stoppskripte für separaten R5-Stand erstellt.
+Neuer passiver 180-s-Vorlauf und aktuelle Quellenbindung bestanden; sechs
+aktuelle Start-Geometrieproben weiterhin negativ. Kein aktiver Versuch.
+Audit korrigiert privaten Monitor: Soll-RPM sind keine Stillstandsbestätigung;
+gemessene Motor-RPM, gültiges Feedback und unverändert 180 ms Alter verlangen.
+Zwölf Gegenproben grün. Direkte Launch-PIDs geordnet beendet, FC03-Stillstand
+und unveränderte Bestandsinstallation nachgewiesen. Aktueller vollständiger
+Befund im STATUS/Vorlaufbericht; keine weitere pauschale Freigabe ausstehend.
+
+## 11.10.2026 – AP-06: freien ARM-Kern für Explorer nutzen
+
+Der bisherige Gesamtprüfstand belegte Graph 0–2, Quellen 5 und endliche Sensoren 4; Kern 3 blieb frei. Nur der vorhandene Explorer wird auf diesen freien Kern gelegt, alle originalen Welten, Quellempfangszeiten, fünf Sekunden Auswahl und übrigen Missions-/Schutzbudgets bleiben erhalten. Auf installiertem Kandidat e9e69f9/R24 erreicht A dadurch erstmals ein echtes selbstgewähltes natives Ziel (16,48 cm simulierte Bewegung); die zweite Auswahl scheitert weiterhin. Diagnose mit eingefrorenen echten synthetischen Entscheidungsdaten bestätigt die vorhandene Aufgabenhistorie. Kein vollständiger Missions- oder Hardwareerfolg. Änderungen betreffen ausschließlich die gerätefrei isolierte Startverteilung; Rückfall durch Revert dieses Werkzeugcommits. Private Originale arm-spare-cpu-a und arm-spare-cpu-decisions bleiben erhalten.
+
+## 11.10.2026 – AP-06: identische Rasterrechnung gebündelt
+
+Originale zweite Auswahl aus arm-spare-cpu-decisions mit unveränderter Aufgabenhistorie profiliert: 2,903 s, davon 1,369 s im Suchmaskenpfad; zehntausende skalare Rastertransformationen. Die Kostenaufnahme verwendet jetzt denselben Zellmittelpunkt, dieselbe Quaternionformel, Rechenreihenfolge und floor-Abbildung als NumPy-Feldoperation. Keine neuen freien Zellen, Route oder Sensorgültigkeit dadurch. 27 zellgenaue Vergleichsfälle mit gedrehten Rastern, Grenzkontakten und Kosten −1/0/90/91/100 sowie vorhandene Mutations-/History-/Geometriefälle: insgesamt 79 gezielte Tests bestanden. Gleiche Originalauswahl profiliert 1,789 s, identisches Ziel, 62 Punkte und Evidenzhash. Offline-Komponentenbeleg ohne Fahr-/Missionsautorität; neue Gesamtprüfung folgt. Rückfall Revert dieses Commits; Bestandsinstallation bleibt erhalten.
+
+## 11.10.2026 – AP-06: unbenutzte Erstbesuchs-Evidenz nicht vorab hashen
+
+Original-C-Profil: 13 lokale Hashes vor erstem Versuch, 2,616 s im profilierten Live-Lauf. Neue notwendige Policy-Vorabfragen verwenden deren bestehendes optionales leeres Evidenzfeld ausschließlich in der aktuellen Auswahl und bei vollständig unbesuchter Historie (keine Versuche, Fehler, erledigten oder teilbeobachteten Aufgaben). Finale Kandidatenauswahl bindet weiterhin den vollständigen tatsächlichen Hash. Original-A227-Gegenprobe rot: elf statt eines Hashs; 29 gezielte Gegenfälle nach Korrektur grün, einschließlich vorhandener Historie, Cooldown, Caps, fehlender Route/Sicht und mutierter Daten. Eingefrorenes C: 2,730 → 1,611 s im Vorversuch, identisches Ziel, 149 Punkte und Hash; tatsächliche Source-Gegenprobe ebenfalls gebunden. Kein Quellen-/Frische-/Gesamtbudget geändert, keine Bewegung hieraus freigegeben. Neuer vollständiger Kandidat und Originalgesamtfälle bleiben erforderlich. Rückfall Revert dieses Commits; Bestandsinstall erhalten.
+
+## 11.10.2026 – AP-06: identische endliche Beobachtungsstrahlen gebündelt
+
+Originale A-Entscheidungsdaten zeigen 174 geplante Punkte im späteren Originalraster sämtlich beobachtet und durch spätere Originalstrahlen bestätigt; Runtime zählte dennoch null. Kein rückwirkender Missionspositivnachweis. Profil der identischen reinen Strahlprüfung: 34.841 skalare Transformationen, 0,810 s. Optionale gebündelte Produktionstransformation prüft identische linspace-Proben, floor-Zellen, Endpunkte und beide diagonalen Seitenzellen; unbekannte/belegte Zwischenelemente bleiben ablehnend. Neu 0,063 s und identische 174 Nachweise. 175 gezielte Fälle plus 24 getrennte Original-/Batch-Negativfälle bestanden. Sensorfrische, Zwei-Sekunden-Beobachtungsfenster, Abschluss-, Cancel-, Stop- und Gesamtfristen unverändert; keine Quelle neu gestempelt. C-Erstauswahl mit tatsächlich geladenem unverändertem nativen Sweep: 1,616 s, identisches Ziel/149 Punkte/Hash. Frühere Source-Gegenprobe mit nicht verfügbarer alter nativer Erweiterung als Fallbackdiagnose getrennt erhalten. Neuer einheitlicher Build und Originalgesamtvergleich erforderlich. Rückfall gezielter Revert; allgemeiner Funktionsaufruf erhält skalaren Default.
+
+## 11.10.2026 – AP-06: ursprünglicher v5-Gesamtvergleich und kurze Erstbeobachtung
+
+14 Pakete separat gebaut, 154 identische Produktdateien, 2.714 eindeutige Testfälle nach dokumentierter reiner Wrapperreparatur bestanden. Erste echte Beobachtung A nun 174 Zellen, aber ursprünglicher Gesamtvergleich weiter 0/3: spätere Auswahlbudgetfehler, B nur 2/2 Ankünfte/Beobachtungen, keine ganze Passage. Separate zusätzliche CPU-Zuweisung ohne Gesamterfolg wieder zurückgenommen; Diagnosedatenerfassung einmal schon am echten 346-ms-Quellaussetzer gescheitert, kein Auswahlbeleg. Rein eingefrorene ursprüngliche A-Anfangsgeometrie erlaubt 40 cm, lehnt 45 cm ab. Früheste 30-cm-Auswahl endet unter unveränderter RPP-Toleranz rechnerisch nach 15,25 cm. Kurze Suche prüft deshalb dasselbe lokale Intervall von seinem entfernten Ende; vollständige Route, endliche Sicht und Historie bleiben nötig. Keine automatische Erweiterung von Raum, Zeit, Frische oder Bewegung. Neuer Kandidat/Gesamtnachweis erforderlich. Hardware/Bestandsinstall bleiben erhalten; eigener gezielter Revert ist der Rückfall.
+
+Nachprüfung dieser kurzen Priorität: echte vorher negative RPP-Prognose 15,25 cm, anschließend 30/30 gezielte Fälle bestanden. Ursprüngliche eingefrorene ARM-Anfangsdaten wählen nun 43 cm, 177 endliche potenzielle Punkte, unveränderter vollständiger Evidenzhash, 1,246 s. Keine neue reale Beobachtung oder Gesamtqualifikation daraus.
+
+## 11.10.2026 – AP-06: Ursachenfolge im Produktergebnis erhalten
+
+Erster beobachteter Auslöser wird separat kopiert, Folgereaktionen auf 40 begrenzt und terminaler Grund separat erhalten. Scanversuch bindet originale Dauer/Winkel/Sollrate; Navigation bewahrt den ersten Stopgrund unabhängig von späteren Reaktionen. 136 betroffene Fälle bestanden, auch verworfene native Elternroute vor terminalem Budget. Reiner Ergebnisbeleg ohne Entscheidungsänderung. Ältere Zwei-Beobachtungs-Scanmessung: 5,6421 rad, ungefähr 151 s Observerzeit, etwa 18 s Stillstand, mittlere Ist-Drehung 0,03743 rad/s. Sollwerte .08/.024 passen zum bestehenden .3-SlowZone, aber ohne vollständige Monitor-Spur keine Gesamtkausalität behauptet. Exakte Routenwiederverwendung ohne gemessenen Gewinn vollständig verworfen. Gemeinsamer Build/Originalmissionen und drei aufeinanderfolgende Beobachtungen bleiben notwendig. Rückfall gezielter Revert der Ergebnisfelder/Hooks; keine Hardwarewirkung.
+
+## 11.10.2026 – AP-06: gemeinsamer Korrekturkandidat v11 bleibt 0/3
+
+Sauberes `b58b257`, separater 14-Paket-ARM64-Build, 157 Quelle-Installgleichheiten und 756 Installhashes. Tatsächliche Vollregression 2.933 Fälle ohne Fehler/Skip. Originale A/B/C unverändert 0/3: A zwei Beobachtungen/0,728097 m, B keine/0,311323 m, C eine/0,712181 m. A misst 6,29505 rad Scan, Status dennoch am 150-s-Limit unterbrochen, danach getrennte Footprint-Verwerfungen und Auswahlbudget 5,09361 s bei 2,02131 s Thread-CPU. B zuerst Egress mit neuer unbekannter Fläche/Belegung, C zuerst Scangeometrie ungültig. Kein bewiesener universeller Auslöser. Alle Kinder terminal und vier Kommandos null; keine reale autonome Abnahme. 1.048 Bestandsinstallhashes gleich. Neuer Signatur-/Kopiervermeidungsversuch ohne Gewinn nicht übernommen. Weiter nur gemessen reine Geometrie verringern, Schutzgrenzen bewahren. Rückfall private Laufzeit abwählen bzw. eigene begrenzte Commits revertieren.
+
+## 11.10.2026 – AP-06: optionales Geometriefenster gemeinsam verbrauchen
+
+Echter adaptiver Gegenfall: 2,0278 s öffentliche Verfeinerung plus drei erneuerte .5-s-Seitenfenster (insgesamt 3,5372 s) vor notwendiger Schlussarbeit. Bestehende 2-s-Zuteilung jetzt pro Auswahl gemeinsam genutzt; ursprüngliche 5 s und alle Quellen-/Aufgaben-/Gesamtfristen unverändert. Originale eingefrorene Auswahl 4,5049 → 2,9637 s mit identischem Ziel, 102 Punkten und Evidenzhash. 180 betroffene Fälle positiv. Keine Entscheidung durch Erfolgsstub ersetzt; kein Fahrrecht gespeichert. Andere Reuse-/Rasterpaarversuche ohne klaren Gesamtgewinn verworfen. Neu gemeinsamer Build und ursprüngliche Missionen erforderlich; letzte Abnahme bleibt 0/3, reale Folge offen. Rückfall nur diese Zuteilung/Ergebnisfelder revertieren.
+
+## 11.10.2026 – gemeinsamer AP-06-Kandidat v12 bleibt unvollständig
+
+Sauberer Softwarestand f7138cf, separates v12-Install: 2.936 gesammelte
+Produktfälle positiv. Originale A/B/C 0/3. B erreicht drei eigene Beobachtungen
+und 1,272521 m, inklusive vollständigem optionalem Scan im ursprünglichen
+Budget; keine volle Passage/Weitererkundung. A endet nach Egress-Verwerfung
+am 5-s-Auswahlbudget, C nach Verarbeitungsfrischeverletzung und einer
+Beobachtung am gleichen Budget. Die gemeinsame optionale Zuteilung beseitigt
+nicht jede teure Restarbeit. Keine höheren Fristen oder Gesundheitsannahmen
+als Folgerung. Weiter konkrete Quellen-/Geometrieübergänge prüfen.
+Beleg: docs/wohnungserkundung/evidence/ap06-correction-v12-20261011.json.
+
+## 11.10.2026 – AP-06 Planner-Topic gehört zur aktuellen Navigationsphase
+
+NavFn veröffentlicht auch reine ComputePath-Ergebnisse auf /plan. Aktuelles
+Ziel/Kontext und Endpunktdistanz allein bestimmen keinen Navigationsbesitzer.
+Topic-Update nur beim gleichen aktiven Nav2-Kind; neuer Dispatch-Stempel
+schließt vorherige Query-Veröffentlichungen aus. Eigene explizite Queryantwort
+bleibt vor Bewegung voll geprüft. Drei rote Gegenfälle vor Änderung, danach
+174 Fälle grün, einschließlich tatsächlichem adaptivem Elternpfad.
+Kein Grund, jede ursprüngliche Pfadverwerfung hiermit zu erklären: der alte
+A-Task-4-Plan entsprach exakt dem Querypfad. Rückfall nur dieser begrenzte Diff.
+Beleg: docs/wohnungserkundung/evidence/ap06-plan-publication-owner-20261011.json.
+
+## 11.10.2026 – AP-06 exakte Query behält ihr Messfenster
+
+Nach erster Beobachtung fünf identische Nav2-Readonlypfade bei unveränderter
+synthetischer Karte; abgelehnte Halteposition ohne ursprüngliche Sicht.
+Näherer unversuchter Frontier verdrängte Historie derselben exakten Query,
+Hashvergleich unterschiedlicher Ortsfenster wirkte wie neue Daten. Zwei rote
+Gegenfälle einschließlich echter adaptiver Auswahl; danach 110/104 betroffene
+Fälle grün. Exakt gleicher versuchter Zielpunkt priorisiert ursprüngliche
+Historie/Messfenster mit bestehender 1e-12-Präzision. Andere Querypositionen,
+neue endliche abgeschlossene Sichten, Cooldown und räumliche Caps unverändert.
+Keine neue Fahrfreigabe. Causaldiagnose bewusst über eigene PID beendet,
+unvollständiger Ergebnis-/Reportingbeleg zählt nicht als Mission. Hashcache
+und größere Nativbatch mangels verlässlichem Gesamtgewinn verworfen. Neuer
+gemeinsamer Kandidat/Originalvergleich nötig. Rückfall nur Identitätsdiff;
+Beleg docs/wohnungserkundung/evidence/ap06-exact-query-identity-20261011.json.
+
+## 11.10.2026 – AP-06 v13: Schutzfälle bestanden, volle Missionen offen
+
+Gemeinsamer sauberer Produktstand a4b4e35, 14 private Pakete/157 Quellgleichheiten,
+2.946 gesammelte Fälle positiv. Originale A/B/C weiterhin 0/3, zwei/eine/eine
+Beobachtungen; vier Kommandoströme null, sämtliche Kinder terminal. Originale
+Cancel/HOLD 2/2 positiv; HOLD-Stopp ist kein Wiederaufnahmebeleg. A erster
+Sichtverlust, später partieller Scan und zweite Beobachtung, terminal Fahrtor-
+Encoderalter 184,949 ms über 180 ms. Gleichzeitige 208–215-ms-Quellenprozesspause
+belegt, Grund unbewiesen; kein realer Busfehler daraus. B/C getrennte Auswahl-
+budgetenden. Tatsächlicher gekappter B-Aufruf eingefroren: live 5,390469 s/
+2,189939 s CPU, Replay 3,594412 s/reiner 90-Punkt-Vorschlag. Signaturen/Hashes
+0,754/0,704 s gemessen. NumPy-Vollvergleich und nativer Bytevergleich langsamer,
+beide ohne Produktdiff verworfen. Keine höheren Budgets, neue Gesundheits-
+annahmen oder Hardwarefahrt. Nächster konkreter Schritt/Beleg im aktuellen
+STATUS und evidence/ap06-correction-v13-20261011.json; Rückfall privates Overlay
+abwählen oder begrenzte eigene Commits revertieren.
+
+## 11.10.2026 – AP-06 unbeteiligte Historie verursacht unnötige Karten-Hashes
+
+Tatsächlicher adaptiver Gegenfall: elf lokale Digests bei nur einem unbesuchten
+Ziel ohne relevante versuchte Nachbarn, vor Änderung negativ. Jetzt entfallen
+nur ungenutzte Preselection-Hashes ohne eigene Historie und ohne Nachbarn an
+allen geprüften Ziel-/Stoppositionen. Eigene/relevante Historie und endgültiger
+Kandidat behalten vollständige aktuelle Evidenz. 151 eindeutige gezielte Fälle
+positiv. Aufgezeichneter synthetischer terminaler B-Aufruf, gleicher v13-
+Nativkern: acht → drei Digests, Profil 3,594 → 3,032 s, identische Auswahl/
+90 Punkte/Evidenzhash/Ranking, ursprüngliche Zähler erhalten. Keine gemeinsame
+Abnahme daraus; neuer gemeinsamer v14-Vergleich folgt. Quellenpause getrennt
+offen. Rückfall eigener begrenzter Performancecommit; kein Budgetreset oder
+Quellen-/Bewegungsrechtcache. Beleg im aktuellen WE-STATUS.
+
+## 11.10.2026 – AP-06 v14 negativ, reine Routenbindung reduziert Wiederholungsarbeit
+
+Gemeinsamer a6d5bbd/v14: 14 private Pakete, 2.954 gesammelte Prüfungen positiv,
+ursprüngliche Missionen 0/3. B erreicht vier selbst gewählte Beobachtungen;
+alle drei terminal am ursprünglichen 5-s-Auswahlbudget, vorher verschiedene
+Scan-/Join-/Sichttrigger. Originale Cancel/HOLD 2/2; HOLD fortgesetzt und zwei
+Beobachtungen, aber ursprünglicher Fall ausdrücklich keine Resumequalifikation.
+Neuer tatsächlicher Signaturgegenfall: 4.484 Rasterreads. Exakte Inhaltsbindung
+nur innerhalb einer reinen Route teilen, vollständig vor Rückgabe auditieren;
+Änderungen an Inhalt/Masken/Referenz/Egress/Scope/Konturparametern verwerfen
+Auswahl. 166 eindeutige gezielte Prüfungen, drei identische native Profilpaare
+mit gleichem Ziel/90 Punkten/Hash/Ranking und geringerer Laufzeit. Kein Gesundheits-
+oder Bewegungsrechtcache; Quellen-/Dispatch-/Budgetprüfungen unverändert. Neue
+gemeinsame v15-Qualifikation folgt, reale Folge weiter offen. Rückfall begrenzter
+eigener Performancecommit/private Overlay-Abwahl. Belege im aktuellen STATUS.
+
+## 11.10.2026 – AP-06 v15 negativ, native Stoprotation als begrenzter Vorschlag
+
+V15/1d03a1f: 2.965 volle Regressionen positiv, Originalmissionen 0/3, Cancel
+positiv, HOLD ohne Einspeisung schon am Auswahlbudget negativ. C innerhalb
+Auswahlbudget, danach tatsächliche Schlussdrehung unzulässig. Nachgewiesene
+fehlende Zuordnung dieses read-only Geometriefehlers zu Routenverwerfung:
+echte adaptive Auswahl/echter nativer RPP-Sweep als Gegenfall zuvor rot.
+Nur Elternklassifizierung ergänzt; guard lehnt weiterhin ab, Vorgang wird
+mit Originalgrund/Versuchszähler verbucht, keine Aktor-/Kindwirkung. 281
+betroffene Prüfungen grün; Frame-/Nichtendlichfehler weiter terminal. V16
+gemeinsame Gesamtprüfung folgt. CPU-Stichprobe zeigt zusätzliche Threadarbeit,
+keine bewiesene gemeinsame Timingursache. Grenzen/Budgets unverändert.
+Rückfall eigener Klassifizierungscommit/private Overlay-Abwahl; Belege STATUS.
+
+## 11.10.2026 – AP-06 v16 negativ, privater Queryfehler eingeordnet
+
+Gemeinsamer dc84753/v16, 2.969 Regressionen positiv, Originalmissionen 0/3,
+Cancel/HOLD 2/2; HOLD nur Stopp, keine vollständige Wiederaufnahme. A scheitert
+an einer unzulässigen Anfangsdrehung eines nativen Vorschlags. Tatsächlicher
+adaptiver Gegenfall belegt fehlende begrenzte Verbuchung; Klassifizierung
+ergänzt, Drehguard und alle Schutz-/Budgetgrenzen gleich. 193 gezielte Tests
+positiv. 1-ms-Executor-Yield wegen verzögerter aktueller Nachrichtenzustellung
+verworfen, Null-Yield ohne Gewinn verworfen. Keine Realfahrt oder gemessene
+gemeinsame Fehlerursache. Weitere reine Rechenarbeit wird geprüft; gemeinsamer
+v17 folgt. Rückfall eigener Klassifizierungscommit/privates Overlay abwählen.
+
+## 11.10.2026 – AP-06 reine Inhaltsbindung innerhalb einer Auswahl
+
+Echter aufgezeichneter synthetischer adaptiver Aufruf vor Änderung 1.828
+Rasterinhaltsreads, Gegenfall rot. Reine Auswahl teilt die genaue Bindung,
+vollständiger frischer Audit vor Rückgabe; geänderte Eingaben/Parameter
+verwerfen alle Vorschläge, Ausnahme gibt Memo/Gruppe frei. 176 betroffene
+Tests positiv. Drei native Paare unter gleicher künstlicher DDS-Last: median
+3,909→3,265 s, CPU 2,396→1,997 s, 16 Reads, identische Auswahl/90 Punkte/Hash.
+Keine gespeicherte Gesundheit/Fahrfreigabe oder neue Budgets. Keine zusätzliche
+Executor-Pause. Gemeinsamer v17 folgt, aktuelle vollständige Missionen 0/3.
+Rückfall eigener Performancecommit/Overlay-Abwahl; exakte Belege WE-STATUS.
+
+## 11.10.2026 – AP-06 v17 kritisch ausgewertet
+
+60e894c sauber separat gebaut/auf Feature veröffentlicht; 14 Pakete, 157
+Vergleichseinträge für 155 eindeutige Dateien/756 Hashes, 3.717 Quellmanifestwerte übereinstimmend,
+2.976 Regressionen grün. Ursprüngliche Missionen weiter 0/3; A Egressverwerfung
+und unbewiesene Rohpose am Abschluss, B/C spätere Auswahlbudgets 5,890/5,707 s.
+Der lokale reine Rechenzeitgewinn genügt daher nicht für die Gesamtlast.
+Erste Auslöser bleiben getrennt; keine gemeinsame Ursache bewiesen. Originale
+Cancel/HOLD-Stopps separat im aktuellen STATUS, kein voller Resume-/Realbeleg.
+Falsche Prüfpfade/Ordnerstarts zählen nicht als Produktfehler oder positive
+Tests. Veraltete Jetson-Kandidatenangabe korrigiert; historisches Bundle bleibt
+historisch. Buildreview und exakte Belege veröffentlicht; weitere Ursachen-
+messung vor Änderung, Schutz-/Zeitgrenzen gleich. Rückfall eigene Commits
+gezielt revertieren/private Overlay-Abwahl.
+
+## 15.10.2026 – Selbstheilung statt Abbruch (Projektinhaber)
+
+**Entscheidung:** Ein Kundenroboter muss sich selbst heilen; Missionsende nur bei
+echten Ausnahmen (aktiver Not-Aus, Aktorfehler, dauerhaft fehlende Sicherheits-
+quelle, unsicheres Nav2-Kind, erschöpftes Heilungsbudget = „Hilfe benötigt“).
+Unbekannte Zellen sind Vorsicht, kein Verbot. VL53 dienen vorrangig dem
+Ausweichen. Rückwärtsfahrt nur entlang der eigenen, geraden, zuvor befahrenen
+Spur (max. 0,4 m, 0,05 m/s) ist freigegeben.
+
+**Grund (gemessen, v17-Rohdaten):** A scheiterte an einem float32-Rundungsrest
+von 0,2 nm, HOLD an einem 2-ms-Rennen zwischen Kartenstatus und Rohkarte, B/C an
+einem Rechenbudget im Stillstand. Keiner dieser Gründe war eine reale Gefahr.
+
+**Umsetzung:** gezielte AP06-Korrekturen (Toleranz, Status-vor-Rohkarte,
+optionaler Auswahl-Neuversuch) und neue Strategie `self_healing`
+(`explore/self_healing*.py`, Profil `config/self_healing_params.yaml`,
+`nav_mapping.launch.py self_healing:=true`). Details:
+`docs/wohnungserkundung/KONZEPT_SELBSTHEILUNG.md`.
+
+**Rückfall:** `self_healing:=false` (Default) = bisheriges Verhalten.
+
+**Nachtrag 15.10.2026 – Tempo im Unbekannten:** Solange der Korridor vor dem
+Roboter (1,0 m × 0,5 m) zu mehr als 2 % nicht kartiert ist, begrenzt der
+Explorer RPP über Nav2 `speed_limit` absolut auf 0,06 m/s (Entscheidung
+Projektinhaber). Ohne Karte/Pose bleibt die Begrenzung aktiv; am Missionsende
+wird sie freigegeben. Parameter `self_healing_unknown_*`, Obergrenze 0,08 m/s.
+
+**Nachtrag 15.10.2026 – Heilungsbudget:** Übernommen wie profiliert: „Hilfe
+benötigt“ nach 8 Fehlschlägen in Folge ohne Fortschritt, nach 30 Heilungen je
+Mission oder nach 600 s ohne Kartenzuwachs. Ziel erreicht oder Kartenzuwachs
+setzt die Folge zurück. Die Teilkarte bleibt erhalten.
+
+**Nachtrag 15.10.2026 – Hauptlinie:** `self_healing` wird die Hauptlinie der
+Erkundung; AP06 (`metric_frontier`) wird eingefroren, bleibt aber vollständig
+erhalten und per `self_healing:=false` aktivierbar. Gründe: Der Nav2-basierte
+Ansatz fuhr im August real autonom (Frontier-Ziele, Raumwechsel); AP06 erreichte
+in keiner Version eine vollständige Mission, und seine v17-Abbrüche waren keine
+realen Gefahren; die Schutzkette ist in beiden Wegen identisch; zwei parallel
+gepflegte Fahrlogiken verdoppeln den Aufwand. Bestätigung nach drei begrenzten
+Laborfahrten (Kriterien in KONZEPT_SELBSTHEILUNG.md).
+
+**Nachtrag 15.10.2026 – Abnahme:** Das AP06-Kriterium (≥ 95 % Referenzfläche,
+≤ 0,10 m, beide Türen inklusive Heck in einem Lauf) ist für reale Wohnungen zu
+streng und nur in Simulation messbar. Für die Hauptlinie gilt eine Abnahmeleiter:
+Labor (3/3 saubere Fahrten), Robustheit in Simulation (5/5 Störfälle geheilt),
+echte Wohnung (3 Läufe, alle zugänglichen Räume, Richtwert ≥ 90 % begehbare
+Fläche, kein Kontakt). Details: KONZEPT_SELBSTHEILUNG.md §11.
+
+**Nachtrag 15.10.2026 – Hilfe und „Weiter“:** Nach „Hilfe benötigt“ soll ein
+„Weiter“ in der App dieselbe Mission mit Gedächtnis fortsetzen (Arbeitspaket
+geplant, KONZEPT_SELBSTHEILUNG.md §12). Abnahme: Stufe 1 und 2 ohne Eingriff,
+Stufe 3 höchstens 1× „Weiter“ je Lauf und nur bei echtem physischem Hindernis,
+jeder Eingriff mit Grund protokolliert; langfristiges Ziel null Eingriffe.
+
+
+**Nachtrag 15.10.2026 – Rückfragen und VL53:** Teleop-Tempo bleibt unverändert.
+Es kommen keine Hecksensoren hinzu; Rückwärtsfahrt bleibt deshalb auf die eigene
+Spur begrenzt. Annahme des Projektinhabers: die VL53-8×8-Punktwolke deckt
+niedrige Hindernisse ab. Befund aus der Konfiguration (noch nicht gemessen): der
+Sensor trifft sie, aber alle VL53-Verbraucher verwerfen Punkte unter 0,05 m über
+`base_link` ≈ 0,14 m über Boden. Vor einer Änderung wird gemessen
+(`tools/kartierung/selbstheilung_stillstand_pruefen.py --vl53-s`); eine
+Filteränderung ist eine eigene Sicherheitsänderung (Kostenkarten,
+`collision_monitor`).
+
+**Nachtrag 16.10.2026 – VL53 gemessen:** Bei SH-1 v3 (Jetson, Stillstand)
+lieferte ein leerer Bereich 0 Treffer. 3 cm hohe Objekte sieht der VL53 nicht,
+5,5–10 cm sieht er, aber die Höhengrenze verwirft diese Treffer vollständig;
+15 cm wird überwiegend behalten. Der niedrigste mögliche Wolkenpunkt liegt
+geometrisch bei 0,084 m über Boden (0,50 m Reichweite, unterste Zeile −26,25°).
+Bodenpunkte entstehen erst ab mehr als 11° Neigung. Die Annahme „die
+8×8-Wolke deckt niedrige Hindernisse ab“ gilt damit heute nicht. Die Entscheidung
+über eine niedrigere Grenze trifft der Projektinhaber; die Messwerte stehen in
+`docs/wohnungserkundung/KONZEPT_SELBSTHEILUNG.md` §6.
+
+**Nachtrag 16.10.2026 – VL53-Höhengrenze (Entscheidung 7):** Der
+Projektinhaber hat entschieden, die Grenze nur im Selbstheilungsbetrieb auf
+−0,02 m über `base_link` (0,07 m über Boden) zu senken. Damit zählt jeder
+gültige VL53-Treffer in Kostenkarten und `collision_monitor`. Andere Modi und
+der eingefrorene AP06-Pfad behalten 0,05 m. Grund: Messung SH-1 v3 (leerer
+Boden 0 Treffer, 5,5–10 cm vollständig verworfen, tiefster möglicher Punkt
+0,084 m). Eigener Commit `5c285c0`; Rückfall `self_healing:=false` oder Revert.
+Objekte um 3 cm bleiben für den VL53 unsichtbar (Hardwaregrenze).
+
+**Nachtrag 22.10.2026 – Odometrie der Laborfahrten (Entscheidung 8):** Die
+Laborfahrten der Hauptlinie laufen mit HWT601-Odometrie. Der Projektinhaber
+hatte den HWT601 eingebaut, weil Amadeus auf den Küchenfliesen über die Fugen
+schwankte und ohne ihn keine saubere Karte entstand. Belegt durch die
+abgenommenen Realfahrten auf Branch `codex/hwt601-encoder-shadow`: Rundblick
+10.09.2026, Encoder −4,06° je Umdrehung gegenüber HWT/LiDAR, 16,6 mm
+Rumpfversatz auf den Fugen; Gerade 11.09.2026, Encoder-Gier 1,3° neben
+HWT/LiDAR. Eine erste Empfehlung „Standard“ beruhte auf einer Suche nur im
+Hauptstand und wurde nach dem Hinweis des Projektinhabers korrigiert. Lehre:
+Bei Hardwarefragen auch die Feature-Branches nach Abnahmen durchsuchen.
+
+**Nachtrag 22.10.2026 – Robustheitssimulation Stufe 2:** Die geschlossene
+Simulation (`tools/simulation/sh_robustheit.py`, echter Produktpfad, Mission
+wie aus der App) hat die Heilungsleiter bestätigt: VL53- und LiDAR-Lücken
+werden abgewartet, Volllast bricht nichts ab. Sie hat zugleich vier Dinge
+gezeigt, die vorher niemand gemessen hatte:
+1. Das Frontier-Ziel „nächste Zelle des Clusters“ liegt in Türöffnungen an der
+   Pfostenecke und in Verbindungen am ungesehenen Wandfuß. Der Roboter parkte
+   dort mit der Mitte im 0,28-m-Sperrsaum oder drehte mit der Vorderecke an
+   die Wand. Ziele brauchen Drehraum (0,45 m); umgesetzt im Explorer.
+2. Im Kartierbetrieb ist die OAK aus; die lokale Kostenkarte kennt nur, was
+   die VL53 nach vorn sehen. Der Regler prüft seine Kontur also nicht gegen
+   Seitenwände und Türpfosten (gemessen: 0 tödliche Zellen über dem Pfosten an
+   der engsten Stelle). Offene Entscheidung des Projektinhabers.
+3. Ein 10-cm-Hindernis liegt näher als etwa 0,41 m unter allen VL53-Zeilen;
+   2D-Räumen über es hinweg löscht seine Markierung. Offene Entscheidung.
+4. `slam_toolbox` schloss in der spiegelsymmetrischen Testwelt mehrfach falsche
+   Ringe (Karte um 1,7–3,3 m verbogen). Ohne Ringschluss bestanden die Läufe.
+   Wahrscheinlich durch die künstliche Symmetrie verstärkt; reale Räume prüft
+   SH-3.
+Lehre wie im Juli: Mehrere naheliegende Erklärungen (Rechenlast, zu kleiner
+Planerradius, fehlender LiDAR in der lokalen Karte allein) hat die Messung
+widerlegt oder relativiert; die Zielwahl war die Hauptursache. Einzelheiten
+und Zahlen: `docs/wohnungserkundung/STATUS.md`, Abschnitt 22.10.2026.
+
+**Nachtrag 22.10.2026 – Entscheidungen zur Stufe 2 (Projektinhaber):**
+- A+B: Kandidat X9 übernommen (`2f46799`, nur `self_healing`): LiDAR markiert
+  Seitenwände in der lokalen Kostenkarte, räumt dort nicht; VL53 räumen erst ab
+  0,45 m. Vorab gemessen in 5 Simulationsläufen; real erst in SH-3 belegt.
+- C: Ursache der falschen Ringschlüsse nicht belegt (Posensprung 3,3 m ohne
+  Drehung ist keine Spiegelung). Erst Experiment mit unsymmetrischer Testwelt;
+  bleiben die Fehler, folgt ein Vorschlag für strengere SLAM-Schwellen.
+- D und Manifest v3: Abnahme nach Kartenabdeckung der erreichbaren Fläche
+  (≥ 95 %) und Kartenfehler ≤ 0,10 m statt Zielzähler; keine Ausnahme für
+  Teilenden. v2 hatte einen Lauf mit 3,3 m verbogener Karte bestehen lassen.
+  Ergebnisse bleiben nach der Manifestversion bewertet, mit der sie liefen.
+Lehre: Bei der Nachprüfung waren drei eigene Aussagen stärker formuliert als
+belegt (Drehung in der Verbindung nur mit Versatz kritisch, „0 Zellen über der
+Box“ nur aus einem X1-Lauf, Symmetrie nur Vermutung). Messung und Vermutung im
+Bericht ausdrücklich trennen.
+
+**Nachtrag 22.10.2026 (abends) – SLAM-Schwellen und niedrige Gegenstände:**
+Falsche Ringschlüsse traten auch in einer unsymmetrischen Testwelt auf (5 von
+6 mit dem aktuellen Explorer), mit strengeren Schwellen in 0 von 4. Der
+Projektinhaber hat sie **nur für den Selbstheilungsbetrieb** übernommen
+(`7d8ef37`, Launch-Argument `slam_params_overlay`). Niedrige Gegenstände unter
+etwa 15 cm sind eine **bekannte Sensorgrenze**: Die VL53 sehen nur ihre
+Vorderkante, beim Drehen trifft die Flanke den Rest; das vollständige Leeren
+der Nahbereichskarte in der Nav2-Recovery machte es schlimmer, ein Baum, der
+den Nahbereich behält (X10), verhinderte die Berührung aber auch nicht. Lehre:
+Der Baumkommentar „VL53/OAK markieren im nächsten Frame neu“ war eine
+ungeprüfte Annahme (OAK ist beim Kartieren aus, die VL53 sehen Nahes nicht).
+
+**Nachtrag 23.10.2026 – volle v4-Abnahme kritisch ausgewertet:** Mit den
+SLAM-Schwellen im Produkt bestanden 10 von 12 Läufen; beide Fehlschläge sind
+die bekannte Grenze niedriger Gegenstände, kein falscher Ringschluss in 18
+Läufen. Drei Lehren:
+1. Eine Heilungsentscheidung muss den Zustand zum Zeitpunkt der Entscheidung
+   prüfen. „Umsehen“ prüfte den Drehkreis an der Pose vom Beginn der
+   Schleifenrunde; nach dem Fehlversuch stand der Roboter 0,25 m weiter neben
+   einer Wand (Kontakt). Behoben in `ff05706`, Test schlägt auf dem alten Code
+   fehl.
+2. Erst messen, auch bei der eigenen Hypothese: Fast alle Heilungen kamen von
+   Reglerabbrüchen, weil `map`→`odom` zu alt war. Die naheliegende Erklärung
+   „SLAM datiert zu kurz vor“ (X11, `transform_timeout` 0,5 s) war falsch, die
+   Fehlerzahl blieb fast gleich; ein gröberes SLAM-Raster (X12) half nur
+   teilweise. Ursache offen; SH-3 misst Häufigkeit und SLAM-Last am Jetson.
+3. Was die Simulation nicht zeigen kann, ausdrücklich nennen: Ihre Odometrie
+   ist ideal. „0 Ringschlüsse“ heißt dort auch „0 echte Ringschlüsse“; ob die
+   strengen Schwellen bei realer Drift nötige Korrekturen unterdrücken, zeigt
+   erst eine reale Fahrt.
+
+**Nachtrag 02.11.2026 – Abnahmestufe 1 bestanden (SH-3):** Drei autonome
+Laborfahrten der Hauptlinie `self_healing` ohne Kontakt und ohne Eingriff,
+jeder Zwischenfall (VL53-Aussetzer, Lokalisierungslücke, Zielzeitüberschreitung)
+selbst geheilt; Karten nach Sicht sauber, im Laborraum also kein Hinweis, dass
+die strengen SLAM-Schwellen nötige Korrekturen unterdrücken. Lehre: Die
+geschlossene Simulation hat die SLAM-Last richtig vorhergesagt (Verlauf bis
+etwa ein Kern, verspätetes `map`→`odom`), der Jetson zeigte dasselbe Muster.
+Für die Wohnung ist das jetzt das größte gemessene Risiko. Vorher verlief die
+Kette über drei Prüfstufen (SH-1, SH-2, SH-3); zwei Abbrüche gingen auf
+Fehler in Prüfskript und Auftrag zurück, nicht auf den Roboter, und wurden
+von den lokalen Agenten richtig erkannt und regelkonform gemeldet.
+
+**Nachtrag 03.11.2026 – DR-1 Drehschwäche, Entscheidungen und Lehre:**
+Entscheidungen des Projektinhabers: (1) erst die Drehschwäche lösen, dann
+SL-1 Stufe B wiederholen und erst danach am Jetson abnehmen; (2) SL-1 A2
+(9 verworfene Scans aus der Aufnahme) als begründete Abweichung; (3) H4 bei
+Drehsperre erweitert: angesetzte Drehung zurücknehmen, dann bis zu 2 × 0,4 m
+auf der eigenen Spur zurück (vorher 1 × 0,4 m); (4) danach: seitliche
+Spurtoleranz 6 statt 3 cm und Erkundungsziele nur noch an Punkten mit Drehraum;
+(5) als Letztes: DR-1 mit dokumentierter Abweichung abgenommen, Drehraum-Regel
+wieder aus (sie versperrte Gänge und Türen, Abdeckung 0,72), 6 cm bleiben,
+Engstellen werden Arbeitspaket DR-2, SH-4 am Jetson aktiviert.
+
+**Nachtrag 04.11.2026 – SH-4 ausgewertet:** Entscheidung des Projektinhabers:
+SL-1 am Jetson abgenommen, DR-1 offen (berührungsfrei, aber zwei von drei
+Fahrten „Hilfe benötigt“ neben Gegenständen unterhalb der LiDAR-Höhe); erst
+Rohdaten (SH-4N, nur lesend), dann Lösung in DR-2. Lehre: Eine ehrliche
+Sicherheitsprüfung macht eine bisher verdeckte Lücke der Selbstheilung
+sichtbar. Vorher „funktionierte“ das Drehen neben niedrigen Gegenständen nur,
+weil der Regler sie beim langsamen Drehen übersah. Wer eine Prüfung schärft,
+muss im selben Zug prüfen, ob der Roboter dann noch einen Ausweg hat; die
+Simulation hatte keine Gegenstände unterhalb der LiDAR-Ebene neben dem Weg
+und konnte das nicht zeigen. Zweite Lehre: Die Vorprüfung prüfte die
+Motorfreigabe, nicht die Bereitschaft der Fahrquellen (jetzt ergänzt).
+
+**Nachtrag 04.11.2026 – Kurswechsel zur Einfachheit (Projektinhaber):**
+Produkt zurück auf SH-3 plus SL-1 (`037c41a`), DR-1-Fahränderungen
+zurückgenommen, DR-2 zurückgestellt, SH-4N zurückgezogen, Bestätigung mit
+SH-5. Lehre: Ein Simulationsmaß (Annäherung auf 2 cm zählt als Berührung)
+ist nicht die Wirklichkeit. Wer dagegen optimiert, ohne die realen Folgen zu
+messen, baut Sonderfall um Sonderfall. Der Projektinhaber hat das an zwei
+realen Hilfe-Stellen (Mülleimer, Bücherregal) als ein gemeinsames Problem
+erkannt. Künftig: Eine Verschärfung am Fahrverhalten braucht zuerst einen
+realen Befund, nicht nur einen simulierten.
+
+**Nachtrag 04.11.2026 (spät) – Entscheidungen des Projektinhabers:** (1) Die
+OAK-D wird nicht zur Hinderniserkennung eingesetzt (zu ungenau, später
+teilweise vom Arm verdeckt); Nahbereich bleibt LiDAR plus VL53. (2) Eine
+allgemeine Heilungsregel statt Sonderfällen: kein Fortschritt im Anlauf →
+zuerst die freigegebene Spur-Rückfahrt, dann dasselbe Ziel (`e8f00f6`).
+(3) Raumwechsel ohne neues Raumkonzept, schrittweise real öffnen: SH-6 ein
+Raum, SH-7 zwei Räume durch eine offene Tür (≥ 75 cm, ohne Schwelle),
+dann Wohnung. Lehre aus SH-5N: Der Kollisionsmonitor bremste richtig; was
+fehlte, war ein Schritt, der den Roboter von der Stelle wegbewegt.
+
+**Nachtrag 05.11.2026 – SH-6 bestätigt, SH-7:** Drei Laborfahrten mit der
+Regel ohne Hilferuf und ohne Berührung, 8–10 Ziele je Fahrt (bisher bestes
+Ergebnis). Die Regel löste dreimal aus, half demselben Ziel aber nie; Amadeus
+kam über andere Ziele weiter. Lehre: Ein Kriterium „bestanden“ belegt noch
+nicht, welche Änderung gewirkt hat; die Wirkung einer Regel steht in den
+Ereignissen danach, nicht in der Endbilanz. Für zwei Räume (SH-7) gilt im
+Selbstheilungsprofil ein Gesamtbudget von 40 min (`c444bca`, Entscheidung
+des Projektinhabers 04.11.2026).
+
+**Nachtrag 05.11.2026 (mittags) – Entscheidungen des Projektinhabers nach
+eigener Beobachtung von SH-6:** (1) Das Verhalten passt (Ausweichen vor
+eigens aufgestellten Papierkörben, Raum gut abgescannt): **Prototyp 1 ist
+eingefroren** = `src/`-Stand `e8f00f6` (SH-3 plus SL-1 plus Regel), am Jetson
+Release `selbstheilung-sh6-20261104_2140`, unverändert als Referenz und
+Rückfall. (2) Tempo: vorwärts +35 %, Drehen +25 % (`adbb39f`, nur
+Selbstheilungsprofil; Kollisionsmonitor, Rampen und Antriebsgrenzen
+unverändert), weil die Fahrten am Zeitbudget endeten. (3) Fokus jetzt auf dem
+Nachbarraum (SH-7), danach Wohnung. (4) **Räume und Türen bekommen in der
+Erkundung keine IDs.** Nach der Erkundung grenzt der Projektinhaber Räume in
+der App ab und benennt sie (vorhanden: `semantic_map_manager`, an die
+gespeicherte Karte gebunden); Raumziele fährt der Roboter später über
+`go_to_room` an (real nur per Opt-in und mit Lokalisierung auf der
+gespeicherten Karte). Die automatische Tür-/Regionserkennung aus AP-06
+bleibt eingefroren. Ob die Kette Erkundungskarte → Speichern → Räume zeichnen
+→ Raumziel mit Karten aus dem Selbstheilungsbetrieb durchgängig funktioniert,
+ist noch nicht geprüft; eigener Schritt nach SH-7.
+
+**Nachtrag 08.11.2026 – SH-7 (zwei Räume) nicht bestätigt:** Der Raumwechsel
+selbst gelang in zwei von drei Fahrten ohne Berührung und ohne neues
+Raumkonzept. Gescheitert ist jede Fahrt an derselben Grenze wie in DR-1
+gemessen: In engen Stellen (Flur mit Garderobe, Ecke) hat die Heilungsleiter
+keinen Zug, der Amadeus wegbewegt (Rückfahrt nur auf gerader eigener Spur,
+Umsehen nur mit freiem Drehkreis), und die Grenze „8 Fehlschläge in Folge“
+ist bei schnellen Abbrüchen in ein bis zwei Minuten erreicht. Lehre: Ein
+Raum allein zeigt diese Grenze kaum; eine Wohnung besteht zu einem guten Teil
+daraus.
+
+**Nachtrag 09.11.2026 – Fahrplan als roter Faden (Entscheidung des
+Projektinhabers):** Für die Selbstheilungslinie gilt MASTERPLAN §9: je
+Realtest genau eine Verhaltensänderung, die nächste Verbesserung parallel in
+der Simulation, Kriterien und Rückfall vorab, nach einem Fehlschlag zuerst
+Daten, Bestandenes wird eingefroren. Reihenfolge: SH-8 (AW-1) → SH-9 (EK-1:
+Rundblick, „gut genug“-Ende, kürzere Fehlversuche) → EK-2 bei Bedarf →
+Wohnung → Raumziele. Anlass: Der Projektinhaber beobachtete, dass Amadeus
+20–30 min im selben Raum umherfährt, obwohl ein Rundblick und wenige Fahrten
+den Großteil erfassen; gezählt verbrachte er 13–69 % der Fahrzeit in
+150-s-Anläufen, die das Ziel nicht erreichten. Die STATUS-Arbeitsliste führt
+den aktuellen Stand.
+
+**Nachtrag 10.11.2026 – Standortbestimmung (Entscheidung des
+Projektinhabers):** Die Richtung stimmt, aber seit dem 04.11. hing die Arbeit
+an einem Problem (Festsitzen dicht an Hindernissen): vier Korrekturen, fünf
+Testtage, kein realer Beleg. Entschieden: (1) ein Problem zur Zeit, alles
+andere geparkt; (2) Stellprobe statt langer Zufallsfahrten: Amadeus wird
+gezielt in die Lage gestellt, gemessen wird wenige Minuten (MASTERPLAN §9
+Regeln 6 und 7). Lehren: Ein seltenes Ereignis prüft man nicht mit langen
+Fahrten, in denen es zufällig eintritt. Die Simulation habe ich zweimal
+falsch gedeutet (kein „Einfrieren“; die 2-cm-Annäherungen waren mit dem
+echten Gehäuse gemessen Berührungen); ihre Urteile gelten nur mit der
+Messgröße, die das echte Gehäuse erfasst, und sie ersetzt keine Realprobe.
+Mehrere Pakete an einem Tag verstoßen gegen den Geist des Fahrplans, auch
+wenn nur eines auf den Roboter geht.
+
+**Nachtrag 13.11.2026 – SH-8 (erste Stellprobe):** Die neue Testform hat
+in einem Abend geliefert, was fünf Testtage mit langen Fahrten nicht
+lieferten: Ecke und Garderobe sind gelöst (AW-1, kein „Collision Ahead“
+mehr), an den Mülleimern ist die Ursache belegt. Der Kollisionsmonitor setzt
+im Modus „approach“ jede Bewegung auf null, sobald Punkte innerhalb der
+gepolsterten Kontur liegen, auch rückwärts; dorthin kommt Amadeus, weil die
+lokale Karte alles unter der gepolsterten Kontur löscht. Folge nach der
+Entscheidung vom 10.11.: genau eine Korrektur (KM-1 B), dieselbe Stellprobe
+(SH-8b). Lehren: (1) Real und Simulation zeigten denselben Mechanismus; die
+Simulation hatte ihn am 09.11. vorhergesagt, ich hatte ihn als „real nicht
+beobachtet“ geparkt. (2) Die Langsam-Zone bremst auch das Wegfahren nach
+hinten; das kostet Zeit, nicht Sicherheit, und bleibt geparkt, bis es misst,
+dass es stört.
+Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
+aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
+nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je
+Drehschritt), und die Hindernisschicht räumt die Fläche unter dem Footprint
+frei. Mehr Polster (K1) verschob das Problem nur. Wird der Regler ehrlich,
+zeigt sich die eigentliche Grenze: In Engstellen unter etwa 0,9 m kann
+Amadeus nicht drehen. Seine Selbstheilung braucht dort Rückfahrt und
+Zielpunkte mit Drehraum, nicht einen Regler, der es „irgendwie“ schafft.
+Erst messen hat hier zweimal Zeit gespart: Der vermutete Kandidat K1 wäre
+ohne Kontaktaufzeichnung übernommen worden.
+

@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "qualification": "software_only",
+  "plant": {
+    "integration_hz": 100,
+    "response_tau_s": 0.05,
+    "command_watchdog_s": 0.25
+  },
+  "sensor": {
+    "lidar_hz": 10,
+    "lidar_beams": 2160,
+    "range_max_m": 10.0,
+    "native_clockwise_mast_mask_deg": [
+      236,
+      304
+    ],
+    "ros_normalized_mast_mask_deg": [
+      56,
+      124
+    ],
+    "encoder_hz": 20,
+    "gyro_hz": 100
+  },
+  "budgets": {
+    "startup_s": 60,
+    "mission_s": 900,
+    "goal_s": 150,
+    "cancel_s": 3,
+    "stop_s": 1
+  },
+  "positive": [
+    {
+      "id": "door68_start_a",
+      "door_m": 0.68,
+      "start": [
+        -1.9,
+        -0.45,
+        0.0
+      ]
+    },
+    {
+      "id": "door68_start_b",
+      "door_m": 0.68,
+      "start": [
+        -2.1,
+        0.45,
+        0.0
+      ]
+    },
+    {
+      "id": "door80_start_c",
+      "door_m": 0.8,
+      "start": [
+        -1.6,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "negative": [
+    {
+      "id": "cancel",
+      "door_m": 0.8,
+      "start": [
+        -1.9,
+        -0.45,
+        0.0
+      ],
+      "inject": "cancel_after_first_motion"
+    },
+    {
+      "id": "gyro_hold",
+      "door_m": 0.8,
+      "start": [
+        -1.9,
+        -0.45,
+        0.0
+      ],
+      "inject": "gyro_gap_after_first_motion"
+    }
+  ],
+  "acceptance": {
+    "positive_requires": [
+      "actual_mission_success",
+      "three_autonomous_tasks",
+      "rear_cleared_both_doors",
+      "right_room_observed",
+      "map_growth_after_motion",
+      "no_ground_truth_collision",
+      "one_map_odom_owner",
+      "one_odom_base_owner",
+      "no_unresolved_tasks"
+    ],
+    "min_reference_observed_fraction": 0.95,
+    "max_map_truth_error_m": 0.1,
+    "note": "Manifest precedes runtime. A stopped, blocked or partial run is not positive completion. No hardware tracking claim."
+  },
+  "fixture_profile": "native_normalized_stl27l_grid",
+  "fixture_revision": 2,
+  "previous_fixture": "ap06_scenarios.json",
+  "change_reason": "Product scan_vereinheitlichen declares 2160 beams; the original 720-beam fixture is retained as a lower-density stress case. No start, world, mask, contour, freshness, deadline or acceptance change."
+}

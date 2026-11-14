@@ -1,0 +1,67 @@
+running egg_info
+creating ../../../ap05-final-build/robot_navigation/robot_navigation.egg-info
+writing ../../../ap05-final-build/robot_navigation/robot_navigation.egg-info/PKG-INFO
+writing dependency_links to ../../../ap05-final-build/robot_navigation/robot_navigation.egg-info/dependency_links.txt
+writing entry points to ../../../ap05-final-build/robot_navigation/robot_navigation.egg-info/entry_points.txt
+writing requirements to ../../../ap05-final-build/robot_navigation/robot_navigation.egg-info/requires.txt
+writing top-level names to ../../../ap05-final-build/robot_navigation/robot_navigation.egg-info/top_level.txt
+writing manifest file '../../../ap05-final-build/robot_navigation/robot_navigation.egg-info/SOURCES.txt'
+reading manifest file '../../../ap05-final-build/robot_navigation/robot_navigation.egg-info/SOURCES.txt'
+writing manifest file '../../../ap05-final-build/robot_navigation/robot_navigation.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /evidence/ap05-final-build/robot_navigation/build
+creating /evidence/ap05-final-build/robot_navigation/build/lib
+creating /evidence/ap05-final-build/robot_navigation/build/lib/robot_navigation
+copying robot_navigation/global_scan_matcher.py -> /evidence/ap05-final-build/robot_navigation/build/lib/robot_navigation
+copying robot_navigation/localization_guard.py -> /evidence/ap05-final-build/robot_navigation/build/lib/robot_navigation
+copying robot_navigation/cmd_vel_mission_gate.py -> /evidence/ap05-final-build/robot_navigation/build/lib/robot_navigation
+copying robot_navigation/localization_contract.py -> /evidence/ap05-final-build/robot_navigation/build/lib/robot_navigation
+copying robot_navigation/global_scan_localizer.py -> /evidence/ap05-final-build/robot_navigation/build/lib/robot_navigation
+copying robot_navigation/stage3_motion_diagnostic.py -> /evidence/ap05-final-build/robot_navigation/build/lib/robot_navigation
+copying robot_navigation/__init__.py -> /evidence/ap05-final-build/robot_navigation/build/lib/robot_navigation
+running install
+running install_lib
+creating /evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages/robot_navigation
+copying /evidence/ap05-final-build/robot_navigation/build/lib/robot_navigation/global_scan_matcher.py -> /evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages/robot_navigation
+copying /evidence/ap05-final-build/robot_navigation/build/lib/robot_navigation/localization_guard.py -> /evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages/robot_navigation
+copying /evidence/ap05-final-build/robot_navigation/build/lib/robot_navigation/cmd_vel_mission_gate.py -> /evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages/robot_navigation
+copying /evidence/ap05-final-build/robot_navigation/build/lib/robot_navigation/localization_contract.py -> /evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages/robot_navigation
+copying /evidence/ap05-final-build/robot_navigation/build/lib/robot_navigation/global_scan_localizer.py -> /evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages/robot_navigation
+copying /evidence/ap05-final-build/robot_navigation/build/lib/robot_navigation/stage3_motion_diagnostic.py -> /evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages/robot_navigation
+copying /evidence/ap05-final-build/robot_navigation/build/lib/robot_navigation/__init__.py -> /evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages/robot_navigation
+byte-compiling /evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/global_scan_matcher.py to global_scan_matcher.cpython-310.pyc
+byte-compiling /evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/localization_guard.py to localization_guard.cpython-310.pyc
+byte-compiling /evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/cmd_vel_mission_gate.py to cmd_vel_mission_gate.cpython-310.pyc
+byte-compiling /evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/localization_contract.py to localization_contract.cpython-310.pyc
+byte-compiling /evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/global_scan_localizer.py to global_scan_localizer.cpython-310.pyc
+byte-compiling /evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/stage3_motion_diagnostic.py to stage3_motion_diagnostic.cpython-310.pyc
+byte-compiling /evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/__init__.py to __init__.cpython-310.pyc
+running install_data
+creating /evidence/ap05-final-install/robot_navigation/share/ament_index
+creating /evidence/ap05-final-install/robot_navigation/share/ament_index/resource_index
+creating /evidence/ap05-final-install/robot_navigation/share/ament_index/resource_index/packages
+copying resource/robot_navigation -> /evidence/ap05-final-install/robot_navigation/share/ament_index/resource_index/packages
+copying package.xml -> /evidence/ap05-final-install/robot_navigation/share/robot_navigation
+copying README.md -> /evidence/ap05-final-install/robot_navigation/share/robot_navigation
+creating /evidence/ap05-final-install/robot_navigation/share/robot_navigation/config
+copying config/nav2_params_real.yaml -> /evidence/ap05-final-install/robot_navigation/share/robot_navigation/config
+copying config/nav2_params.yaml -> /evidence/ap05-final-install/robot_navigation/share/robot_navigation/config
+creating /evidence/ap05-final-install/robot_navigation/share/robot_navigation/launch
+copying launch/nav_mapping.launch.py -> /evidence/ap05-final-install/robot_navigation/share/robot_navigation/launch
+copying launch/nav_test.launch.py -> /evidence/ap05-final-install/robot_navigation/share/robot_navigation/launch
+copying launch/nav_localized.launch.py -> /evidence/ap05-final-install/robot_navigation/share/robot_navigation/launch
+copying launch/nav_real.launch.py -> /evidence/ap05-final-install/robot_navigation/share/robot_navigation/launch
+creating /evidence/ap05-final-install/robot_navigation/share/robot_navigation/maps
+copying maps/testwohnung.pgm -> /evidence/ap05-final-install/robot_navigation/share/robot_navigation/maps
+copying maps/testwohnung.yaml -> /evidence/ap05-final-install/robot_navigation/share/robot_navigation/maps
+copying maps/leer.pgm -> /evidence/ap05-final-install/robot_navigation/share/robot_navigation/maps
+copying maps/leer.yaml -> /evidence/ap05-final-install/robot_navigation/share/robot_navigation/maps
+running install_egg_info
+Copying ../../../ap05-final-build/robot_navigation/robot_navigation.egg-info to /evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages/robot_navigation-0.1.0-py3.10.egg-info
+running install_scripts
+Installing cmd_vel_mission_gate script to /evidence/ap05-final-install/robot_navigation/lib/robot_navigation
+Installing global_scan_localizer script to /evidence/ap05-final-install/robot_navigation/lib/robot_navigation
+Installing localization_guard script to /evidence/ap05-final-install/robot_navigation/lib/robot_navigation
+Installing stage3_motion_diagnostic script to /evidence/ap05-final-install/robot_navigation/lib/robot_navigation
+writing list of installed files to '/evidence/ap05-final-build/robot_navigation/install.log'

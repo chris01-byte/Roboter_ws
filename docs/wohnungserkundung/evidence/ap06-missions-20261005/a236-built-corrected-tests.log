@@ -1,0 +1,33 @@
+F.........................                                               [100%]
+=================================== FAILURES ===================================
+___ test_actual_initial_private_departure_is_not_starved_by_distant_queries ____
+
+    def test_actual_initial_private_departure_is_not_starved_by_distant_queries():
+        node, inputs, policy = frozen('ap06_a227_start_selection')
+        assert not policy.attempts and all(e.valid for e in node._metric_egress)
+        before = copy.deepcopy(node._metric_egress)
+        maps = [list(inputs[i].data) for i in (0, 5)]
+        def distant(*_, **__):
+            pytest.fail('Proved short private departure must precede distant approaches')
+        node._frontier_approach_goal = distant
+        candidates = node._metric_select(inputs, policy, .3)
+        assert candidates and node._frontier_rank_stats['bounded_start_observation']
+        chosen = candidates[0]
+        assert chosen.observation_points and not chosen.requires_nav2_plan
+        assert node._metric_waypoints_clear(inputs, chosen.route, chosen.yaw) is not None
+        assert maps == [list(inputs[i].data) for i in (0, 5)]
+        assert all(a.tries == 0 and a.failures == 0 for a in policy.attempts.values())
+        for old, now in zip(before, node._metric_egress):
+            assert old.fixed.remaining_area == now.fixed.remaining_area
+            assert old.fixed.departed_distance == now.fixed.departed_distance
+>           assert old.valid == now.valid and old.generation == now.generation
+E           assert (True == True and 1 == 2)
+E            +  where True = <explore.metric_egress_reference.ReferencedStartEgress object at 0x7fde068b9630>.valid
+E            +  and   True = <explore.metric_egress_reference.ReferencedStartEgress object at 0x7fde06760670>.valid
+E            +  and   1 = <explore.metric_egress_reference.ReferencedStartEgress object at 0x7fde068b9630>.generation
+E            +  and   2 = <explore.metric_egress_reference.ReferencedStartEgress object at 0x7fde06760670>.generation
+
+src/explore/test/test_metric_near_start_priority.py:25: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_near_start_priority.py::test_actual_initial_private_departure_is_not_starved_by_distant_queries
+1 failed, 25 passed in 4.77s

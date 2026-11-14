@@ -1,0 +1,136 @@
+................F......FF.F..............F.............................. [ 27%]
+........................................................................ [ 55%]
+........................................................................ [ 83%]
+............................................                             [100%]
+=================================== FAILURES ===================================
+_ test_actual_selection_finds_view_with_served_first_observer_and_same_budget __
+
+    def test_actual_selection_finds_view_with_served_first_observer_and_same_budget():
+        from explore.metric_checkpoint import restore_policy
+        node, inputs, metadata = fixture('ap06_a52_selection')
+        recorded, _ = restore_policy(metadata['checkpoint'], time.monotonic(),
+                                     metadata['checkpoint']['saved_wall_time'])
+        # Earlier-history component variant, on these explicitly later rasters.
+        policy = MetricTaskPolicy(.6, 30., 2)
+        policy.attempts['metric-task-4'] = copy.deepcopy(recorded.attempts['metric-task-4'])
+        policy.next_id = 4
+        node._global_costmap_received_at = time.monotonic()
+        candidates = node._metric_select(inputs, policy, .3)
+        assert candidates and not candidates[0].requires_nav2_plan
+        candidate = candidates[0]
+        assert candidate.observation_points
+        assert node._metric_waypoints_clear(inputs, candidate.route, candidate.yaw) is not None
+        assert policy.attempts['metric-task-4'].completed
+        assert policy.attempts['metric-task-4'].tries == 1
+>       assert policy.attempts[candidate.task_id].tries == 0
+E       AssertionError: assert 1 == 0
+E        +  where 1 = MetricAttempt(frontier_xy=(-0.7349999835714698, 1.6949999621137977), target_xy=(0.6947397571504254, -0.005346227304916...eted=True, reason='observed', tries=1, evidence_key='8b247b8f027d570e1cca89dee923bab2980d84fce3153afee3e97e27dcc69e88').tries
+
+test/test_metric_side_work_budget.py:56: AssertionError
+___ test_useful_proved_robot_side_pose_precedes_unsafe_passage_query[False] ____
+
+prior_rejection = False
+
+    @pytest.mark.parametrize('prior_rejection', [False, True])
+    def test_useful_proved_robot_side_pose_precedes_unsafe_passage_query(prior_rejection):
+        node, inputs, _ = fixture()
+        policy = MetricTaskPolicy(.6, 30., 2)
+        anchor = (1.304999970830977, .13499999698251486)
+        key = policy.identify(anchor)
+        if prior_rejection:
+            attempt = policy.attempts[key]
+            attempt.tries = 1
+            attempt.reason = 'proposal_rejected'
+            attempt.target_xy = (1.304999970830977, .46499998960644007)
+            attempt.evidence_key = 'older actual local evidence'
+        before = [bytes(np.asarray(inputs[i].data, dtype=np.int8)) for i in (0, 5)]
+        candidates = node._metric_select(inputs, policy, .3)
+        assert candidates and not candidates[0].requires_nav2_plan, node._frontier_rank_stats
+        candidate = candidates[0]
+        assert candidate.task_id == key and candidate.observation_points
+>       assert node._frontier_rank_stats['robot_side_observation']
+E       KeyError: 'robot_side_observation'
+
+test/test_metric_robot_side_observation.py:53: KeyError
+____ test_useful_proved_robot_side_pose_precedes_unsafe_passage_query[True] ____
+
+prior_rejection = True
+
+    @pytest.mark.parametrize('prior_rejection', [False, True])
+    def test_useful_proved_robot_side_pose_precedes_unsafe_passage_query(prior_rejection):
+        node, inputs, _ = fixture()
+        policy = MetricTaskPolicy(.6, 30., 2)
+        anchor = (1.304999970830977, .13499999698251486)
+        key = policy.identify(anchor)
+        if prior_rejection:
+            attempt = policy.attempts[key]
+            attempt.tries = 1
+            attempt.reason = 'proposal_rejected'
+            attempt.target_xy = (1.304999970830977, .46499998960644007)
+            attempt.evidence_key = 'older actual local evidence'
+        before = [bytes(np.asarray(inputs[i].data, dtype=np.int8)) for i in (0, 5)]
+        candidates = node._metric_select(inputs, policy, .3)
+        assert candidates and not candidates[0].requires_nav2_plan, node._frontier_rank_stats
+        candidate = candidates[0]
+        assert candidate.task_id == key and candidate.observation_points
+>       assert node._frontier_rank_stats['robot_side_observation']
+E       KeyError: 'robot_side_observation'
+
+test/test_metric_robot_side_observation.py:53: KeyError
+_________ test_robot_side_choice_keeps_an_earlier_served_neighbourhood _________
+
+    def test_robot_side_choice_keeps_an_earlier_served_neighbourhood():
+        node, inputs, metadata = fixture()
+        state = metadata['checkpoint']
+        policy, _ = restore_policy(state, time.monotonic(), state['saved_wall_time'])
+        # Model the earlier first rejection, retaining all the other actual
+        # failed/served neighbours. This is not the exhausted recorded policy.
+        policy.attempts['metric-task-2'].tries = 1
+        candidates = node._metric_select(inputs, policy, .3)
+        assert candidates and not candidates[0].requires_nav2_plan
+        candidate = candidates[0]
+        served = policy.attempts['metric-task-5']
+        assert served.completed
+>       assert math.dist((candidate.x, candidate.y), served.target_xy) >= policy.radius
+E       AssertionError: assert 0.5981439726879311 >= 0.6
+E        +  where 0.5981439726879311 = <built-in function dist>((0.5280964396205752, 0.1605811169863826), (0.384901713268581, -0.42016967501297225))
+E        +    where <built-in function dist> = math.dist
+E        +    and   (0.384901713268581, -0.42016967501297225) = MetricAttempt(frontier_xy=(-0.5249999882653356, -0.5249999882653356), target_xy=(0.384901713268581, -0.420169675012972...eted=True, reason='observed', tries=1, evidence_key='3084cc3b9b24155edade3c067b4a213cb600f95a3ad21a467f49c3ebee8e025c').target_xy
+E        +  and   0.6 = MetricTaskPolicy(radius=0.6, cooldown_s=30.0, retry_limit=2, attempts={'metric-task-1': MetricAttempt(frontier_xy=(-0....es=0, retry_after=209571.273201394, fingerprint='', completed=False, reason='', tries=0, evidence_key='')}, next_id=10).radius
+
+test/test_metric_robot_side_observation.py:94: AssertionError
+____ test_actual_a48_served_boundaries_keep_a_bounded_different_observation ____
+
+    def test_actual_a48_served_boundaries_keep_a_bounded_different_observation():
+        node, inputs, metadata = recorded_fixture('ap06_a48_selection')
+        state = metadata['checkpoint']
+        policy, _ = restore_policy(state, time.monotonic(), state['saved_wall_time'])
+        assert policy.attempts['metric-task-4'].completed
+        assert policy.attempts['metric-task-5'].completed
+        assert policy.attempts['metric-task-2'].tries == 3
+        before = {k: (a.tries, a.failures, a.completed) for k, a in policy.attempts.items()}
+        actual_candidates = node._metric_select(inputs, policy, .3)
+        for selected in actual_candidates:
+            assert selected.task_id != 'metric-task-2'
+            assert policy.attempts[selected.task_id].tries < 3
+            assert selected.observation_points and not selected.requires_nav2_plan
+            assert node._metric_waypoints_clear(inputs, selected.route, selected.yaw) is not None
+        assert before == {k: (a.tries, a.failures, a.completed)
+                          for k, a in policy.attempts.items() if k in before}
+        # Counter variant models the earlier first rejection. All actual later
+        # maps, finite scan angles and the other served histories remain intact.
+        policy.attempts['metric-task-2'].tries = 1
+        candidates = node._metric_select(inputs, policy, .3)
+        assert candidates and not candidates[0].requires_nav2_plan
+        selected = candidates[0]
+>       assert selected.observation_points and node._frontier_rank_stats['robot_side_observation']
+E       KeyError: 'robot_side_observation'
+
+test/test_metric_observation_neighbourhood.py:88: KeyError
+=========================== short test summary info ============================
+FAILED test/test_metric_side_work_budget.py::test_actual_selection_finds_view_with_served_first_observer_and_same_budget
+FAILED test/test_metric_robot_side_observation.py::test_useful_proved_robot_side_pose_precedes_unsafe_passage_query[False]
+FAILED test/test_metric_robot_side_observation.py::test_useful_proved_robot_side_pose_precedes_unsafe_passage_query[True]
+FAILED test/test_metric_robot_side_observation.py::test_robot_side_choice_keeps_an_earlier_served_neighbourhood
+FAILED test/test_metric_observation_neighbourhood.py::test_actual_a48_served_boundaries_keep_a_bounded_different_observation
+5 failed, 255 passed in 44.97s

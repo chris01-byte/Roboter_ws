@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "checked_utc": "2026-10-11T04:32:57.552648+00:00",
+  "repository": "https://github.com/chris01-byte/Roboter_ws",
+  "remote_ref": "refs/heads/feature/ap06-closed-product-validation",
+  "remote_verified_software_commit": "09f866d3a3e9bd7729ac4e052247b88fe43738ec",
+  "previous_remote_commit": "e14ca31276b26be2d88397b310301dad3c4e9600",
+  "plan_and_analysis_commit": "79cd7842328d170bd0eea332f6c10eed716f2a1f",
+  "method": "Non-force fast-forward push followed by git ls-remote SHA equality check.",
+  "scope": "Development snapshot; the following publication documentation commit changes no product files.",
+  "qualification": {
+    "complete_product_build_source": "2d93f2b1ab4e374c3595eecac5db44fe3737e688",
+    "complete_tests_passed": 2867,
+    "original_missions_passed": 0,
+    "original_missions_total": 3,
+    "cooldown_targeted_tests_passed": 196,
+    "known_adaptive_wait_order_defect_open": true,
+    "latest_diagnostic_passed": false,
+    "new_build_or_mission_run_for_publication": false,
+    "ci_result_claimed": false,
+    "previously_tested_source_hashes_match": true
+  },
+  "prepublication_checks": {
+    "changed_files_pattern_scanned": 68,
+    "new_blob_and_commit_objects_pattern_scanned": 205,
+    "common_secret_pattern_findings": 0,
+    "objects_over_2MB": 0,
+    "private_recording_paths_detected": 0,
+    "python_syntax": "valid",
+    "limitation": "Pattern checks are not a guarantee of detecting every possible secret."
+  },
+  "hardware_installation_changed": false,
+  "hardware_commands_sent": false,
+  "main_merged": false,
+  "source_file_sha256": {
+    "src/explore/explore/metric_frontier_runtime.py": "7ac338b70fe1ed91aa2c525f66bdc23d3fb7a0a69b008f135825359cbeecc258",
+    "src/explore/test/test_metric_private_cooldown.py": "483a8c2149e6e60272616cb0993ddd22eb3dfa10e0a7d5df4bd3652dafa138cf",
+    "src/explore/test/test_metric_progress.py": "b2f9ad4bf32caba6296a8e44a1f5f90d56a7d8d5cdd985f73f1203ccc4c28dd4"
+  },
+  "historical_audit": "ap06-ablauf-audit-20261011.json"
+}

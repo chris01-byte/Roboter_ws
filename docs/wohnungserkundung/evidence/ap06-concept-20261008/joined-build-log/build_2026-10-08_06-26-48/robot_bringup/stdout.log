@@ -1,0 +1,21 @@
+running egg_info
+writing ../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info/PKG-INFO
+writing dependency_links to ../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info/dependency_links.txt
+writing entry points to ../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info/entry_points.txt
+writing requirements to ../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info/requires.txt
+writing top-level names to ../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info/top_level.txt
+reading manifest file '../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info/SOURCES.txt'
+writing manifest file '../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info/SOURCES.txt'
+running build
+running build_py
+running install
+running install_lib
+running install_data
+copying launch/app_mapping.launch.py -> /evidence/ap06-old-product-install/robot_bringup/share/robot_bringup/launch
+running install_egg_info
+removing '/evidence/ap06-old-product-install/robot_bringup/lib/python3.10/site-packages/robot_bringup-0.1.0-py3.10.egg-info' (and everything under it)
+Copying ../../../ap06-old-product-build/robot_bringup/robot_bringup.egg-info to /evidence/ap06-old-product-install/robot_bringup/lib/python3.10/site-packages/robot_bringup-0.1.0-py3.10.egg-info
+running install_scripts
+Installing link_monitor script to /evidence/ap06-old-product-install/robot_bringup/lib/robot_bringup
+Installing oak_rectifier script to /evidence/ap06-old-product-install/robot_bringup/lib/robot_bringup
+writing list of installed files to '/evidence/ap06-old-product-build/robot_bringup/install.log'

@@ -1,0 +1,241 @@
+{
+  "schema_version": 1,
+  "kind": "AP06 correction-plan audit",
+  "checked_utc": "2026-10-11T04:26:30.307608+00:00",
+  "scope": "Static code findings and existing test evidence; no new software test or hardware operation performed for this audit.",
+  "source": {
+    "head_before_documentation_commit": "fc6174f5d85a37b5f0d8795744b416a049fab510",
+    "branch": "fix/ap06-private-observation-cooldown",
+    "commits_after_e14ca312_before_documentation_commit": 32,
+    "working_code_committed": false,
+    "file_sha256": {
+      "src/explore/explore/metric_frontier_runtime.py": "7ac338b70fe1ed91aa2c525f66bdc23d3fb7a0a69b008f135825359cbeecc258",
+      "src/explore/test/test_metric_private_cooldown.py": "483a8c2149e6e60272616cb0993ddd22eb3dfa10e0a7d5df4bd3652dafa138cf",
+      "src/explore/test/test_metric_progress.py": "b2f9ad4bf32caba6296a8e44a1f5f90d56a7d8d5cdd985f73f1203ccc4c28dd4"
+    }
+  },
+  "remote": {
+    "checked_utc": "2026-10-11T04:26:30.307608+00:00",
+    "method": "git ls-remote --heads origin (development and current fix branch)",
+    "repository": "https://github.com/chris01-byte/Roboter_ws",
+    "refs": {
+      "refs/heads/feature/ap06-closed-product-validation": "e14ca31276b26be2d88397b310301dad3c4e9600"
+    },
+    "current_fix_branch_present": false,
+    "pushed_in_this_task": false
+  },
+  "v10": {
+    "product_source_head": "2d93f2b1ab4e374c3595eecac5db44fe3737e688",
+    "tests": {
+      "tests": 2867,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "original_cases": {
+      "candidate_head": "2d93f2b1ab4e374c3595eecac5db44fe3737e688",
+      "passed_cases": 0,
+      "cases": [
+        {
+          "case": "door68_start_a",
+          "passed": false,
+          "manifest_compatible": true,
+          "travel_m": 0.29382716557083566,
+          "arrivals": 1,
+          "observations": 1,
+          "rear_cleared": false,
+          "reason": "frontier_candidate_processing_budget_exhausted",
+          "source_fault": null,
+          "child_terminal": true,
+          "chain": [
+            {
+              "decision": "observed",
+              "result": "success",
+              "stop_reason": null,
+              "observed_cells": 176
+            },
+            {
+              "decision": "proposal_rejected",
+              "result": "planning_failed",
+              "stop_reason": "route_invalidated",
+              "observed_cells": 0
+            },
+            {
+              "decision": "proposal_rejected",
+              "result": "planning_failed",
+              "stop_reason": "route_invalidated",
+              "observed_cells": 0
+            },
+            {
+              "decision": "proposal_rejected",
+              "result": "planning_failed",
+              "stop_reason": "route_invalidated",
+              "observed_cells": 0
+            }
+          ]
+        },
+        {
+          "case": "door68_start_b",
+          "passed": false,
+          "manifest_compatible": true,
+          "travel_m": 0.36421884014786754,
+          "arrivals": 1,
+          "observations": 1,
+          "rear_cleared": false,
+          "reason": "frontier_candidate_processing_budget_exhausted",
+          "source_fault": null,
+          "child_terminal": true,
+          "chain": [
+            {
+              "decision": "observed",
+              "result": "success",
+              "stop_reason": null,
+              "observed_cells": 183
+            }
+          ]
+        },
+        {
+          "case": "door80_start_c",
+          "passed": false,
+          "manifest_compatible": true,
+          "travel_m": 0.7107450269792157,
+          "arrivals": 1,
+          "observations": 1,
+          "rear_cleared": false,
+          "reason": "frontier_candidate_processing_budget_exhausted",
+          "source_fault": null,
+          "child_terminal": true,
+          "chain": [
+            {
+              "decision": "partially_observed",
+              "result": "success",
+              "stop_reason": null,
+              "observed_cells": 145
+            },
+            {
+              "decision": "proposal_rejected",
+              "result": "planning_failed",
+              "stop_reason": "route_invalidated",
+              "observed_cells": 0
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "uncommitted_cooldown": {
+    "targeted_tests": {
+      "tests": 196,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "parent_wait_test_strategy": "configured_scan via parent_fixture",
+    "actual_diagnostic_strategy": "adaptive",
+    "adaptive_wait_regression_executed": false,
+    "common_candidate_built": false
+  },
+  "latest_diagnostic": {
+    "passed": false,
+    "manifest_compatible": false,
+    "hardware_qualified": false,
+    "travel_m": 0.7293345805021847,
+    "rear_cleared": false,
+    "arrivals": 2,
+    "observations": 2,
+    "reason": "frontier_candidate_processing_budget_exhausted",
+    "source_fault": null,
+    "deferred_initial_scan": {
+      "result": "interrupted",
+      "completed": false,
+      "attempts": 1,
+      "reason": "scan_task_budget_exhausted"
+    },
+    "geometry_snapshot_rejection": {
+      "reason": "self_body_scan_stale_after_processing",
+      "checked_at": 36229.699007534,
+      "selection_started_at": 36229.273540758,
+      "selected_age_s": 0.08602174199768342,
+      "processing_elapsed_s": 0.4254667760033044,
+      "final_age_s": 0.5114885180009878,
+      "limit_s": 0.5,
+      "phase": "idle",
+      "active": false,
+      "active_child": false,
+      "age_basis": "scan_callback_receipt",
+      "received_at": 36229.187519016,
+      "scan_key": [
+        1791688335,
+        344730677,
+        2160
+      ]
+    },
+    "chain": [
+      {
+        "decision": "observed",
+        "result": "success",
+        "arrived": true,
+        "observed_cells": 176,
+        "planning_rejection": null,
+        "stop_reason": null
+      },
+      {
+        "decision": "observed",
+        "result": "success",
+        "arrived": true,
+        "observed_cells": 2,
+        "planning_rejection": null,
+        "stop_reason": null
+      },
+      {
+        "decision": "proposal_rejected",
+        "result": "planning_failed",
+        "arrived": false,
+        "observed_cells": 0,
+        "planning_rejection": "nav2_plan_timeout_or_stop",
+        "stop_reason": "route_invalidated"
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "adaptive_wait_order",
+      "basis": "static code inspection",
+      "description": "_execute_metric_frontier calls _metric_start_decision, which can select candidates, before testing private_wait_until; current parent-wait tests use configured_scan.",
+      "single_cause_of_all_mission_failures_proven": false
+    },
+    {
+      "id": "processing_age",
+      "basis": "instrumented simulation measurement",
+      "description": "A scan ages from 0.08602174199768342 to 0.5114885180009878 seconds during 0.4254667760033044 seconds of input processing; existing limit is 0.5 seconds."
+    },
+    {
+      "id": "coupled_budget",
+      "basis": "static code inspection",
+      "description": "_map_timeout_s is also used as the candidate-processing deadline. Separating names alone does not solve excess runtime; effective limits must remain unchanged during causal comparison."
+    },
+    {
+      "id": "followup_chain",
+      "basis": "instrumented simulation result",
+      "description": "Two observations precede incomplete optional scan, rejected proposal and final candidate-processing budget failure. Common root cause remains unproven."
+    }
+  ],
+  "evidence": {
+    "local_root": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010",
+    "sha256": {
+      "candidate-v10-stage-proof.json": "479640c5408db3f05cafe4edcbda938a7800188d1e990fb257a4352ee19ec50d",
+      "simulation/product-tests-v10/summary.json": "5d2ea92ebb3ad3b7fee025199c63944801ce54c3d8cdb743b1701396405dd081",
+      "simulation/original-v10-route-region-compact.json": "4f8ee8c7567dfe07e3954bd2c3c6a1cbb2aa3d40b22381395eac39d9d096d085",
+      "simulation/private-cooldown-source-a-proof.json": "3b2efbebdd66349650ec8abf31635164f748abfdb87d837164a9fa2f3a138dee",
+      "simulation/private-cooldown-source-a/result.json": "ed528ff99d74d62fd03b60df12b5413d60db353e50e99cd95789e2fe1c32413e",
+      "simulation/private-cooldown-targeted/results.xml": "eb65868ff106ed8d4c262c61e2a85a86a7526494e8e29f74ba50f777007ccb62",
+      "simulation/private-cooldown-frozen-original-a/result.json": "c84ac40cce8e66e73d4bf759d8347ffe770e47f6890c76360e0c8440b524c17a"
+    }
+  },
+  "hardware": {
+    "operated_during_audit": false,
+    "new_real_autonomous_mission": false,
+    "original_install_modified": false
+  },
+  "next_step": "Reproduce adaptive selection-before-wait with actual product decisions before changing the transition."
+}

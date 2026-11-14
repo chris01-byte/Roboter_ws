@@ -1,0 +1,43 @@
+[INFO] [1791043895.318072852] [controller_server]: 
+	controller_server lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791043895.319437828] [controller_server]: Creating controller server
+[INFO] [1791043895.326158793] [local_costmap.local_costmap]: 
+	local_costmap lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791043895.326519626] [local_costmap.local_costmap]: Creating Costmap
+[INFO] [1791043895.550319400] [controller_server]: Configuring controller interface
+[INFO] [1791043895.550492846] [controller_server]: getting goal checker plugins..
+[INFO] [1791043895.550582058] [controller_server]: Controller frequency set to 20.0000Hz
+[INFO] [1791043895.550619803] [local_costmap.local_costmap]: Configuring
+[INFO] [1791043895.554273460] [local_costmap.local_costmap]: Using plugin "static_layer"
+[INFO] [1791043895.558512510] [local_costmap.local_costmap]: Subscribing to the map topic (/map) with transient local durability
+[INFO] [1791043895.559341004] [local_costmap.local_costmap]: Initialized plugin "static_layer"
+[INFO] [1791043895.559399871] [local_costmap.local_costmap]: Using plugin "inflation_layer"
+[INFO] [1791043895.560176528] [local_costmap.local_costmap]: Initialized plugin "inflation_layer"
+[INFO] [1791043895.566546085] [controller_server]: Created progress_checker : progress_checker of type nav2_controller::PoseProgressChecker
+[INFO] [1791043895.567087705] [controller_server]: Created goal checker : general_goal_checker of type nav2_controller::SimpleGoalChecker
+[INFO] [1791043895.567324125] [controller_server]: Controller Server has general_goal_checker  goal checkers available.
+[INFO] [1791043895.567922639] [controller_server]: Created controller : FollowPath of type nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791043895.569927790] [controller_server]: Controller Server has FollowPath  controllers available.
+[INFO] [1791043895.571396629] [local_costmap.local_costmap]: StaticLayer: Resizing costmap to 200 X 200 at 0.020000 m/pix
+[INFO] [1791043895.581453682] [controller_server]: Activating
+[INFO] [1791043895.581486611] [local_costmap.local_costmap]: Activating
+[INFO] [1791043895.581495744] [local_costmap.local_costmap]: Checking transform
+[INFO] [1791043895.581568412] [local_costmap.local_costmap]: start
+[INFO] [1791043895.631707322] [controller_server]: Activating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791043895.631768843] [controller_server]: Creating bond (controller_server) to lifecycle manager.
+[INFO] [1791043896.897850220] [rclcpp]: signal_handler(signum=15)
+[INFO] [1791043896.898012660] [controller_server]: Running Nav2 LifecycleNode rcl preshutdown (controller_server)
+[INFO] [1791043896.898087231] [controller_server]: Deactivating
+[INFO] [1791043896.898105988] [controller_server]: Deactivating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791043896.898128722] [local_costmap.local_costmap]: Deactivating
+[INFO] [1791043896.931869384] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[INFO] [1791043896.942244376] [controller_server]: Cleaning up
+[INFO] [1791043896.942296433] [controller_server]: Cleaning up controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791043896.942332947] [local_costmap.local_costmap]: Cleaning up
+[INFO] [1791043896.955703514] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[INFO] [1791043896.960170021] [local_costmap.local_costmap]: Destroying
+[INFO] [1791043896.965777402] [controller_server]: Destroying

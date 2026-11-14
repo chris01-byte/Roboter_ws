@@ -1,0 +1,267 @@
+{
+  "kind": "Own terminal B207 public rasters, recorded actual TF/finite scan and original complete saved task history; not a pre-failure live input, health receipt or qualification",
+  "pose": [
+    0.9607212737685388,
+    -0.4648932498627781,
+    0.27795843482653765
+  ],
+  "correlation": {
+    "context": {
+      "session_id": "ap06-door68_start_b",
+      "map_id": "map-90d8c97bb97e420cd116ec7eb814c10f74f9fe8b1d9581db1772d45494d06dfb",
+      "frame_id": "map"
+    },
+    "map_revision": 0,
+    "fingerprint": "1a84e91c202b6e9db8437e723385f24b5706441e4cff617e1b0ccf4b8ca9e4ab",
+    "source_stamp_ns": 1791394039410459272
+  },
+  "scope": {
+    "scope_id": "ap06-two-rooms",
+    "context": {
+      "session_id": "ap06-door68_start_b",
+      "map_id": "map-90d8c97bb97e420cd116ec7eb814c10f74f9fe8b1d9581db1772d45494d06dfb",
+      "frame_id": "map"
+    },
+    "vertices": [
+      {
+        "x": -0.6999999999999997,
+        "y": -1.8499999999999999
+      },
+      {
+        "x": 4.9,
+        "y": -1.8499999999999999
+      },
+      {
+        "x": 4.9,
+        "y": 0.95
+      },
+      {
+        "x": -0.6999999999999997,
+        "y": 0.95
+      }
+    ],
+    "max_vertices": 64
+  },
+  "reference": [
+    0.008480772241863867,
+    -0.009970941654463675,
+    0.010469999999998258
+  ],
+  "physical_motion": null,
+  "attributes": {
+    "_metric_start_egress_enabled": true,
+    "_metric_egress_expired": true,
+    "_metric_body_anchor_expired": true,
+    "_prealign_handoff_tolerance": 0.02,
+    "_goal_clearance_m": 0.28,
+    "_frontier_goal_max_cost": 90,
+    "_goal_search_m": 0.3,
+    "_min_goal_dist_m": 0.3,
+    "_approach_dist_m": 0.45,
+    "_metric_bounds": [
+      -0.13,
+      0.33,
+      -0.25,
+      0.25
+    ],
+    "_map_timeout_s": 5.0,
+    "_frontier_forward_cone_half_angle": 0.0,
+    "_potential_scale": 3.0,
+    "_gain_scale": 1.0,
+    "_heading_scale": 0.75,
+    "_metric_start_strategy": "adaptive",
+    "_metric_candidate_source": "boundary_samples",
+    "_metric_path_validation": "rpp_rollout",
+    "_global_frame": "map",
+    "_wohnungserkundung_evidence_max_cells": 262144,
+    "_door_lidar_scan_timeout": 0.5,
+    "_door_lidar_max_range": 4.0
+  },
+  "identity": [
+    {
+      "session_id": "ap06-door68_start_b",
+      "map_id": "map-90d8c97bb97e420cd116ec7eb814c10f74f9fe8b1d9581db1772d45494d06dfb",
+      "frame_id": "map"
+    },
+    [
+      [
+        "map",
+        565,
+        287,
+        0.009999999776482582,
+        [
+          -0.7199999839067459,
+          -1.8699999582022429,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      [
+        "map",
+        565,
+        287,
+        0.009999999776482582,
+        [
+          -0.7199999839067459,
+          -1.8699999582022429,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    ]
+  ],
+  "policy": {
+    "cooldown_s": 30.0,
+    "next_id": 7,
+    "radius": 0.6,
+    "retry_limit": 2,
+    "tasks": {
+      "metric-task-1": {
+        "completed": false,
+        "evidence_key": "",
+        "failures": 0,
+        "fingerprint": "",
+        "frontier_xy": [
+          -0.2849999936297536,
+          -1.4549999674782157
+        ],
+        "partial_observation": false,
+        "reason": "",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          -0.2849999936297536,
+          -1.4549999674782157
+        ],
+        "tries": 0
+      },
+      "metric-task-2": {
+        "completed": false,
+        "evidence_key": "4afd66939abab7a899a407013e4e8692c0c0edbe721ebe20080519ca39d21f0a",
+        "failures": 0,
+        "fingerprint": "13dd7c76c374bd0ec077d4bb4eeee5d7563a27f356f96ed9568352fd3788e208",
+        "frontier_xy": [
+          0.634999985806644,
+          -0.6849999846890569
+        ],
+        "partial_observation": true,
+        "reason": "partially_observed",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          0.15479067174503539,
+          6.452061233325753e-06
+        ],
+        "tries": 1
+      },
+      "metric-task-3": {
+        "completed": false,
+        "evidence_key": "09e6c54c195b2f22056ac60438a59889344ba384e8ecf2d0148bc8821e90267c",
+        "failures": 0,
+        "fingerprint": "1a84e91c202b6e9db8437e723385f24b5706441e4cff617e1b0ccf4b8ca9e4ab",
+        "frontier_xy": [
+          3.764999915845692,
+          -1.1249999748542905
+        ],
+        "partial_observation": false,
+        "reason": "proposal_rejected",
+        "retry_remaining_s": 24.31053832299949,
+        "target_xy": [
+          3.2807013825381337,
+          -0.6807676849083227
+        ],
+        "tries": 1
+      },
+      "metric-task-4": {
+        "completed": false,
+        "evidence_key": "",
+        "failures": 0,
+        "fingerprint": "",
+        "frontier_xy": [
+          4.524999898858368,
+          -1.374999969266355
+        ],
+        "partial_observation": false,
+        "reason": "",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          4.524999898858368,
+          -1.374999969266355
+        ],
+        "tries": 0
+      },
+      "metric-task-5": {
+        "completed": false,
+        "evidence_key": "",
+        "failures": 0,
+        "fingerprint": "",
+        "frontier_xy": [
+          2.8449999364092946,
+          -0.8149999817833304
+        ],
+        "partial_observation": false,
+        "reason": "",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          2.8449999364092946,
+          -0.8149999817833304
+        ],
+        "tries": 0
+      },
+      "metric-task-6": {
+        "completed": false,
+        "evidence_key": "",
+        "failures": 0,
+        "fingerprint": "",
+        "frontier_xy": [
+          3.644999918527901,
+          -0.31499999295920134
+        ],
+        "partial_observation": false,
+        "reason": "",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          3.644999918527901,
+          -0.31499999295920134
+        ],
+        "tries": 0
+      },
+      "metric-task-7": {
+        "completed": false,
+        "evidence_key": "845704566b2f04a1bb74b438fcb4964e28e7e4a69cd4aa994249f41b51bbf404",
+        "failures": 0,
+        "fingerprint": "1a84e91c202b6e9db8437e723385f24b5706441e4cff617e1b0ccf4b8ca9e4ab",
+        "frontier_xy": [
+          1.4849999668076634,
+          -0.10499999765306711
+        ],
+        "partial_observation": true,
+        "reason": "partially_observed",
+        "retry_remaining_s": 17.926573282995378,
+        "target_xy": [
+          0.96072148191791,
+          -0.46489318506287824
+        ],
+        "tries": 3
+      }
+    }
+  },
+  "mount": [
+    0.245,
+    0.0,
+    1.5707963267948963
+  ],
+  "minimum_range": 0.05000000074505806,
+  "maximum_range": 4.0,
+  "evidence": [],
+  "event_raw_sha256": "c6611d3c48321be168d7ade16ae0cc0dccef993da3218847d723bf6ce6e4e662",
+  "expected_candidate": [
+    2.734999938867986,
+    -0.42499999050050974,
+    0.0
+  ]
+}

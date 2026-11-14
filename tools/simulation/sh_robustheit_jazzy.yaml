@@ -1,0 +1,24 @@
+# Nur Robustheitssimulation (Cloud, ROS 2 Jazzy, Nav2 1.3) - NICHT am Jetson.
+# Jazzy registriert die Nav2-Plugins mit "::" statt "/" und hat einzelne
+# Parameter umbenannt. Diese Datei ersetzt ausschließlich Klassen- und
+# Parameternamen; alle Werte bleiben die des Produktprofils
+# (nav2_params_real.yaml + nav2_params_self_healing.yaml). Auf dem Jetson
+# (Humble) gelten die Originalnamen unverändert.
+planner_server:
+  ros__parameters:
+    GridBased:
+      plugin: "nav2_navfn_planner::NavfnPlanner"
+
+behavior_server:
+  ros__parameters:
+    # Humble footprint_topic heißt in Jazzy local_footprint_topic
+    # (Rückfahrkontur, Overlay vom 08.11.2026).
+    local_footprint_topic: rueckfahr_kontur
+    spin:
+      plugin: "nav2_behaviors::Spin"
+    backup:
+      plugin: "nav2_behaviors::BackUp"
+    drive_on_heading:
+      plugin: "nav2_behaviors::DriveOnHeading"
+    wait:
+      plugin: "nav2_behaviors::Wait"

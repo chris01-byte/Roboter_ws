@@ -1,0 +1,12 @@
+{
+  "machine": "x86_64",
+  "hostname": "aeb5723056f9",
+  "os_release": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.6\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\n",
+  "execution_cwd": "/workspace",
+  "app_project_path_exists": false,
+  "jetson_release_exists": false,
+  "device_tree_model_exists": false,
+  "base_alias_exists": false,
+  "hwt_alias_exists": false,
+  "physical_test_executed": false
+}

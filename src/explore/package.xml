@@ -19,6 +19,8 @@
   <license>MIT</license>
 
   <buildtool_depend>ament_python</buildtool_depend>
+  <build_depend>python3-dev</build_depend>
+  <build_depend>build-essential</build_depend>
 
   <depend>rclpy</depend>
   <depend>nav_msgs</depend>
@@ -32,6 +34,9 @@
 
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-scipy</exec_depend>
+  <exec_depend>python3-shapely</exec_depend>
+  <exec_depend>amadeus_map_identity</exec_depend>
+  <exec_depend>robot_state_estimation</exec_depend>
   <exec_depend>ament_index_python</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>

@@ -159,6 +159,7 @@ bewusst keine Modbus-Hardware existiert.
 | `encoder_feedback_period_s` | `0.05` s | Zielabstand zwischen Positionspaaren; bei gültigen neuen Paaren 20 Hz |
 | `encoder_stale_timeout_s` | `0.30` s | ab diesem Alter ist eine Rückmeldung stale |
 | `encoder_max_recovery_gap_s` | `2.0` s | längste Lücke, deren kumuliertes Delta noch übernommen werden darf |
+| `encoder_timing_recovery_enabled` | `false`, HWT-Launch `true` | unveränderlicher Startparameter für den gemeinsamen Readervertrag unten |
 | `encoder_max_delta_factor` | `1.5` | Reserve über der physikalisch berechneten maximalen Änderung |
 | `encoder_failure_stop_count` | `5` | aufeinanderfolgende normale FC03-Transportfehler bis Stopp und Reconnect |
 | `modbus_timeout_s` | `0.10` s | Zeitgrenze eines einzelnen Modbus-Versuchs |
@@ -170,6 +171,29 @@ bewusst keine Modbus-Hardware existiert.
 | `odom_yaw_variance` | `0.0076` rad² | konservativer Startwert für Gierwinkel |
 | `odom_twist_linear_variance` | `0.01` (m/s)² | konservativer Startwert für lineare Geschwindigkeit |
 | `odom_twist_angular_variance` | `0.03` (rad/s)² | konservativer Startwert für Winkelgeschwindigkeit |
+
+**HWT-Präzisierung 01.10.2026:** Der HWT-Launch setzt im aktiven Basistreiber
+`encoder_timing_recovery_enabled=true`, Stale- und Integrationsgrenze jeweils
+180 ms. Dieser Pfad verwendet denselben `EncoderShadowCore` wie der passive
+Reader; die obigen Legacy-Vorgaben außerhalb dieses Pfads bleiben erhalten.
+Paarmessungen über 120 ms werden niemals publiziert. Nach mindestens 20 gesunden
+Paaren sind höchstens zwei Timing-Recoveries pro Readerlebensdauer mit jeweils
+absolut 2 s Diagnosefrist zulässig. Ungültige Probe, Kontinuitätsbeleg und
+Bewegungsbereitschaft sind getrennt: zwei neue gültige Paare können nur innerhalb
+der unveränderten 180-ms-Lücke das gesamte kumulierte Delta übernehmen.
+Unbelegbare Lücken bleiben ohne Odometrie/Ready und enden gesperrt; keine
+Neubasierung, kein Reconnect oder Pose-Reset als Wiederherstellung.
+
+Die Fusion erlaubt maximal zwei HWT- und zwei Rad-HOLDs pro Lebensdauer,
+jeweils absolut 5 s einschließlich Kindabbruch und Validierung. Readerfrist
+und Quellenfrische bleiben zusätzlich wirksam. Fortsetzung erfordert gültige
+Originalstempel, stabile Quellen/Stillstand, aktuelle Karte/Pose/Route,
+terminales altes Kind und Gate-ACK. Geräte-/Portwechsel, unplausible Zähler,
+Zeitrücklauf, Aktuatorfehler, Not-Aus und Nutzerabbruch bleiben harte Gegenfälle.
+`encoder_timing_recovery` im aktiven Basisstatus enthält denselben Diagnosevertrag
+wie der passive Wheelstatus; `first_timing_rejection` bleibt unverändert,
+`last_timing_rejection` und die vorhandenen Ereignissnapshots unterscheiden
+spätere Fehler. Ein Diagnosepaar ist keine gültige neue Radnachricht.
 
 Der wichtigste Inbetriebnahmeschutz ist
 `encoder_counts_per_motor_revolution: 0`. Solange die reale Einheit unbekannt

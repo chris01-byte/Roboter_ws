@@ -1,0 +1,755 @@
+{
+  "schema": 1,
+  "created_utc": "2026-10-08T06:17:12.128088+00:00",
+  "trace": {
+    "path": "/workspace/scratch/ap06-concept-20261008/phase-a/door68_start_a/events.jsonl.gz",
+    "uncompressed_sha256": "60e9fb0db12f0042f204acdbbb551b6e35f3665660ce535680e26e71b7d9211e",
+    "uncompressed_bytes": 148814652,
+    "compressed_bytes": 19264015,
+    "verified": true
+  },
+  "artifact_hashes": {
+    "result.json": "fc305ad4661056250e73e0953791e380ea4b7e44e3b5e57eda3061851c278724",
+    "events.jsonl.gz.meta.json": "92c5863bcccc36ca37c43ce032dac667f9d15ec0ef4c7566fdee9b3ceca3c093",
+    "controller_server.log": "8c0a47bd17ebb45ff1f34997280913c6d3379ce67fed2b0bd79b7c35536165d1",
+    "explorer.log": "06cd06b93276f154cddc95ac4faa9e3efc80c99d9ace547f9fba2e262de75623",
+    "maps.log": "43fc8cbd4e37bd7c6f45ebbe116c8e1316c45e0243cfb670109c623ddcf4f59f"
+  },
+  "inspected_sources": {
+    "src/explore/explore/metric_frontier_runtime.py": {
+      "current_sha256": "da9431511148042ade7e2be78318150cfcace777e655f16bbea5298674772f70",
+      "executed_manifest_sha256": "da9431511148042ade7e2be78318150cfcace777e655f16bbea5298674772f70",
+      "matches": true
+    },
+    "src/explore/explore/metric_frontier.py": {
+      "current_sha256": "47d770a122116390415a598642d016830d0cb0b3947edd6f4d4ac9471537592b",
+      "executed_manifest_sha256": "47d770a122116390415a598642d016830d0cb0b3947edd6f4d4ac9471537592b",
+      "matches": true
+    }
+  },
+  "topic_counts": {
+    "/base_hardware/state_json": 13099,
+    "/tf": 514,
+    "/fusion/hwt601/status_json": 1123,
+    "/mission_manager/status_json": 3685,
+    "/explore/status_json": 252,
+    "/explore_area/_action/status": 2,
+    "/plan": 8,
+    "/navigate_to_pose/_action/status": 10,
+    "/received_global_plan": 1633
+  },
+  "status_transitions": [
+    {
+      "at": 169153.833219917,
+      "published_unix_s": 1791439501.8538117,
+      "phase": "idle",
+      "state": "idle",
+      "attempt": null,
+      "arrivals": 0,
+      "observations": 0,
+      "chain_entries": 0,
+      "first_rejecting_predicate": null,
+      "reason": null,
+      "active_goal": {},
+      "scan_progress_rad": null,
+      "scan_join_revalidate": null
+    },
+    {
+      "at": 169173.832739038,
+      "published_unix_s": 1791439521.8531249,
+      "phase": "idle",
+      "state": "running",
+      "attempt": null,
+      "arrivals": 0,
+      "observations": 0,
+      "chain_entries": 0,
+      "first_rejecting_predicate": null,
+      "reason": null,
+      "active_goal": {},
+      "scan_progress_rad": null,
+      "scan_join_revalidate": null
+    },
+    {
+      "at": 169175.832769246,
+      "published_unix_s": 1791439523.8530297,
+      "phase": "metric_prealign",
+      "state": "running",
+      "attempt": 1,
+      "arrivals": 0,
+      "observations": 0,
+      "chain_entries": 0,
+      "first_rejecting_predicate": null,
+      "reason": null,
+      "active_goal": {
+        "task_id": "metric-task-1",
+        "x": 0.44999999999999996,
+        "y": 0.0,
+        "route_length_m": 0.44999999999999996,
+        "cost": 0.06000002883374678,
+        "revision": 27
+      },
+      "scan_progress_rad": null,
+      "scan_join_revalidate": null
+    },
+    {
+      "at": 169176.834453161,
+      "published_unix_s": 1791439524.8591318,
+      "phase": "metric_navigation",
+      "state": "running",
+      "attempt": 1,
+      "arrivals": 0,
+      "observations": 0,
+      "chain_entries": 0,
+      "first_rejecting_predicate": null,
+      "reason": null,
+      "active_goal": {
+        "task_id": "metric-task-1",
+        "x": 0.44999999999999996,
+        "y": 0.0,
+        "route_length_m": 0.44999999999999996,
+        "cost": 0.06000002883374678,
+        "revision": 27
+      },
+      "scan_progress_rad": null,
+      "scan_join_revalidate": null
+    },
+    {
+      "at": 169197.832649408,
+      "published_unix_s": 1791439545.8520343,
+      "phase": "we_initial_scan",
+      "state": "waiting_new_observation",
+      "attempt": 1,
+      "arrivals": 1,
+      "observations": 1,
+      "chain_entries": 1,
+      "first_rejecting_predicate": null,
+      "reason": null,
+      "active_goal": {
+        "task_id": "metric-task-1",
+        "x": 0.44999999999999996,
+        "y": 0.0,
+        "route_length_m": 0.44999999999999996,
+        "cost": 0.06000002883374678,
+        "revision": 27
+      },
+      "scan_progress_rad": null,
+      "scan_join_revalidate": null
+    },
+    {
+      "at": 169201.842909479,
+      "published_unix_s": 1791439549.8663177,
+      "phase": "we_initial_scan",
+      "state": "waiting_new_observation",
+      "attempt": 1,
+      "arrivals": 1,
+      "observations": 1,
+      "chain_entries": 1,
+      "first_rejecting_predicate": "map_status_join_pending",
+      "reason": null,
+      "active_goal": {
+        "task_id": "metric-task-1",
+        "x": 0.44999999999999996,
+        "y": 0.0,
+        "route_length_m": 0.44999999999999996,
+        "cost": 0.06000002883374678,
+        "revision": 27
+      },
+      "scan_progress_rad": 0.2273297308848683,
+      "scan_join_revalidate": null
+    },
+    {
+      "at": 169298.838059707,
+      "published_unix_s": 1791439646.8576274,
+      "phase": "metric_prealign",
+      "state": "running",
+      "attempt": 3,
+      "arrivals": 1,
+      "observations": 1,
+      "chain_entries": 1,
+      "first_rejecting_predicate": "map_status_join_pending",
+      "reason": null,
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.9178918903231799,
+        "y": 0.0661617218996514,
+        "route_length_m": 0.6,
+        "cost": 3.455108885483906,
+        "revision": 149
+      },
+      "scan_progress_rad": 6.306728053589719,
+      "scan_join_revalidate": true
+    },
+    {
+      "at": 169300.88280425,
+      "published_unix_s": 1791439648.852065,
+      "phase": "metric_navigation",
+      "state": "running",
+      "attempt": 3,
+      "arrivals": 1,
+      "observations": 1,
+      "chain_entries": 1,
+      "first_rejecting_predicate": "map_status_join_pending",
+      "reason": null,
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.9178918903231799,
+        "y": 0.0661617218996514,
+        "route_length_m": 0.6,
+        "cost": 3.455108885483906,
+        "revision": 149
+      },
+      "scan_progress_rad": 6.306728053589719,
+      "scan_join_revalidate": true
+    },
+    {
+      "at": 169336.84520319,
+      "published_unix_s": 1791439684.8687406,
+      "phase": "metric_prealign",
+      "state": "running",
+      "attempt": 4,
+      "arrivals": 1,
+      "observations": 1,
+      "chain_entries": 2,
+      "first_rejecting_predicate": "map_status_join_pending",
+      "reason": null,
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.9178918903231799,
+        "y": 0.0661617218996514,
+        "route_length_m": 0.6,
+        "cost": 3.455108885483906,
+        "revision": 149
+      },
+      "scan_progress_rad": 6.306728053589719,
+      "scan_join_revalidate": true
+    },
+    {
+      "at": 169337.832220363,
+      "published_unix_s": 1791439685.856203,
+      "phase": "metric_navigation",
+      "state": "running",
+      "attempt": 4,
+      "arrivals": 1,
+      "observations": 1,
+      "chain_entries": 2,
+      "first_rejecting_predicate": "map_status_join_pending",
+      "reason": null,
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.9178918903231799,
+        "y": 0.0661617218996514,
+        "route_length_m": 0.6,
+        "cost": 3.455108885483906,
+        "revision": 149
+      },
+      "scan_progress_rad": 6.306728053589719,
+      "scan_join_revalidate": true
+    },
+    {
+      "at": 169352.835849616,
+      "published_unix_s": 1791439700.8534539,
+      "phase": "metric_replanning",
+      "state": "waiting_new_observation",
+      "attempt": 4,
+      "arrivals": 2,
+      "observations": 2,
+      "chain_entries": 3,
+      "first_rejecting_predicate": "map_status_join_pending",
+      "reason": null,
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.9178918903231799,
+        "y": 0.0661617218996514,
+        "route_length_m": 0.6,
+        "cost": 3.455108885483906,
+        "revision": 149
+      },
+      "scan_progress_rad": 6.306728053589719,
+      "scan_join_revalidate": true
+    },
+    {
+      "at": 169353.833213377,
+      "published_unix_s": 1791439701.8525426,
+      "phase": "metric_waiting_tasks",
+      "state": "waiting",
+      "attempt": 4,
+      "arrivals": 2,
+      "observations": 2,
+      "chain_entries": 3,
+      "first_rejecting_predicate": "map_status_join_pending",
+      "reason": null,
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.9178918903231799,
+        "y": 0.0661617218996514,
+        "route_length_m": 0.6,
+        "cost": 3.455108885483906,
+        "revision": 149
+      },
+      "scan_progress_rad": 6.306728053589719,
+      "scan_join_revalidate": true
+    },
+    {
+      "at": 169372.845430375,
+      "published_unix_s": 1791439720.8691885,
+      "phase": "metric_waiting_sources",
+      "state": "waiting",
+      "attempt": 4,
+      "arrivals": 2,
+      "observations": 2,
+      "chain_entries": 3,
+      "first_rejecting_predicate": "map_status_join_pending",
+      "reason": null,
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.9178918903231799,
+        "y": 0.0661617218996514,
+        "route_length_m": 0.6,
+        "cost": 3.455108885483906,
+        "revision": 149
+      },
+      "scan_progress_rad": 6.306728053589719,
+      "scan_join_revalidate": true
+    },
+    {
+      "at": 169373.833888388,
+      "published_unix_s": 1791439721.8567965,
+      "phase": "metric_waiting_tasks",
+      "state": "waiting",
+      "attempt": 4,
+      "arrivals": 2,
+      "observations": 2,
+      "chain_entries": 3,
+      "first_rejecting_predicate": "map_status_join_pending",
+      "reason": null,
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.9178918903231799,
+        "y": 0.0661617218996514,
+        "route_length_m": 0.6,
+        "cost": 3.455108885483906,
+        "revision": 149
+      },
+      "scan_progress_rad": 6.306728053589719,
+      "scan_join_revalidate": true
+    },
+    {
+      "at": 169383.9175845,
+      "published_unix_s": 1791439731.9406714,
+      "phase": "metric_prealign",
+      "state": "running",
+      "attempt": 5,
+      "arrivals": 2,
+      "observations": 2,
+      "chain_entries": 3,
+      "first_rejecting_predicate": "map_status_join_pending",
+      "reason": null,
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.784198965952045,
+        "y": 0.6738170235299357,
+        "route_length_m": 0.6,
+        "cost": 1.775829278243838,
+        "revision": 235
+      },
+      "scan_progress_rad": 6.306728053589719,
+      "scan_join_revalidate": true
+    },
+    {
+      "at": 169386.851825346,
+      "published_unix_s": 1791439734.8576138,
+      "phase": "metric_navigation",
+      "state": "running",
+      "attempt": 5,
+      "arrivals": 2,
+      "observations": 2,
+      "chain_entries": 3,
+      "first_rejecting_predicate": "map_status_join_pending",
+      "reason": null,
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.784198965952045,
+        "y": 0.6738170235299357,
+        "route_length_m": 0.6,
+        "cost": 1.775829278243838,
+        "revision": 235
+      },
+      "scan_progress_rad": 6.306728053589719,
+      "scan_join_revalidate": true
+    },
+    {
+      "at": 169402.324815935,
+      "published_unix_s": 1791439750.3470206,
+      "phase": "partial",
+      "state": "blocked",
+      "attempt": 5,
+      "arrivals": 2,
+      "observations": 2,
+      "chain_entries": 3,
+      "first_rejecting_predicate": "map_status_join_pending",
+      "reason": "map_status_join_retry_budget_exhausted",
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.784198965952045,
+        "y": 0.6738170235299357,
+        "route_length_m": 0.6,
+        "cost": 1.775829278243838,
+        "revision": 235
+      },
+      "scan_progress_rad": 6.306728053589719,
+      "scan_join_revalidate": true
+    }
+  ],
+  "action_transitions": [
+    {
+      "at": 169173.468194863,
+      "topic": "/explore_area/_action/status",
+      "active": [
+        [
+          0,
+          118,
+          39,
+          76,
+          206,
+          127,
+          153,
+          176,
+          215,
+          95,
+          13,
+          246,
+          19,
+          113,
+          201,
+          112
+        ]
+      ]
+    },
+    {
+      "at": 169176.855909595,
+      "topic": "/navigate_to_pose/_action/status",
+      "active": [
+        [
+          236,
+          9,
+          174,
+          27,
+          62,
+          211,
+          72,
+          13,
+          180,
+          72,
+          102,
+          81,
+          70,
+          199,
+          70,
+          24
+        ]
+      ]
+    },
+    {
+      "at": 169195.762179629,
+      "topic": "/navigate_to_pose/_action/status",
+      "active": []
+    },
+    {
+      "at": 169300.855675405,
+      "topic": "/navigate_to_pose/_action/status",
+      "active": [
+        [
+          204,
+          44,
+          166,
+          113,
+          95,
+          198,
+          74,
+          115,
+          166,
+          164,
+          152,
+          246,
+          118,
+          152,
+          1,
+          102
+        ]
+      ]
+    },
+    {
+      "at": 169335.273776274,
+      "topic": "/navigate_to_pose/_action/status",
+      "active": [
+        [
+          204,
+          44,
+          166,
+          113,
+          95,
+          198,
+          74,
+          115,
+          166,
+          164,
+          152,
+          246,
+          118,
+          152,
+          1,
+          102
+        ]
+      ]
+    },
+    {
+      "at": 169335.316350919,
+      "topic": "/navigate_to_pose/_action/status",
+      "active": []
+    },
+    {
+      "at": 169337.850769179,
+      "topic": "/navigate_to_pose/_action/status",
+      "active": [
+        [
+          76,
+          220,
+          132,
+          173,
+          45,
+          106,
+          78,
+          112,
+          134,
+          76,
+          100,
+          56,
+          200,
+          116,
+          217,
+          222
+        ]
+      ]
+    },
+    {
+      "at": 169350.961818707,
+      "topic": "/navigate_to_pose/_action/status",
+      "active": []
+    },
+    {
+      "at": 169386.193331188,
+      "topic": "/navigate_to_pose/_action/status",
+      "active": [
+        [
+          192,
+          209,
+          58,
+          6,
+          185,
+          145,
+          69,
+          146,
+          130,
+          40,
+          12,
+          210,
+          179,
+          37,
+          32,
+          230
+        ]
+      ]
+    },
+    {
+      "at": 169401.308060512,
+      "topic": "/navigate_to_pose/_action/status",
+      "active": [
+        [
+          192,
+          209,
+          58,
+          6,
+          185,
+          145,
+          69,
+          146,
+          130,
+          40,
+          12,
+          210,
+          179,
+          37,
+          32,
+          230
+        ]
+      ]
+    },
+    {
+      "at": 169401.332127482,
+      "topic": "/navigate_to_pose/_action/status",
+      "active": []
+    },
+    {
+      "at": 169402.319009008,
+      "topic": "/explore_area/_action/status",
+      "active": []
+    }
+  ],
+  "all_observed_alignment_receipts": [
+    {
+      "task": "metric-task-1",
+      "attempt": 1,
+      "checked_at": 169176.529818382,
+      "status": "controller_owned",
+      "result": [
+        "controller_owned",
+        0.0,
+        0.0,
+        0.0
+      ],
+      "achieved_angle_rad": 0.0,
+      "initial_error_rad": 0.0,
+      "residual_error_rad": 0.0
+    },
+    {
+      "task": "metric-task-2",
+      "attempt": 3,
+      "checked_at": 169300.358773282,
+      "status": "controller_owned",
+      "result": [
+        "controller_owned",
+        0.0,
+        0.0,
+        0.0
+      ],
+      "achieved_angle_rad": 0.0,
+      "initial_error_rad": 0.0,
+      "residual_error_rad": 0.0
+    },
+    {
+      "task": "metric-task-2",
+      "attempt": 4,
+      "checked_at": 169337.617909164,
+      "status": "controller_owned",
+      "result": [
+        "controller_owned",
+        0.0,
+        0.0,
+        0.0
+      ],
+      "achieved_angle_rad": 0.0,
+      "initial_error_rad": 0.0,
+      "residual_error_rad": 0.0
+    },
+    {
+      "task": "metric-task-2",
+      "attempt": 5,
+      "checked_at": 169385.774419592,
+      "status": "controller_owned",
+      "result": [
+        "controller_owned",
+        0.0,
+        0.0,
+        0.0
+      ],
+      "achieved_angle_rad": 0.0,
+      "initial_error_rad": 0.0,
+      "residual_error_rad": 0.0
+    }
+  ],
+  "final_start_reference": {
+    "current": [
+      0.019388409659577357,
+      0.011443873272009117,
+      0.0069799999999951776
+    ],
+    "initial": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "private_epoch_expired": false,
+    "retained": [
+      0,
+      0
+    ],
+    "retained_area_m2": [
+      0.0,
+      0.0
+    ],
+    "projected": [
+      0,
+      0
+    ],
+    "valid": [
+      true,
+      true
+    ],
+    "reasons": [
+      "",
+      ""
+    ],
+    "monotone_detail": [
+      null,
+      null
+    ]
+  },
+  "measured_outcome": {
+    "state": "blocked",
+    "reason": "map_status_join_retry_budget_exhausted",
+    "arrivals": 2,
+    "observations": 2,
+    "attempts": 5,
+    "failures": 0,
+    "travel_m": 1.244533302333127,
+    "map_oracle": {
+      "reference_free_cells": 128256,
+      "reference_observed_cells": 94112,
+      "reference_observed_fraction": 0.7337824351297405,
+      "maximum_occupied_wall_error_m": 0.025000019557773978
+    },
+    "minimum_padded_clearance_m": 0.07264989139486944,
+    "rear_cleared": false,
+    "action_active_at_terminal": {
+      "/explore_area/_action/status": [],
+      "/navigate_to_pose/_action/status": []
+    },
+    "command_values_at_terminal": {
+      "/cmd_vel_nav": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_smoothed": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_nav_raw": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "established_findings": [
+    "Two active Task-2 navigation attempts were canceled for map/status join; one intervening attempt produced a real arrival and partial observation.",
+    "The three Task-2 dispatches exhaust the configured retry_limit + 1 tries, even though aggregate mission failures remain zero.",
+    "The terminal rejected attempt exits before chain.append at the retry limit, so chain omits that final canceled leg.",
+    "All recorded departure_alignment receipts are controller_owned; this run did not exercise the new external rotation validation branch.",
+    "The reported private reference has valid=[true,true] but empty retained/projected cell counts and zero retained area."
+  ],
+  "source_supported_hypothesis": {
+    "predicate": "metric_frontier_runtime.py:583: any(e.valid for e in _metric_egress)",
+    "finding": "The existing raw-first public withdrawal fallback rejects valid-but-empty private evidence; valid is not equivalent to usable private authority.",
+    "limit": "No exact join-rejection receipt or historical raw/status pairs were logged, so the particular branch at either historical cancellation cannot be proven from this trace alone."
+  },
+  "evidence_limits": [
+    "Neither /map nor /robot_map_manager/status_json is present in the event journal; historical fingerprint pairs, pending durations, and callback ordering cannot be reconstructed.",
+    "The first_rejecting_predicate field remains map_status_join_pending from the early scan onward. It is stale diagnostic state, not a timestamp of each later rejection.",
+    "The active_goal.revision values 27, 149 and 235 belong to selected proposals, not a log of every current raw/status correlation.",
+    "Final raw/costmap snapshots cannot establish historical maps at either canceled leg.",
+    "No hardware or original masked-LiDAR qualification follows from this finite-unmasked simulation."
+  ]
+}

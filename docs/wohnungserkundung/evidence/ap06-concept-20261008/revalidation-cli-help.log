@@ -1,0 +1,30 @@
+usage: metric_scope_vorbereiten.py [-h] --scope SCOPE --output OUTPUT
+                                   --tf-probe TF_PROBE --install-root
+                                   INSTALL_ROOT [--timeout TIMEOUT]
+                                   [--map-owner MAP_OWNER]
+                                   [--manager-owner MANAGER_OWNER]
+                                   [--odom-owner ODOM_OWNER]
+
+Bind a private, explicitly reviewed LAB polygon to the current passive stack.
+Reads /map, MapManager status, TF and ROS graph ownership. Starts only the
+existing native read-only TF provenance observer, never Explorer or a mission.
+The printed existing Explorer launch stays passive and conservative.
+
+options:
+  -h, --help            show this help message and exit
+  --scope SCOPE         private explicitly reviewed LAB-scope JSON
+  --output OUTPUT       new private YAML outside repository
+  --tf-probe TF_PROBE   built existing tools/simulation/tf_ownership_probe
+                        binary
+  --install-root INSTALL_ROOT
+                        explicit product-install root; reject mixed/old Python
+                        overlays
+  --timeout TIMEOUT
+  --map-owner MAP_OWNER
+  --manager-owner MANAGER_OWNER
+  --odom-owner ODOM_OWNER
+
+Scope JSON needs schema_version=1, session_id, scope_id, frame_id, current
+map_fingerprint, accessible_scope_verified=true and explicit vertices
+[[x,y],...]. Read the fingerprint from the current
+/robot_map_manager/status_json; never reuse a prior map epoch blindly.

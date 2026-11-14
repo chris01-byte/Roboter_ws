@@ -1,0 +1,13 @@
+[
+  {
+    "goal": [
+      0.8549999808892608,
+      -0.10499999765306711,
+      2.060753653048625
+    ],
+    "arrival_plan_valid": true,
+    "arrival_rejection": null,
+    "kind": "Actual later A47 rasters; existing approach distance and local search toward current robot side; actual native CPP queries, no motion or whole acceptance",
+    "departure_valid": true
+  }
+]

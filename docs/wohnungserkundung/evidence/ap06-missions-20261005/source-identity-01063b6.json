@@ -1,0 +1,30 @@
+{
+  "candidate": "01063b6147ea9659d7d65c94bd12f31b3ee8b20a",
+  "status": "candidate for fresh complete mission; not final qualification",
+  "files": {
+    "src/explore/explore/metric_frontier.py": {
+      "source_sha256": "9fb6f1ffa1bd8ebb8e34f3b40681c6503d9e62d88777a9f73c088ccbf71c3d98",
+      "execution_copy_sha256": "9fb6f1ffa1bd8ebb8e34f3b40681c6503d9e62d88777a9f73c088ccbf71c3d98"
+    },
+    "src/explore/explore/metric_frontier_runtime.py": {
+      "source_sha256": "7983947a0e902566a4beb7ee2eef1d30efbd90035b1aabc5db1d1fe349912f58",
+      "execution_copy_sha256": "7983947a0e902566a4beb7ee2eef1d30efbd90035b1aabc5db1d1fe349912f58"
+    },
+    "src/explore/explore/metric_egress_reference.py": {
+      "source_sha256": "88231dbc6e02dd5a1b62de0d818e850299855db577e5dde57fd3520246976258",
+      "execution_copy_sha256": "88231dbc6e02dd5a1b62de0d818e850299855db577e5dde57fd3520246976258"
+    },
+    "tools/simulation/ap06_closed_product.py": {
+      "source_sha256": "8ef1eb7330602b28148625b55f86a197612fa593cb96b56cac883d624dd6e881",
+      "execution_copy_sha256": "8ef1eb7330602b28148625b55f86a197612fa593cb96b56cac883d624dd6e881"
+    },
+    "tools/simulation/ap06_product_scenarios.json": {
+      "source_sha256": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da",
+      "execution_copy_sha256": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da"
+    },
+    "docs/wohnungserkundung/MASTERPLAN.md": {
+      "source_sha256": "030782dc0cce24d23ef730783703f91cac6957ceb4b7305a224342fba74a8a10",
+      "execution_copy_sha256": "030782dc0cce24d23ef730783703f91cac6957ceb4b7305a224342fba74a8a10"
+    }
+  }
+}

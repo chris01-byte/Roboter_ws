@@ -1,0 +1,227 @@
+{
+  "kind": "offline_measured_input_only_no_nav2_plan_or_actuation",
+  "source_run": "product-c-04-profile",
+  "pose": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "probes": [
+    {
+      "forward_distance_m": 0.3,
+      "accepted": false,
+      "rejection": "goal_orientation_invalid",
+      "goal_missing_cells": {
+        "raw": {
+          "outside": 0,
+          "unknown": 7,
+          "occupied": 0
+        },
+        "costmap": {
+          "outside": 0,
+          "unknown": 1,
+          "occupied": 3
+        }
+      },
+      "route": null
+    },
+    {
+      "forward_distance_m": 0.33,
+      "accepted": false,
+      "rejection": "goal_orientation_invalid",
+      "goal_missing_cells": {
+        "raw": {
+          "outside": 0,
+          "unknown": 2,
+          "occupied": 0
+        },
+        "costmap": {
+          "outside": 0,
+          "unknown": 0,
+          "occupied": 3
+        }
+      },
+      "route": null
+    },
+    {
+      "forward_distance_m": 0.36,
+      "accepted": false,
+      "rejection": "goal_orientation_invalid",
+      "goal_missing_cells": {
+        "raw": {
+          "outside": 0,
+          "unknown": 1,
+          "occupied": 0
+        },
+        "costmap": {
+          "outside": 0,
+          "unknown": 0,
+          "occupied": 3
+        }
+      },
+      "route": null
+    },
+    {
+      "forward_distance_m": 0.39,
+      "accepted": false,
+      "rejection": "goal_orientation_invalid",
+      "goal_missing_cells": {
+        "raw": {
+          "outside": 0,
+          "unknown": 0,
+          "occupied": 0
+        },
+        "costmap": {
+          "outside": 0,
+          "unknown": 0,
+          "occupied": 3
+        }
+      },
+      "route": null
+    },
+    {
+      "forward_distance_m": 0.42,
+      "accepted": false,
+      "rejection": "goal_orientation_invalid",
+      "goal_missing_cells": {
+        "raw": {
+          "outside": 0,
+          "unknown": 0,
+          "occupied": 0
+        },
+        "costmap": {
+          "outside": 0,
+          "unknown": 0,
+          "occupied": 3
+        }
+      },
+      "route": null
+    },
+    {
+      "forward_distance_m": 0.45,
+      "accepted": false,
+      "rejection": "goal_orientation_invalid",
+      "goal_missing_cells": {
+        "raw": {
+          "outside": 0,
+          "unknown": 0,
+          "occupied": 1
+        },
+        "costmap": {
+          "outside": 0,
+          "unknown": 0,
+          "occupied": 4
+        }
+      },
+      "route": null
+    },
+    {
+      "forward_distance_m": 0.48,
+      "accepted": false,
+      "rejection": "goal_orientation_invalid",
+      "goal_missing_cells": {
+        "raw": {
+          "outside": 0,
+          "unknown": 0,
+          "occupied": 4
+        },
+        "costmap": {
+          "outside": 0,
+          "unknown": 0,
+          "occupied": 7
+        }
+      },
+      "route": null
+    },
+    {
+      "forward_distance_m": 0.51,
+      "accepted": false,
+      "rejection": "goal_orientation_invalid",
+      "goal_missing_cells": {
+        "raw": {
+          "outside": 0,
+          "unknown": 1,
+          "occupied": 8
+        },
+        "costmap": {
+          "outside": 0,
+          "unknown": 0,
+          "occupied": 11
+        }
+      },
+      "route": null
+    },
+    {
+      "forward_distance_m": 0.54,
+      "accepted": false,
+      "rejection": "goal_orientation_invalid",
+      "goal_missing_cells": {
+        "raw": {
+          "outside": 0,
+          "unknown": 4,
+          "occupied": 11
+        },
+        "costmap": {
+          "outside": 0,
+          "unknown": 0,
+          "occupied": 14
+        }
+      },
+      "route": null
+    },
+    {
+      "forward_distance_m": 0.6,
+      "accepted": false,
+      "rejection": "no_known_free_route",
+      "goal_missing_cells": {
+        "raw": {
+          "outside": 0,
+          "unknown": 14,
+          "occupied": 17
+        },
+        "costmap": {
+          "outside": 0,
+          "unknown": 0,
+          "occupied": 22
+        }
+      },
+      "route": null
+    },
+    {
+      "forward_distance_m": 0.75,
+      "accepted": false,
+      "rejection": "no_known_free_route",
+      "goal_missing_cells": {
+        "raw": {
+          "outside": 0,
+          "unknown": 58,
+          "occupied": 28
+        },
+        "costmap": {
+          "outside": 0,
+          "unknown": 0,
+          "occupied": 39
+        }
+      },
+      "route": null
+    },
+    {
+      "forward_distance_m": 1.0,
+      "accepted": false,
+      "rejection": "no_known_free_route",
+      "goal_missing_cells": {
+        "raw": {
+          "outside": 0,
+          "unknown": 108,
+          "occupied": 40
+        },
+        "costmap": {
+          "outside": 0,
+          "unknown": 0,
+          "occupied": 61
+        }
+      },
+      "route": null
+    }
+  ]
+}

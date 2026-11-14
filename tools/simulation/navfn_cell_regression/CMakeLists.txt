@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 3.8)
+project(navfn_cell_regression)
+find_package(ament_cmake REQUIRED)
+find_package(nav2_navfn_planner REQUIRED)
+find_package(nav2_costmap_2d REQUIRED)
+find_package(nav2_util REQUIRED)
+find_package(rclcpp REQUIRED)
+add_executable(navfn_cell_regression navfn_cell_regression.cpp)
+ament_target_dependencies(navfn_cell_regression
+  nav2_navfn_planner nav2_costmap_2d nav2_util rclcpp)
+enable_testing()
+add_test(NAME navfn_cell_coordinates COMMAND navfn_cell_regression)

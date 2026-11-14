@@ -1,0 +1,33 @@
+Starting >>> nav2_common
+Starting >>> base_hardware
+Starting >>> robot_interfaces
+Starting >>> amadeus_map_identity
+Finished <<< nav2_common [0.78s]
+Starting >>> nav2_msgs
+Finished <<< base_hardware [0.86s]
+Starting >>> robot_state_estimation
+Finished <<< amadeus_map_identity [1.03s]
+Finished <<< robot_state_estimation [0.66s]
+Finished <<< robot_interfaces [21.0s]
+Finished <<< nav2_msgs [46.2s]
+Starting >>> explore
+Starting >>> mission_manager
+Finished <<< mission_manager [0.65s]
+Finished <<< explore [0.74s]
+Starting >>> robot_map_manager
+[47.905s] ERROR:colcon.colcon_ros.task.ament_python.build:Failed to find the following files:
+- /evidence/ap02-install/safety_monitor/share/safety_monitor/package.sh
+- /evidence/ap02-install/vl53_near_field/share/vl53_near_field/package.sh
+- /evidence/ap02-install/amadeus_lidar_bringup/share/amadeus_lidar_bringup/package.sh
+- /evidence/ap02-install/bt_orchestrator/share/bt_orchestrator/package.sh
+- /evidence/ap02-install/robot_navigation/share/robot_navigation/package.sh
+Check that the following packages have been built:
+- safety_monitor
+- vl53_near_field
+- amadeus_lidar_bringup
+- bt_orchestrator
+- robot_navigation
+Failed   <<< robot_map_manager [0.00s, exited with code 1]
+
+Summary: 8 packages finished [47.9s]
+  1 package failed: robot_map_manager

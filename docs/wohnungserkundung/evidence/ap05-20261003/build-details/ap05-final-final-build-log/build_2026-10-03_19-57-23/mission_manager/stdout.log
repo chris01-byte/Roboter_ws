@@ -1,0 +1,57 @@
+running egg_info
+creating ../../../ap05-final-build/mission_manager/mission_manager.egg-info
+writing ../../../ap05-final-build/mission_manager/mission_manager.egg-info/PKG-INFO
+writing dependency_links to ../../../ap05-final-build/mission_manager/mission_manager.egg-info/dependency_links.txt
+writing entry points to ../../../ap05-final-build/mission_manager/mission_manager.egg-info/entry_points.txt
+writing requirements to ../../../ap05-final-build/mission_manager/mission_manager.egg-info/requires.txt
+writing top-level names to ../../../ap05-final-build/mission_manager/mission_manager.egg-info/top_level.txt
+writing manifest file '../../../ap05-final-build/mission_manager/mission_manager.egg-info/SOURCES.txt'
+reading manifest file '../../../ap05-final-build/mission_manager/mission_manager.egg-info/SOURCES.txt'
+writing manifest file '../../../ap05-final-build/mission_manager/mission_manager.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /evidence/ap05-final-build/mission_manager/build
+creating /evidence/ap05-final-build/mission_manager/build/lib
+creating /evidence/ap05-final-build/mission_manager/build/lib/mission_manager
+copying mission_manager/command_payload.py -> /evidence/ap05-final-build/mission_manager/build/lib/mission_manager
+copying mission_manager/action_outcome.py -> /evidence/ap05-final-build/mission_manager/build/lib/mission_manager
+copying mission_manager/execution_policy.py -> /evidence/ap05-final-build/mission_manager/build/lib/mission_manager
+copying mission_manager/mission_manager_node.py -> /evidence/ap05-final-build/mission_manager/build/lib/mission_manager
+copying mission_manager/semantic_room_goal.py -> /evidence/ap05-final-build/mission_manager/build/lib/mission_manager
+copying mission_manager/semantic_catalog.py -> /evidence/ap05-final-build/mission_manager/build/lib/mission_manager
+copying mission_manager/__init__.py -> /evidence/ap05-final-build/mission_manager/build/lib/mission_manager
+running install
+running install_lib
+creating /evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages/mission_manager
+copying /evidence/ap05-final-build/mission_manager/build/lib/mission_manager/command_payload.py -> /evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages/mission_manager
+copying /evidence/ap05-final-build/mission_manager/build/lib/mission_manager/action_outcome.py -> /evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages/mission_manager
+copying /evidence/ap05-final-build/mission_manager/build/lib/mission_manager/execution_policy.py -> /evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages/mission_manager
+copying /evidence/ap05-final-build/mission_manager/build/lib/mission_manager/mission_manager_node.py -> /evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages/mission_manager
+copying /evidence/ap05-final-build/mission_manager/build/lib/mission_manager/semantic_room_goal.py -> /evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages/mission_manager
+copying /evidence/ap05-final-build/mission_manager/build/lib/mission_manager/semantic_catalog.py -> /evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages/mission_manager
+copying /evidence/ap05-final-build/mission_manager/build/lib/mission_manager/__init__.py -> /evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages/mission_manager
+byte-compiling /evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages/mission_manager/command_payload.py to command_payload.cpython-310.pyc
+byte-compiling /evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages/mission_manager/action_outcome.py to action_outcome.cpython-310.pyc
+byte-compiling /evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages/mission_manager/execution_policy.py to execution_policy.cpython-310.pyc
+byte-compiling /evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages/mission_manager/mission_manager_node.py to mission_manager_node.cpython-310.pyc
+byte-compiling /evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages/mission_manager/semantic_room_goal.py to semantic_room_goal.cpython-310.pyc
+byte-compiling /evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages/mission_manager/semantic_catalog.py to semantic_catalog.cpython-310.pyc
+byte-compiling /evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages/mission_manager/__init__.py to __init__.cpython-310.pyc
+running install_data
+creating /evidence/ap05-final-install/mission_manager/share/ament_index
+creating /evidence/ap05-final-install/mission_manager/share/ament_index/resource_index
+creating /evidence/ap05-final-install/mission_manager/share/ament_index/resource_index/packages
+copying resource/mission_manager -> /evidence/ap05-final-install/mission_manager/share/ament_index/resource_index/packages
+copying package.xml -> /evidence/ap05-final-install/mission_manager/share/mission_manager
+copying README.md -> /evidence/ap05-final-install/mission_manager/share/mission_manager
+creating /evidence/ap05-final-install/mission_manager/share/mission_manager/launch
+copying launch/mission_manager.launch.py -> /evidence/ap05-final-install/mission_manager/share/mission_manager/launch
+creating /evidence/ap05-final-install/mission_manager/share/mission_manager/config
+copying config/mission_catalog.yaml -> /evidence/ap05-final-install/mission_manager/share/mission_manager/config
+creating /evidence/ap05-final-install/mission_manager/share/mission_manager/behavior_trees
+copying behavior_trees/navigate_to_pose_no_recovery.xml -> /evidence/ap05-final-install/mission_manager/share/mission_manager/behavior_trees
+running install_egg_info
+Copying ../../../ap05-final-build/mission_manager/mission_manager.egg-info to /evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages/mission_manager-0.1.0-py3.10.egg-info
+running install_scripts
+Installing mission_manager script to /evidence/ap05-final-install/mission_manager/lib/mission_manager
+writing list of installed files to '/evidence/ap05-final-build/mission_manager/install.log'

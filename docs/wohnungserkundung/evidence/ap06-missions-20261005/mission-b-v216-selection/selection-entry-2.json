@@ -1,0 +1,150 @@
+{
+  "kind": "Actual B216 live selection ENTRY and complete ORIGINAL history before distant proposal attempts; diagnostic only, not qualification",
+  "arrivals": 2,
+  "observations": 2,
+  "elapsed_s": 5.100457267006277,
+  "ranking": {
+    "raw": 15,
+    "unsafe": 10,
+    "deferred_or_served": 1,
+    "accepted": 0,
+    "route_rejections": {
+      "goal_orientation_invalid": 8,
+      "footprint_sweep_invalid": 2
+    }
+  },
+  "policy": {
+    "radius": 0.6,
+    "cooldown_s": 30.0,
+    "retry_limit": 2,
+    "next_id": 7,
+    "tasks": {
+      "metric-task-1": {
+        "frontier_xy": [
+          -0.2849999936297536,
+          -1.4549999674782157
+        ],
+        "target_xy": [
+          -0.2849999936297536,
+          -1.4549999674782157
+        ],
+        "failures": 0,
+        "fingerprint": "",
+        "completed": false,
+        "reason": "",
+        "tries": 0,
+        "evidence_key": "",
+        "partial_observation": false,
+        "retry_remaining_s": 0.0
+      },
+      "metric-task-2": {
+        "frontier_xy": [
+          0.634999985806644,
+          -0.6849999846890569
+        ],
+        "target_xy": [
+          0.16573411423005838,
+          -1.3636777706042274e-06
+        ],
+        "failures": 0,
+        "fingerprint": "124f8decd2c6901cf5160ea8be7420da46d6a9cd9f3b0c0cece5b4cf25fd7549",
+        "completed": false,
+        "reason": "partially_observed",
+        "tries": 1,
+        "evidence_key": "4afd66939abab7a899a407013e4e8692c0c0edbe721ebe20080519ca39d21f0a",
+        "partial_observation": true,
+        "retry_remaining_s": 0.0
+      },
+      "metric-task-3": {
+        "frontier_xy": [
+          3.79499991517514,
+          -1.134999974630773
+        ],
+        "target_xy": [
+          0.9297532210951523,
+          -0.002843631717921533
+        ],
+        "failures": 0,
+        "fingerprint": "2791f0eb0b01c73a50f257108411c794d9108587fc7143fb012149c7b9c6d8bb",
+        "completed": true,
+        "reason": "observed",
+        "tries": 1,
+        "evidence_key": "c168a6852cd73f3fcb7676f4c8d67e0f4f2ff47dad1bfbf351bd2f0ab2ed1647",
+        "partial_observation": false,
+        "retry_remaining_s": 29.50849706400186
+      },
+      "metric-task-4": {
+        "frontier_xy": [
+          4.534999898634851,
+          -1.3849999690428376
+        ],
+        "target_xy": [
+          4.534999898634851,
+          -1.3849999690428376
+        ],
+        "failures": 0,
+        "fingerprint": "",
+        "completed": false,
+        "reason": "",
+        "tries": 0,
+        "evidence_key": "",
+        "partial_observation": false,
+        "retry_remaining_s": 0.0
+      },
+      "metric-task-5": {
+        "frontier_xy": [
+          2.8449999364092946,
+          -0.8149999817833304
+        ],
+        "target_xy": [
+          2.8449999364092946,
+          -0.8149999817833304
+        ],
+        "failures": 0,
+        "fingerprint": "",
+        "completed": false,
+        "reason": "",
+        "tries": 0,
+        "evidence_key": "",
+        "partial_observation": false,
+        "retry_remaining_s": 0.0
+      },
+      "metric-task-6": {
+        "frontier_xy": [
+          3.644999918527901,
+          -0.31499999295920134
+        ],
+        "target_xy": [
+          3.644999918527901,
+          -0.31499999295920134
+        ],
+        "failures": 0,
+        "fingerprint": "",
+        "completed": false,
+        "reason": "",
+        "tries": 0,
+        "evidence_key": "",
+        "partial_observation": false,
+        "retry_remaining_s": 0.0
+      },
+      "metric-task-7": {
+        "frontier_xy": [
+          1.4749999670311809,
+          -0.10499999765306711
+        ],
+        "target_xy": [
+          1.4749999670311809,
+          -0.10499999765306711
+        ],
+        "failures": 0,
+        "fingerprint": "",
+        "completed": false,
+        "reason": "",
+        "tries": 0,
+        "evidence_key": "",
+        "partial_observation": false,
+        "retry_remaining_s": 0.0
+      }
+    }
+  }
+}

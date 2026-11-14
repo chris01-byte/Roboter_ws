@@ -1,0 +1,47 @@
+....FF.................................................................. [ 92%]
+......                                                                   [100%]
+=================================== FAILURES ===================================
+_ test_new_unknown_or_occupied_departure_cell_is_never_added_after_correction[-1] _
+
+value = -1
+
+    @pytest.mark.parametrize('value', [-1, 100])
+    def test_new_unknown_or_occupied_departure_cell_is_never_added_after_correction(value):
+        node, inputs = referenced_fixture()
+        updated = shift(node, inputs, .002)
+        row, col = 20, 15
+        a = np.asarray(updated[0].data).reshape(updated[3].shape).copy()
+        a[row,col] = value
+        updated[0].data = a.ravel().tolist()
+        updated[3][row,col] = False
+        assert node._metric_waypoints_clear(updated,(updated[2][:2],(.752,.05))) is None
+>       assert node._metric_last_route_rejection == 'start_egress_new_unknown_or_obstacle'
+E       AssertionError: assert 'footprint_sweep_invalid' == 'start_egress...n_or_obstacle'
+E         - start_egress_new_unknown_or_obstacle
+E         + footprint_sweep_invalid
+
+src/explore/test/test_metric_egress_reference.py:85: AssertionError
+_ test_new_unknown_or_occupied_departure_cell_is_never_added_after_correction[100] _
+
+value = 100
+
+    @pytest.mark.parametrize('value', [-1, 100])
+    def test_new_unknown_or_occupied_departure_cell_is_never_added_after_correction(value):
+        node, inputs = referenced_fixture()
+        updated = shift(node, inputs, .002)
+        row, col = 20, 15
+        a = np.asarray(updated[0].data).reshape(updated[3].shape).copy()
+        a[row,col] = value
+        updated[0].data = a.ravel().tolist()
+        updated[3][row,col] = False
+        assert node._metric_waypoints_clear(updated,(updated[2][:2],(.752,.05))) is None
+>       assert node._metric_last_route_rejection == 'start_egress_new_unknown_or_obstacle'
+E       AssertionError: assert 'footprint_sweep_invalid' == 'start_egress...n_or_obstacle'
+E         - start_egress_new_unknown_or_obstacle
+E         + footprint_sweep_invalid
+
+src/explore/test/test_metric_egress_reference.py:85: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_egress_reference.py::test_new_unknown_or_occupied_departure_cell_is_never_added_after_correction[-1]
+FAILED src/explore/test/test_metric_egress_reference.py::test_new_unknown_or_occupied_departure_cell_is_never_added_after_correction[100]
+2 failed, 76 passed in 2.34s

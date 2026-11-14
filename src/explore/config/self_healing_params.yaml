@@ -1,0 +1,126 @@
+# =====================================================================
+#  Selbstheilender Erkundungsbetrieb (Profil, 15.10.2026)
+#  Konzept: docs/wohnungserkundung/KONZEPT_SELBSTHEILUNG.md
+#
+#  Start (Laborumfang LAB-1, Not-Aus in Reichweite):
+#    ros2 launch robot_navigation nav_mapping.launch.py self_healing:=true \
+#      active_drive:=true enable_auto_explore:=true
+#
+#  self_healing:=true laedt dieses Profil, den Nav2-Baum mit leichter
+#  Recovery und das Nav2-Overlay (Planung durch Unbekanntes, begrenzte
+#  Rueckfahrt nur ueber den Behavior-Server).
+#  Rueckfallweg: self_healing:=false (Default) = bisheriger Explorer.
+# =====================================================================
+explore_node:
+  ros__parameters:
+    exploration_strategy: self_healing
+    # Ein Fahrbesitzer: keine direkten Tuer-/Portalbruecken, keine
+    # Abdeckungsfahrt, keine Rueckkehr-Ausfuehrung, keine semantische Policy.
+    wohnungserkundung_policy_enabled: false
+    wohnungserkundung_navigation_enabled: false
+    portal_crossing_enabled: false
+    door_traverse_distance_m: 0.0
+    coverage_enabled: false
+    return_to_start: false
+
+    # Gesamtbudget je Mission (Basis 1200 s). Entscheidung Projektinhaber
+    # 04.11.2026 fuer SH-7 (Laborraum plus Nachbarraum durch eine offene Tuer):
+    # 40 min. In SH-3/SH-5/SH-6 endeten 7 von 9 Fahrten im EINEN Laborraum am
+    # 20-min-Budget. Rueckfall: Zeile entfernen (dann wieder 1200 s).
+    overall_timeout_s: 2400.0
+
+    # Warten im Stillstand auf frische Quellen (Not-Aus-Status, VL53, LiDAR,
+    # Odometrie, Lokalisierung, Karte). Danach "Hilfe benoetigt", kein Abbruch
+    # mit Datenverlust. Ein AKTIVER Not-Aus und Aktorfehler enden sofort.
+    self_healing_source_wait_s: 30.0
+    self_healing_map_timeout_s: 5.0
+    self_healing_pose_timeout_s: 1.5
+
+    # Heilungsleiter: H1 erneut -> H2 zurueckstellen -> H3 umsehen ->
+    # H4 Spur zurueck -> H5 Hilfe. Fortschritt setzt sie zurueck.
+    # Budget beschlossen vom Projektinhaber am 15.10.2026 (Entscheidung 3).
+    self_healing_heal_wait_s: 2.0
+    self_healing_goal_retries: 1
+    self_healing_look_around_after: 3
+    self_healing_track_back_after: 5
+    self_healing_help_after: 8
+    self_healing_max_heals: 30
+    self_healing_no_progress_timeout_s: 600.0
+    self_healing_min_gain_m2: 0.05
+
+    # Frontier-Auswahl (schnell, ohne Sichtprognose).
+    self_healing_blacklist_radius_m: 0.5
+    self_healing_min_goal_distance_m: 0.3
+    self_healing_gain_scale: 0.5
+    self_healing_completion_checks: 3
+    # Frontiers nur vorab ausschließen, wenn sie in der eigenen SLAM-Karte
+    # eindeutig abgeschnitten sind (Lücke unter etwa 2 x 0,20 m, z. B.
+    # geschlossene Tür). 0,20 m liegt unter dem Nav2-Radius 0,28 m; alles
+    # andere entscheidet weiter Nav2 mit der Heilungsleiter (Konzept §5 H2:
+    # unerreichbar markieren ist kein Missionsende). 0 = aus.
+    self_healing_reachability_clearance_m: 0.2
+    self_healing_reachability_escape_m: 0.35
+    self_healing_reachability_goal_tolerance_m: 0.3   # = Nav2 GridBased.tolerance
+    # Zielpunkt nur dort, wo sich der Roboter auf der Stelle drehen kann:
+    # mindestens 0,45 m zu Belegtem (= self_healing_rotation_radius_m; die
+    # Vorderecken überstreichen 0,41 m um die Antriebsachse), gemessen zu
+    # Belegtem UND Unbekanntem (ein ungesehener Wandfuß ist kein freier Raum).
+    # Gibt es das im
+    # Cluster nicht (Türöffnung, Verbindung), die geräumigste Zelle.
+    # Simulation 22.10.2026: die nächste Zelle lag in einer Türöffnung an der
+    # Pfostenecke, der Roboter parkte im 0,28-m-Sperrsaum. 0 = aus.
+    self_healing_goal_clearance_m: 0.45
+    # Liegt auch die geräumigste Frontier-Zelle zu nah an einer Wand (Frontier
+    # nur entlang der Wand), rückt das Ziel bis 0,5 m auf eine bekannt freie
+    # Zelle mit diesem Abstand. Simulation 22.10.2026: Ziel 6 cm vor der Wand
+    # einer 0,84-m-Verbindung, die Enddrehung brachte die Ecke an die Wand
+    # (4 von 5 Berührungen). 0 = aus.
+    self_healing_goal_shift_max_m: 0.5
+
+    # H3 Umsehen: langsame Drehung, nur wenn im Drehkreis keine GEMESSENEN
+    # Hindernisse liegen (Unbekanntes blockiert nicht). Drehrate und Zeit
+    # kommen aus initial_scan_speed / initial_scan_timeout.
+    self_healing_look_around_rad: 1.5708
+    # Drehrate des Umsehens (Basis 0.08 rad/s): +25 % mit dem Tempo
+    # (Entscheidung Projektinhaber 05.11.2026).
+    initial_scan_angular_speed_radps: 0.10
+    self_healing_rotation_radius_m: 0.45
+
+    # H4 Rueckfahrt entlang der eigenen Spur (Freigabe Projektinhaber
+    # 15.10.2026): nur gerader, zuletzt selbst befahrener Abschnitt,
+    # hoechstens 0,4 m, 0,05 m/s, seitliche Abweichung <= 3 cm.
+    self_healing_track_back_max_m: 0.4
+    self_healing_track_back_min_m: 0.1
+    self_healing_track_back_speed_mps: 0.05
+    self_healing_track_lateral_tolerance_m: 0.03
+    # Erweiterung (Entscheidung Projektinhaber 08.11.2026 nach SH-7N): Gibt es
+    # keine gerade eigene Spur (Ecke, nach Drehungen), faehrt Amadeus 0,3 m
+    # gerade rueckwaerts, sofern der Behavior-Server hinten frei sieht (er prueft
+    # laufend gegen die lokale Karte, Rueckfahrkontur siehe nav2-Overlay).
+    # Weiterhin hoechstens 0,4 m, 0,05 m/s, einmal je Stillstand.
+    # Rueckfall: 0.0 (nur gerade eigene Spur).
+    self_healing_free_back_m: 0.3
+    # Zeitgrenze der Rueckfahrt mit 30 % Tempo rechnen: Der Kollisionsmonitor
+    # drosselt in seiner Langsam-Zone darauf (SH-6/SH-7: 4 von 6 Rueckfahrten
+    # endeten an der zu knappen Grenze). Rueckfall: 1.0.
+    self_healing_track_back_slow_factor: 0.3
+    # Kein Fortschritt im Anlauf (weniger als stuck_move_m bewegt): zuerst die
+    # Spur-Rueckfahrt (H4, einmal je Stillstand, hoechstens 0,4 m), dann ein
+    # anderes Ziel (Entscheidung Projektinhaber 04.11.2026; seit 09.11.2026
+    # AW-1b wird das Ziel nach der Rueckfahrt zurueckgestellt, weil dasselbe
+    # Ziel wieder an dieselbe enge Stelle fuehrte). SH-5 Fahrt 3: vor zwei
+    # Muelleimern an der Front 10 Minuten "erneut"/"anderes Ziel", nie zurueck.
+    self_healing_stuck_move_m: 0.05
+    self_healing_backup_action: backup
+
+    # Entscheidung Projektinhaber 15.10.2026: solange der Korridor vor dem
+    # Roboter (1,0 m lang, 0,5 m breit) zu mehr als 2 % nicht kartiert ist,
+    # faehrt RPP absolut langsamer (nav2 speed_limit; 0,06 m/s bis 05.11.2026,
+    # seitdem 0,08 m/s mit dem hoeheren Tempo). Fehlen Karte/Pose,
+    # bleibt die Begrenzung aktiv; am Missionsende wird sie freigegeben.
+    self_healing_unknown_speed_mps: 0.08   # 0.06 bis 05.11.2026; +33 %, Obergrenze des Parameters
+    self_healing_unknown_lookahead_m: 1.0
+    self_healing_unknown_half_width_m: 0.25
+    self_healing_unknown_fraction: 0.02
+    self_healing_speed_limit_topic: /speed_limit
+

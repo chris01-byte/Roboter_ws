@@ -1,0 +1,60 @@
+........................................................................ [  3%]
+........................................................................ [  6%]
+........................................................................ [ 10%]
+........................................................................ [ 13%]
+........................................................................ [ 17%]
+........................................................................ [ 20%]
+........................................................................ [ 24%]
+........................................................................ [ 27%]
+........................................................................ [ 31%]
+........................................................................ [ 34%]
+........................................................................ [ 37%]
+........................................................................ [ 41%]
+........................................................................ [ 44%]
+........................................................................ [ 48%]
+........................................................................ [ 51%]
+........................................................................ [ 55%]
+........................................................................ [ 58%]
+........................................................................ [ 62%]
+...................F.F.................................................. [ 65%]
+........................................................................ [ 68%]
+........................................................................ [ 72%]
+........................................................................ [ 75%]
+........................................................................ [ 79%]
+........................................................................ [ 82%]
+........................................................................ [ 86%]
+........................................................................ [ 89%]
+........................................................................ [ 93%]
+........................................................................ [ 96%]
+........................................................................ [100%]
+=================================== FAILURES ===================================
+_ test_retired_private_history_does_not_block_fully_ordinary_forward_observation _
+
+    def test_retired_private_history_does_not_block_fully_ordinary_forward_observation():
+        node, inputs, _ = ordinary_departure_fixture()
+        # Exhaustive stateless geometry regression, without live task selection.
+        # The separate live-selection test and product retain their 5-s deadline.
+        node._map_timeout_s = 30.
+        before = [copy.deepcopy(inputs[i].data) for i in (0, 5)]
+        candidates = node._metric_candidates(inputs, .3)
+        proved = [c for c in candidates if not c.requires_nav2_plan]
+>       assert proved, node._frontier_rank_stats
+E       AssertionError: {'accepted': 0, 'deferred_or_served': 0, 'raw': 20, 'route_rejections': {'no_known_free_route': 20}, ...}
+E       assert []
+
+src/explore/test/test_metric_start_observation.py:140: AssertionError
+____ test_live_task_selection_proves_one_goal_and_looks_past_served_history ____
+
+    def test_live_task_selection_proves_one_goal_and_looks_past_served_history():
+        from explore.metric_frontier import MetricTaskPolicy
+        node, inputs, _ = ordinary_departure_fixture()
+        policy = MetricTaskPolicy(.6, 30., 2)
+        first = node._metric_select(inputs, policy, .3)
+>       assert first and not first[0].requires_nav2_plan
+E       assert ([])
+
+src/explore/test/test_metric_start_observation.py:163: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_start_observation.py::test_retired_private_history_does_not_block_fully_ordinary_forward_observation
+FAILED src/explore/test/test_metric_start_observation.py::test_live_task_selection_proves_one_goal_and_looks_past_served_history
+2 failed, 2086 passed in 110.71s (0:01:50)

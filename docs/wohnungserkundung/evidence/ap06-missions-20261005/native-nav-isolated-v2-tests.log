@@ -1,0 +1,8 @@
+........................................................................ [ 96%]
+...                                                                      [100%]
+75 passed in 9.26s
+Starting >>> robot_navigation
+Finished <<< robot_navigation [9.52s]	[ with test failures ]
+
+Summary: 1 package finished [9.76s]
+  1 package had test failures: robot_navigation

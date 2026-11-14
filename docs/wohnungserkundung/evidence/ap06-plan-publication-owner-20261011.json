@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "parent_source": "fa6c3ec",
+  "kind": "Real adaptive parent, actual selection and complete map/route guards; action peers doubled only",
+  "before": {
+    "tests": 4,
+    "failures": 3,
+    "passed": 1
+  },
+  "after": {
+    "tests": 174,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "change": "Shared /plan belongs only to the same current NavigateToPose child. Dispatch cutoff excludes queued read-only publications; explicit returned path remains fully checked.",
+  "budgets_or_sensor_limits_changed": false,
+  "mission_qualified": false,
+  "hardware_test": false,
+  "causality_limit": "Observed original v11 task-4 topic path equals its query path; this owner defect is not proven to explain that footprint rejection or every budget end.",
+  "rollback": "Revert this plan ownership/cutoff diff; original installation remains unchanged.",
+  "sha256": {
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/plan-owner-before-parent/results.xml": "686cd4310b366d49e66406aaa704ae5485edfcb21ee6f3f23a25f40f682fded3",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/plan-owner-after/results.xml": "9ffd2377a1b360b0d2613005fb461bfba04a46b5b623f9d56d31742330e8fa97",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/test_plan_publication_owner.py": "4432a31ea7ce3a8d7cb17fb75219f08e4455bd0cb7a52123421697f4e42bbb1e",
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/explore/metric_frontier_runtime.py": "d45173d2e178d4543610e7c34ecc2b13d73bab9cf19ca6e6cb8b7927c59404fc",
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/test/test_metric_plan_publication_owner.py": "4bd5deaca678c0ce305083384a4f3566a02ad9ec2f83d5dc06b9f360233ea965"
+  }
+}

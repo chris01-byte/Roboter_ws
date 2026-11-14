@@ -1,0 +1,1267 @@
+{
+  "mission-a-v238": {
+    "passed": false,
+    "error": "AP06 acceptance not met: completion_raw_pose_not_observed_free",
+    "travel_m": 0.021259425879068407,
+    "arrivals": 0,
+    "observations": 0,
+    "reference": {
+      "current": [
+        -9.020562075079397e-17,
+        1.9425218337619683e-17,
+        0.0
+      ],
+      "initial": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "private_epoch_expired": false,
+      "retained": [
+        1084,
+        13
+      ],
+      "retained_area_m2": [
+        0.10839999515414243,
+        0.001299999941885472
+      ],
+      "projected": [
+        0,
+        0
+      ],
+      "valid": [
+        false,
+        false
+      ],
+      "reasons": [
+        "start_egress_reentry_or_added_cell_area",
+        "start_egress_reentry_or_added_cell_area"
+      ],
+      "monotone_detail": [
+        {
+          "reason": "area_increase",
+          "pose": [
+            0.005430180062437047,
+            -2.1888534984835452e-07,
+            -0.00010196898912041717
+          ],
+          "cell": [
+            122,
+            77
+          ],
+          "previous_area": 0.7071073623319535,
+          "current_area": 0.708517564999056,
+          "subset_valid": false,
+          "last_commit": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "reason": "area_increase",
+          "pose": [
+            0.005430180062437047,
+            -2.1888534984835452e-07,
+            -0.00010196898912041717
+          ],
+          "cell": [
+            122,
+            77
+          ],
+          "previous_area": 0.7071073623319535,
+          "current_area": 0.708517564999056,
+          "subset_valid": false,
+          "last_commit": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ]
+    },
+    "chain": [
+      {
+        "task": "metric-task-7",
+        "target": [
+          0.3,
+          0.0
+        ],
+        "result": "canceled",
+        "decision": "route_invalidated",
+        "terminal_child": true,
+        "stop_reason": "route_invalidated",
+        "child_dispatched": true,
+        "planning_rejection": null,
+        "arrived": false,
+        "observed_cells": 0
+      }
+    ],
+    "transitions": [
+      {
+        "at": 130317.066152918,
+        "state": "STARTUP",
+        "reason": "yaw_missing_stale_or_invalid",
+        "fault": null
+      },
+      {
+        "at": 130340.819715111,
+        "state": "STARTUP",
+        "reason": "yaw_uncalibrated_or_faulted",
+        "fault": null
+      },
+      {
+        "at": 130341.268557574,
+        "state": "HEALTHY",
+        "reason": "raw_sources_ready",
+        "fault": null
+      }
+    ],
+    "source_faults": [],
+    "plans": [
+      {
+        "at": 130344.450619671,
+        "topic": "/plan",
+        "frame": "map",
+        "stamp": [
+          1791400692,
+          469452146
+        ],
+        "latest_tf": [
+          {
+            "parent": "odom",
+            "child": "base_link",
+            "stamp": [
+              1791400692,
+              435397352
+            ],
+            "translation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          },
+          {
+            "parent": "map",
+            "child": "odom",
+            "stamp": [
+              1791400692,
+              566959658
+            ],
+            "translation": [
+              -0.0,
+              -0.0,
+              -0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          }
+        ],
+        "points": [
+          [
+            0.004999999888241291,
+            0.004999999888241291
+          ],
+          [
+            0.014999999664723873,
+            0.004999999888241291
+          ],
+          [
+            0.019999999552965164,
+            0.004999999888241291
+          ],
+          [
+            0.024999999441206455,
+            0.004999999888241291
+          ],
+          [
+            0.029999999329447746,
+            0.004999999888241291
+          ],
+          [
+            0.03499999921768904,
+            0.004999999888241291
+          ],
+          [
+            0.03999999910593033,
+            0.004999999888241291
+          ],
+          [
+            0.04499999899417162,
+            0.004999999888241291
+          ],
+          [
+            0.04999999888241291,
+            0.004999999888241291
+          ],
+          [
+            0.0549999987706542,
+            0.004999999888241291
+          ],
+          [
+            0.05999999865889549,
+            0.004999999888241291
+          ],
+          [
+            0.06499999854713678,
+            0.004999999888241291
+          ],
+          [
+            0.06999999843537807,
+            0.004999999888241291
+          ],
+          [
+            0.07499999832361937,
+            0.004999999888241291
+          ],
+          [
+            0.07999999821186066,
+            0.004999999888241291
+          ],
+          [
+            0.08499999810010195,
+            0.004999999888241291
+          ],
+          [
+            0.08999999798834324,
+            0.004999999888241291
+          ],
+          [
+            0.09499999787658453,
+            0.004999999888241291
+          ],
+          [
+            0.09999999776482582,
+            0.004999999888241291
+          ],
+          [
+            0.10499999765306711,
+            0.004999999888241291
+          ],
+          [
+            0.1099999975413084,
+            0.004999999888241291
+          ],
+          [
+            0.1149999974295497,
+            0.004999999888241291
+          ],
+          [
+            0.11999999731779099,
+            0.004999999888241291
+          ],
+          [
+            0.12499999720603228,
+            0.004999999888241291
+          ],
+          [
+            0.12999999709427357,
+            0.004999999888241291
+          ],
+          [
+            0.13499999698251486,
+            0.004999999888241291
+          ],
+          [
+            0.13999999687075615,
+            0.004999999888241291
+          ],
+          [
+            0.14499999675899744,
+            0.004999999888241291
+          ],
+          [
+            0.14999999664723873,
+            0.004999999888241291
+          ],
+          [
+            0.15499999653548002,
+            0.004999999888241291
+          ],
+          [
+            0.1599999964237213,
+            0.004999999888241291
+          ],
+          [
+            0.1649999963119626,
+            0.004999999888241291
+          ],
+          [
+            0.1699999962002039,
+            0.004999999888241291
+          ],
+          [
+            0.1749999960884452,
+            0.004999999888241291
+          ],
+          [
+            0.17999999597668648,
+            0.004999999888241291
+          ],
+          [
+            0.18499999586492777,
+            0.004999999888241291
+          ],
+          [
+            0.18999999575316906,
+            0.004999999888241291
+          ],
+          [
+            0.19499999564141035,
+            0.004999999888241291
+          ],
+          [
+            0.19999999552965164,
+            0.004999999888241291
+          ],
+          [
+            0.20499999541789293,
+            0.004999999888241291
+          ],
+          [
+            0.20999999530613422,
+            0.004999999888241291
+          ],
+          [
+            0.21499999519437551,
+            0.004999999888241291
+          ],
+          [
+            0.2199999950826168,
+            0.004999999888241291
+          ],
+          [
+            0.2249999949708581,
+            0.004999999888241291
+          ],
+          [
+            0.2299999948590994,
+            0.004999999888241291
+          ],
+          [
+            0.23499999474734068,
+            0.004999999888241291
+          ],
+          [
+            0.23999999463558197,
+            0.004999999888241291
+          ],
+          [
+            0.24499999452382326,
+            0.004999999888241291
+          ],
+          [
+            0.24999999441206455,
+            0.004999999888241291
+          ],
+          [
+            0.25499999430030584,
+            0.004999999888241291
+          ],
+          [
+            0.25999999418854713,
+            0.004999999888241291
+          ],
+          [
+            0.2649999940767884,
+            0.004999999888241291
+          ],
+          [
+            0.2699999939650297,
+            0.004999999888241291
+          ],
+          [
+            0.274999993853271,
+            0.004999999888241291
+          ],
+          [
+            0.2799999937415123,
+            0.004999999888241291
+          ],
+          [
+            0.2849999936297536,
+            0.004999999888241291
+          ],
+          [
+            0.29499999340623617,
+            0.004999999888241291
+          ],
+          [
+            0.3,
+            0.0
+          ]
+        ]
+      },
+      {
+        "at": 130346.371627191,
+        "topic": "/plan",
+        "frame": "map",
+        "stamp": [
+          1791400694,
+          393314863
+        ],
+        "latest_tf": [
+          {
+            "parent": "odom",
+            "child": "base_link",
+            "stamp": [
+              1791400694,
+              365516676
+            ],
+            "translation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          },
+          {
+            "parent": "map",
+            "child": "odom",
+            "stamp": [
+              1791400694,
+              466969962
+            ],
+            "translation": [
+              -0.0,
+              -0.0,
+              -0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          }
+        ],
+        "points": [
+          [
+            0.004999999888241291,
+            0.004999999888241291
+          ],
+          [
+            0.014999999664723873,
+            0.004999999888241291
+          ],
+          [
+            0.019999999552965164,
+            0.004999999888241291
+          ],
+          [
+            0.024999999441206455,
+            0.004999999888241291
+          ],
+          [
+            0.029999999329447746,
+            0.004999999888241291
+          ],
+          [
+            0.03499999921768904,
+            0.004999999888241291
+          ],
+          [
+            0.03999999910593033,
+            0.004999999888241291
+          ],
+          [
+            0.04499999899417162,
+            0.004999999888241291
+          ],
+          [
+            0.04999999888241291,
+            0.004999999888241291
+          ],
+          [
+            0.0549999987706542,
+            0.004999999888241291
+          ],
+          [
+            0.05999999865889549,
+            0.004999999888241291
+          ],
+          [
+            0.06499999854713678,
+            0.004999999888241291
+          ],
+          [
+            0.06999999843537807,
+            0.004999999888241291
+          ],
+          [
+            0.07499999832361937,
+            0.004999999888241291
+          ],
+          [
+            0.07999999821186066,
+            0.004999999888241291
+          ],
+          [
+            0.08499999810010195,
+            0.004999999888241291
+          ],
+          [
+            0.08999999798834324,
+            0.004999999888241291
+          ],
+          [
+            0.09499999787658453,
+            0.004999999888241291
+          ],
+          [
+            0.09999999776482582,
+            0.004999999888241291
+          ],
+          [
+            0.10499999765306711,
+            0.004999999888241291
+          ],
+          [
+            0.1099999975413084,
+            0.004999999888241291
+          ],
+          [
+            0.1149999974295497,
+            0.004999999888241291
+          ],
+          [
+            0.11999999731779099,
+            0.004999999888241291
+          ],
+          [
+            0.12499999720603228,
+            0.004999999888241291
+          ],
+          [
+            0.12999999709427357,
+            0.004999999888241291
+          ],
+          [
+            0.13499999698251486,
+            0.004999999888241291
+          ],
+          [
+            0.13999999687075615,
+            0.004999999888241291
+          ],
+          [
+            0.14499999675899744,
+            0.004999999888241291
+          ],
+          [
+            0.14999999664723873,
+            0.004999999888241291
+          ],
+          [
+            0.15499999653548002,
+            0.004999999888241291
+          ],
+          [
+            0.1599999964237213,
+            0.004999999888241291
+          ],
+          [
+            0.1649999963119626,
+            0.004999999888241291
+          ],
+          [
+            0.1699999962002039,
+            0.004999999888241291
+          ],
+          [
+            0.1749999960884452,
+            0.004999999888241291
+          ],
+          [
+            0.17999999597668648,
+            0.004999999888241291
+          ],
+          [
+            0.18499999586492777,
+            0.004999999888241291
+          ],
+          [
+            0.18999999575316906,
+            0.004999999888241291
+          ],
+          [
+            0.19499999564141035,
+            0.004999999888241291
+          ],
+          [
+            0.19999999552965164,
+            0.004999999888241291
+          ],
+          [
+            0.20499999541789293,
+            0.004999999888241291
+          ],
+          [
+            0.20999999530613422,
+            0.004999999888241291
+          ],
+          [
+            0.21499999519437551,
+            0.004999999888241291
+          ],
+          [
+            0.2199999950826168,
+            0.004999999888241291
+          ],
+          [
+            0.2249999949708581,
+            0.004999999888241291
+          ],
+          [
+            0.2299999948590994,
+            0.004999999888241291
+          ],
+          [
+            0.23499999474734068,
+            0.004999999888241291
+          ],
+          [
+            0.23999999463558197,
+            0.004999999888241291
+          ],
+          [
+            0.24499999452382326,
+            0.004999999888241291
+          ],
+          [
+            0.24999999441206455,
+            0.004999999888241291
+          ],
+          [
+            0.25499999430030584,
+            0.004999999888241291
+          ],
+          [
+            0.25999999418854713,
+            0.004999999888241291
+          ],
+          [
+            0.2649999940767884,
+            0.004999999888241291
+          ],
+          [
+            0.2699999939650297,
+            0.004999999888241291
+          ],
+          [
+            0.274999993853271,
+            0.004999999888241291
+          ],
+          [
+            0.2799999937415123,
+            0.004999999888241291
+          ],
+          [
+            0.2849999936297536,
+            0.004999999888241291
+          ],
+          [
+            0.29499999340623617,
+            0.004999999888241291
+          ],
+          [
+            0.3,
+            0.0
+          ]
+        ]
+      }
+    ],
+    "trace_raw_sha256": "98e17f8ff25c2e87b33bcce14695274f924e8b765e5977c77f4af13071e58e44",
+    "trace_raw_bytes": 11621896
+  },
+  "mission-b-v239": {
+    "passed": false,
+    "error": "AP06 acceptance not met: completion_raw_pose_not_observed_free",
+    "travel_m": 0.1593672691497423,
+    "arrivals": 0,
+    "observations": 0,
+    "reference": {
+      "current": [
+        -0.010000000000000037,
+        7.070465225670134e-17,
+        -7.14218181124826e-18
+      ],
+      "initial": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "private_epoch_expired": false,
+      "retained": [
+        1082,
+        13
+      ],
+      "retained_area_m2": [
+        0.10819999516308312,
+        0.001299999941885472
+      ],
+      "projected": [
+        0,
+        6
+      ],
+      "valid": [
+        false,
+        true
+      ],
+      "reasons": [
+        "start_egress_new_unknown_or_obstacle",
+        ""
+      ],
+      "monotone_detail": [
+        null,
+        null
+      ]
+    },
+    "chain": [
+      {
+        "task": "metric-task-5",
+        "result": "canceled",
+        "decision": "geometry_snapshot_revalidate",
+        "terminal_child": true,
+        "stop_reason": "start_motion_wheel_stale_after_processing",
+        "arrived": false,
+        "observed_cells": 0
+      },
+      {
+        "task": "metric-task-5",
+        "target": [
+          0.3,
+          0.0
+        ],
+        "result": "canceled",
+        "decision": "route_invalidated",
+        "terminal_child": true,
+        "stop_reason": "route_invalidated",
+        "child_dispatched": false,
+        "planning_rejection": null,
+        "arrived": false,
+        "observed_cells": 0
+      }
+    ],
+    "transitions": [
+      {
+        "at": 130358.21816931,
+        "state": "STARTUP",
+        "reason": "raw_missing_stale_or_invalid",
+        "fault": null
+      },
+      {
+        "at": 130358.230222077,
+        "state": "STARTUP",
+        "reason": "yaw_missing_stale_or_invalid",
+        "fault": null
+      },
+      {
+        "at": 130381.77959271,
+        "state": "STARTUP",
+        "reason": "yaw_uncalibrated_or_faulted",
+        "fault": null
+      },
+      {
+        "at": 130382.430628648,
+        "state": "HEALTHY",
+        "reason": "raw_sources_ready",
+        "fault": null
+      }
+    ],
+    "source_faults": [],
+    "plans": [],
+    "trace_raw_sha256": "81e00704b5c4af956fe3df97aa3837561819683aee008666dbb7c6fba65e3da6",
+    "trace_raw_bytes": 17144294
+  },
+  "mission-c-v240": {
+    "passed": false,
+    "error": "AP06 acceptance not met: hwt_terminal",
+    "travel_m": 4.393971176042551,
+    "arrivals": 3,
+    "observations": 3,
+    "reference": {
+      "current": [
+        0.009071710495736308,
+        -0.008599364611626397,
+        0.013960000000002661
+      ],
+      "initial": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "private_epoch_expired": false,
+      "retained": [
+        1080,
+        13
+      ],
+      "retained_area_m2": [
+        0.10799999517202383,
+        0.001299999941885472
+      ],
+      "projected": [
+        0,
+        0
+      ],
+      "valid": [
+        false,
+        false
+      ],
+      "reasons": [
+        "start_egress_approaches_unknown",
+        "start_egress_approaches_unknown"
+      ],
+      "monotone_detail": [
+        {
+          "reason": "distance_decrease",
+          "pose": [
+            0.7064758775133686,
+            0.0004155389748740214,
+            0.008966721965302684
+          ],
+          "cell": [
+            166,
+            106
+          ],
+          "previous_distance": 69.72660185551462,
+          "current_distance": 69.70432090719927,
+          "last_commit": [
+            0.7066986814344437,
+            0.00041715213611835786,
+            0.008966721965302684
+          ]
+        },
+        {
+          "reason": "distance_decrease",
+          "pose": [
+            0.7064758775133686,
+            0.0004155389748740214,
+            0.008966721965302684
+          ],
+          "cell": [
+            166,
+            106
+          ],
+          "previous_distance": 69.72660185551462,
+          "current_distance": 69.70432090719927,
+          "last_commit": [
+            0.7066986814344437,
+            0.00041715213611835786,
+            0.008966721965302684
+          ]
+        }
+      ]
+    },
+    "chain": [
+      {
+        "task": "metric-task-5",
+        "target": [
+          0.8499999977648258,
+          0.0
+        ],
+        "result": "success",
+        "decision": "partially_observed",
+        "terminal_child": true,
+        "stop_reason": null,
+        "child_dispatched": true,
+        "planning_rejection": null,
+        "arrived": true,
+        "observed_cells": 144
+      },
+      {
+        "task": "metric-task-14",
+        "target": [
+          2.7813603275249617,
+          -0.21136038496893786
+        ],
+        "result": "planning_failed",
+        "decision": "proposal_rejected",
+        "terminal_child": true,
+        "stop_reason": "route_invalidated",
+        "child_dispatched": false,
+        "planning_rejection": "native_stop_has_no_candidate_view",
+        "arrived": false,
+        "observed_cells": 0
+      },
+      {
+        "task": "metric-task-1",
+        "target": [
+          -0.24378679111534404,
+          -0.9062131831801529
+        ],
+        "result": "success",
+        "decision": "observed",
+        "terminal_child": true,
+        "stop_reason": null,
+        "child_dispatched": true,
+        "planning_rejection": null,
+        "arrived": true,
+        "observed_cells": 90
+      },
+      {
+        "task": "metric-task-14",
+        "target": [
+          2.7701471243399998,
+          -0.20014718178397606
+        ],
+        "result": "planning_failed",
+        "decision": "proposal_rejected",
+        "terminal_child": true,
+        "stop_reason": "route_invalidated",
+        "child_dispatched": false,
+        "planning_rejection": "native_stop_has_no_candidate_view",
+        "arrived": false,
+        "observed_cells": 0
+      },
+      {
+        "task": "metric-task-13",
+        "target": [
+          2.234999950043857,
+          0.07499999832361937
+        ],
+        "result": "success",
+        "decision": "partially_observed",
+        "terminal_child": true,
+        "stop_reason": null,
+        "child_dispatched": true,
+        "planning_rejection": null,
+        "arrived": true,
+        "observed_cells": 77
+      },
+      {
+        "task": "metric-task-13",
+        "target": [
+          2.5522959488507446,
+          0.038908658936909604
+        ],
+        "result": "planning_failed",
+        "decision": "proposal_rejected",
+        "terminal_child": true,
+        "stop_reason": "route_invalidated",
+        "child_dispatched": false,
+        "planning_rejection": "known_space_departure_unavailable",
+        "arrived": false,
+        "observed_cells": 0
+      }
+    ],
+    "transitions": [
+      {
+        "at": 130407.199553313,
+        "state": "STARTUP",
+        "reason": "yaw_missing_stale_or_invalid",
+        "fault": null
+      },
+      {
+        "at": 130429.1448543,
+        "state": "STARTUP",
+        "reason": "yaw_uncalibrated_or_faulted",
+        "fault": null
+      },
+      {
+        "at": 130429.594285596,
+        "state": "HEALTHY",
+        "reason": "raw_sources_ready",
+        "fault": null
+      },
+      {
+        "at": 130687.566018958,
+        "state": "HOLD",
+        "reason": "wheel_missing_stale_or_invalid",
+        "fault": null
+      },
+      {
+        "at": 130689.596680547,
+        "state": "TERMINAL_FAULT",
+        "reason": "wheel_missing_stale_or_invalid",
+        "fault": "wheel_missing_stale_or_invalid"
+      }
+    ],
+    "source_faults": [
+      {
+        "at": 130687.568551529,
+        "detail": {
+          "reason": "encoder_luecke_nicht_ueberbrueckbar",
+          "pair_duration_s": 0.0001374970015604049,
+          "sample_gap_s": 0.2132446764881024,
+          "read_end_age_s": 0.21331342498888262
+        },
+        "nearby_throttled_usec_delta": 184487,
+        "nearby_device_pauses": [
+          {
+            "node": "base_hardware",
+            "begin": 130687.368569243,
+            "end": 130687.5541401,
+            "duration_s": 0.1855708569928538,
+            "process_cpu_s": 0.18282731699999033,
+            "thread_cpu_s": 0.1591364189999993,
+            "last_slow_advance": {
+              "begin": 130598.761183074,
+              "end": 130598.806518742,
+              "thread_id": 103322,
+              "lock_wait_s": 4.5099295675754547e-07,
+              "elapsed_s": 0.0016114309983095154,
+              "steps": 1,
+              "pose": [
+                -1.3073444788770923,
+                -0.5164583034613184,
+                0.7390577092118314
+              ],
+              "velocity": [
+                0.09997832033096904,
+                0.09173448771661694
+              ]
+            }
+          },
+          {
+            "node": "hwt601_imu",
+            "begin": 130687.394823006,
+            "end": 130687.555587404,
+            "duration_s": 0.1607643979950808,
+            "process_cpu_s": 0.16076344299999334,
+            "thread_cpu_s": 0.0016071430000010878,
+            "last_slow_advance": {
+              "begin": 130598.761183074,
+              "end": 130598.806518742,
+              "thread_id": 103322,
+              "lock_wait_s": 4.5099295675754547e-07,
+              "elapsed_s": 0.0016114309983095154,
+              "steps": 1,
+              "pose": [
+                -1.3073444788770923,
+                -0.5164583034613184,
+                0.7390577092118314
+              ],
+              "velocity": [
+                0.09997832033096904,
+                0.09173448771661694
+              ]
+            }
+          },
+          {
+            "node": "ap06_simulated_plant",
+            "begin": 130687.360680651,
+            "end": 130687.555667565,
+            "duration_s": 0.194986913993489,
+            "process_cpu_s": 0.18505720399998893,
+            "thread_cpu_s": 0.015582303999998715,
+            "last_slow_advance": {
+              "begin": 130598.761183074,
+              "end": 130598.806518742,
+              "thread_id": 103322,
+              "lock_wait_s": 4.5099295675754547e-07,
+              "elapsed_s": 0.0016114309983095154,
+              "steps": 1,
+              "pose": [
+                -1.3073444788770923,
+                -0.5164583034613184,
+                0.7390577092118314
+              ],
+              "velocity": [
+                0.09997832033096904,
+                0.09173448771661694
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "plans": [],
+    "trace_raw_sha256": "279512f9a3d4fc941c9ffc211af2f994b38efe127d2283825fd9bc912bb03c4c",
+    "trace_raw_bytes": 250311204
+  },
+  "mission-cancel-v241": {
+    "passed": true,
+    "error": null,
+    "travel_m": 0.031010987236835652,
+    "arrivals": 0,
+    "observations": 0,
+    "reference": {
+      "current": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "initial": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "private_epoch_expired": false,
+      "retained": [
+        1084,
+        13
+      ],
+      "retained_area_m2": [
+        0.10839999515414243,
+        0.001299999941885472
+      ],
+      "projected": [
+        1084,
+        13
+      ],
+      "valid": [
+        true,
+        true
+      ],
+      "reasons": [
+        "",
+        ""
+      ],
+      "monotone_detail": [
+        null,
+        null
+      ]
+    },
+    "chain": [],
+    "transitions": [
+      {
+        "at": 130700.268502224,
+        "state": "STARTUP",
+        "reason": "yaw_missing_stale_or_invalid",
+        "fault": null
+      },
+      {
+        "at": 130722.108709275,
+        "state": "STARTUP",
+        "reason": "yaw_uncalibrated_or_faulted",
+        "fault": null
+      },
+      {
+        "at": 130722.603767198,
+        "state": "HEALTHY",
+        "reason": "raw_sources_ready",
+        "fault": null
+      }
+    ],
+    "source_faults": [],
+    "plans": [],
+    "trace_raw_sha256": "64c3c1181edabba46e6819ec534d85a07cd5cd9f8ff69dc363e1cfb0d6866705",
+    "trace_raw_bytes": 11283655
+  },
+  "mission-gyro-v242": {
+    "passed": true,
+    "error": null,
+    "travel_m": 0.04730648565202328,
+    "arrivals": 0,
+    "observations": 0,
+    "reference": {
+      "current": [
+        -7.632783294297951e-17,
+        -8.246712774467868e-18,
+        1.355252715606881e-20
+      ],
+      "initial": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "private_epoch_expired": false,
+      "retained": [
+        1084,
+        13
+      ],
+      "retained_area_m2": [
+        0.10839999515414243,
+        0.001299999941885472
+      ],
+      "projected": [
+        1084,
+        13
+      ],
+      "valid": [
+        true,
+        true
+      ],
+      "reasons": [
+        "",
+        ""
+      ],
+      "monotone_detail": [
+        null,
+        null
+      ]
+    },
+    "chain": [
+      {
+        "task": "metric-task-7",
+        "result": "hwt_hold",
+        "terminal_child": true
+      }
+    ],
+    "transitions": [
+      {
+        "at": 130736.379908219,
+        "state": "STARTUP",
+        "reason": "yaw_missing_stale_or_invalid",
+        "fault": null
+      },
+      {
+        "at": 130737.247806395,
+        "state": "STARTUP",
+        "reason": "raw_missing_stale_or_invalid",
+        "fault": null
+      },
+      {
+        "at": 130737.280211357,
+        "state": "STARTUP",
+        "reason": "yaw_missing_stale_or_invalid",
+        "fault": null
+      },
+      {
+        "at": 130760.13116058,
+        "state": "STARTUP",
+        "reason": "yaw_uncalibrated_or_faulted",
+        "fault": null
+      },
+      {
+        "at": 130760.580748844,
+        "state": "HEALTHY",
+        "reason": "raw_sources_ready",
+        "fault": null
+      },
+      {
+        "at": 130767.032866019,
+        "state": "HOLD",
+        "reason": "raw_missing_stale_or_invalid",
+        "fault": null
+      },
+      {
+        "at": 130767.584208442,
+        "state": "RECOVERY_VALIDATION",
+        "reason": "raw_missing_stale_or_invalid",
+        "fault": null
+      },
+      {
+        "at": 130768.633679162,
+        "state": "HEALTHY",
+        "reason": "awaiting_explore_resume",
+        "fault": null
+      }
+    ],
+    "source_faults": [],
+    "plans": [],
+    "trace_raw_sha256": "6c550c71f5682fae834a109b2029ea2361805cf94caf7bda735dcd6a39f3f839",
+    "trace_raw_bytes": 25748404
+  },
+  "parent_cpu": {
+    "nr_throttled": 4,
+    "throttled_usec": 189083,
+    "usage_usec": 1037736724
+  }
+}

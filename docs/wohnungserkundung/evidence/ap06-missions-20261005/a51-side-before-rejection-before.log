@@ -1,0 +1,52 @@
+FF.                                                                      [100%]
+=================================== FAILURES ===================================
+___ test_invalid_normal_approach_keeps_proved_robot_side_observation[False] ____
+
+served = False
+
+    @pytest.mark.parametrize('served', [False, True])
+    def test_invalid_normal_approach_keeps_proved_robot_side_observation(served):
+        node, inputs, metadata = fixture('ap06_a51_selection')
+        policy = MetricTaskPolicy(.6, 30., 2)
+        if served:
+            original, _ = restore_policy(metadata['checkpoint'], time.monotonic(),
+                                          metadata['checkpoint']['saved_wall_time'])
+            # Explicit earlier-history component variant on later rasters:
+            # retain the actual first completed observer, not later failed tries.
+            policy.attempts['metric-task-4'] = copy.deepcopy(original.attempts['metric-task-4'])
+            policy.next_id = 4
+        node._global_costmap_received_at = time.monotonic()
+        candidates = node._metric_select(inputs, policy, .3)
+>       assert candidates and not candidates[0].requires_nav2_plan, node._frontier_rank_stats
+E       AssertionError: {'accepted': 1, 'deferred_or_served': 0, 'proposal_search_stopped_on_eligible_task': True, 'raw': 15, ...}
+E       assert ([MetricCandidate(task_id='metric-task-5', x=3.0944116955403898, y=0.6326470446827657, yaw=-2.279422598922558, frontier...49999332800508, 1.0349999768659472)), evidence_key='d8712acd0897068d7e5662f451fa243d634e4c04f55b6295d4cb53cb7a09c8be')] and not True)
+E        +  where True = MetricCandidate(task_id='metric-task-5', x=3.0944116955403898, y=0.6326470446827657, yaw=-2.279422598922558, frontier_...849999332800508, 1.0349999768659472)), evidence_key='d8712acd0897068d7e5662f451fa243d634e4c04f55b6295d4cb53cb7a09c8be').requires_nav2_plan
+
+evidence/ap06-repo/src/explore/test/test_metric_side_before_rejection.py:25: AssertionError
+____ test_invalid_normal_approach_keeps_proved_robot_side_observation[True] ____
+
+served = True
+
+    @pytest.mark.parametrize('served', [False, True])
+    def test_invalid_normal_approach_keeps_proved_robot_side_observation(served):
+        node, inputs, metadata = fixture('ap06_a51_selection')
+        policy = MetricTaskPolicy(.6, 30., 2)
+        if served:
+            original, _ = restore_policy(metadata['checkpoint'], time.monotonic(),
+                                          metadata['checkpoint']['saved_wall_time'])
+            # Explicit earlier-history component variant on later rasters:
+            # retain the actual first completed observer, not later failed tries.
+            policy.attempts['metric-task-4'] = copy.deepcopy(original.attempts['metric-task-4'])
+            policy.next_id = 4
+        node._global_costmap_received_at = time.monotonic()
+        candidates = node._metric_select(inputs, policy, .3)
+>       assert candidates and not candidates[0].requires_nav2_plan, node._frontier_rank_stats
+E       AssertionError: {'accepted': 1, 'deferred_or_served': 0, 'proposal_search_stopped_on_eligible_task': True, 'raw': 15, ...}
+E       assert ([MetricCandidate(task_id='metric-task-9', x=3.0944116955403898, y=0.6326470446827657, yaw=-2.279422598922558, frontier...49999332800508, 1.0349999768659472)), evidence_key='d8712acd0897068d7e5662f451fa243d634e4c04f55b6295d4cb53cb7a09c8be')] and not True)
+E        +  where True = MetricCandidate(task_id='metric-task-9', x=3.0944116955403898, y=0.6326470446827657, yaw=-2.279422598922558, frontier_...849999332800508, 1.0349999768659472)), evidence_key='d8712acd0897068d7e5662f451fa243d634e4c04f55b6295d4cb53cb7a09c8be').requires_nav2_plan
+
+evidence/ap06-repo/src/explore/test/test_metric_side_before_rejection.py:25: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_side_before_rejection.py::test_invalid_normal_approach_keeps_proved_robot_side_observation[False]
+FAILED evidence/ap06-repo/src/explore/test/test_metric_side_before_rejection.py::test_invalid_normal_approach_keeps_proved_robot_side_observation[True]
+2 failed, 1 passed in 2.78s

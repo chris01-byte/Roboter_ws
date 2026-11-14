@@ -1,0 +1,124 @@
+{
+  "python": "3.10.12 (main, Aug 31 2026, 10:18:17) [GCC 11.4.0]",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.35",
+  "source": "/evidence/ap05-repo",
+  "modules": [
+    {
+      "module": "explore.explore_node",
+      "source": "src/explore/explore/explore_node.py",
+      "installed": "/evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/explore_node.py",
+      "sha256": "cd138f377ec50ecde7dc061beaed41c1c3547b85cdf8ff965da633ae85b9afaa"
+    },
+    {
+      "module": "explore.metric_frontier_runtime",
+      "source": "src/explore/explore/metric_frontier_runtime.py",
+      "installed": "/evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+      "sha256": "3bd260079afcb63f28bd1965091e88d079fcc92c49bc7ae5fbe4bc1cec4b967c"
+    },
+    {
+      "module": "explore.metric_frontier",
+      "source": "src/explore/explore/metric_frontier.py",
+      "installed": "/evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+      "sha256": "3c7092b02dd786cfda269d93e344329eec32d35b230091f8ee4212442f4d72f7"
+    },
+    {
+      "module": "explore.metric_frontier_candidates",
+      "source": "src/explore/explore/metric_frontier_candidates.py",
+      "installed": "/evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/metric_frontier_candidates.py",
+      "sha256": "c56f9f59e486e5ccab283f9e045303108353b27c20327bfebdbd77a0d72af614"
+    },
+    {
+      "module": "explore.metric_progress",
+      "source": "src/explore/explore/metric_progress.py",
+      "installed": "/evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/metric_progress.py",
+      "sha256": "9b3ae4ed53f0dd4f37ebee7d49ef77ce2c1195d4b3e83e86e9d5e7de160bdb2d"
+    },
+    {
+      "module": "explore.metric_checkpoint",
+      "source": "src/explore/explore/metric_checkpoint.py",
+      "installed": "/evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/metric_checkpoint.py",
+      "sha256": "8e8611c027756aca3e112f744c7dc1b526e494b631b00ab3411a716f7080b8dd"
+    },
+    {
+      "module": "explore.exploration_persistence",
+      "source": "src/explore/explore/exploration_persistence.py",
+      "installed": "/evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/exploration_persistence.py",
+      "sha256": "62f11a33998766fe5fac65b08f3b624f531198a1314b0df2eb191336fd173adc"
+    },
+    {
+      "module": "mission_manager.mission_manager_node",
+      "source": "src/mission_manager/mission_manager/mission_manager_node.py",
+      "installed": "/evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages/mission_manager/mission_manager_node.py",
+      "sha256": "7e002b3d19daeb2706e9267eefb20b85b8386133f46de76a86af4d546ea921ba"
+    },
+    {
+      "module": "robot_map_manager.robot_map_manager_node",
+      "source": "src/robot_map_manager/robot_map_manager/robot_map_manager_node.py",
+      "installed": "/evidence/ap05-final-install/robot_map_manager/lib/python3.10/site-packages/robot_map_manager/robot_map_manager_node.py",
+      "sha256": "4f8822b8ae1b1b97aa140096bdae67d30fc1704485e73c00ac51a063370d8975"
+    },
+    {
+      "module": "amadeus_map_identity.fingerprint",
+      "source": "src/amadeus_map_identity/amadeus_map_identity/fingerprint.py",
+      "installed": "/evidence/ap05-final-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py",
+      "sha256": "61c2ee882e3e25dbc8d6b1b25573152d3c271b817b4d81f074333c99a1ed0759"
+    },
+    {
+      "module": "robot_state_estimation.hwt601_imu_node",
+      "source": "src/robot_state_estimation/robot_state_estimation/hwt601_imu_node.py",
+      "installed": "/evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_imu_node.py",
+      "sha256": "572443d640ad721067ebad90ed7c06ad68a4886fbad4000b7364d85348266a27"
+    },
+    {
+      "module": "robot_state_estimation._hwt601_clock",
+      "source": "src/robot_state_estimation/robot_state_estimation/_hwt601_clock.py",
+      "installed": "/evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/_hwt601_clock.py",
+      "sha256": "876bd95e33185a0c804bfb2ebeada64088974f97e5f158bf3d7fa8768435f772"
+    },
+    {
+      "module": "robot_navigation.cmd_vel_mission_gate",
+      "source": "src/robot_navigation/robot_navigation/cmd_vel_mission_gate.py",
+      "installed": "/evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/cmd_vel_mission_gate.py",
+      "sha256": "99e30430e1989c20dedcd206963db6732bb4bbe3f1dbcdd3ed11d4070bc4885c"
+    },
+    {
+      "module": "base_hardware.encoder_shadow_node",
+      "source": "src/base_hardware/base_hardware/encoder_shadow_node.py",
+      "installed": "/evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages/base_hardware/encoder_shadow_node.py",
+      "sha256": "b05c21fc74d8f742da40fdd718900810c197265e50c0594843d42a13952c0988"
+    }
+  ],
+  "installed_files": [
+    {
+      "source": "src/explore/config/metric_frontier_params.yaml",
+      "installed": "/evidence/ap05-final-install/explore/share/explore/config/metric_frontier_params.yaml",
+      "sha256": "8a88ca2117983b09b1234f9e8c2a38159223fafc997d4bc28b89dd338d7ffe51"
+    },
+    {
+      "source": "src/robot_interfaces/action/ExploreArea.action",
+      "installed": "/evidence/ap05-final-install/robot_interfaces/share/robot_interfaces/action/ExploreArea.action",
+      "sha256": "a3e320a4392adf02628be223987407914df35c15365c4de3f4d7e5269f595cd3"
+    }
+  ],
+  "action_fields": {
+    "ExploreArea_Goal": {
+      "timeout_s": "float",
+      "min_frontier_size_m": "float",
+      "return_to_start": "boolean"
+    },
+    "ExploreArea_Result": {
+      "success": "boolean",
+      "message": "string",
+      "frontiers_visited": "int32",
+      "explored_area_m2": "float"
+    },
+    "ExploreArea_Feedback": {
+      "explored_percent": "float",
+      "frontiers_remaining": "int32",
+      "current_goal": "geometry_msgs/PoseStamped"
+    }
+  },
+  "ros_domain_id": 230,
+  "ros_localhost_only": true,
+  "proof_scope": "Actual installed ROS bindings and byte identity; no hardware or full AP-06 graph"
+}

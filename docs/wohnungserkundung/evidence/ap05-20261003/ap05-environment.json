@@ -1,0 +1,23 @@
+{
+  "container": "/ap03-current",
+  "image_id": "sha256:2d63ffdf9d13ee52f45749a255f213a45addee8c367f8063a9993830467c17ff",
+  "network_mode": "none",
+  "init": true,
+  "mounts": [
+    {
+      "source": "/workspace/Roboter_ws-ap03",
+      "destination": "/repo",
+      "rw": true
+    },
+    {
+      "source": "/workspace/scratch",
+      "destination": "/evidence",
+      "rw": true
+    }
+  ],
+  "host_platform_tools": {
+    "swift": null,
+    "xcodebuild": null,
+    "xcrun": null
+  }
+}
