@@ -153,3 +153,74 @@ def test_closest_real_body_approach_records_pose_time_and_obstacle_kind():
     w.pruefe_koerper()                    # weiter weg: Eintrag bleibt
     assert w.koerper_engste is erst
     assert w.koerper_verlauf == [(12.5, erst['abstand_m'])]
+
+
+# --- Grundriss-Welt und Antriebsmodell (Fahrplan §9 Schritt 2, 14.11.2026) ---
+
+def _labor():
+    import json
+    manifest = json.loads((Path(__file__).parent/'experimente'/'manifest_labor_flur.json')
+                          .read_text(encoding='utf-8'))
+    g = manifest['welt']['grundriss']
+    return welt.GrundrissWelt(manifest['welt']['start'], g['raeume'], g['durchgaenge'],
+                              g['moebel'], g['niedrig'], manifest['welt']['antrieb']), manifest
+
+
+def test_drive_model_reproduces_the_measured_one_second_pulse():
+    """base_hardware_params.yaml, 14.08.2026: 1,0 s mit 0,12 m/s ergab 0,0439 m."""
+    v, weg, dt = np.zeros(2), 0.0, 0.005
+    for i in range(600):                       # 1 s Impuls, 2 s Auslauf
+        soll = (0.12, 0.0) if i < 200 else (0.0, 0.0)
+        v = welt.antrieb_schritt(v, soll, dt, 1.3, 0.15)
+        weg += v[0]*dt
+    assert weg == pytest.approx(0.0439, rel=0.10)
+    assert abs(v[0]) < 1e-4
+    # Reine Drehung bleibt eine reine Drehung; Bremsen ist schneller als Anfahren.
+    w = welt.antrieb_schritt(np.zeros(2), (0.0, 0.25), 0.1, 1.3, 0.15)
+    assert w[0] == pytest.approx(0.0, abs=1e-12) and 0 < w[1] < 0.25*0.1
+    brems = welt.antrieb_schritt(np.array([0.12, 0.0]), (0.0, 0.0), 0.1, 1.3, 0.15)
+    assert brems[0] < 0.12*0.6
+
+
+def test_rectangle_difference_cuts_a_door_out_of_a_wall():
+    assert welt.rechteck_minus((4.3, 4.35, -0.05, 4.35), (4.3, 4.35, 1.6, 2.4)) == [
+        (4.3, 4.35, -0.05, 1.6), (4.3, 4.35, 2.4, 4.35)]
+    assert welt.rechteck_minus((0., 1., 0., 1.), (2., 3., 0., 1.)) == [(0., 1., 0., 1.)]
+
+
+def test_floor_plan_world_has_walls_a_door_rooms_and_low_furniture():
+    w, manifest = _labor()
+    assert w.antrieb == (1.3, 0.15)
+    assert w.raum_von((1.5, 1.2)) == 'labor' and w.raum_von((5.0, 2.0)) == 'flur'
+    assert w.raum_von((4.32, 2.0)) is None             # in der Türöffnung
+    # Strahl nach Osten: durch die Tür bis zur Flurwand, daneben bis zur Laborwand.
+    durch = w.raycast(np.array([3.6, 2.0]), np.array([0.0]))[0]
+    wand = w.raycast(np.array([3.6, 3.0]), np.array([0.0]))[0]
+    assert durch == pytest.approx(5.85-3.6, abs=1e-6)
+    assert wand == pytest.approx(4.3-3.6, abs=1e-6)
+    # Der LiDAR sieht die Mülleimer nicht, die Welt kennt sie als Hindernis.
+    assert w.raycast(np.array([2.0, 1.45]), np.array([0.0]))[0] > 2.0
+    assert len(w.niedrig) == len(manifest['welt']['grundriss']['niedrig'])
+    assert w.abstand_niedrig([(2.5, 1.45)]) == pytest.approx(0.10)
+    with pytest.raises(ValueError):
+        welt.GrundrissWelt((9., 9., 0.), {'a': [0, 1, 0, 1]})
+
+
+def test_room_coverage_counts_each_room_separately():
+    w, _ = _labor()
+    res = 0.05
+    # Karte im Startrahmen: nur der Laborraum ist frei bekannt, der Flur unbekannt.
+    hoehe, breite = 200, 200
+    origin = (-5.0, -5.0)
+    karte = np.full((hoehe, breite), -1, dtype=np.int16)
+    ys, xs = np.mgrid[0:hoehe, 0:breite]
+    lokal = np.stack((origin[0]+(xs.ravel()+.5)*res, origin[1]+(ys.ravel()+.5)*res), axis=1)
+    weltpunkte = w.karte_zu_welt(lokal)
+    im_labor = ((weltpunkte[:, 0] > 0) & (weltpunkte[:, 0] < 4.3)
+                & (weltpunkte[:, 1] > 0) & (weltpunkte[:, 1] < 4.3))
+    karte.ravel()[im_labor] = 0
+    anteile = w.raum_abdeckung(karte, res, origin)
+    assert anteile['labor'] > 0.97 and anteile['flur'] == 0.0
+    gesamt = w.abdeckung_erreichbar(karte, res, origin)
+    assert 0.6 < gesamt['erreichbar_anteil'] < 0.8      # Flur fehlt
+    assert w.map_oracle(karte, res, origin)['reference_observed_fraction'] < 0.8

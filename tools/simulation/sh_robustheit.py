@@ -271,6 +271,18 @@ def bewerte(abnahme, szenario, zusammenfassung, stoerung, kollision, abgestuerzt
 # ---------------------------------------------------------------------------
 
 
+def raum_zeiten(verlauf, namen, anteile=(.85, .90, .95)):
+    """Fahrzeit, bis ein Raum zu 85/90/95 % seiner erreichbaren Fläche frei kartiert war."""
+    zeiten = {}
+    for name in namen:
+        zeiten[name] = {}
+        for anteil in anteile:
+            treffer = [p['fahrt_s'] for p in verlauf
+                       if p.get(name) is not None and p[name] >= anteil]
+            zeiten[name][f'{int(anteil*100)}_prozent_s'] = treffer[0] if treffer else None
+    return zeiten
+
+
 def odometrie_drift(konfig):
     """(gier_skala, laenge_skala) aus dem Manifest oder None (ideale Odometrie)."""
     if not konfig:
@@ -346,12 +358,26 @@ def main(argv=None):
     from tf2_ros import StaticTransformBroadcaster, TransformBroadcaster
 
     from ap06_sensors import vl53_producer
-    from sh_robustheit_welt import RobustheitsWelt
+    from sh_robustheit_welt import GrundrissWelt, RobustheitsWelt
     from selbstheilung_lauf_protokoll import LaufProtokoll
 
-    welt = RobustheitsWelt(manifest['welt']['door_m'], manifest['welt']['start'],
-                           zusatz=manifest['welt'].get('zusatz_hindernisse', ()),
-                           niedrig=manifest['welt'].get('niedrige_hindernisse', ()))
+    grundriss = manifest['welt'].get('grundriss')
+    if grundriss:
+        # Frei beschriebener Grundriss (Fahrplan §9 Schritt 2): Räume, Durchgänge,
+        # Möbel; optional das gemessene Antriebsmodell.
+        welt = GrundrissWelt(manifest['welt']['start'], grundriss['raeume'],
+                             durchgaenge=grundriss.get('durchgaenge', ()),
+                             moebel=grundriss.get('moebel', ()),
+                             niedrig=grundriss.get('niedrig', ()),
+                             antrieb=manifest['welt'].get('antrieb'))
+    else:
+        welt = RobustheitsWelt(manifest['welt']['door_m'], manifest['welt']['start'],
+                               zusatz=manifest['welt'].get('zusatz_hindernisse', ()),
+                               niedrig=manifest['welt'].get('niedrige_hindernisse', ()))
+    lidar_rauschen = float(manifest['sensor'].get('lidar_rauschen_m', 0.))
+    rauschen = np.random.default_rng(int(manifest['sensor'].get('rauschen_saat', 1)))
+    # Je Raum: Abdeckung alle 10 s und erstes Betreten (nur Grundriss-Welten).
+    raeume = dict(verlauf=[], erstes_betreten_s={}, letzte=-math.inf)
     niedrig_plaene = dict(verlauf=[], nah=[])   # Diagnose: Pläne um niedrige Möbel
     sensor = manifest['sensor']
     latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
@@ -487,6 +513,10 @@ def main(argv=None):
             jetzt = time.monotonic()
             if jetzt >= zustand['lidar_pause_bis']:
                 winkel, ranges = welt.laser(beams=sensor['lidar_beams'], mask=sensor['mastmaske'])
+                if lidar_rauschen > 0.:
+                    # Messrauschen des echten LiDAR (STL-27L: ±15 mm): ohne es sind
+                    # Simulationskarten glatter als echte 1-cm-Karten.
+                    ranges = ranges + rauschen.normal(0., lidar_rauschen, len(ranges))
                 scan = LaserScan()
                 scan.header.stamp = self.get_clock().now().to_msg()
                 scan.header.frame_id = 'laser_frame'
@@ -715,6 +745,21 @@ def main(argv=None):
             for e in protokoll.ereignisse[gemeldet:]:
                 print('EREIGNIS', json.dumps(e, ensure_ascii=False), flush=True)
             gemeldet = len(protokoll.ereignisse)
+            if grundriss:
+                seit = round(jetzt - missionsstart, 1)
+                raum = welt.raum_von(welt.pose[:2])
+                if raum is not None and raum not in raeume['erstes_betreten_s']:
+                    raeume['erstes_betreten_s'][raum] = seit
+                    print('RAUM', raum, seit, flush=True)
+                if jetzt - raeume['letzte'] >= 10. and beobachter.karte is not None:
+                    raeume['letzte'] = jetzt
+                    k = beobachter.karte
+                    anteile = welt.raum_abdeckung(
+                        np.asarray(k.data, dtype=np.int16).reshape(k.info.height, k.info.width),
+                        k.info.resolution, (k.info.origin.position.x, k.info.origin.position.y))
+                    raeume['verlauf'].append(dict(
+                        fahrt_s=seit, ziele=(protokoll.self_healing or {}).get('goals_reached'),
+                        **anteile))
             if protokoll.beendet_um is not None and jetzt - protokoll.beendet_um >= manifest['budgets']['nachlauf_s']:
                 break
             if (protokoll.gestartet_um is None and jetzt - missionsstart > 30.
@@ -812,6 +857,10 @@ def main(argv=None):
     ergebnis['fahrtprotokoll'] = zusammenfassung
     if stellprobe_m > 0:
         ergebnis['stellprobe'] = protokoll.stellprobe_ergebnis(stellprobe_m)
+    if grundriss:
+        ergebnis['raeume'] = dict(
+            erstes_betreten_s=raeume['erstes_betreten_s'], verlauf=raeume['verlauf'],
+            zeit_bis=raum_zeiten(raeume['verlauf'], list(grundriss['raeume'])))
     ergebnis['kollision'] = bool(welt.collision)
     ergebnis['minimaler_abstand_m'] = (None if not math.isfinite(welt.minimum_clearance)
                                        else round(float(welt.minimum_clearance), 3))

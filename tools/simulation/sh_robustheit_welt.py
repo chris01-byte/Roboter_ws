@@ -28,6 +28,31 @@ MAX_SCHRITT_S = 0.01
 KOERPER = ((-.11, -.23), (.31, -.23), (.31, .23), (-.11, .23))
 
 
+RADABSTAND_M = 0.3845
+
+
+def antrieb_schritt(geschwindigkeit, soll, dt, tau_auf_s, tau_ab_s):
+    """Ein Zeitschritt der Radantriebe mit Anfahr- und Bremsrampe.
+
+    Gemessen am Roboter (base_hardware_params.yaml, 14.08.2026): Mit
+    ``accel_ms=2000`` ergab ein 1,0-s-Fahrimpuls mit 0,12 m/s nur 0,0439 m
+    Encoderweg; gebremst wird mit 400 ms. Das Modell ist je Rad eine
+    Verzögerung erster Ordnung, träge beim Schnellerwerden (``tau_auf_s``),
+    zügig beim Langsamerwerden oder Richtungswechsel (``tau_ab_s``). Mit
+    1,3 s / 0,15 s trifft es den gemessenen Impuls auf etwa 5 %.
+    """
+    v, w = float(geschwindigkeit[0]), float(geschwindigkeit[1])
+    sv, sw = float(soll[0]), float(soll[1])
+    raeder = [v - w*RADABSTAND_M/2, v + w*RADABSTAND_M/2]
+    ziele = [sv - sw*RADABSTAND_M/2, sv + sw*RADABSTAND_M/2]
+    neu = []
+    for ist, ziel in zip(raeder, ziele):
+        schneller = abs(ziel) > abs(ist) and (ist*ziel >= 0.)
+        tau = tau_auf_s if schneller else tau_ab_s
+        neu.append(ist + (ziel-ist)*(1.-math.exp(-dt/tau)))
+    return np.array([(neu[0]+neu[1])/2, (neu[1]-neu[0])/RADABSTAND_M])
+
+
 def koerper(pose):
     x, y, yaw = pose
     c, s = math.cos(yaw), math.sin(yaw)
@@ -63,6 +88,8 @@ class RobustheitsWelt(World):
         self.minimum_koerper = math.inf  # kleinster Abstand des echten Gehäuses
         self.koerper_engste = None       # Pose und Zeit dazu (SH-8b, 13.11.2026)
         self.koerper_verlauf = []        # jede neue Annäherung: (t_s, Abstand)
+        # Optionales Antriebsmodell (tau_auf_s, tau_ab_s): siehe ``antrieb_schritt``.
+        self.antrieb = None
 
     # --- Szenarioeingriffe ----------------------------------------------
     def schliesse_tuer(self, seite):
@@ -119,7 +146,13 @@ class RobustheitsWelt(World):
         schritte = max(1, math.ceil(dt/MAX_SCHRITT_S))
         for _ in range(schritte):
             vorher = self.minimum_clearance
-            super().integrate(command, dt/schritte, tau)
+            if self.antrieb is None:
+                super().integrate(command, dt/schritte, tau)
+            else:
+                # Räder folgen dem Sollwert träge (gemessene Motorrampe); die
+                # Basisklasse übernimmt die so berechnete Geschwindigkeit sofort.
+                ziel = antrieb_schritt(self.velocity, command, dt/schritte, *self.antrieb)
+                super().integrate(ziel, dt/schritte, 1e-9)
             if self.niedrig:
                 frei = chassis_clearance(self.pose, [b for b, _ in self.niedrig])
                 self.minimum_clearance = min(self.minimum_clearance, frei)
@@ -249,3 +282,134 @@ class RobustheitsWelt(World):
         best = np.where(best <= maximum, best, np.inf)
         nearest = np.minimum(np.where(np.isnan(result), np.inf, result), best)
         return np.where(np.isfinite(nearest), nearest, np.nan)
+
+
+def rechteck_minus(rechteck, oeffnung):
+    """Achsparalleles Rechteck (x0, x1, y0, y1) ohne die Öffnung; Liste der Reste."""
+    x0, x1, y0, y1 = rechteck
+    ox0, ox1, oy0, oy1 = oeffnung
+    if ox0 >= x1 or ox1 <= x0 or oy0 >= y1 or oy1 <= y0:
+        return [tuple(rechteck)]
+    reste = [(x0, min(x1, ox0), y0, y1), (max(x0, ox1), x1, y0, y1),
+             (max(x0, ox0), min(x1, ox1), y0, min(y1, oy0)),
+             (max(x0, ox0), min(x1, ox1), max(y0, oy1), y1)]
+    return [r for r in reste if r[1]-r[0] > 1e-9 and r[3]-r[2] > 1e-9]
+
+
+class GrundrissWelt(RobustheitsWelt):
+    """Frei beschriebener Grundriss für Erkundungsversuche (Fahrplan §9 Schritt 2).
+
+    ``raeume``: Name -> Innenfläche [x0, x1, y0, y1]. ``durchgaenge``: freie
+    Rechtecke durch die Wände (Türöffnungen). Wände entstehen als Streifen um
+    jeden Raum, ohne Räume und Durchgänge. ``moebel`` sind raumhohe Rechtecke
+    (LiDAR und VL53 sehen sie), ``niedrig`` Rechtecke [x0, x1, y0, y1, Höhe]
+    unter der LiDAR-Ebene (nur die VL53 sehen sie, die SLAM-Karte kennt sie
+    nicht). Die Welt liefert dem Produkt weiterhin keine Karte.
+    """
+    WAND_M = 0.05
+
+    def __init__(self, start, raeume, durchgaenge=(), moebel=(), niedrig=(), antrieb=None):
+        super().__init__(.8, start)
+        self.raeume = {str(name): tuple(float(v) for v in box) for name, box in raeume.items()}
+        self.durchgaenge = [tuple(float(v) for v in d) for d in durchgaenge]
+        if not self.raeume:
+            raise ValueError('grundriss braucht mindestens einen Raum')
+        frei = list(self.raeume.values()) + self.durchgaenge
+        t = self.WAND_M
+        streifen = []
+        for x0, x1, y0, y1 in self.raeume.values():
+            streifen += [(x0-t, x0, y0-t, y1+t), (x1, x1+t, y0-t, y1+t),
+                         (x0-t, x1+t, y0-t, y0), (x0-t, x1+t, y1, y1+t)]
+        for oeffnung in frei:
+            streifen = [rest for wand in streifen for rest in rechteck_minus(wand, oeffnung)]
+        self.obstacles = [rectangle(*wand) for wand in streifen]
+        self.obstacles += [rectangle(*(float(v) for v in m)) for m in moebel]
+        for x0, x1, y0, y1, hoehe in niedrig:
+            self.niedrig.append((rectangle(float(x0), float(x1), float(y0), float(y1)),
+                                 float(hoehe)))
+        if antrieb:
+            self.antrieb = (float(antrieb['tau_auf_s']), float(antrieb['tau_ab_s']))
+            if not (0. < self.antrieb[1] <= self.antrieb[0] <= 10.):
+                raise ValueError('antrieb: 0 < tau_ab_s <= tau_auf_s <= 10 erwartet')
+        xs = [v for box in frei for v in box[:2]]
+        ys = [v for box in frei for v in box[2:]]
+        self.grenzen = (min(xs), max(xs), min(ys), max(ys))
+        if self.raum_von(self.start[:2]) is None:
+            raise ValueError('Startpose liegt in keinem Raum')
+
+    def schliesse_tuer(self, seite):
+        raise ValueError('schliesse_tuer gibt es nur in der festen Zwei-Raum-Welt')
+
+    def raum_von(self, punkt):
+        """Name des Raums, in dem der Punkt liegt, sonst None (Wand, Durchgang)."""
+        x, y = float(punkt[0]), float(punkt[1])
+        for name, (x0, x1, y0, y1) in self.raeume.items():
+            if x0 <= x <= x1 and y0 <= y <= y1:
+                return name
+        return None
+
+    def _referenz(self, resolution):
+        """Zellmitten der Welt, Maske frei (Räume und Durchgänge ohne Hindernisse)."""
+        gx0, gx1, gy0, gy1 = self.grenzen
+        ys, xs = np.mgrid[gy0:gy1:resolution, gx0:gx1:resolution]
+        cx, cy = xs+resolution/2, ys+resolution/2
+        frei = np.zeros(cx.shape, dtype=bool)
+        for x0, x1, y0, y1 in list(self.raeume.values()) + self.durchgaenge:
+            frei |= (cx >= x0) & (cx <= x1) & (cy >= y0) & (cy <= y1)
+        for o in list(self.obstacles) + [b for b, _ in self.niedrig]:
+            lo, hi = o.min(axis=0), o.max(axis=0)
+            frei &= ~((cx >= lo[0]) & (cx <= hi[0]) & (cy >= lo[1]) & (cy <= hi[1]))
+        return cx, cy, frei
+
+    def _erreichbar(self, resolution):
+        cx, cy, frei = self._referenz(resolution)
+        teile, _ = label(frei)
+        gx0, _, gy0, _ = self.grenzen
+        r = int(np.clip(math.floor((self.start[1]-gy0)/resolution), 0, frei.shape[0]-1))
+        c = int(np.clip(math.floor((self.start[0]-gx0)/resolution), 0, frei.shape[1]-1))
+        if teile[r, c] == 0:
+            return cx, cy, None
+        return cx, cy, teile == teile[r, c]
+
+    def _gesehen(self, punkte, occupancy, resolution, origin):
+        a = np.asarray(occupancy)
+        idx = np.floor((self.local(punkte)-np.asarray(origin))/resolution).astype(int)
+        im = (idx[:, 0] >= 0) & (idx[:, 0] < a.shape[1]) & (idx[:, 1] >= 0) & (idx[:, 1] < a.shape[0])
+        gesehen = np.zeros(len(punkte), dtype=bool)
+        gesehen[im] = a[idx[im, 1], idx[im, 0]] == 0
+        return gesehen
+
+    def abdeckung_erreichbar(self, occupancy, resolution, origin):
+        cx, cy, erreichbar = self._erreichbar(resolution)
+        if erreichbar is None:
+            return None
+        punkte = np.stack((cx[erreichbar], cy[erreichbar]), axis=1)
+        gesehen = self._gesehen(punkte, occupancy, resolution, origin)
+        return {'erreichbar_zellen': int(len(punkte)), 'erreichbar_beobachtet': int(gesehen.sum()),
+                'erreichbar_anteil': float(gesehen.mean())}
+
+    def raum_abdeckung(self, occupancy, resolution, origin):
+        """Je Raum: Anteil seiner erreichbaren Fläche, den die SLAM-Karte frei kennt."""
+        cx, cy, erreichbar = self._erreichbar(resolution)
+        if erreichbar is None:
+            return {}
+        ergebnis = {}
+        for name, (x0, x1, y0, y1) in self.raeume.items():
+            maske = erreichbar & (cx >= x0) & (cx <= x1) & (cy >= y0) & (cy <= y1)
+            if not maske.any():
+                ergebnis[name] = None
+                continue
+            punkte = np.stack((cx[maske], cy[maske]), axis=1)
+            ergebnis[name] = round(float(self._gesehen(punkte, occupancy, resolution, origin).mean()), 4)
+        return ergebnis
+
+    def map_oracle(self, occupancy, resolution, origin):
+        a = np.asarray(occupancy)
+        cx, cy, frei = self._referenz(resolution)
+        punkte = np.stack((cx[frei], cy[frei]), axis=1)
+        gesehen = self._gesehen(punkte, a, resolution, origin)
+        fehler = self.kartenfehler_orte(a, resolution, origin, schwelle_m=0., anzahl=1)
+        return {'reference_free_cells': int(len(punkte)),
+                'reference_observed_cells': int(gesehen.sum()),
+                'reference_observed_fraction': float(gesehen.mean()),
+                'maximum_occupied_wall_error_m': fehler['orte'][0][2] if fehler['orte'] else 0.}
