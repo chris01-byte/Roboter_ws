@@ -1,0 +1,10 @@
+# EK-1 mit A Teilschwenk 90 Grad, B nur tiefe Luecken (0,5 m breit) und
+# D Anlauf nach 45 s ohne Weggewinn abbrechen. Ohne C: Das Ende ergibt sich
+# geometrisch (keine tiefe Luecke mehr), nicht ueber ein Zeitfenster.
+# Nur Simulation; im Produktprofil ist nichts davon gesetzt.
+sh_treiber:
+  explorer_parameter:
+    self_healing_scan_rad: 1.5708
+    self_healing_scan_spacing_m: 2.5
+    self_healing_gap_depth_m: 0.25
+    self_healing_attempt_stall_s: 45.0

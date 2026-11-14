@@ -282,6 +282,42 @@ def obstacle_clearance(occupancy: np.ndarray, resolution: float, *,
     return _fine(np.maximum(distance - k*resolution*math.sqrt(2.), 0.), k, occupancy.shape)
 
 
+def deep_unknown_mask(occupancy: np.ndarray, resolution: float,
+                      depth_m: float) -> Optional[np.ndarray]:
+    """Unbekannte Zellen, die zu mindestens ``2*depth_m`` breitem Unbekanntem gehören.
+
+    EK-1 Teil B (14.11.2026): Real lagen 14 von 26 Zielen näher als 0,5 m, ein
+    erreichtes Ziel kostete im Median 70 s (SH-8). Schmale Schattenkeile hinter
+    Stuhlbeinen, Strahllücken und Streifen vor Wänden haben lange Frontiers,
+    aber kaum Fläche, und der Roboter passt nicht hinein. „Tief“ ist
+    Unbekanntes, in das eine Scheibe mit Radius ``depth_m`` passt
+    (morphologische Öffnung über zwei Abstandstransformationen, in voller
+    Auflösung: Ein 1-cm-Loch in einer Wand verbindet nicht mit dem Unbekannten
+    dahinter). Außerhalb der Karte gilt alles als unbekannt. ``None`` bei
+    ``depth_m <= 0``.
+    """
+    occupancy = np.asarray(occupancy)
+    if not depth_m > 0 or occupancy.ndim != 2 or occupancy.size == 0 or not resolution > 0:
+        return None
+    radius = depth_m/resolution
+    pad = int(math.ceil(radius)) + 1
+    unknown = np.pad(occupancy < 0, pad, constant_values=True)
+    kern = distance_transform_edt(unknown) >= radius
+    offen = (distance_transform_edt(~kern) <= radius) & unknown
+    return offen[pad:-pad, pad:-pad]
+
+
+def _an_tiefem(free: np.ndarray, deep: np.ndarray) -> np.ndarray:
+    """Freie Zellen mit einem 4-Nachbarn in tiefem Unbekanntem."""
+    deep = np.asarray(deep, dtype=bool)
+    neben = np.zeros_like(free)
+    neben[1:, :] |= deep[:-1, :]
+    neben[:-1, :] |= deep[1:, :]
+    neben[:, 1:] |= deep[:, :-1]
+    neben[:, :-1] |= deep[:, 1:]
+    return free & neben
+
+
 def reachable_goal_mask(occupancy: np.ndarray, resolution: float,
                         robot_cell: Tuple[int, int], *, clearance_m: float = .2,
                         escape_m: float = .35, goal_tolerance_m: float = .3,
@@ -337,7 +373,8 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
                    allowed: Optional[np.ndarray] = None,
                    clearance: Optional[np.ndarray] = None,
                    goal_clearance_m: float = 0.,
-                   goal_shift_max_m: float = 0.) -> List[FrontierGoal]:
+                   goal_shift_max_m: float = 0.,
+                   deep: Optional[np.ndarray] = None) -> List[FrontierGoal]:
     """Schnelle Frontier-Auswahl ohne Sichtprognose (anytime, Millisekunden).
 
     Frontier = freie Zelle mit unbekanntem 4-Nachbarn; Cluster mit
@@ -357,6 +394,11 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
     ``goal_shift_max_m``, gibt es keine, auf die geräumigste bekannt freie
     Zelle dort: Der Roboter soll dort stehen und sich drehen können; der
     LiDAR sieht die Frontier auch von dort.
+
+    Mit ``deep`` (siehe ``deep_unknown_mask``) zählen je Cluster nur die
+    Zellen direkt an tiefem Unbekanntem: Ein Cluster ohne ``min_size_cells``
+    solcher Zellen entfällt, Zielzelle und Kosten beziehen sich auf den tiefen
+    Teil.
     """
     occupancy = np.asarray(occupancy)
     if occupancy.ndim != 2 or occupancy.size == 0 or not resolution > 0:
@@ -384,6 +426,10 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
     blocked |= distance < min_distance_m
     if allowed is not None:
         blocked |= ~np.asarray(allowed, dtype=bool)[rows, cols]
+    if deep is not None:
+        tief = _an_tiefem(free, deep)[rows, cols]
+        sizes = np.bincount(ids[tief], minlength=count+1)   # nur der tiefe Teil zählt
+        blocked |= ~tief
     spacious = None
     if clearance is not None and goal_clearance_m > 0:
         clearance = np.asarray(clearance)
@@ -443,8 +489,12 @@ def _nearest_spacious(free: np.ndarray, clearance: np.ndarray, wanted_m: float, 
     return float(np.asarray(x)[0]), float(np.asarray(y)[0])
 
 
-def frontier_cells_remaining(occupancy: np.ndarray, min_size_cells: int = 5) -> int:
-    """Anzahl der Frontier-Cluster ausreichender Größe (ohne Sperrliste)."""
+def frontier_cells_remaining(occupancy: np.ndarray, min_size_cells: int = 5,
+                             deep: Optional[np.ndarray] = None) -> int:
+    """Anzahl der Frontier-Cluster ausreichender Größe (ohne Sperrliste).
+
+    Mit ``deep`` zählen je Cluster nur Zellen an tiefem Unbekanntem.
+    """
     occupancy = np.asarray(occupancy)
     if occupancy.ndim != 2 or occupancy.size == 0:
         return 0
@@ -457,6 +507,8 @@ def frontier_cells_remaining(occupancy: np.ndarray, min_size_cells: int = 5) -> 
     labels, count = label(free & adjacent, structure=np.ones((3, 3), dtype=bool))
     if count == 0:
         return 0
+    if deep is not None:
+        labels = np.where(_an_tiefem(free, deep), labels, 0)
     sizes = np.bincount(labels.ravel(), minlength=count+1)[1:]
     return int(np.count_nonzero(sizes >= min_size_cells))
 

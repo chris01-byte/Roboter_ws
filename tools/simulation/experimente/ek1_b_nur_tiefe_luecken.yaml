@@ -1,0 +1,7 @@
+# EK-1 Teil B allein (14.11.2026): Frontiers zaehlen nur an Unbekanntem, das
+# mindestens 0,5 m breit ist (2 x 0,25 m). Schmale Schattenkeile, Strahlluecken
+# und Streifen vor Waenden werden nicht angefahren und halten das Ende nicht
+# auf. Nur Simulation; im Produktprofil ist nichts davon gesetzt.
+sh_treiber:
+  explorer_parameter:
+    self_healing_gap_depth_m: 0.25

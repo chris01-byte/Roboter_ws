@@ -28,8 +28,9 @@ from robot_interfaces.action import ExploreArea
 from .action_client import SerializedActionClient as ActionClient
 from .self_healing import (
     FATAL, WAIT, classify, HealingLadder, RETRY, LOOK_AROUND, TRACK_BACK,
-    REQUEST_HELP, TrackRecorder, frontier_goals, frontier_cells_remaining,
-    obstacle_clearance, reachable_goal_mask, rotation_clear, unknown_ahead_fraction)
+    REQUEST_HELP, TrackRecorder, deep_unknown_mask, frontier_goals,
+    frontier_cells_remaining, obstacle_clearance, reachable_goal_mask, rotation_clear,
+    unknown_ahead_fraction)
 
 
 class SelfHealingRuntime:
@@ -105,6 +106,11 @@ class SelfHealingRuntime:
         # hat (SH-6/SH-7: 13-69 % der Fahrzeit in 150-s-Anläufen ohne Ziel).
         self._self_healing_attempt_stall_s = number('self_healing_attempt_stall_s', 0., 0., 600.)
         self._self_healing_attempt_stall_m = number('self_healing_attempt_stall_m', .25, .05, 2.)
+        # B nur Lücken, in die der Roboter passt (14.11.2026): Frontiers zählen
+        # nur an Unbekanntem, das mindestens 2*gap_depth_m breit ist. Schmale
+        # Schattenkeile und Strahllücken werden nicht angefahren und halten das
+        # Ende nicht auf (SH-8: 14 von 26 Zielen näher als 0,5 m). 0 = aus.
+        self._self_healing_gap_depth_m = number('self_healing_gap_depth_m', 0., 0., 1.)
         # „Nicht vom Fleck gekommen“: weniger als stuck_move_m seit Beginn des
         # Versuchs; dann kommt die Spur-Rückfahrt sofort (Entscheidung 04.11.2026).
         self._self_healing_stuck_move_m = number('self_healing_stuck_move_m', .05, .01, .3)
@@ -484,6 +490,13 @@ class SelfHealingRuntime:
                                                               unknown_blocks=True),
                                  goal_clearance_m=self._self_healing_goal_clearance_m,
                                  goal_shift_max_m=self._self_healing_goal_shift_max_m)
+            gap_depth = getattr(self, '_self_healing_gap_depth_m', 0.)
+            deep = deep_unknown_mask(occupancy, info.resolution, gap_depth)
+            if deep is not None:
+                selection.update(deep=deep)
+                status['shallow_frontiers'] = max(
+                    0, frontier_cells_remaining(occupancy, min_cells)
+                    - frontier_cells_remaining(occupancy, min_cells, deep=deep))
             goals = frontier_goals(occupancy, info.resolution, cell_to_world, pose[:2],
                                    allowed=allowed, **selection)
             if allowed is not None:
@@ -496,7 +509,7 @@ class SelfHealingRuntime:
                 if empty_checks < self._self_healing_completion_checks:
                     time.sleep(min(.5, self._replan_period_s))
                     continue
-                remaining = frontier_cells_remaining(occupancy, min_cells)
+                remaining = frontier_cells_remaining(occupancy, min_cells, deep=deep)
                 if remaining == 0:
                     return finish('success', 'exploration_complete')
                 if not second_chance_used and blacklist:
