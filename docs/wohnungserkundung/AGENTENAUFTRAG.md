@@ -551,9 +551,13 @@ Unabhängig von Teil A und Teil B, **ohne Stack, ohne Fahrt, ohne ROS**: Das
 Werkzeug liest nur vorhandene Logdateien. Es dient der Vorbereitung von
 Schritt 2 (Erkundungstempo) und ändert nichts an diesem Auftrag. Ausführen,
 sobald Teil A (und gegebenenfalls Teil B) abgeschlossen ist, oder wenn
-Christopher darum bittet. Das Werkzeug liegt ab `c6da3d4` im Klon;
-vorher einmal `git pull --ff-only` (die Werkzeuge und der Release von SH-8b
-bleiben dabei unverändert).
+Christopher darum bittet. Das Werkzeug liegt ab `c6da3d4` im Klon; **ab
+`23317fe` liest es zusätzlich die Fahrbefehle der Basis** (Zeilen
+`CMD: v=…` und `TIMEOUT-STOP` im selben `launch.log`). Vorher einmal
+`git pull --ff-only` (die Werkzeuge und der Release von SH-8b bleiben dabei
+unverändert). Wurde Anhang Z schon mit einem älteren Stand ausgeführt: nach
+dem `git pull` **einmal erneut** ausführen, die früheren Ergebnisdateien
+dürfen überschrieben werden.
 
 **Frage:** Wohin ging in den bisherigen vollen Fahrten die Zeit? Je Anlauf
 Entfernung des Ziels, Dauer und Ausgang; dazu die Zeitanteile des
@@ -575,10 +579,20 @@ for d in "$R"/selbstheilung-sh6-20261104_2140/pruefung/sh6_run[123] \
 done
 ```
 
-Bericht `~/selbstheilung_anlaeufe_bericht.md`: je Fahrt der Block
-`zusammenfassung` wörtlich und darunter die Liste der Anläufe (die Zeilen
-nach dem JSON-Block aus `<n>.txt`). Fehlt ein Log, das nennen. Keine Karten,
-keine Bilder. Kein Stackstart, kein `topic pub`, kein Build.
+Bericht `~/selbstheilung_anlaeufe_bericht.md` (beim erneuten Lauf
+`~/selbstheilung_anlaeufe_bericht_2.md`): je Fahrt der Block
+`zusammenfassung` wörtlich, **einschließlich des Blocks `fahrbefehle`**, und
+darunter die Liste der Anläufe (die Zeilen nach dem JSON-Block aus
+`<n>.txt`, jetzt mit den Sekunden vorwärts, drehen, zurück, stehen und ohne
+Befehl). Steht bei `fahrbefehle` nur `null`, das nennen und mit
+
+```bash
+grep -c "CMD: v=" <launch.log>; grep -c "TIMEOUT-STOP" <launch.log>; grep -m3 "CMD: v=" <launch.log>
+```
+
+für eine der Fahrten zeigen, ob und wie die Basis ins Log schreibt. Fehlt
+ein Log, das nennen. Keine Karten, keine Bilder. Kein Stackstart, kein
+`topic pub`, kein Build.
 
 ## Danach
 

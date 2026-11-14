@@ -50,7 +50,10 @@ Zwei-Raum-Fahrt.
 Nachtrag): Schritt 2 „Erkundungstempo und Nachbarraum finden“**, Paket EK-1
 für SH-9. Stand im Abschnitt 14.11.2026: möblierte Welt mit Flur, neuer
 Teil B „nur Lücken, in die Amadeus passt“ (Code vorhanden, ausgeschaltet).
-Auf den Roboter geht davon nichts, bevor SH-8b ausgewertet ist. Für das
+**Der Vorschlag ruht seit dem Abend:** Anhang Z zeigt, dass Amadeus real nur
+mit etwa 1 cm/s vorankommt und Ziele über 1,5 m fast nie erreicht; zuerst
+wird die Ursache gemessen (Fahrbefehle aus den vorhandenen Logs, ohne
+Fahrt). Auf den Roboter geht nichts, bevor SH-8b ausgewertet ist. Für das
 aktive Problem ist in der Simulation nichts offen (Mülleimer-Stellprobe:
 SH-8-Stand 0 von 3 befreit, KM-1 B 4 von 4).
 
@@ -62,7 +65,7 @@ speichern, Räume in der App, `go_to_room`).
 
 | Punkt | Grund für Parken | Wieder aufnehmen, wenn |
 |---|---|---|
-| Zeit je Anlauf: real im Median 70 s je erreichtem Ziel (SH-8), in der Simulation 4- bis 5-mal schneller | Ursache nicht gemessen (Langsam-Zone beim Drehen, Regler, Antrieb?); erst messen | Anhang Z liefert die Anläufe der sechs alten Fahrten; SH-9 misst zusätzlich die Zeitanteile Stehen, Drehen, Fahren |
+| Reale Geschwindigkeit: effektiv 0,8–1,1 cm/s statt 10–13,5 cm/s (Anhang Z, sechs Fahrten); Ziele über 1,5 m nur 2 von 42 erreicht | Ursache nicht gemessen; die Langsam-Zone ist es nicht (14–27 % der Zeit) | **als Nächstes:** Anhang Z erneut mit den Fahrbefehlen der Basis (`23317fe`, ohne Fahrt); entscheidet, was Schritt 2 prüft |
 | Rückfahrt in der Langsam-Zone zu langsam (0,015 m/s; SH-8: 7 von 8 an der 30-s-Grenze, je etwa 0,15 m statt 0,3 m) | ein Problem zur Zeit; befreit hat er sich trotzdem, nur langsamer (3–4 min) | SH-8b misst die Strecke je Rückfahrt; reicht sie nicht zum Befreien oder kostet sie in vollen Fahrten viel Zeit |
 | KM-1 Variante „Kollisionsmonitor lässt Wegfahren zu“ (approach blockiert auch rückwärts) | sicherheitsrelevant (Kollisionsmonitor); Variante A verworfen; KM-1 B soll die Lage gar nicht erst entstehen lassen | SH-8b zeigt trotz KM-1 B „approach“ während einer Rückfahrt |
 | Niedrige Gegenstände seitlich (unter 0,75 m, nie von den VL53 gesehen): Simulation 13.11. berührte nach dem Befreien in 4 von 4 KM-1-B-Läufen eine Eimerseite | bekannte Sensorgrenze, nicht Teil des aktiven Problems; real bisher keine Berührung | vor Stufe 3 (Wohnung) oder bei der ersten realen Berührung; SH-8b-Teil B ohne Eimer |
@@ -82,6 +85,75 @@ Raumwechsel ausgewertet, nicht bestätigt (08.11.) · SH-7N Ursache gefunden
 Fahrtprotokoll (09.11.) · Simulation KM-1 A/B und EK-1 ausgewertet (09.11.)
 · Standortbestimmung, Stellprobe als Testform (10.11.) · SH-8 ausgewertet:
 Ecke und Garderobe befreit, Mülleimer nicht (13.11.).
+
+## 14.11.2026 (abends) – Anhang Z ausgewertet: Amadeus kommt real nur mit etwa 1 cm/s voran
+
+Bericht `~/selbstheilung_anlaeufe_bericht.md` (Jetson, Klon `734f259`, nur
+lesend auf vorhandene `launch.log`, kein Stack, keine Fahrt). Ausgewertet:
+die sechs vollen Fahrten aus SH-6 (ein Raum) und SH-7 (zwei Räume) sowie
+drei SH-8b-Proben. Dauer der Fahrten aus den früheren Auswertungen.
+
+| Fahrt | Anläufe | erreicht | erreichte Ziele: Zeit / Luftlinie / effektiv | 150-s-Abbrüche (Anteil der Fahrzeit) | Abbrüche unter 12 s |
+|---|---|---|---|---|---|
+| SH-6 Fahrt 1 | 16 | 8 | 504 s / 4,40 m / 0,87 cm/s | 3 (38 %) | 2 |
+| SH-6 Fahrt 2 | 17 | 10 | 496 s / 4,13 m / 0,83 cm/s | 4 (50 %) | 0 |
+| SH-6 Fahrt 3 | 22 | 10 | 611 s / 5,09 m / 0,83 cm/s | 1 (13 %) | 6 |
+| SH-7 Fahrt 1 | 14 | 5 | 338 s / 2,78 m / 0,82 cm/s | 7 (69 %) | 0 |
+| SH-7 Fahrt 2 | 33 | 12 | 783 s / 8,46 m / 1,08 cm/s | 4 (32 %) | 13 |
+| SH-7 Fahrt 3 | 33 | 7 | 334 s / 3,79 m / 1,13 cm/s | 7 (55 %) | 15 |
+
+Alle 135 Anläufe nach Entfernung des Ziels:
+
+| Ziel entfernt | Anläufe | erreicht | Median Dauer (erreicht) | 150-s-Abbrüche |
+|---|---|---|---|---|
+| bis 0,3 m | 17 | 14 (82 %) | 20 s | 0 |
+| 0,3–0,6 m | 22 | 19 (86 %) | 51 s | 0 |
+| 0,6–1,0 m | 28 | 13 (46 %) | 84 s | 3 |
+| 1,0–1,5 m | 26 | 4 (15 %) | 117 s | 7 |
+| über 1,5 m | 42 | **2 (5 %)** | 140 s | 16 |
+
+**Was belegt ist:**
+
+1. **Effektiv 0,8–1,1 cm/s** zum erreichten Ziel, in allen sechs Fahrten
+   fast gleich, bei befohlenen 10 cm/s (SH-6) und 13,5 cm/s (SH-7), also
+   rund 8 % des Sollwerts. Die Tempoerhöhung vom 05.11. kam an (+30 %), am
+   Verhältnis änderte sie nichts.
+2. **Ziele über 1,5 m erreicht Amadeus fast nie** (2 von 42), ab 1 m nur
+   noch jedes siebte. Bei 1 cm/s braucht 1,5 m genau die 150 s, nach denen
+   ein Anlauf abgebrochen wird. Die 150-s-Abbrüche kosten 13–69 % der
+   Fahrzeit (Median 44 %).
+3. Das erklärt zwei Beobachtungen auf einmal: das **lange Umherfahren im
+   Raum** (erreichbar sind praktisch nur Ziele im Umkreis von etwa 1 m, also
+   viele kleine Sprünge) und den **unzuverlässigen Raumwechsel** (die Tür
+   liegt meist weiter weg).
+4. Die Langsam-Zone ist nicht die Hauptursache: Sie war nur 14–27 % der Zeit
+   aktiv, „approach“ 0–10 %.
+
+**Folgen:**
+
+- **Der SH-9-Vorschlag vom Vormittag ruht.** Der Lückenfilter (Teil B)
+  wählt weniger und weiter entfernte Ziele; in der Simulation ist das der
+  Gewinn, real würden gerade diese Ziele bei 1 cm/s meist an der
+  150-s-Grenze scheitern. Die Simulation ist je Anlauf 4- bis 5-mal
+  schneller als der Roboter; ihr Ergebnis überträgt sich erst, wenn die
+  Ursache der realen Langsamkeit bekannt ist.
+- **Nächste Messung, wieder ohne Fahrt** (`23317fe`): Das Auswertewerkzeug
+  liest aus denselben Logs jetzt auch die Fahrbefehle der Basis (etwa einer
+  je Sekunde). Das trennt drei Möglichkeiten: Die Basis sollte so langsam
+  fahren (Regler, Tempolimits); sie drehte die meiste Zeit; oder es kamen
+  zeitweise keine Befehle an (Watchdog 0,25 s, danach Neustart mit
+  2-s-Anfahrrampe). Anhang Z einmal erneut ausführen.
+- Erst danach wird entschieden, was Schritt 2 auf dem Roboter prüft.
+
+**SH-8b (nur was Anhang Z zeigt; der SH-8b-Bericht liegt hier noch nicht
+vor):** Drei Proben mit Mission, Teil B nicht gefahren. Garderobe (s1a):
+acht Anläufe, alle nach 8,7–8,8 s gescheitert. Ecke (s2a): acht Anläufe,
+sieben nach 8,7–9,1 s gescheitert, einer nach 70 s. Mülleimer (s3a): drei
+Anläufe (62 s gescheitert, 150 s und 86 s abgebrochen). Kein Anlauf
+erreichte sein Ziel. Urteil und Ursache erst mit dem SH-8b-Bericht
+(MASTERPLAN §9 Regel 4).
+
+**Nächster Schritt:** SH-8b-Bericht und den erneuten Anhang Z auswerten.
 
 ## 14.11.2026 – Schritt 2 in der Simulation vorbereitet: wohin die Zeit geht, EK-1 neu gefasst
 

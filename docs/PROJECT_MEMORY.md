@@ -1503,6 +1503,18 @@ sichtbar. (2) Sekunden aus der Simulation übertragen sich nicht (je Anlauf
 4- bis 5-mal schneller als real), die Zahl der Anläufe schon eher. (3)
 Niedrige Möbel sind in der möblierten Welt die häufigste Berührungsursache
 und gehören vor der Wohnungsstufe gelöst.
+
+**Nachtrag 14.11.2026 (abends) – Anhang Z:** Die Auswertung der vorhandenen
+Logs (ohne eine einzige neue Fahrt) zeigt den eigentlichen Engpass: Amadeus
+kommt real mit 0,8–1,1 cm/s voran, rund 8 % des befohlenen Tempos, und
+erreicht Ziele über 1,5 m in 2 von 42 Anläufen. Das lange Umherfahren im
+Raum und der unzuverlässige Raumwechsel sind damit zuerst ein
+Geschwindigkeitsproblem, erst danach eines der Zielauswahl. Lehre: Ich hatte
+am Vormittag aus der Simulation einen Vorschlag für SH-9 abgeleitet, obwohl
+schon bekannt war, dass sie je Anlauf 4- bis 5-mal schneller ist. Ein
+Simulationsergebnis zählt erst, wenn die Simulation die reale Kenngröße
+trifft, um die es geht; hier hätte die Messung an den alten Logs vor dem Bau
+stehen müssen.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je
