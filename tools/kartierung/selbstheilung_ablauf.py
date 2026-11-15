@@ -16,6 +16,12 @@ Aufzeichnungen, ohne neue Fahrt:
      Fläche, Zeit- und Reglerfehler.
   5. Die häufigsten Warnungen und Fehler im Log (Zahlen unkenntlich).
   6. Logauszüge um Abbrüche und starke Wackelspitzen (Koordinaten unkenntlich).
+  7. Die Anläufe der Reihe nach, mit ``--tuer`` auch ihr Bezug zur Tür: Wie
+     weit von der Tür begann jeder Anlauf (das ist zugleich die Stelle, an
+     der der vorige endete), wie weit lag sein Ziel von der Tür, und lag es
+     vom Startplatz aus gesehen hinter ihr?
+  8. Warte- und HWT-Phasen der Reihe nach und die Rückfahrten mit ihrem
+     Ausgang; bei einer abgebrochenen Rückfahrt der Grund wie bei den Zielen.
 
 Eingaben: das ``launch.log`` der Fahrt und das ``protokoll.json`` des
 Fahrtprotokolls. Die Ausgabe enthält keine Koordinaten; Ziele erscheinen nur
@@ -48,6 +54,10 @@ ZAEHLER = (
 ZAHL = re.compile(r'[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?')
 PAAR = re.compile(r'\(\s*[-+]?\d+\.\d+\s*,\s*[-+]?\d+\.\d+\s*\)')
 LAUFEND = ('running', 'waiting', 'checking_completion')
+TUER_NAH_M = 1.0                 # näher als so gilt ein Standort als „an der Tür“
+RUECKFAHRT_ENDE = (('backup completed successfully', 'vollständig'),
+                   ('backup failed', 'gescheitert'), ('Canceling backup', 'abgebrochen'))
+PHASEN_HOECHSTENS = 60
 
 
 def log_eintraege(text):
@@ -128,6 +138,76 @@ def ziele(anlaeufe, mission_beginn=None, tuer=None):
     return liste, uebersicht
 
 
+def ziel_nummern(anlaeufe):
+    """Laufende Nummer je Ziel, in derselben Reihenfolge wie die Zielliste."""
+    zahl, erster = Counter(), {}
+    for a in anlaeufe:
+        key = ziel_schluessel(a['ziel'])
+        zahl[key] += 1
+        erster.setdefault(key, a['beginn'])
+    return {key: nummer for nummer, key in
+            enumerate(sorted(zahl, key=lambda k: (-zahl[k], erster[k])), 1)}
+
+
+def hinter_der_tuer(punkt, startplatz, tuer):
+    """Wie weit ein Punkt in Richtung Startplatz→Tür hinter der Tür liegt (m).
+
+    Positiv heißt: vom Startplatz aus gesehen weiter weg als die Tür. Das ist
+    eine Näherung ohne Karte; ein Punkt im selben Raum schräg neben der Tür
+    kann einen kleinen positiven Wert bekommen.
+    """
+    weite = math.dist(startplatz, tuer)
+    if weite < 1e-6:
+        return None
+    ex, ey = (tuer[0] - startplatz[0])/weite, (tuer[1] - startplatz[1])/weite
+    return (punkt[0] - tuer[0])*ex + (punkt[1] - tuer[1])*ey
+
+
+def reihenfolge(anlaeufe, gruende, beginn_log, tuer=None):
+    """Die Anläufe der Reihe nach, ohne Koordinaten; mit Tür auch ihr Bezug dazu."""
+    nummern = ziel_nummern(anlaeufe)
+    startplatz = anlaeufe[0]['von'] if anlaeufe else None
+    null = beginn_log if beginn_log is not None else (anlaeufe[0]['beginn'] if anlaeufe else 0.0)
+    zeilen = []
+    for nummer, a in enumerate(anlaeufe, 1):
+        zeile = dict(nr=nummer, beginn_s=round(a['beginn'] - null, 1),
+                     dauer_s=None if a['dauer_s'] is None else round(a['dauer_s'], 1),
+                     ausgang=a['ausgang'], ziel=nummern[ziel_schluessel(a['ziel'])],
+                     luftlinie_m=round(a['entfernung_m'], 2), grund=gruende.get(nummer))
+        if tuer is not None:
+            hinter = hinter_der_tuer(a['ziel'], startplatz, tuer)
+            zeile.update(start_tuer_m=round(math.dist(a['von'], tuer), 2),
+                         ziel_tuer_m=round(math.dist(a['ziel'], tuer), 2),
+                         ziel_hinter_tuer_m=None if hinter is None else round(hinter, 2))
+        zeilen.append(zeile)
+    return zeilen
+
+
+def tuerbezug(zeilen):
+    """Zusammenfassung: Wo begannen die Anläufe, und wohin wollten sie?"""
+    if not zeilen or 'start_tuer_m' not in zeilen[0]:
+        return None
+
+    def nach_ausgang(auswahl):
+        return dict(Counter(z['ausgang'] for z in auswahl))
+
+    an_tuer = [z for z in zeilen if z['start_tuer_m'] < TUER_NAH_M]
+    hinter = [z for z in zeilen if (z['ziel_hinter_tuer_m'] or 0.0) > 0.0]
+    zur_tuer = [z for z in zeilen if z['ziel_tuer_m'] < TUER_NAH_M
+                and not (z['ziel_hinter_tuer_m'] or 0.0) > 0.0]
+    rest = [z for z in zeilen if z not in hinter and z not in zur_tuer]
+    return dict(
+        nah_m=TUER_NAH_M,
+        startplatz_zur_tuer_m=zeilen[0]['start_tuer_m'],
+        kleinster_abstand_eines_starts_m=min(z['start_tuer_m'] for z in zeilen),
+        anlaeufe_mit_start_an_der_tuer=dict(anzahl=len(an_tuer), ausgang=nach_ausgang(an_tuer)),
+        anlaeufe_mit_ziel_hinter_der_tuer=dict(anzahl=len(hinter), ausgang=nach_ausgang(hinter)),
+        anlaeufe_mit_ziel_an_der_tuer_davor=dict(anzahl=len(zur_tuer),
+                                                 ausgang=nach_ausgang(zur_tuer)),
+        anlaeufe_mit_ziel_woanders=dict(anzahl=len(rest), ausgang=nach_ausgang(rest)),
+        zeit_mit_start_an_der_tuer_s=round(sum(z['dauer_s'] or 0.0 for z in an_tuer), 1))
+
+
 def ereignisse_aus(protokoll):
     if 'ereignisse' not in protokoll and isinstance(protokoll.get('fahrtprotokoll'), dict):
         protokoll = protokoll['fahrtprotokoll']
@@ -205,6 +285,50 @@ def abbruchgrund(anlauf, warten, hwt, versatz):
         if -FENSTER_VOR_S <= beginn - t <= FENSTER_NACH_S:
             return f'hwt:{zustand}'
     return 'kein_warten_im_fenster'
+
+
+def rueckfahrten_aus_log(eintraege):
+    """Rückfahrten des Behavior-Servers: Beginn, Ende und Ausgang (Logzeit)."""
+    fahrten, offen = [], None
+    for t, _, knoten, meldung in eintraege:
+        if knoten != 'behavior_server':
+            continue
+        if 'Running backup' in meldung:
+            if offen is not None:
+                fahrten.append(dict(beginn=offen, ende=None, ausgang='offen'))
+            offen = t
+            continue
+        for muster, ausgang in RUECKFAHRT_ENDE:
+            if muster in meldung and offen is not None:
+                fahrten.append(dict(beginn=offen, ende=t, ausgang=ausgang))
+                offen = None
+                break
+    if offen is not None:
+        fahrten.append(dict(beginn=offen, ende=None, ausgang='offen'))
+    return fahrten
+
+
+def grund_im_zeitraum(beginn_log, ende_log, warten, hwt, versatz, rand_s=2.0):
+    """Wartephase oder HWT-Zustand, der zwischen Beginn und Ende (Logzeit) begann."""
+    if versatz is None or ende_log is None:
+        return 'nicht_zuordenbar'
+    von, bis = beginn_log - versatz - rand_s, ende_log - versatz + rand_s
+    for beginn, _, grund in warten:
+        if von <= beginn <= bis:
+            return f'warten:{grund}'
+    for beginn, _, zustand in hwt:
+        if von <= beginn <= bis:
+            return f'hwt:{zustand}'
+    return 'kein_warten_im_zeitraum'
+
+
+def phasenliste(warten, hwt, versatz, beginn_log):
+    """Warte- und HWT-Phasen der Reihe nach, in Sekunden seit Missionsbeginn."""
+    if versatz is None or beginn_log is None:
+        return []
+    phasen = [(b, e, f'warten:{g}') for b, e, g in warten] + [(b, e, f'hwt:{z}') for b, e, z in hwt]
+    return [dict(beginn_s=round(b + versatz - beginn_log, 1), dauer_s=round(e - b, 1), was=was)
+            for b, e, was in sorted(phasen)]
 
 
 def summen(phasen):
@@ -305,10 +429,12 @@ def auswerten(log_text, protokoll, tuer=None):
     zielliste, uebersicht = ziele(anlaeufe, beginn_log, tuer)
     abbrueche = Counter()
     faelle = []
-    for a in anlaeufe:
+    gruende = {}
+    for nummer, a in enumerate(anlaeufe, 1):
         if a['ausgang'] != 'abgebrochen':
             continue
         grund = abbruchgrund(a, warten, hwt, versatz)
+        gruende[nummer] = grund
         abbrueche[grund] += 1
         faelle.append(dict(ende_s=round(a['ende'] - (beginn_log or 0.0), 1),
                            dauer_s=round(a['dauer_s'], 1), grund=grund, _ende=a['ende']))
@@ -332,6 +458,15 @@ def auswerten(log_text, protokoll, tuer=None):
     for fall in faelle:
         del fall['_ende']
     dauer = None if beginn_log is None else round(ende_log - beginn_log, 1)
+    der_reihe_nach = reihenfolge(anlaeufe, gruende, beginn_log, tuer)
+    rueckfahrten = []
+    for r in rueckfahrten_aus_log(eintraege):
+        rueckfahrten.append(dict(
+            beginn_s=round(r['beginn'] - (beginn_log or 0.0), 1),
+            dauer_s=None if r['ende'] is None else round(r['ende'] - r['beginn'], 1),
+            ausgang=r['ausgang'],
+            grund=(grund_im_zeitraum(r['beginn'], r['ende'], warten, hwt, versatz)
+                   if r['ausgang'] == 'abgebrochen' else None)))
     drittel = None
     if kurve:
         ende_frei = kurve[-1]['frei_m2']
@@ -352,6 +487,8 @@ def auswerten(log_text, protokoll, tuer=None):
         warten=summen(warten), hwt_nicht_gesund=summen(hwt),
         warten_gesamt_s=round(sum(e - b for b, e, _ in warten), 1),
         nach_dem_erfassen=drittel,
+        anlaeufe=der_reihe_nach, tuerbezug=tuerbezug(der_reihe_nach),
+        phasen=phasenliste(warten, hwt, versatz, beginn_log), rueckfahrten=rueckfahrten,
         minuten=minuten(anlaeufe, eintraege, warten, kurve, beginn_log, ende_log, versatz),
         haeufigste_meldungen=meldungen(eintraege, beginn_log),
         auszuege=auszuege)
@@ -378,6 +515,40 @@ def text(ergebnis):
         if 'abstand_tuer_m' in g:
             zeile += f"{g['abstand_tuer_m']:11.2f}"
         aus.append(zeile)
+    mit_tuer = bool(ergebnis['anlaeufe']) and 'start_tuer_m' in ergebnis['anlaeufe'][0]
+    aus += ['', 'Anläufe der Reihe nach (der Start eines Anlaufs ist die Stelle, an der der vorige endete):',
+            '  Nr  Beginn s  Dauer s  Ausgang      Ziel  Luftlinie m'
+            + ('  Start→Tür m  Ziel→Tür m  Ziel hinter Tür m' if mit_tuer else '') + '  Grund']
+    for a in ergebnis['anlaeufe']:
+        dauer = '      -' if a['dauer_s'] is None else f"{a['dauer_s']:7.1f}"
+        zeile = (f"{a['nr']:4d} {a['beginn_s']:9.1f} {dauer}  {a['ausgang']:<11s} "
+                 f"{a['ziel']:5d} {a['luftlinie_m']:12.2f}")
+        if mit_tuer:
+            hinter = '      -' if a['ziel_hinter_tuer_m'] is None else f"{a['ziel_hinter_tuer_m']:+7.2f}"
+            zeile += f"{a['start_tuer_m']:13.2f}{a['ziel_tuer_m']:12.2f}{hinter:>19s}"
+        aus.append(zeile + (f"  {a['grund']}" if a['grund'] else ''))
+    if ergebnis['tuerbezug']:
+        t = ergebnis['tuerbezug']
+        aus += ['', f"Türbezug (an der Tür = näher als {t['nah_m']} m; „hinter der Tür“ ist eine "
+                    'Näherung in Richtung Startplatz→Tür):',
+                f"  Startplatz zur Tür {t['startplatz_zur_tuer_m']} m; kleinster Abstand eines "
+                f"Starts {t['kleinster_abstand_eines_starts_m']} m",
+                f"  Start an der Tür: {t['anlaeufe_mit_start_an_der_tuer']}; Zeit in diesen "
+                f"Anläufen {t['zeit_mit_start_an_der_tuer_s']} s",
+                f"  Ziel hinter der Tür: {t['anlaeufe_mit_ziel_hinter_der_tuer']}",
+                f"  Ziel an der Tür, davor: {t['anlaeufe_mit_ziel_an_der_tuer_davor']}",
+                f"  Ziel woanders: {t['anlaeufe_mit_ziel_woanders']}"]
+    aus += ['', 'Rückfahrten (Beginn s, Dauer s, Ausgang, Grund eines Abbruchs):']
+    for r in ergebnis['rueckfahrten']:
+        dauer = '-' if r['dauer_s'] is None else f"{r['dauer_s']:.1f}"
+        aus.append(f"  {r['beginn_s']:8.1f} {dauer:>6s}  {r['ausgang']}"
+                   + (f"  {r['grund']}" if r['grund'] else ''))
+    phasen = ergebnis['phasen']
+    aus += ['', f'Warte- und HWT-Phasen der Reihe nach ({len(phasen)}; Beginn s, Dauer s, was):']
+    for ph in phasen[:PHASEN_HOECHSTENS]:
+        aus.append(f"  {ph['beginn_s']:8.1f} {ph['dauer_s']:6.1f}  {ph['was']}")
+    if len(phasen) > PHASEN_HOECHSTENS:
+        aus.append(f'  … {len(phasen) - PHASEN_HOECHSTENS} weitere ausgelassen (stehen im JSON)')
     aus += ['', 'Min. beg. err. gesch. abgebr. warten s  frei m²  Koll.voraus Geduld TF-Zuk. '
                 'TF-Pose Takt Queue kein Weg Rückf.']
     for m in ergebnis['minuten']:

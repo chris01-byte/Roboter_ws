@@ -71,6 +71,73 @@ def test_goals_are_grouped_and_repeats_counted_without_coordinates():
     assert not re.search(r'\(\s*-?\d+\.\d+,\s*-?\d+\.\d+\s*\)', ausgabe)
 
 
+def test_attempts_in_order_show_where_each_began_relative_to_the_door():
+    nav = lambda t, x0, y0, x1, y1: (t, 'INFO', 'bt_navigator',
+        f'Begin navigating from current location ({x0:.2f}, {y0:.2f}) to ({x1:.2f}, {y1:.2f})')
+    ende = lambda t, wie: (t, 'INFO', 'bt_navigator', f'Goal {wie}')
+    log = _log([
+        nav(10, 0.0, 0.0, 1.0, 1.0), ende(30, 'succeeded'),          # im Raum, erreicht
+        nav(31, 1.0, 1.0, 3.0, 0.0), ende(60, 'failed'),             # Ziel 1 m hinter der Tür
+        nav(62, 1.7, 0.1, 3.0, 0.0), ende(70, 'failed'),             # Start 0,32 m vor der Tür
+        nav(72, 1.8, 0.0, 1.6, 0.4), ende(80, 'succeeded'),          # Ziel an der Tür, davor
+    ])
+    e = ab.auswerten(log, None, tuer=(2.0, 0.0))
+    zeilen = e['anlaeufe']
+    assert [z['nr'] for z in zeilen] == [1, 2, 3, 4]
+    assert [z['ziel'] for z in zeilen] == [2, 1, 1, 3]              # Ziel 1 = das zweimal versuchte
+    assert [z['ausgang'] for z in zeilen] == ['erreicht', 'gescheitert', 'gescheitert', 'erreicht']
+    assert [z['start_tuer_m'] for z in zeilen] == [2.0, 1.41, 0.32, 0.2]
+    assert zeilen[1]['ziel_tuer_m'] == 1.0 and zeilen[1]['ziel_hinter_tuer_m'] == 1.0
+    assert zeilen[0]['ziel_hinter_tuer_m'] == -1.0 and zeilen[3]['ziel_hinter_tuer_m'] == -0.4
+    t = e['tuerbezug']
+    assert t['startplatz_zur_tuer_m'] == 2.0 and t['kleinster_abstand_eines_starts_m'] == 0.2
+    assert t['anlaeufe_mit_start_an_der_tuer'] == dict(
+        anzahl=2, ausgang=dict(gescheitert=1, erreicht=1))
+    assert t['anlaeufe_mit_ziel_hinter_der_tuer'] == dict(anzahl=2, ausgang=dict(gescheitert=2))
+    assert t['anlaeufe_mit_ziel_an_der_tuer_davor'] == dict(anzahl=1, ausgang=dict(erreicht=1))
+    assert t['anlaeufe_mit_ziel_woanders'] == dict(anzahl=1, ausgang=dict(erreicht=1))
+    assert t['zeit_mit_start_an_der_tuer_s'] == 16.0
+    ausgabe = ab.text(e)
+    assert 'Anläufe der Reihe nach' in ausgabe and 'Ziel hinter der Tür' in ausgabe
+    assert not re.search(r'\(\s*-?\d+\.\d+,\s*-?\d+\.\d+\s*\)', ausgabe)
+    # Ohne Tür: dieselbe Liste ohne Türspalten, kein Türbezug.
+    ohne = ab.auswerten(log, None)
+    assert 'start_tuer_m' not in ohne['anlaeufe'][0] and ohne['tuerbezug'] is None
+    assert 'Start→Tür' not in ab.text(ohne)
+
+
+def test_canceled_attempts_carry_their_reason_in_the_sequence():
+    log, protokoll = _fahrt()
+    e = ab.auswerten(log, protokoll, tuer=(2.0, -1.05))
+    gruende = [z['grund'] for z in e['anlaeufe']]
+    assert gruende == [None, 'warten:vl53_status_missing_stale_or_invalid', None, 'hwt:HOLD',
+                       'zielzeit_abgelaufen', 'kein_warten_im_fenster']
+    assert 'hwt:HOLD' in ab.text(e)
+
+
+def test_wait_phases_and_backups_are_listed_with_the_reason_for_a_canceled_backup():
+    log, protokoll = _fahrt()
+    log += '\n' + _log([
+        (100, 'INFO', 'behavior_server', 'Running backup'),
+        (103, 'WARN', 'behavior_server', 'Canceling backup'),        # 113 s Protokoll: HOLD seit 104 s? nein
+        (200, 'INFO', 'behavior_server', 'Running backup'),
+        (206, 'INFO', 'behavior_server', 'backup completed successfully'),
+        (92, 'INFO', 'behavior_server', 'Running backup'),
+        (96, 'WARN', 'behavior_server', 'Canceling backup'),         # 102–106 s Protokoll: HOLD ab 104 s
+    ])
+    e = ab.auswerten(log, protokoll)
+    assert e['phasen'] == [dict(beginn_s=34.0, dauer_s=4.0, was='warten:vl53_status_missing_stale_or_invalid'),
+                           dict(beginn_s=84.0, dauer_s=6.0, was='hwt:HOLD')]
+    assert e['rueckfahrten'] == [
+        dict(beginn_s=82.0, dauer_s=4.0, ausgang='abgebrochen', grund='hwt:HOLD'),
+        dict(beginn_s=90.0, dauer_s=3.0, ausgang='abgebrochen', grund='kein_warten_im_zeitraum'),
+        dict(beginn_s=190.0, dauer_s=6.0, ausgang='vollständig', grund=None)]
+    ausgabe = ab.text(e)
+    assert 'Rückfahrten' in ausgabe and 'Warte- und HWT-Phasen der Reihe nach (2;' in ausgabe
+    ohne = ab.auswerten(log, None)                                  # ohne Protokoll: keine Zuordnung
+    assert ohne['phasen'] == [] and ohne['rueckfahrten'][0]['grund'] == 'nicht_zuordenbar'
+
+
 def test_cancellations_are_attributed_to_what_the_explorer_waited_for():
     log, protokoll = _fahrt()
     e = ab.auswerten(log, protokoll)
