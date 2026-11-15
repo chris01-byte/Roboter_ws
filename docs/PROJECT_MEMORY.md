@@ -1559,6 +1559,29 @@ frei; Befehle dort umgehen den Kollisionsmonitor und brauchen eine eigene
 Freigabe. Der Projektinhaber hat sie am 15.11.2026 für die Wiederholung
 AT-1b erteilt (freie Fläche, höchstens 0,10 m/s und 0,9 m, Hand am Not-Aus);
 das Werkzeug verlangt dafür ein eigenes Freigabewort.
+
+**Nachtrag 15.11.2026 (mittags) – AT-1b, Ursache des Kriechtempos gemessen:**
+Direkt an der Basis und ungestört gemessen folgt der Antrieb Sprüngen und
+Stufen voll (auch während der Fahrt), Rampen in 20-Hz-Schritten aber nur mit
+11–22 %. Erklärung als Rechenmodell (`tools/kartierung/antriebsmodell.py`):
+Der ESS23-RS verteilt jede Sollwertänderung auf seine Anfahrzeit (2000 ms
+seit 14.08.2026), gerechnet ab dem vorigen Sollwert; nach einer feinen Rampe
+bestimmt der letzte kleine Schritt die Beschleunigung. Das Modell gibt alle
+Verläufe aus AT-1b wieder und ohne Anpassung die Rückfahrstrecke aus SH-8b
+(0,153 m gerechnet, 0,151 m gemessen). Damit haben Kriechtempo,
+150-s-Abbrüche, verfehlte ferne Ziele und zu kurze Rückfahrten eine
+gemeinsame Ursache, die seit dem 14.08. besteht: zwei Rampen hintereinander
+(Nav2 und Antrieb), die sich nicht vertragen. Lehren: (1) Die Änderung vom
+14.08. wurde nur mit einem konstanten Sollwert geprüft; eine Änderung an der
+Motorsteuerung wird künftig mit den Befehlsformen geprüft, die im Betrieb
+vorkommen (Sprung, Stufe, Rampe). (2) Die Hypothese vom 14.11. passte
+„exakt“ zu zwei Zahlen und war im Mechanismus trotzdem falsch; erst die
+gezielte Messung mit getrennten Befehlsformen hat unterschieden. (3) Vorab
+festgelegte Urteile brauchen einen Platz für „keins von beiden“; `unklar`
+war hier das wertvollste Ergebnis. (4) Die Streckenkalibrierung war nie das
+Problem (Hinweis des Projektinhabers vom 14.11.): Die Odometrie misst
+richtig, der Antrieb erreicht das Tempo nicht. Entscheidung zum nächsten
+Schritt (Anfahrzeit 100 ms messen oder Treiber anpassen) offen.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

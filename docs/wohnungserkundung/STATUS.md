@@ -1,12 +1,14 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 15.11.2026:** Hauptlinie `self_healing`
+**Aktueller Stand 15.11.2026 (mittags):** Hauptlinie `self_healing`
 (Nutzerentscheidung 15.10.2026). Es gilt der **Fahrplan in MASTERPLAN §9**.
-Das aktive Problem (Festsitzen dicht an Hindernissen) und das Kriechtempo
-hängen an derselben offenen Frage: Setzt der Antrieb um, was befohlen wird?
-Die Antriebsprobe AT-1 (15.11.) hat das **nicht** geklärt; die Messung war
-gestört (Abschnitt 15.11.2026). **Aktiver Jetson-Auftrag: AT-1b**, die
-Wiederholung direkt an der Basis (Freigabe des Projektinhabers 15.11.2026).
+Die Antriebsprobe AT-1b hat die gemeinsame Ursache von Kriechtempo und zu
+kurzer Rückfahrt gemessen: **Der Antrieb folgt Sprüngen und Stufen voll,
+feinen Rampen (wie Nav2 sie sendet) nur mit 11–22 %.** Grund ist die
+Anfahrzeit des Antriebs von 2000 ms (seit 14.08.2026), die er auf jede
+einzelne Sollwertänderung anwendet (Abschnitt 15.11.2026 mittags).
+**Kein aktiver Jetson-Auftrag**, bis der Projektinhaber über den nächsten
+Schritt am Antrieb entschieden hat.
 Wo wir stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
@@ -35,20 +37,18 @@ kommen unter „Geparkt“, nicht sofort in den Code.
 **Das eine aktive Problem:** Amadeus sitzt dicht an Hindernissen fest.
 Stand SH-8b (14.11.): mit KM-1 B kein „approach“ mehr, aber Stellprobe an
 allen drei Stellen nicht bestanden, weil die Rückfahrt nur 0,15–0,22 m statt
-0,3 m schafft. **Wahrscheinliche gemeinsame Ursache mit dem Kriechtempo:**
-Der Antrieb fährt mit dem ersten kleinen Sollwert nach dem Stillstand
-weiter (Startimpuls im Motortreiber); abgeleitet, noch nicht gemessen.
+0,3 m schafft. **Gemeinsame Ursache mit dem Kriechtempo, in AT-1b gemessen
+(15.11.):** Der Antrieb folgt feinen Rampen nicht. Er verteilt jede
+Sollwertänderung auf seine Anfahrzeit von 2000 ms; nach einer Rampe in
+20-Hz-Schritten bestimmt der letzte kleine Schritt die Beschleunigung.
 **Dazu aus der Simulation vom 14.11.:** Die freie Rückfahrt aus AW-1 ist
 nach hinten blind (Heck am Türpfosten in einem Lauf).
 
-**Aktiv (Roboter):** **AT-1b Antriebsprobe direkt an der Basis**,
-[Auftrag](AGENTENAUFTRAG.md), vom Projektinhaber am 15.11.2026 freigegeben
-(ohne Nahbereichsbremse, freie Fläche, Hand am Not-Aus). Reine Messung,
-keine Änderung: dieselben sechs Sollwertfolgen wie AT-1, diesmal auf
-`/cmd_vel`. AT-1 (15.11.) war **nicht verwertbar**: Der Glätter sendet auch
-ohne Mission Nullbefehle auf das damals benutzte Topic; die Basis bekam
-Sollwert und Halt im Wechsel. Der Fehler lag im Auftrag. Die Hypothese
-„Sollwert nur beim Anfahren“ ist weder bestätigt noch widerlegt.
+**Aktiv (Roboter):** nichts. AT-1b (15.11.) ist ausgewertet. **Offen ist
+eine Entscheidung des Projektinhabers** zum nächsten Schritt am Antrieb
+(sicherheitsrelevanter Bereich Motorsteuerung, AGENTS §2.7): Vorschlag ist
+eine Messfahrt AT-2 mit kurzer Anfahrzeit des Antriebs (100 ms, der Stand
+bis 14.08.2026) und Sollwerten nur als Rampen wie unter Nav2.
 
 **In Simulation (Nutzerentscheidung 14.11.2026, MASTERPLAN §9 Regel 7
 Nachtrag): Schritt 2 „Erkundungstempo und Nachbarraum finden“**, Paket EK-1
@@ -70,7 +70,7 @@ speichern, Räume in der App, `go_to_room`).
 
 | Punkt | Grund für Parken | Wieder aufnehmen, wenn |
 |---|---|---|
-| KM-1 B (lokale Karte löscht nichts unter der Kontur) | in SH-8b nicht bestätigt: kein „approach“, aber nach der kurzen Rückfahrt verweigert der Regler jede Drehung | der Antrieb ist geklärt; dann dieselbe Stellprobe |
+| KM-1 B (lokale Karte löscht nichts unter der Kontur) | in SH-8b nicht bestätigt: kein „approach“, aber nach der kurzen Rückfahrt verweigert der Regler jede Drehung | der Antrieb folgt den Befehlen von Nav2 (nach AT-2); dann dieselbe Stellprobe |
 | Schritt 2 (EK-1 mit Lückenfilter, SH-9) | bei 1,3–1,7 cm/s Ist-Tempo erreicht Amadeus weiter entfernte Ziele nicht (2 von 42 über 1,5 m) | der Antrieb fährt, was befohlen wird |
 | Rückfahrt in der Langsam-Zone zu langsam (0,015 m/s; SH-8: 7 von 8 an der 30-s-Grenze, je etwa 0,15 m statt 0,3 m) | ein Problem zur Zeit; befreit hat er sich trotzdem, nur langsamer (3–4 min) | SH-8b misst die Strecke je Rückfahrt; reicht sie nicht zum Befreien oder kostet sie in vollen Fahrten viel Zeit |
 | KM-1 Variante „Kollisionsmonitor lässt Wegfahren zu“ (approach blockiert auch rückwärts) | sicherheitsrelevant (Kollisionsmonitor); Variante A verworfen; KM-1 B soll die Lage gar nicht erst entstehen lassen | SH-8b zeigt trotz KM-1 B „approach“ während einer Rückfahrt |
@@ -96,7 +96,118 @@ Ecke und Garderobe befreit, Mülleimer nicht (13.11.) · Anhang Z zweimal
 ausgewertet: Befehle 6–10 cm/s, gefahren 1,3–1,7 cm/s (14.11.) · SH-8b
 ausgewertet: nicht bestanden, Rückfahrten 0,151 m (14.11.) · AT-1
 ausgewertet: Messung gestört, kein Urteil; Werkzeug erkennt fremde Sender
-jetzt selbst (15.11.).
+jetzt selbst (15.11.) · AT-1b ausgewertet: Antrieb folgt Sprüngen, feinen
+Rampen nicht; Ursache ist die Anfahrzeit 2000 ms (15.11.).
+
+## 15.11.2026 (mittags) – AT-1b ausgewertet: Der Antrieb folgt Sprüngen, aber keinen feinen Rampen
+
+Bericht `~/selbstheilung_jetson_bericht_at1b.md` (Jetson, Klon `84af692`,
+Release `selbstheilung-sh8b-20261114_1643` ohne Build, Werkzeugtest 12
+bestanden, Vorprüfung 59× OK). Ein scharfer Stackstart, keine Mission, zwei
+Proben direkt auf `/cmd_vel`, kein Abbruch, keine Berührung, kein Eingriff.
+
+**Die Messung ist diesmal ungestört:** vor Probe 1 und 2 und danach je 0
+Nachrichten auf `/cmd_vel` (10 s, 5 s, 5 s gezählt), einziger Publisher der
+Kollisionsmonitor, einziger Abonnent `base_hardware`; im Werkzeug 0 fremde
+Nachrichten; an der Basis kam in jedem Abschnitt genau der Sollwert an.
+
+| Phase | Sollwertfolge | `ist_zu_soll` Probe 1 / 2 | Weg bzw. Winkel |
+|---|---|---|---|
+| A | Sprung auf 0,10 m/s | 1,00 / 1,00 | 0,386 / 0,395 m |
+| B | 0,02 m/s, dann Stufe auf 0,10 m/s | 1,00 / 1,01 | 0,472 / 0,465 m |
+| C | **Rampe wie Nav2** auf 0,10 m/s | **0,11 / 0,22** | 0,041 / 0,079 m |
+| F | 0,10 m/s, dann Stufe ab auf 0,03 m/s | 0,99 / 1,00 | 0,334 / 0,332 m |
+| D | Sprung auf 0,25 rad/s | 1,01 / 1,02 | 70,7° / 71,5° |
+| E | **Rampe** auf 0,25 rad/s | **0,11 / 0,11** | 6,1° / 5,7° |
+
+**Urteil des Werkzeugs: zweimal `unklar`**, nach den vorab festgelegten
+Regeln richtig (weder „Sprung gut, Rampe und Treppe schlecht“ noch „Rampe
+und Treppe gut“). Die Regeln hatten diesen dritten Fall nicht vorgesehen.
+
+**Was belegt ist:**
+
+1. Die Hypothese „Sollwert nur beim Anfahren“ ist **in ihrer Form
+   widerlegt**: Der Antrieb übernimmt neue Sollwerte während der Fahrt, auf-
+   und abwärts (B, F).
+2. Jeder Sprung und jede Stufe ist nach etwa 2 s erreicht, gleich wie groß
+   (0 → 0,02 m/s, 0 → 0,10 m/s, 0,02 → 0,10 m/s).
+3. Nach einer Rampe in 20-Hz-Schritten steigt das Tempo nur gleichmäßig und
+   sehr langsam (C: 0,2 bzw. 0,5 cm/s je Sekunde), obwohl an der Basis ab
+   0,8 s gut 5 s lang der volle Sollwert anlag.
+4. Genau solche Rampen sendet Nav2 immer (Glätter 0,12 m/s² bei 20 Hz; beim
+   Drehen begrenzt zusätzlich der Regler). Das ist das Kriechtempo aus den
+   echten Fahrten.
+
+**Erklärung (Rechenmodell, `tools/kartierung/antriebsmodell.py`, 9 Tests):**
+Der Antrieb verteilt **jede Sollwertänderung auf seine Anfahrzeit**
+(Register `0x001E`, 2000 ms), gerechnet ab dem vorigen Sollwert und nicht ab
+dem tatsächlichen Tempo. Ein Sprung von 0 auf 153 U/min wird mit 153 U/min
+in 2 s gefahren. Eine Rampe endet mit einem kleinen Schritt (147 → 153
+U/min); danach beschleunigt der Antrieb nur noch mit 6 U/min in 2 s und
+bräuchte für den Rest fast eine Minute.
+
+| Größe | Modell | gemessen |
+|---|---|---|
+| A, Tempo je Sekunde (m/s) | 0,018 / 0,068 / 0,099 | 0,018 / 0,069 / 0,102 |
+| B, Sekunden 5–7 (Stufe auf 0,10) | 0,035 / 0,074 / 0,100 | 0,035 / 0,076 / 0,102 |
+| C, Sekunden 1–6 | 0,001 / 0,004 / 0,005 / 0,007 / 0,009 / 0,011 | 0,001 / 0,004 / 0,006 / 0,008 / 0,010 / 0,012 |
+| E, Sekunde 6 (rad/s) | 0,029 | 0,031 / 0,031 |
+| **SH-8b-Rückfahrt, 30,1 s (nicht angepasst)** | **0,153 m** | **0,151 m (dreimal)** |
+
+Angepasst ist eine einzige Größe (0,13 s Laufzeit vom Befehl bis zum
+Motor). Die Rückfahrstrecke aus SH-8b stammt aus einer anderen Fahrt und
+war nicht Teil der Anpassung. C in Probe 2 (doppelt so schnell wie in Probe
+1) passt zu einem ausgelassenen Rampenschritt (letzte Änderung 15 statt 6
+U/min); das ist abgeleitet, nicht gemessen. **Es bleibt ein Modell**, für
+andere Anfahrzeiten ist es eine Vorhersage.
+
+**Woher es kommt (Historie, nur gelesen):** Bis zum 14.08.2026 standen im
+Antrieb real 100 ms Anfahrzeit. Am 14.08. wurde sie auf 2000 ms gesetzt,
+weil der hohe Aufbau beim Anfahren mit dem Steuerkreuz (Sprung auf vollen
+Ausschlag) stark wackelte; geprüft wurde mit einem konstanten Sollwert. Die
+Parameterdatei vermerkt schon damals, die Rampe wirke „offenbar weitgehend
+direkt auf die Sollwertänderung“. Mit Rampen aus Nav2 wurde die Kombination
+nie gemessen. Die Streckenkalibrierung ist davon nicht berührt: Die
+Odometrie misst richtig, nur das Tempo wird nicht erreicht.
+
+**Was das für die bisherigen Befunde heißt:**
+
+- Kriechtempo 1,3–1,7 cm/s bei 6–10 cm/s Sollwert (Anhang Z), 150-s-Abbrüche
+  und Ziele über 1,5 m fast nie erreicht: derselbe Mechanismus.
+- Rückfahrt 0,151 m statt 0,3 m (SH-8, SH-8b): derselbe Mechanismus; in der
+  Langsam-Zone ist der letzte Rampenschritt 1 U/min.
+- Die Annahme vom 14.11. („bleibt beim ersten Sollwert, 8 und 11 U/min“) war
+  in der Richtung richtig (kleine Rampenschritte), im Mechanismus falsch.
+  Die damals „exakt passenden“ Zahlen passen zum neuen Modell genauso.
+- KM-1 B, EK-1 und die Stellprobe sind unter diesem Antriebsverhalten nicht
+  fair geprüft worden.
+
+**Vorhersage des Modells für 100 ms Anfahrzeit** (nicht gemessen): Die
+Nav2-Rampe auf 0,10 m/s ist nach etwa 2,3 s voll erreicht (statt nach fast
+einer Minute), die Drehrampe ebenso; die Rückfahrt in der Langsam-Zone
+schafft 0,3 m in etwa 21 s. Bekannter Nachteil aus dem August: Bei einem
+**Sprung** (Steuerkreuz, Werkzeuge) ruckt der hohe Aufbau mit 100 ms wieder.
+Unter Nav2 gibt es keine großen Sprünge nach oben, außer beim Verlassen der
+Langsam-Zone (0,03 → 0,10 m/s).
+
+**Mögliche Wege (Entscheidung offen):**
+
+1. **Messfahrt AT-2 mit 100 ms** (Startargument `hwt601_accel_ms:=100`,
+   seit 10.10.2026 als Laborvergleich 100–2000 vorgesehen; keine
+   Codeänderung): dieselbe Probe, aber nur mit Rampen wie unter Nav2, dazu
+   die langsame Rückfahrt und eine Stufe wie beim Verlassen der
+   Langsam-Zone. Zeigt, ob die Vorhersage stimmt und ob der Aufbau dabei
+   ruhig bleibt. Danach die Stellprobe mit dieser einen Änderung.
+2. **Treiber rechnet die Anfahrzeit je Änderung selbst** (gleiche sanfte
+   Beschleunigung bei Sprung und Rampe): die gründlichere Lösung, aber eine
+   Codeänderung an der Motorsteuerung mit mehr Buszugriffen; eigener Schritt
+   mit eigener Prüfung, mindestens eine Runde länger.
+
+Empfohlen ist Weg 1 als nächster einzelner Schritt (MASTERPLAN §9 Regel 1:
+eine Änderung je Realtest); Weg 2 bleibt möglich, falls das Rucken stört.
+AT-1b [archiviert](archive/20261115-at1b-ausgewertet/README.md).
+
+**Nächster Schritt:** Entscheidung des Projektinhabers; danach Auftrag.
 
 ## 15.11.2026 – AT-1 ausgewertet: Messung gestört, die Frage zum Antrieb ist offen
 

@@ -219,6 +219,21 @@ Publisher. Stack geordnet beendet (SIGINT an die Launch-PID). Lokal neu:
 `lidar_acryl_test`-Dateien, Herkunft offen). Frühere Releases und
 Codex-Referenz unverändert, kein Autostart. Kein aktiver Auftrag danach.
 
+Nachtrag 15.11.2026 (mittags), tatsächliche Jetson-Wirkung AT-1b: kein
+Build, kein neuer Release; Klon per `git pull --ff-only` auf `84af692`. Ein
+scharfer Stackstart ohne Mission, zwei Läufe von
+`antriebsprobe.py --topic /cmd_vel --freigabe AT-1b`, also **direkt an der
+Basis ohne Kollisionsmonitor** (Freigabe des Projektinhabers 15.11.2026).
+Motoren liefen: je Probe vier Geradeausphasen bis 0,47 m mit höchstens
+0,10 m/s, Rückwege mit 0,05 m/s, zwei Drehphasen bis 71,5° mit 0,25 rad/s.
+Kein Kontakt, kein Eingriff, kein Not-Aus; Amadeus stand danach auf 1 cm
+und 0,06 rad am Ausgangspunkt. Zusätzlich nur lesend: `ros2 topic info -v`,
+Zählknoten ohne Publisher auf `/cmd_vel` und `/cmd_vel_smoothed`. Stack
+geordnet beendet. Lokal neu: `$SH_PR/at1b/`. Antriebsregister unverändert
+(Anfahren 2000 ms, Bremsen 400 ms, Startdrehzahl 5 U/min). `~/roboter_ws`
+nicht angefasst (fremde Änderungen dort unverändert), frühere Releases und
+Codex-Referenz unverändert, kein Autostart. Kein aktiver Auftrag danach.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit
