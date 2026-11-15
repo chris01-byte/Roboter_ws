@@ -8,8 +8,10 @@ ein großer Schritt:** An der Ecke befreite sich Amadeus zweimal in etwa 92 s
 (Rückfahrt 0,31 m in 21 s; in SH-8b „Hilfe benötigt“). An den Mülleimern
 hielt ihn der Kollisionsmonitor wieder fest („approach“ während der
 Rückfahrt). Dafür gibt es seit dem Abend die Korrektur KM-2 (gerade
-Rückfahrt bleibt erlaubt), in der Simulation geprüft. **Aktiver
-Jetson-Auftrag: SH-8d**, Stellprobe mit KM-2, bei Erfolg eine volle Fahrt.
+Rückfahrt bleibt erlaubt), in der Simulation geprüft. **Der Projektinhaber
+hat am 15.11. entschieden, jetzt die ganze Wohnung zu erkunden, zuerst als
+begleitete Messfahrt. Aktiver Jetson-Auftrag: W-1**, Stellprobe mit KM-2,
+bei Erfolg die Wohnungs-Messfahrt (SH-8d dafür zurückgezogen).
 Wo wir stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
@@ -46,17 +48,17 @@ Regler hält auf dem 5-cm-Raster an, eine Reserve dazwischen gibt es nicht.
 **Dazu aus der Simulation vom 14.11.:** Die freie Rückfahrt aus AW-1 ist
 nach hinten blind (Heck am Türpfosten in einem Lauf).
 
-**Aktiv (Roboter):** **SH-8d**, [Auftrag](AGENTENAUFTRAG.md): Stellprobe
-(Mülleimer zweimal, Garderobe zweimal, Ecke einmal) mit genau einer
-Änderung, **KM-2 „Rückzug aus der Sperre“** (neuer Build), jeder Start mit
-`hwt601_accel_ms:=100`; bei bestandener Stellprobe eine volle
-Zwei-Raum-Fahrt. KM-2: Für eine reine gerade Rückwärtsfahrt prüft der
-Kollisionsmonitor gegen die Rückfahrkontur aus AW-1; Vorwärtsfahrt und
-Drehen behalten die volle gepolsterte Kontur. In der Simulation bestanden
-(Abschnitt 15.11.2026 abends, zweiter Teil).
+**Aktiv (Roboter):** **W-1**, [Auftrag](AGENTENAUFTRAG.md), nach
+MASTERPLAN §9 Nachtrag 15.11.2026: **Teil A** Stellprobe mit genau einer
+Änderung, **KM-2 „Rückzug aus der Sperre“** (neuer Build; Mülleimer
+zweimal, Ecke einmal), jeder Start mit `hwt601_accel_ms:=100`. **Teil B**,
+nur bei bestandener Stellprobe: **begleitete Messfahrt durch die ganze
+Wohnung** (alle Zimmertüren offen, bis 40 min, kein Bestehen oder
+Durchfallen), höchstens zwei Fahrten. Was dafür nötig ist und was bewusst
+offen bleibt, steht im Abschnitt 15.11.2026 (nachts).
 **Entscheidungen des Projektinhabers (15.11.2026):** Der Antrieb wird für
 die autonome Fahrt ausgelegt; 100 ms Anfahrzeit ist der Standard für den
-selbstheilenden Betrieb.
+selbstheilenden Betrieb; die Wohnung kommt jetzt, zuerst als Messfahrt.
 
 **In Simulation (Nutzerentscheidung 14.11.2026, MASTERPLAN §9 Regel 7
 Nachtrag): Schritt 2 „Erkundungstempo und Nachbarraum finden“**, Paket EK-1
@@ -70,9 +72,12 @@ ausgewertet ist. Für das
 aktive Problem ist in der Simulation nichts offen (Mülleimer-Stellprobe:
 SH-8-Stand 0 von 3 befreit, KM-1 B 4 von 4).
 
-**Fahrplan danach:** zwei weitere volle Fahrten (dann Prototyp 2) → Schritt 2
-Erkundungstempo → Schritt 4 Stufe 3 Wohnung → Schritt 5 Raumziele (Karte
-speichern, Räume in der App, `go_to_room`).
+**Fahrplan danach (Nachtrag 15.11.2026):** W-1 auswerten → nach den Daten
+entscheiden, was die Wohnung als Nächstes braucht (Kandidaten: niedrige
+Gegenstände seitlich, Fliesen, Erkundungstempo aus Schritt 2, Zeitbudget)
+→ Abnahme der Wohnung (Stufe 3, drei Läufe) → Schritt 5 Raumziele (Karte
+speichern, Räume in der App, `go_to_room`). Zurückgestellt: die zwei
+weiteren Zwei-Raum-Fahrten für Prototyp 2.
 
 **Geparkt (mit Grund):**
 
@@ -111,6 +116,52 @@ Rampen nicht; Ursache ist die Anfahrzeit 2000 ms (15.11.) · AT-2
 bestanden: mit 100 ms folgt der Antrieb den Nav2-Rampen (15.11.) · SH-8c
 ausgewertet: Ecke zweimal befreit, Mülleimer vom Kollisionsmonitor
 festgehalten (15.11.).
+
+## 15.11.2026 (nachts) – Entscheidung: Wohnung jetzt; was die erste Wohnungsfahrt braucht
+
+**Entscheidung des Projektinhabers:** Das Tempo war das Ziel der letzten
+Runden und ist erreicht; als Nächstes die Erkundung der ganzen Wohnung.
+Festgelegt im Gespräch: **alle Räume als begleitete Messfahrt** (kein
+Bestehen oder Durchfallen), **Bewegliches wegräumen**, in der Wohnung gibt
+es **keine Stufe nach unten und keine Schwelle, aber Fliesen mit Fugen**.
+SH-8d war noch nicht gelaufen und ist
+[zurückgezogen](archive/20261115-sh8d-zurueckgezogen/README.md).
+Fahrplan: MASTERPLAN §9, Nachtrag 15.11.2026.
+
+**Bewertung: Was ist für die Wohnung nötig, und wie geht W-1 damit um?**
+
+| Punkt | Stand | In W-1 |
+|---|---|---|
+| Antrieb folgt den Befehlen | gemessen (AT-2, SH-8c) | jeder Start mit `hwt601_accel_ms:=100`, Zeile wird je Start geprüft |
+| Sperre des Kollisionsmonitors ohne Ausweg (SH-8c Mülleimer) | KM-2 gebaut, Simulation bestanden, **am Roboter nicht geprüft** | **Teil A:** Stellprobe Mülleimer zweimal, Ecke einmal; ohne bestandene Stellprobe keine Wohnungsfahrt |
+| Freigabe für neue Räume (LAB-1 gilt dort nicht von selbst) | vom Projektinhaber für diese Messfahrt erteilt, mit Bedingungen | steht im Rahmen des Auftrags; Christopher bestätigt die Vorbereitung einmal (B1) |
+| Stufen nach unten, Schwellen (Amadeus erkennt keinen Abgrund) | laut Projektinhaber keine | Frage 5 in B1; bei „ja“ keine Fahrt, bis die Stelle abgetrennt ist |
+| Seiten niedriger Dinge (15–66 cm) | ungelöst; Simulation: Berührung beim Drehen; real 0–2 cm | Bewegliches weg, Stühle an den Tisch; feste Möbel werden je Raum notiert; Christopher greift vor einer Berührung ein; jeder Eingriff mit Ort und Grund ist Messwert M5 |
+| Rückfahrt blind (bis 0,4 m) | ungelöst | Christopher achtet auf das Heck; Eingriffsgrund |
+| Fliesenfugen bei echtem Tempo | nie gemessen; kein Schutz im Stack | wird gemessen (`wackeln`, Frage 5); starkes Schwanken ist Eingriffsgrund |
+| Flaches unter 5 cm (Kabel, Teppichkanten) | Sensorgrenze | wird vorher weggeräumt (B1) |
+| Glas und Spiegel bis zum Boden | nie geprüft | Frage 4 in B1; Eingriffsgrund, wenn er darauf zufährt |
+| Zeitbudget 40 min | für zwei Räume gesetzt; für die Wohnung unbekannt | bleibt (keine zweite Änderung); „Teilkarte“ ist für eine Messfahrt ein gültiges Ende; die Zahlen bestimmen das spätere Budget |
+| Erkundungstempo (Schritt 2, EK-1 mit Lückenfilter) | in der Simulation vorbereitet, ausgeschaltet | nicht dabei; die Abdeckungskurve von W-1 zeigt, ob es gebraucht wird |
+| „Weiter“ nach „Hilfe benötigt“ | nicht vorhanden | eine zweite Fahrt als Kaltstart ist erlaubt (B8) |
+| Karte speichern und Räume benennen (Schritt 5) | später | Karte wird lokal gesichert, sonst nichts |
+| Startfehler (LiDAR „abnormal“, „D Quellen“) | bekannt, Vorprüfung fängt sie ab | Neustart wie bisher |
+
+**Was W-1 ausdrücklich nicht ist:** keine Abnahme der Wohnung (Stufe 3
+bleibt: drei Läufe, alle Räume, Karte mindestens 90 %, kein Kontakt), kein
+Test neuer Erkundungslogik, keine Raumziele.
+
+**Was W-1 liefern soll:** die befahrenen Räume und Zeiten, die
+Abdeckungskurve, alle Heilungen und Hilferufe, jeden Eingriff und jede sehr
+nahe Stelle mit Ort und Gegenstand, das Wackeln auf den Fliesen und
+Christophers Urteil zur Karte je Raum. Daraus folgt die Reihenfolge der
+nächsten Arbeiten für die Wohnung.
+
+**Risiko, offen benannt:** Der größte bekannte Mangel für eine möblierte
+Wohnung, die Seiten niedriger Dinge, ist nicht gelöst. W-1 fährt deshalb
+nur begleitet; eine unbegleitete Wohnungsfahrt ist damit nicht freigegeben.
+
+**Nächster Schritt:** W-1-Bericht auswerten.
 
 ## 15.11.2026 (abends) – SH-8c ausgewertet: Ecke gelöst, Mülleimer vom Kollisionsmonitor festgehalten
 
@@ -250,7 +301,8 @@ annimmt wie unter Jazzy (die Vorprüfung auf dem Roboter prüft das im Stand:
 Verdrahtung, Geometrie und, falls publiziert, seine eigene Sicht); ob die
 Simulation das Heranfahren an einen runden Eimer so zeigt wie real.
 
-**Auftrag [SH-8d](AGENTENAUFTRAG.md):** neuer Build (einzige Änderung KM-2),
+**Auftrag SH-8d (am selben Abend zurückgezogen, siehe Abschnitt 15.11.2026
+nachts; die Stellprobe steckt in W-1):** neuer Build (einzige Änderung KM-2),
 jeder Start mit `hwt601_accel_ms:=100`. Teil A: Mülleimer zweimal, Garderobe
 zweimal (ohne 3-cm-Wiederholung), Ecke einmal. Bestanden, wenn die
 Mülleimer und die Ecke `befreit` ergeben und nichts mit `nicht_befreit`,
@@ -258,7 +310,7 @@ Berührung, Eingriff oder Eigenecho endet. Nur dann Teil B: eine volle
 Zwei-Raum-Fahrt ohne Mülleimer. Das Fahrtprotokoll misst Wackeln jetzt auf
 dem richtigen Topic und meldet die Quelle vor der Fahrt.
 
-**Nächster Schritt:** SH-8d-Bericht auswerten.
+**Nächster Schritt damals:** SH-8d-Bericht auswerten (überholt durch W-1).
 
 ## 15.11.2026 (nachmittags) – AT-2 ausgewertet: bestanden; mit 100 ms folgt der Antrieb den Nav2-Rampen
 

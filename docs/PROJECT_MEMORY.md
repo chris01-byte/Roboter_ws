@@ -1658,6 +1658,22 @@ Ausgangsstand gemessen. (3) Mit folgendem Antrieb rückt „niedrige
 Gegenstände seitlich“ nach vorn: real 0–2 cm an einem Eimer, in der
 Simulation Berührung in allen Läufen nach dem Befreien. Das ist der nächste
 Kandidat für das eine aktive Problem.
+
+**Entscheidung des Projektinhabers 15.11.2026 – Wohnung jetzt, zuerst als
+Messfahrt:** Nach den ersten Fahrten mit folgendem Antrieb („für mich als
+äußerer Beobachter hat alles geklappt“) zieht er die Erkundung der ganzen
+Wohnung vor. Festgelegt: alle Räume, begleitet, ohne Bestehen oder
+Durchfallen; Bewegliches wegräumen; in der Wohnung keine Stufe nach unten
+und keine Schwelle, aber Fliesen mit Fugen. Umsetzung als Auftrag W-1:
+davor die Stellprobe für KM-2, weil ohne den Ausweg aus der Sperre jedes zu
+nahe Heranfahren an etwas Niedriges die Fahrt beendet hätte; SH-8d (noch
+nicht gelaufen) dafür zurückgezogen. Zurückgestellt: die zwei weiteren
+Zwei-Raum-Fahrten und Schritt 2/3. Begründung für die Messfahrt statt
+weiterer Vorarbeit: Welche der bekannten Grenzen (niedrige Dinge seitlich,
+Fliesen, Zeitbudget, Erkundungstempo) in dieser Wohnung wirklich zählt,
+zeigt nur die Fahrt selbst; die Sicherheit trägt in dieser Fahrt die
+Begleitung, nicht die Technik. Die Freigabe gilt für W-1, nicht für
+unbegleitete Wohnungsfahrten.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

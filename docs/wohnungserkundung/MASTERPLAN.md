@@ -265,6 +265,28 @@ neue Entscheidung des Projektinhabers.
 | 4 | **Stufe 3:** Wohnung | – | Umfang und Kriterien legt der Projektinhaber vorher fest |
 | 5 | Raumziele: Erkundungskarte speichern, Räume in der App zeichnen und benennen, Raum per `go_to_room` anfahren | – | wird vor dem Schritt festgelegt |
 
+**Nachtrag (Nutzerentscheidung 15.11.2026): Wohnung jetzt, zuerst als
+Messfahrt.** Seit dem 15.11. folgt der Antrieb den Befehlen (Anfahrzeit
+100 ms); das Tempo war das Ziel der letzten Runden. Der Projektinhaber
+zieht deshalb **Schritt 4 (Wohnung) vor**:
+
+- **Nächster Realtest ist W-1:** eine **begleitete Messfahrt durch alle
+  Räume**, ohne Bestehen oder Durchfallen. Davor im selben Auftrag die
+  Stellprobe für die eine offene Korrektur des Festsitzens (KM-2), nach
+  Regel 6. Regel 1 bleibt: KM-2 ist die einzige Verhaltensänderung.
+- **Umfang nach Angabe des Projektinhabers:** alle Zimmertüren offen; keine
+  Stufe nach unten und keine Türschwelle im offenen Bereich; Fliesen mit
+  Fugen sind dabei. Frei stehende niedrige Dinge werden weggeräumt, feste
+  Möbel bleiben. Er geht mit der Hand am Not-Aus mit. Diese Freigabe gilt
+  für die Messfahrt W-1 und ihre eine Wiederholung, nicht allgemein.
+- **Zurückgestellt, nicht gestrichen:** die zwei weiteren vollen
+  Zwei-Raum-Fahrten für Prototyp 2 und Schritt 2/3 (EK-1, EK-2). Was davon
+  gebraucht wird und in welcher Reihenfolge, entscheidet sich an den Daten
+  von W-1 („erst messen“).
+- **Die Abnahme der Wohnung bleibt, wie in KONZEPT_SELBSTHEILUNG §11
+  festgelegt** (drei Läufe, alle zugänglichen Räume, Karte mindestens 90 %,
+  kein Kontakt). W-1 ist dafür keine Wertung.
+
 ### 9.3 Pakete
 
 - **AW-1 „Abstand halten und wegkommen“** (`19c8cb9`, Entscheidung
