@@ -17,6 +17,22 @@ def test_nothing_moves_without_the_exact_release_word(capsys):
     assert ap.main(['--freigabe', 'AT-1', '--phasen', 'A,Z', '--json', '/nonexistent/x.json']) == 2
 
 
+def test_direct_base_topic_needs_its_own_release_word(capsys):
+    """Direkt an die Basis heißt ohne Kollisionsmonitor: eigenes Freigabewort."""
+    assert ap.FREIGABEN == {'/cmd_vel_smoothed': 'AT-1', '/cmd_vel': 'AT-1b'}
+    assert ap.main(['--topic', '/cmd_vel', '--freigabe', 'AT-1',
+                    '--json', '/nonexistent/x.json']) == 2
+    assert 'AT-1b' in capsys.readouterr().err
+    assert ap.main(['--topic', '/cmd_vel_smoothed', '--freigabe', 'AT-1b',
+                    '--json', '/nonexistent/x.json']) == 2
+    # Mit dem richtigen Wort scheitert es erst an der unbekannten Phase, nicht am Wort.
+    assert ap.main(['--topic', '/cmd_vel', '--freigabe', 'AT-1b', '--phasen', 'Z',
+                    '--json', '/nonexistent/x.json']) == 2
+    assert 'Unbekannte Phase' in capsys.readouterr().err
+    with pytest.raises(SystemExit):                     # kein drittes Topic
+        ap.main(['--topic', '/cmd_vel_nav', '--freigabe', 'AT-1', '--json', '/x.json'])
+
+
 def test_tool_publishes_exactly_one_topic_and_nothing_else_that_acts():
     assert len(re.findall(r'create_publisher\(', QUELLE)) == 1
     assert "create_publisher(Twist, args.topic, 1)" in QUELLE
@@ -98,18 +114,56 @@ def test_evaluation_confirms_the_hypothesis_when_only_the_first_setpoint_counts(
 
 
 def test_evaluation_refutes_or_stays_open_otherwise():
+    an_a, an_b, an_c = [(3.5, 0.10, 0.0)], [(3.0, 0.02, 0.0), (8.0, 0.10, 0.0)], [(5.0, 0.10, 0.0)]
     gut = {
-        'A': ap.auswertung('A', 'gerade', _reihe(5, lambda t: 0.10), []),
-        'B': ap.auswertung('B', 'gerade', _reihe(9, lambda t: 0.02 if t < 4 else 0.10), []),
-        'C': ap.auswertung('C', 'gerade', _reihe(6, lambda t: min(0.10, 0.12*t)), []),
+        'A': ap.auswertung('A', 'gerade', _reihe(5, lambda t: 0.10), an_a),
+        'B': ap.auswertung('B', 'gerade', _reihe(9, lambda t: 0.02 if t < 4 else 0.10), an_b),
+        'C': ap.auswertung('C', 'gerade', _reihe(6, lambda t: min(0.10, 0.12*t)), an_c),
     }
+    assert not any(a['gestoert'] for p in gut.values() for a in p['abschnitte'].values())
     assert ap.urteil(gut)['hypothese_sollwert_nur_beim_anfahren'] == 'widerlegt'
-    halb = dict(gut, C=ap.auswertung('C', 'gerade', _reihe(6, lambda t: 0.05), []))
+    halb = dict(gut, C=ap.auswertung('C', 'gerade', _reihe(6, lambda t: 0.05), an_c))
     assert ap.urteil(halb)['hypothese_sollwert_nur_beim_anfahren'] == 'unklar'
     assert ap.urteil({'A': gut['A']})['hypothese_sollwert_nur_beim_anfahren'] == 'nicht_auswertbar'
     # Zu kurze Messreihe: kein Tempo, kein Urteil.
     assert ap.auswertung('A', 'gerade', [(0.0, 0.0, 0.0)], [])['abschnitte']['ende'][
         'ist_zu_soll'] is None
+
+
+def test_at1_disturbance_is_named_instead_of_an_open_verdict():
+    """AT-1, 15.11.2026: Glätter-Nullen im Wechsel mit dem Sollwert, an der Basis
+    kam im Mittel die Hälfte an, gefahren wurden 8–15 %. Das ist keine Aussage
+    über den Antrieb und darf nicht als „unklar“ durchgehen."""
+    wechsel = [(3.0 + k*0.025, 0.10 if k % 2 else 0.0, 0.0) for k in range(80)]
+    wechsel_b = [(7.0 + k*0.025, 0.10 if k % 2 else 0.0, 0.0) for k in range(80)]
+    wechsel_c = [(4.0 + k*0.025, 0.10 if k % 2 else 0.0, 0.0) for k in range(80)]
+    at1 = {
+        'A': ap.auswertung('A', 'gerade', _reihe(5, lambda t: 0.013), wechsel),
+        'B': ap.auswertung('B', 'gerade', _reihe(9, lambda t: 0.008), wechsel_b),
+        'C': ap.auswertung('C', 'gerade', _reihe(6, lambda t: 0.008), wechsel_c),
+    }
+    assert at1['A']['abschnitte']['ende']['an_der_basis_mps'] == pytest.approx(0.05, abs=0.002)
+    assert at1['A']['abschnitte']['ende']['gestoert'] is True
+    urteil = ap.urteil(at1)
+    assert urteil['hypothese_sollwert_nur_beim_anfahren'] == 'gestoert'
+    assert urteil['gestoerte_abschnitte'] == ['A/ende', 'B/stufe_2', 'C/ende']
+    # Kommt an der Basis gar nichts an (Kollisionsmonitor hält), gilt dasselbe.
+    assert ap.basis_gestoert(0.10, None) is True
+    # Langsam-Zone (×0,3) zählt ebenfalls als Störung, 10 % Abweichung nicht.
+    assert ap.basis_gestoert(0.10, 0.03) is True
+    assert ap.basis_gestoert(0.10, 0.091) is False
+    assert ap.basis_gestoert(0.25, 0.25) is False
+
+
+def test_foreign_sender_is_detected_before_and_during_the_run():
+    assert ap.fremde_nachrichten(100, 100) == 0
+    assert ap.fremde_nachrichten(97, 100) == 0          # eigene dürfen fehlen
+    assert ap.fremde_nachrichten(140, 100) == 40
+    assert ap.FREMD_MAX <= 5 and ap.LAUSCHEN_S >= 2.0
+    # Erst lauschen, dann der erste eigene Befehl.
+    lauschen = QUELLE.index("ergebnis['vor_dem_start_fremde_nachrichten']")
+    assert lauschen < QUELLE.index('halt(PAUSE_S)\n            for kennung in gewaehlt')
+    assert "zustand['gesendet'] += 1" in QUELLE
 
 
 def test_rotation_phase_is_measured_in_yaw():
@@ -118,3 +172,12 @@ def test_rotation_phase_is_measured_in_yaw():
     assert d['abschnitte']['ende']['ist_radps'] == pytest.approx(0.25, abs=1e-3)
     assert d['abschnitte']['ende']['an_der_basis_radps'] == 0.25
     assert d['gier_rad'] == pytest.approx(1.5)
+
+
+def test_speed_per_second_shows_whether_the_drive_follows_or_sticks():
+    folgt = ap.auswertung('B', 'gerade', _reihe(9, lambda t: 0.02 if t < 4 else 0.10), [])
+    assert folgt['tempo_je_s'][:3] == pytest.approx([0.02]*3, abs=1e-3)
+    assert folgt['tempo_je_s'][5:] == pytest.approx([0.10]*4, abs=1e-3)
+    klebt = ap.auswertung('C', 'gerade', _reihe(6, lambda t: 0.006), [])
+    assert klebt['tempo_je_s'] == pytest.approx([0.006]*6, abs=1e-4)
+    assert ap.tempo_je_sekunde([], 'weg') == []

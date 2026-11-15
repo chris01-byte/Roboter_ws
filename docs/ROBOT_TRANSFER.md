@@ -202,6 +202,23 @@ lief ein fremder LiDAR-Treiber aus `~/roboter_ws/install` (vom Agenten nicht
 gestartet und nicht angefasst). `~/roboter_ws`, frühere Releases und
 Codex-Referenz unverändert, kein Autostart. Kein aktiver Auftrag danach.
 
+Nachtrag 15.11.2026, tatsächliche Jetson-Wirkung AT-1: kein Build, kein
+neuer Release; Klon `~/roboter_worktrees/selbstheilung-v2` per
+`git pull --ff-only` auf `2c3aafb`. Ein scharfer Stackstart
+(`app_mapping.launch.py self_healing:=true … active_drive:=true`) **ohne
+Mission**, zwei Läufe von `antriebsprobe.py --freigabe AT-1` auf
+`/cmd_vel_smoothed`. Motoren liefen: je Probe sechs Phasen und sechs
+Rückwege; wegen der Nullbefehle des Glätters auf demselben Topic bekam die
+Basis Sollwert und Halt im Wechsel, gefahren wurden höchstens 0,070 m je
+Phase und 6,6–12,5° je Drehphase. Kein Kontakt, kein Eingriff, kein
+Not-Aus; Amadeus stand danach am Ausgangspunkt. Zusätzlich nur lesend:
+`ros2 topic info -v`, ein `topic echo --once`, ein eigener Zählknoten ohne
+Publisher. Stack geordnet beendet (SIGINT an die Launch-PID). Lokal neu:
+`$SH_PR/at1/`. `~/roboter_ws` vom Agenten nicht angefasst, zeigt aber
+**fremde Änderungen** (zwei geänderte Dateien, drei neue
+`lidar_acryl_test`-Dateien, Herkunft offen). Frühere Releases und
+Codex-Referenz unverändert, kein Autostart. Kein aktiver Auftrag danach.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

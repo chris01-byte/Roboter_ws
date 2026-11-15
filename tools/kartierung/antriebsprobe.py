@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""Antriebsprobe AT-1: Sollwert gegen Encoder-Tempo (kurze Messfahrt).
+"""Antriebsprobe AT-1/AT-1b: Sollwert gegen Encoder-Tempo (kurze Messfahrt).
 
-ACHTUNG: Dieses Werkzeug BEWEGT den Roboter. Es läuft nur mit
-``--freigabe AT-1`` und nur im Rahmen des gleichnamigen Auftrags
+ACHTUNG: Dieses Werkzeug BEWEGT den Roboter. Es läuft nur mit dem
+Freigabewort des gleichnamigen Auftrags
 (docs/wohnungserkundung/AGENTENAUFTRAG.md, LAB-1). Freie Fläche: vor der
 Front mindestens 1,5 m, seitlich je 0,6 m, hinten 0,5 m. Not-Aus in
 Reichweite.
+
+  --topic /cmd_vel_smoothed  --freigabe AT-1    durch den Kollisionsmonitor
+  --topic /cmd_vel           --freigabe AT-1b   DIREKT an die Basis, OHNE die
+                                                Nahbereichsbremse (VL53)
 
 Anlass (14.11.2026): In sechs Fahrten kamen an der Basis 6,4–10,1 cm/s an,
 gefahren wurden 1,3–1,7 cm/s. In SH-8b legten vier Rückfahrten mit 30 s und
@@ -26,13 +30,27 @@ Die Probe fährt feste Sollwertfolgen und misst über ``/odom``:
 Nach jeder Phase 3 s Stillstand (Nullbefehl = Stopp des Antriebs), dann mit
 einem Sprung zurück zum Ausgangspunkt bzw. zur Ausgangsrichtung.
 
-Die Befehle gehen auf ``/cmd_vel_smoothed``, also durch den
-Kollisionsmonitor (VL53) zur Basis; der Glätter davor wird umgangen, damit
-die Folge unverändert ankommt. Publiziert wird ausschließlich dieses eine
-Topic. Abbruch mit Nullbefehlen bei Not-Aus, veralteter Odometrie, mehr als
-0,9 m vor oder 0,2 m hinter dem Ausgangspunkt, mehr als 0,35 rad Abweichung
-in einer Geradeausphase, Zeitüberschreitung oder Strg-C. Fällt das Werkzeug
-aus, stoppt die Basis nach 0,25 s von selbst (Watchdog).
+Publiziert wird ausschließlich das eine gewählte Topic. Abbruch mit Nullbefehlen bei Not-Aus, veralteter Odometrie, mehr
+als 0,9 m vor oder 0,2 m hinter dem Ausgangspunkt, mehr als 0,35 rad
+Abweichung in einer Geradeausphase, Zeitüberschreitung oder Strg-C. Fällt das
+Werkzeug aus, stoppt die Basis nach 0,25 s von selbst (Watchdog).
+
+Lehre aus AT-1 (15.11.2026): Im laufenden Nav2-Stack sendet der Glätter auch
+ohne Mission mit 20 Hz Nullbefehle auf ``/cmd_vel_smoothed``. Die Basis bekam
+Sollwert und Halt im Wechsel, beide Proben waren unbrauchbar. Deshalb:
+
+  * Vor dem ersten eigenen Befehl hört das Werkzeug 2 s auf sein Topic.
+    Sendet dort jemand, fährt es nicht.
+  * Tauchen während der Fahrt fremde Nachrichten auf, bricht es ab.
+  * Weicht der Befehl an der Basis im Messabschnitt um mehr als 15 % vom
+    Sollwert ab (fremder Sender, Langsam-Zone, Stopp des Kollisionsmonitors),
+    heißt das Urteil ``gestoert`` und nicht ``unklar``.
+
+AT-1b (Freigabe des Projektinhabers vom 15.11.2026): Im laufenden Stack ist
+ohne Mission nur ``/cmd_vel`` frei, der Eingang der Basis hinter dem
+Kollisionsmonitor. Befehle dort umgehen die Nahbereichsbremse. Es schützen:
+freie Fläche, die Grenzen oben, der Watchdog der Basis und der Mensch am
+Not-Aus.
 """
 
 import argparse
@@ -42,7 +60,9 @@ import os
 import sys
 import time
 
-FREIGABE = 'AT-1'
+# Je Topic ein eigenes Freigabewort: Der direkte Weg zur Basis ist eine andere
+# Schutzlage und wurde getrennt freigegeben.
+FREIGABEN = {'/cmd_vel_smoothed': 'AT-1', '/cmd_vel': 'AT-1b'}
 RATE_HZ = 20.0
 PAUSE_S = 3.0
 V_SPRUNG, V_KLEIN, V_MITTEL = 0.10, 0.02, 0.03
@@ -53,6 +73,9 @@ GRENZE_VOR_M, GRENZE_ZURUECK_M = 0.90, 0.20
 GRENZE_GIER_RAD = 0.35
 ODOM_MAX_ALTER_S = 0.5
 TOPIC = '/cmd_vel_smoothed'
+LAUSCHEN_S = 2.0                     # Stille auf dem eigenen Topic vor dem Start
+FREMD_MAX = 5                        # so viele Nachrichten über den eigenen: Abbruch
+BASIS_TOLERANZ = 0.15                # Befehl an der Basis gegen Sollwert
 
 
 def rampe(ziel, beschleunigung, t):
@@ -116,6 +139,28 @@ def tempo(reihe, von, bis, groesse):
     return (teil[-1][index] - teil[0][index])/(teil[-1][0] - teil[0][0])
 
 
+def fremde_nachrichten(empfangen, gesendet):
+    """Nachrichten auf dem eigenen Topic, die nicht vom Werkzeug stammen können."""
+    return max(0, empfangen - gesendet)
+
+
+def basis_gestoert(soll, an_der_basis):
+    """True, wenn an der Basis im Mittel nicht der gesendete Sollwert ankam."""
+    return an_der_basis is None or abs(an_der_basis - soll) > BASIS_TOLERANZ*abs(soll)
+
+
+def tempo_je_sekunde(reihe, groesse):
+    """Mittleres Tempo je voller Sekunde; zeigt, ob der Antrieb einem Sollwert
+    folgt oder auf einem Wert stehen bleibt."""
+    if not reihe:
+        return []
+    werte = []
+    for sekunde in range(int(reihe[-1][0])):
+        wert = tempo(reihe, sekunde, sekunde + 1.0, groesse)
+        werte.append(None if wert is None else round(wert, 4))
+    return werte
+
+
 def auswertung(kennung, art, reihe, befehle):
     """Kennwerte einer Phase. ``reihe``: (t, längs seit Phasenbeginn, Gier seit
     Phasenbeginn ungefaltet); ``befehle``: (t, v, w) wie an der Basis angekommen."""
@@ -124,14 +169,16 @@ def auswertung(kennung, art, reihe, befehle):
     ergebnis = {'phase': kennung, 'art': art, 'messpunkte': len(reihe),
                 'weg_m': round(reihe[-1][1], 3) if reihe else None,
                 'gier_rad': round(reihe[-1][2], 3) if reihe else None,
+                'tempo_je_s': tempo_je_sekunde(reihe, groesse),
                 'abschnitte': {}}
     for name, von, bis, soll in ABSCHNITTE[kennung]:
         ist = tempo(reihe, von, bis, groesse)
         an_basis = [b[1] if art == 'gerade' else b[2] for b in befehle if von <= b[0] <= bis]
+        mittel = sum(an_basis)/len(an_basis) if an_basis else None
         ergebnis['abschnitte'][name] = {
             f'soll_{einheit}': soll,
-            f'an_der_basis_{einheit}': (round(sum(an_basis)/len(an_basis), 4)
-                                        if an_basis else None),
+            f'an_der_basis_{einheit}': None if mittel is None else round(mittel, 4),
+            'gestoert': basis_gestoert(soll, mittel),
             f'ist_{einheit}': None if ist is None else round(ist, 4),
             'ist_zu_soll': None if ist is None else round(ist/soll, 2),
         }
@@ -147,6 +194,14 @@ def urteil(phasen):
     sprung, rampe_v, stufe_2 = anteil('A', 'ende'), anteil('C', 'ende'), anteil('B', 'stufe_2')
     if None in (sprung, rampe_v, stufe_2):
         return {'hypothese_sollwert_nur_beim_anfahren': 'nicht_auswertbar'}
+    gestoert = [f'{k}/{a}' for k, a in (('A', 'ende'), ('B', 'stufe_2'), ('C', 'ende'))
+                if phasen[k]['abschnitte'][a].get('gestoert')]
+    if gestoert:
+        # Die Basis bekam nicht den gesendeten Sollwert: keine Aussage zur Hypothese.
+        return {'hypothese_sollwert_nur_beim_anfahren': 'gestoert',
+                'gestoerte_abschnitte': gestoert,
+                'sprung_ist_zu_soll': sprung, 'rampe_ist_zu_soll': rampe_v,
+                'treppe_stufe_2_ist_zu_soll': stufe_2}
     if sprung >= .8 and rampe_v < .4 and stufe_2 < .4:
         befund = 'bestaetigt'
     elif rampe_v >= .8 and stufe_2 >= .8:
@@ -164,14 +219,16 @@ def urteil(phasen):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     parser.add_argument('--freigabe', default='',
-                        help=f'muss genau "{FREIGABE}" sein, sonst wird nichts gesendet')
+                        help='muss genau das Freigabewort zum Topic sein '
+                             f'({FREIGABEN}), sonst wird nichts gesendet')
     parser.add_argument('--json', required=True, help='Ergebnis (lokal, nicht ins Repo)')
     parser.add_argument('--phasen', default='A,B,C,F,D,E',
                         help='Auswahl und Reihenfolge, z. B. "A,C"')
-    parser.add_argument('--topic', default=TOPIC)
+    parser.add_argument('--topic', default=TOPIC, choices=sorted(FREIGABEN))
     args = parser.parse_args(argv)
-    if args.freigabe != FREIGABE:
-        print(f'Keine Bewegung: --freigabe {FREIGABE} fehlt.', file=sys.stderr)
+    if args.freigabe != FREIGABEN[args.topic]:
+        print(f'Keine Bewegung: --freigabe {FREIGABEN[args.topic]} fehlt '
+              f'(Topic {args.topic}).', file=sys.stderr)
         return 2
     gewaehlt = [k.strip().upper() for k in args.phasen.split(',') if k.strip()]
     plan = {p[0]: p for p in PHASEN}
@@ -188,7 +245,9 @@ def main(argv=None):
 
     rclpy.init()
     node = rclpy.create_node('antriebsprobe')
-    zustand = dict(pose=None, pose_zeit=None, estop=None, basis=[])
+    zustand = dict(pose=None, pose_zeit=None, estop=None, basis=[],
+                   gesendet=0, empfangen=0)
+    eigenes_ist_basis = args.topic == '/cmd_vel'
     latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
                          durability=DurabilityPolicy.TRANSIENT_LOCAL)
 
@@ -201,14 +260,24 @@ def main(argv=None):
     node.create_subscription(Odometry, '/odom', on_odom, qos_profile_sensor_data)
     node.create_subscription(Bool, '/safety/estop',
                              lambda m: zustand.update(estop=bool(m.data)), latched)
-    node.create_subscription(Twist, '/cmd_vel', lambda m: zustand['basis'].append(
-        (time.monotonic(), m.linear.x, m.angular.z)), qos_profile_sensor_data)
+    def on_basis(m):
+        zustand['basis'].append((time.monotonic(), m.linear.x, m.angular.z))
+        if eigenes_ist_basis:
+            zustand['empfangen'] += 1
+
+    def on_eigenes(_):
+        zustand['empfangen'] += 1
+
+    node.create_subscription(Twist, '/cmd_vel', on_basis, qos_profile_sensor_data)
+    if not eigenes_ist_basis:
+        node.create_subscription(Twist, args.topic, on_eigenes, qos_profile_sensor_data)
     pub = node.create_publisher(Twist, args.topic, 1)
 
     def sende(v, w):
         msg = Twist()
         msg.linear.x, msg.angular.z = float(v), float(w)
         pub.publish(msg)
+        zustand['gesendet'] += 1
 
     def takt():
         """Eingänge verarbeiten bis zum nächsten 20-Hz-Takt (ein Befehl je Takt)."""
@@ -230,9 +299,13 @@ def main(argv=None):
             return 'Not-Aus aktiv oder Not-Aus-Zustand unbekannt'
         if zustand['pose_zeit'] is None or time.monotonic()-zustand['pose_zeit'] > ODOM_MAX_ALTER_S:
             return 'Odometrie fehlt oder ist veraltet'
+        fremd = fremde_nachrichten(zustand['empfangen'], zustand['gesendet'])
+        if fremd > FREMD_MAX:
+            return (f'fremder Sender auf {args.topic} ({fremd} Nachrichten über den '
+                    'eigenen); die Messung wäre gestört')
         return None
 
-    ergebnis = {'schema_version': 1, 'freigabe': FREIGABE, 'topic': args.topic,
+    ergebnis = {'schema_version': 2, 'freigabe': args.freigabe, 'topic': args.topic,
                 'zeit': time.strftime('%Y-%m-%dT%H:%M:%S'), 'phasen': {}, 'rueckwege': [],
                 'abbruch': None}
     start = None
@@ -267,9 +340,18 @@ def main(argv=None):
         frist = time.monotonic() + 5.0
         while time.monotonic() < frist and (zustand['pose'] is None or zustand['estop'] is None):
             rclpy.spin_once(node, timeout_sec=0.1)
+        # Stille auf dem eigenen Topic, bevor der erste eigene Befehl hinausgeht.
+        zustand['empfangen'] = 0
+        frist = time.monotonic() + LAUSCHEN_S
+        while time.monotonic() < frist:
+            rclpy.spin_once(node, timeout_sec=0.05)
+        ergebnis['vor_dem_start_fremde_nachrichten'] = zustand['empfangen']
         grund = stoerung()
+        if grund is None and zustand['empfangen'] > 0:
+            grund = (f'auf {args.topic} sendet schon jemand ({zustand["empfangen"]} '
+                     f'Nachrichten in {LAUSCHEN_S:.0f} s); die Messung wäre gestört')
         if grund is None and pub.get_subscription_count() == 0:
-            grund = f'niemand hört auf {args.topic} (Kollisionsmonitor läuft nicht?)'
+            grund = f'niemand hört auf {args.topic} (Stack läuft nicht?)'
         if grund:
             ergebnis['abbruch'] = f'vor dem Start: {grund}'
         else:
@@ -283,6 +365,7 @@ def main(argv=None):
                 phase['beschreibung'] = text
                 ergebnis['phasen'][kennung] = phase
                 print(json.dumps(phase['abschnitte'], ensure_ascii=False), flush=True)
+                print(f"  Tempo je Sekunde: {phase['tempo_je_s']}", flush=True)
                 if grund:
                     ergebnis['abbruch'] = f'Phase {kennung}: {grund}'
                     break
@@ -318,6 +401,8 @@ def main(argv=None):
             node.destroy_node()
             rclpy.try_shutdown()
 
+    ergebnis['fremde_nachrichten'] = fremde_nachrichten(
+        zustand['empfangen'], zustand['gesendet'])
     ergebnis['urteil'] = urteil(ergebnis['phasen'])
     os.makedirs(os.path.dirname(os.path.abspath(args.json)), exist_ok=True)
     with open(args.json, 'w', encoding='utf-8') as handle:

@@ -1537,6 +1537,26 @@ dem ersten kleinen Wert weiter. Lehre: Eine Messgröße, die nur mitliest
 (Strecke je Rückfahrt), hat in einer Probe mehr geklärt als drei Pakete
 Verhaltensänderung. Noch nicht am Antrieb gemessen; nächster Schritt ist
 eine reine Messung, dann eine getrennte Korrektur im Motortreiber.
+
+**Nachtrag 15.11.2026 – AT-1, eine Messung an einer ungeprüften Annahme
+verloren:** Die Antriebsprobe sendete auf `/cmd_vel_smoothed`, weil dort
+„nur der Glätter umgangen“ werde. Im laufenden Stack sendet der Glätter aber
+auch ohne Mission mit 20 Hz Nullbefehle auf dieses Topic (gespeist vom
+Fahrtor). Die Basis bekam Sollwert und Halt im Wechsel, Amadeus kroch in
+allen Phasen mit 8–16 % des Sollwerts, beide Proben sind unbrauchbar; die
+Hypothese zum Startimpuls ist weiter offen. Lehren: (1) Auch die
+Messanordnung ist eine Annahme und wird vor der Fahrt gemessen: Wer sendet
+auf dem Topic, auf dem das Werkzeug senden soll (`ros2 topic info -v` und
+eine Zählung über einige Sekunden)? (2) Ein Trockenlauf prüft nur, was er
+nachbildet; der vom 14.11. bildete den Antrieb nach, nicht die Kette davor.
+(3) Ein Messwerkzeug muss seine eigene Störung erkennen und benennen, statt
+ein Urteil auszugeben; `antriebsprobe.py` startet jetzt nicht, wenn auf
+seinem Topic jemand sendet, und meldet `gestoert`, wenn an der Basis nicht
+der Sollwert ankommt. (4) Der Jetson-Agent hat die Störung selbst gefunden
+und rein lesend belegt; solche Zusatzmessungen bleiben in Aufträgen
+ausdrücklich erlaubt. Im laufenden Stack ist ohne Mission nur `/cmd_vel`
+frei; Befehle dort umgehen den Kollisionsmonitor und brauchen eine eigene
+Freigabe.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

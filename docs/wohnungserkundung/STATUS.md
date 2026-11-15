@@ -1,12 +1,12 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 13.11.2026:** Hauptlinie `self_healing`
+**Aktueller Stand 15.11.2026:** Hauptlinie `self_healing`
 (Nutzerentscheidung 15.10.2026). Es gilt der **Fahrplan in MASTERPLAN §9**.
-Der einzige Blocker ist seit dem 04.11. das Festsitzen dicht an
-Hindernissen; **ein Problem zur Zeit**, geprüft mit der **Stellprobe**
-(§9 Regeln 6 und 7). SH-8 (13.11.): Ecke und Garderobe befreit, an den
-Mülleimern hielt der Kollisionsmonitor Amadeus fest. **Aktiver
-Jetson-Auftrag: SH-8b**, dieselbe Stellprobe mit der einen Korrektur KM-1 B.
+Das aktive Problem (Festsitzen dicht an Hindernissen) und das Kriechtempo
+hängen an derselben offenen Frage: Setzt der Antrieb um, was befohlen wird?
+Die Antriebsprobe AT-1 (15.11.) hat das **nicht** geklärt; die Messung war
+gestört (Abschnitt 15.11.2026). **Kein aktiver Jetson-Auftrag**, bis der
+Projektinhaber über die Wiederholung entschieden hat.
 Wo wir stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
@@ -27,7 +27,7 @@ HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
 
-## Arbeitsliste (roter Faden nach MASTERPLAN §9) – Stand 14.11.2026
+## Arbeitsliste (roter Faden nach MASTERPLAN §9) – Stand 15.11.2026
 
 Genau eine Liste. Jeder Auftrag bezieht sich auf eine Zeile. Neue Ideen
 kommen unter „Geparkt“, nicht sofort in den Code.
@@ -41,12 +41,15 @@ weiter (Startimpuls im Motortreiber); abgeleitet, noch nicht gemessen.
 **Dazu aus der Simulation vom 14.11.:** Die freie Rückfahrt aus AW-1 ist
 nach hinten blind (Heck am Türpfosten in einem Lauf).
 
-**Aktiv (Roboter):** **AT-1 Antriebsprobe**, [Auftrag](AGENTENAUFTRAG.md),
-vom Projektinhaber am 14.11.2026 freigegeben. Reine Messung, keine Änderung:
-sechs feste Sollwertfolgen auf freier Fläche (Sprung, Treppe, Rampe wie
-Nav2, Drehen), gemessen wird Sollwert gegen Encoder-Tempo. Urteil vorab
-festgelegt: Hypothese „Sollwert nur beim Anfahren“ bestätigt, widerlegt oder
-unklar, in zwei Proben.
+**Aktiv (Roboter):** nichts. **AT-1 Antriebsprobe** lief am 15.11.2026
+zweimal ohne Abbruch und ohne Berührung, ist aber **nicht verwertbar**: Im
+laufenden Stack sendet der Glätter auch ohne Mission Nullbefehle auf
+dasselbe Topic wie das Werkzeug; die Basis bekam Sollwert und Halt im
+Wechsel. Der Fehler lag im Auftrag (Annahme der Cloud-Sitzung, nicht
+gemessen). Die Hypothese „Sollwert nur beim Anfahren“ ist weder bestätigt
+noch widerlegt. **Offen ist eine Entscheidung des Projektinhabers:** die
+Wiederholung (AT-1b) mit Befehlen direkt an die Basis, also ohne die
+Nahbereichsbremse des Kollisionsmonitors.
 
 **In Simulation (Nutzerentscheidung 14.11.2026, MASTERPLAN §9 Regel 7
 Nachtrag): Schritt 2 „Erkundungstempo und Nachbarraum finden“**, Paket EK-1
@@ -73,6 +76,8 @@ speichern, Räume in der App, `go_to_room`).
 | Rückfahrt in der Langsam-Zone zu langsam (0,015 m/s; SH-8: 7 von 8 an der 30-s-Grenze, je etwa 0,15 m statt 0,3 m) | ein Problem zur Zeit; befreit hat er sich trotzdem, nur langsamer (3–4 min) | SH-8b misst die Strecke je Rückfahrt; reicht sie nicht zum Befreien oder kostet sie in vollen Fahrten viel Zeit |
 | KM-1 Variante „Kollisionsmonitor lässt Wegfahren zu“ (approach blockiert auch rückwärts) | sicherheitsrelevant (Kollisionsmonitor); Variante A verworfen; KM-1 B soll die Lage gar nicht erst entstehen lassen | SH-8b zeigt trotz KM-1 B „approach“ während einer Rückfahrt |
 | Niedrige Gegenstände seitlich (unter 0,75 m, nie von den VL53 gesehen): Simulation 13.11. berührte nach dem Befreien in 4 von 4 KM-1-B-Läufen eine Eimerseite | bekannte Sensorgrenze, nicht Teil des aktiven Problems; real bisher keine Berührung | vor Stufe 3 (Wohnung) oder bei der ersten realen Berührung; SH-8b-Teil B ohne Eimer |
+| Handsteuerung (`teleop_joy`) sendet ebenfalls auf `/cmd_vel_smoothed`; neben dem laufenden Nav2-Stack bekäme auch sie die Nullbefehle des Glätters dazwischen | bisher nur aus AT-1 abgeleitet; die Handsteuerung wird mit `slam.launch.py` ohne Nav2 benutzt | jemand will neben dem laufenden Erkundungsstack von Hand fahren |
+| Fremde Änderungen in `~/roboter_ws` (15.11.: `docs/INVENTORY.md`, `tools/kartierung/README.md` geändert, drei `lidar_acryl_test`-Dateien neu) | nicht von dieser Linie; der Jetson-Agent hat sie nicht angefasst | vor dem nächsten Auftrag, der `~/roboter_ws` benutzt, oder wenn Christopher sie einordnet |
 | LiDAR meldet beim Start „communication is abnormal“ (SH-8: dreimal, nach Neustecken behoben) | Vorprüfung fängt es ab, keine Bewegung | tritt erneut auf (dann Kabel/USB prüfen) |
 | E Lückensuche auf gröberem Raster (5 cm) | Nutzen unbelegt; gröberes SLAM-Raster (X12) brachte Wege näher an Türpfosten | reale Abdeckungskurven zeigen, dass kleine Lücken in der Ferne Zeit kosten |
 | F mehr Tempo vor Unbekanntem (bisher 0,08 m/s) | Sicherheitsfrage, eigene Prüfung nötig | nach dem Erkundungspaket, falls die Fahrzeit noch zu lang ist |
@@ -90,7 +95,130 @@ Fahrtprotokoll (09.11.) · Simulation KM-1 A/B und EK-1 ausgewertet (09.11.)
 · Standortbestimmung, Stellprobe als Testform (10.11.) · SH-8 ausgewertet:
 Ecke und Garderobe befreit, Mülleimer nicht (13.11.) · Anhang Z zweimal
 ausgewertet: Befehle 6–10 cm/s, gefahren 1,3–1,7 cm/s (14.11.) · SH-8b
-ausgewertet: nicht bestanden, Rückfahrten 0,151 m (14.11.).
+ausgewertet: nicht bestanden, Rückfahrten 0,151 m (14.11.) · AT-1
+ausgewertet: Messung gestört, kein Urteil; Werkzeug erkennt fremde Sender
+jetzt selbst (15.11.).
+
+## 15.11.2026 – AT-1 ausgewertet: Messung gestört, die Frage zum Antrieb ist offen
+
+Bericht `~/selbstheilung_jetson_bericht_at1.md` (Jetson, Klon `2c3aafb`,
+Release `selbstheilung-sh8b-20261114_1643` ohne Build, Werkzeugtest 8
+bestanden, Vorprüfung 59× OK). Ein scharfer Stackstart, **keine Mission**,
+zwei Werkzeugläufe, kein Abbruch, keine Berührung, kein Eingriff; Amadeus
+stand danach am Ausgangspunkt. Christopher zu beiden Proben: „Überall
+gekrochen“.
+
+**Das Urteil `unklar` beider Proben ist nicht verwertbar.** Ursache, vom
+Jetson-Agenten rein lesend gemessen:
+
+- Der `velocity_smoother` sendet im laufenden Stack **auch ohne Mission**
+  mit 20,1 Hz Nullbefehle auf `/cmd_vel_smoothed` (161 von 161 Nachrichten
+  in 8 s null). Gespeist wird er vom Fahrtor (`cmd_vel_mission_gate`), das
+  ohne freigegebene Mission in festem Takt Null ausgibt (aus dem Code
+  gelesen).
+- Das Werkzeug sendete auf dasselbe Topic. Der Kollisionsmonitor reichte
+  beides weiter; an der Basis kamen **Sollwert und Halt im Wechsel** an
+  (`an_der_basis` in jeder Phase etwa die Hälfte des Sollwerts; in den
+  `CMD`-Zeilen wechseln `v=+0.100` und `v=+0.000`).
+- Ein Nullbefehl ist für die Basis ein Stopp. Der Antrieb fuhr also etwa 20
+  Mal je Sekunde an und hielt wieder.
+
+| Phase | `ist_zu_soll` Probe 1 / 2 | an der Basis | Soll |
+|---|---|---|---|
+| A Sprung vorwärts | 0,13 / 0,15 | 0,049 | 0,10 m/s |
+| B zweite Stufe | 0,08 / 0,11 | 0,049 | 0,10 m/s |
+| C Rampe | 0,08 / 0,09 | 0,049 | 0,10 m/s |
+| F zweite Stufe | 0,09 / 0,12 | 0,015 | 0,03 m/s |
+| D Sprung drehen | 0,08 / 0,16 | 0,122 | 0,25 rad/s |
+| E Rampe drehen | 0,10 / 0,15 | 0,125 | 0,25 rad/s |
+
+**Der Fehler lag im Auftrag, nicht in der Ausführung.** Die Cloud-Sitzung
+hatte angenommen, der Glätter schweige ohne Mission, und das nicht
+gemessen. Der Trockenlauf vom 14.11. bildete nur den Antrieb nach, nicht
+die Kette davor, und konnte den Fehler deshalb nicht zeigen. Der
+Jetson-Agent hat die Störung nach Probe 1 gefunden, belegt und vor Probe 2
+gemeldet.
+
+**Was belegt ist:**
+
+1. Wechseln Sollwert und Halt an der Basis mit je 20 Hz, kriecht Amadeus mit
+   8–16 % des Sollwerts, gleich bei Sprung, Treppe und Rampe.
+2. Ohne Mission steht auf `/cmd_vel` nichts (0 Nachrichten in 8 s und in
+   5 s): Der Kollisionsmonitor schweigt, solange nur Nullen ankommen
+   (`stop_pub_timeout` 2 s).
+3. Die Schutzgrenzen des Werkzeugs hielten: größter Weg 0,070 m, Rückwege
+   endeten 2–5 cm vor dem Ausgangspunkt.
+
+**Was nicht belegt ist:**
+
+1. Ob der Antrieb bei einem gleichmäßigen Sollwert ohne Zwischenhalt richtig
+   fährt. Die Hypothese „Sollwert nur beim Anfahren“ ist **weder bestätigt
+   noch widerlegt**.
+2. Ob ein solcher Wechsel auch in echten Fahrten vorkommt. Dagegen spricht
+   der Bestand: In den sechs Fahrten aus Anhang Z waren nur 1–2 % der
+   `CMD`-Zeilen während der Anläufe null; ein Wechsel mit je 20 Hz hätte
+   etwa die Hälfte ergeben. In einer Fahrt speist der Glätter das Topic
+   allein.
+
+**Aus dem Treibercode (nur gelesen):** Die Änderung vom 16.08.2026
+(Startimpuls nur noch beim Anfahren) wurde damals mit einem **konstanten**
+Sollwert geprüft (0,12 rad/s). Ob der Antrieb einen während der Fahrt
+geänderten Sollwert ohne Startimpuls übernimmt, wurde nie gemessen. Genau
+das soll die Probe zeigen; die Frage bleibt die richtige.
+
+**Korrektur am Werkzeug** (`tools/kartierung/antriebsprobe.py`, 12 Tests):
+
+- Vor dem ersten eigenen Befehl hört es 2 s auf sein Topic. Sendet dort
+  jemand, fährt es nicht.
+- Tauchen während der Fahrt mehr als fünf fremde Nachrichten auf, bricht es
+  mit Nullbefehlen ab.
+- Kommt an der Basis im Messabschnitt nicht der gesendete Sollwert an
+  (Abweichung über 15 %), lautet das Urteil `gestoert` statt `unklar`.
+- Der direkte Weg zur Basis (`--topic /cmd_vel`) verlangt ein eigenes
+  Freigabewort (`AT-1b`); mit `AT-1` fährt das Werkzeug dort nicht.
+
+**Trockenlauf 15.11.** gegen eine nachgebildete Kette (Glätter mit
+20-Hz-Nullen, Kollisionsmonitor mit 2 s Schweigefrist, Basis mit Stopp bei
+Null), fünf Fälle, alle wie erwartet:
+
+| Fall | Topic | Ergebnis |
+|---|---|---|
+| wie AT-1 (Glätter sendet von Anfang an) | `/cmd_vel_smoothed` | fährt nicht: „fremder Sender“, 40 Nachrichten in 2 s |
+| Glätter beginnt mitten in der Probe | `/cmd_vel_smoothed` | Abbruch nach 6 fremden Nachrichten (0,3 s) |
+| Glätter sendet, Antrieb gesund | `/cmd_vel` | `widerlegt`, an der Basis genau der Sollwert, 0 fremde Nachrichten |
+| Glätter sendet, Antrieb bleibt beim ersten Sollwert | `/cmd_vel` | `bestaetigt` (Sprung 0,99, Rampe 0,06, Treppe 0,20) |
+| ohne Glätter, Antrieb gesund | `/cmd_vel_smoothed` | `widerlegt` |
+
+Zusätzlich schreibt das Werkzeug je Phase das Tempo je Sekunde mit
+(`tempo_je_s`); daran ist zu sehen, ob der Antrieb einem Sollwert folgt oder
+auf einem Wert stehen bleibt. Der Trockenlauf prüft das Werkzeug, nicht den
+echten Stack.
+
+**Wie die Wiederholung ungestört wird:** Im laufenden Stack ist nur
+`/cmd_vel` frei, der Eingang der Basis hinter dem Kollisionsmonitor. Dort
+sendet ohne Mission niemand. Befehle dort **umgehen die Nahbereichsbremse**
+(VL53/Kollisionsmonitor). Es bleiben: freie Fläche, höchstens 0,10 m/s und
+0,9 m Weg, Abbruch über Odometrie und Not-Aus-Zustand, Watchdog der Basis
+(0,25 s), Christopher mit der Hand am Not-Aus. Geprüfte Alternativen:
+
+- Stack ohne Nav2 (`slam_lidar`, `vl53_near_field` und `safety_monitor`
+  einzeln): Der Kollisionsmonitor braucht die Kontur aus der lokalen
+  Kostenkarte, die ohne Nav2 fehlt. Eine nie benutzte Startkombination,
+  verworfen.
+- Glätter oder Fahrtor zum Schweigen bringen: wäre eine Verhaltensänderung
+  am Stack vor einer Messung (MASTERPLAN §9 Regel 1), verworfen.
+
+Das ist eine andere Schutzlage als die am 14.11. freigegebene. Sie braucht
+eine **eigene Freigabe des Projektinhabers** (AGENTS §2.1); bis dahin gibt
+es keinen aktiven Auftrag. AT-1
+[archiviert](archive/20261115-at1-ausgewertet/README.md).
+
+**Einordnung nach MASTERPLAN §9:** kein Schritt zurück im Fahrplan, aber
+ein verlorener Messtermin. KM-1 B, Schritt 2 und die Stellprobe warten
+unverändert auf die Antwort zum Antrieb.
+
+**Nächster Schritt:** Entscheidung des Projektinhabers zur Wiederholung
+AT-1b; danach Auftrag schreiben.
 
 ## 14.11.2026 (nachts) – SH-8b ausgewertet: nicht bestanden; die Rückfahrten zeigen die Ursache im Motortreiber
 
