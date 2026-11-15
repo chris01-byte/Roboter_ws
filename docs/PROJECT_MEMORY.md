@@ -1556,7 +1556,9 @@ der Sollwert ankommt. (4) Der Jetson-Agent hat die Störung selbst gefunden
 und rein lesend belegt; solche Zusatzmessungen bleiben in Aufträgen
 ausdrücklich erlaubt. Im laufenden Stack ist ohne Mission nur `/cmd_vel`
 frei; Befehle dort umgehen den Kollisionsmonitor und brauchen eine eigene
-Freigabe.
+Freigabe. Der Projektinhaber hat sie am 15.11.2026 für die Wiederholung
+AT-1b erteilt (freie Fläche, höchstens 0,10 m/s und 0,9 m, Hand am Not-Aus);
+das Werkzeug verlangt dafür ein eigenes Freigabewort.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

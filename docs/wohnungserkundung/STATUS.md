@@ -5,8 +5,8 @@
 Das aktive Problem (Festsitzen dicht an Hindernissen) und das Kriechtempo
 hängen an derselben offenen Frage: Setzt der Antrieb um, was befohlen wird?
 Die Antriebsprobe AT-1 (15.11.) hat das **nicht** geklärt; die Messung war
-gestört (Abschnitt 15.11.2026). **Kein aktiver Jetson-Auftrag**, bis der
-Projektinhaber über die Wiederholung entschieden hat.
+gestört (Abschnitt 15.11.2026). **Aktiver Jetson-Auftrag: AT-1b**, die
+Wiederholung direkt an der Basis (Freigabe des Projektinhabers 15.11.2026).
 Wo wir stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
@@ -41,15 +41,14 @@ weiter (Startimpuls im Motortreiber); abgeleitet, noch nicht gemessen.
 **Dazu aus der Simulation vom 14.11.:** Die freie Rückfahrt aus AW-1 ist
 nach hinten blind (Heck am Türpfosten in einem Lauf).
 
-**Aktiv (Roboter):** nichts. **AT-1 Antriebsprobe** lief am 15.11.2026
-zweimal ohne Abbruch und ohne Berührung, ist aber **nicht verwertbar**: Im
-laufenden Stack sendet der Glätter auch ohne Mission Nullbefehle auf
-dasselbe Topic wie das Werkzeug; die Basis bekam Sollwert und Halt im
-Wechsel. Der Fehler lag im Auftrag (Annahme der Cloud-Sitzung, nicht
-gemessen). Die Hypothese „Sollwert nur beim Anfahren“ ist weder bestätigt
-noch widerlegt. **Offen ist eine Entscheidung des Projektinhabers:** die
-Wiederholung (AT-1b) mit Befehlen direkt an die Basis, also ohne die
-Nahbereichsbremse des Kollisionsmonitors.
+**Aktiv (Roboter):** **AT-1b Antriebsprobe direkt an der Basis**,
+[Auftrag](AGENTENAUFTRAG.md), vom Projektinhaber am 15.11.2026 freigegeben
+(ohne Nahbereichsbremse, freie Fläche, Hand am Not-Aus). Reine Messung,
+keine Änderung: dieselben sechs Sollwertfolgen wie AT-1, diesmal auf
+`/cmd_vel`. AT-1 (15.11.) war **nicht verwertbar**: Der Glätter sendet auch
+ohne Mission Nullbefehle auf das damals benutzte Topic; die Basis bekam
+Sollwert und Halt im Wechsel. Der Fehler lag im Auftrag. Die Hypothese
+„Sollwert nur beim Anfahren“ ist weder bestätigt noch widerlegt.
 
 **In Simulation (Nutzerentscheidung 14.11.2026, MASTERPLAN §9 Regel 7
 Nachtrag): Schritt 2 „Erkundungstempo und Nachbarraum finden“**, Paket EK-1
@@ -208,17 +207,24 @@ sendet ohne Mission niemand. Befehle dort **umgehen die Nahbereichsbremse**
 - Glätter oder Fahrtor zum Schweigen bringen: wäre eine Verhaltensänderung
   am Stack vor einer Messung (MASTERPLAN §9 Regel 1), verworfen.
 
-Das ist eine andere Schutzlage als die am 14.11. freigegebene. Sie braucht
-eine **eigene Freigabe des Projektinhabers** (AGENTS §2.1); bis dahin gibt
-es keinen aktiven Auftrag. AT-1
+Das ist eine andere Schutzlage als die am 14.11. freigegebene und braucht
+eine eigene Freigabe (AGENTS §2.1). AT-1
 [archiviert](archive/20261115-at1-ausgewertet/README.md).
+
+**Entscheidung des Projektinhabers (15.11.2026): Wiederholung direkt an der
+Basis.** Zur Wahl standen außerdem „Bremse bleibt aktiv“ (zuerst eine
+Softwareänderung, eine Runde später) und „nur mitlesen bei normaler Fahrt“
+(weniger eindeutig). Auftrag [AT-1b](AGENTENAUFTRAG.md): derselbe
+Stackstart ohne Mission, vor der ersten Probe zählt der Agent rein lesend
+die Nachrichten auf `/cmd_vel` (erwartet 0), dann zwei Proben mit
+`antriebsprobe.py --topic /cmd_vel --freigabe AT-1b`. Urteile vorab
+festgelegt: `bestaetigt`, `widerlegt`, `unklar`, `gestoert`.
 
 **Einordnung nach MASTERPLAN §9:** kein Schritt zurück im Fahrplan, aber
 ein verlorener Messtermin. KM-1 B, Schritt 2 und die Stellprobe warten
 unverändert auf die Antwort zum Antrieb.
 
-**Nächster Schritt:** Entscheidung des Projektinhabers zur Wiederholung
-AT-1b; danach Auftrag schreiben.
+**Nächster Schritt:** AT-1b-Bericht auswerten.
 
 ## 14.11.2026 (nachts) – SH-8b ausgewertet: nicht bestanden; die Rückfahrten zeigen die Ursache im Motortreiber
 
