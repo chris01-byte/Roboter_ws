@@ -269,6 +269,28 @@ weiter 100 ms. `~/roboter_ws` nicht angefasst (fremde Änderungen dort
 unverändert), frühere Releases und Codex-Referenz unverändert, kein
 Autostart. Kein aktiver Auftrag danach.
 
+Nachtrag 15.11.2026 (spät), tatsächliche Jetson-Wirkung W-1: **neuer
+Release** `~/.local/share/amadeus/releases/selbstheilung-w1-20261115_1801`
+(14 Pakete, HEAD `d6a0416`, enthält KM-2: Knoten `monitor_kontur`, Overlay
+des Kollisionsmonitors mit `footprint_topic: "kollisionsmonitor_kontur"`),
+209 Tests; **`SH_REL` in `~/roboter_worktrees/selbstheilung-v2.env` zeigt
+jetzt darauf** (Rückfall: `…/selbstheilung-sh8b-20261114_1643`). Fünf
+scharfe Stackstarts mit `hwt601_accel_ms:=100`, alle mit Mission: drei
+Stellproben im Labor (Mülleimer zweimal, Ecke) und zwei Wohnungsfahrten ab
+dem Laborraum mit offenen Türen zu Flur, Bad, Schlafzimmer und Küche.
+Amadeus fuhr bis 0,135 m/s und blieb in beiden Wohnungsfahrten im Laborraum
+und in der Tür zum Flur (w1 219 s, „Hilfe benötigt“; w2 1175 s, auf
+Christophers „stop!“ vom Agenten geordnet beendet). Kein Kontakt und kein
+Eingriff in Teil A und w1 laut Christopher; für w2 liegen keine Antworten
+vor. Je Start ein Missionsstart, in Teil A je ein Missionsstopp über
+`/mission_manager/command_json`. Beim Beenden nach s2a und w2 je ein
+Absturz von `slam_toolbox` (w2 auch `bt_orchestrator`) nach dem SIGINT.
+Karte von w1 lokal gesichert, von w2 nicht. Lokal neu: `$SH_PR/w1_*`,
+`$SH_PR/werkzeug/w1_*`. Im Antrieb stehen weiter 100 ms. `~/roboter_ws`
+nicht angefasst (fremde Änderungen dort unverändert), ältere Releases und
+Codex-Referenz unverändert, kein Autostart. Aktiver Auftrag danach: W-1N
+(nur lesend).
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

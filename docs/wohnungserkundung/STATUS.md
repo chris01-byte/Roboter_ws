@@ -1,17 +1,14 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 15.11.2026 (abends):** Hauptlinie `self_healing`
-(Nutzerentscheidung 15.10.2026). Es gilt der **Fahrplan in MASTERPLAN §9**.
-Der Antrieb folgt seit dem 15.11. den Befehlen (Anfahrzeit 100 ms, Standard
-für den selbstheilenden Betrieb). **Stellprobe SH-8c: nicht bestanden, aber
-ein großer Schritt:** An der Ecke befreite sich Amadeus zweimal in etwa 92 s
-(Rückfahrt 0,31 m in 21 s; in SH-8b „Hilfe benötigt“). An den Mülleimern
-hielt ihn der Kollisionsmonitor wieder fest („approach“ während der
-Rückfahrt). Dafür gibt es seit dem Abend die Korrektur KM-2 (gerade
-Rückfahrt bleibt erlaubt), in der Simulation geprüft. **Der Projektinhaber
-hat am 15.11. entschieden, jetzt die ganze Wohnung zu erkunden, zuerst als
-begleitete Messfahrt. Aktiver Jetson-Auftrag: W-1**, Stellprobe mit KM-2,
-bei Erfolg die Wohnungs-Messfahrt (SH-8d dafür zurückgezogen).
+**Aktueller Stand 15.11.2026 (spät):** Hauptlinie `self_healing`
+(Nutzerentscheidung 15.10.2026). Es gilt der **Fahrplan in MASTERPLAN §9**
+mit dem Nachtrag vom 15.11. (Wohnung jetzt, zuerst als Messfahrt). Der
+Antrieb folgt den Befehlen (Anfahrzeit 100 ms). **W-1 (15.11.):** Die
+Stellprobe mit KM-2 ist bestanden (Mülleimer zweimal, Ecke einmal). **Die
+Wohnungsfahrt kam zweimal nicht aus dem Laborraum heraus**; der
+Projektinhaber sah unzählige Drehungen und immer wieder dieselben Ziele.
+**Aktiver Jetson-Auftrag: W-1N**, eine nur lesende Auswertung der
+aufgezeichneten Fahrten; es wird nichts gefahren.
 Wo wir stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
@@ -37,28 +34,27 @@ Korrekturen und früheren Vergleichsstände.
 Genau eine Liste. Jeder Auftrag bezieht sich auf eine Zeile. Neue Ideen
 kommen unter „Geparkt“, nicht sofort in den Code.
 
-**Das eine aktive Problem:** Amadeus sitzt dicht an Hindernissen fest.
-Stand SH-8c (15.11.): Der Antrieb folgt jetzt den Befehlen, die Rückfahrt
-schafft ihre 0,3 m, die Ecke ist gelöst (zweimal `befreit`). **Übrig ist ein
-einzelner, gemessener Mechanismus an niedrigen Gegenständen:** Kommt ein
-VL53-Punkt in das 2-cm-Polsterband der Kontur, setzt der Kollisionsmonitor
-(„approach“) jede Bewegung auf null, auch die gerade Rückfahrt vom Hindernis
-weg. Regler und Kollisionsmonitor benutzen dieselbe gepolsterte Kontur; der
-Regler hält auf dem 5-cm-Raster an, eine Reserve dazwischen gibt es nicht.
-**Dazu aus der Simulation vom 14.11.:** Die freie Rückfahrt aus AW-1 ist
-nach hinten blind (Heck am Türpfosten in einem Lauf).
+**Das eine aktive Problem (seit W-1, 15.11.): Amadeus verlässt den Raum
+nicht.** Der Raum ist nach etwa 2 Minuten zu 85 % erfasst; danach kommt er
+nicht durch die 80-cm-Tür und fährt dieselben Ziele immer wieder an (w2:
+27 Anläufe, 2 erreicht, 14 abgebrochen, 11 gescheitert, rund 20 volle
+Drehungen bei 13 m Weg). Gemessen sind bisher nur die Zahlen; die Ursachen
+(Türdurchfahrt, Zielwahl nach Abbrüchen, Zeitfehler und Rechenlast) sind
+Vermutungen, bis W-1N ausgewertet ist.
 
-**Aktiv (Roboter):** **W-1**, [Auftrag](AGENTENAUFTRAG.md), nach
-MASTERPLAN §9 Nachtrag 15.11.2026: **Teil A** Stellprobe mit genau einer
-Änderung, **KM-2 „Rückzug aus der Sperre“** (neuer Build; Mülleimer
-zweimal, Ecke einmal), jeder Start mit `hwt601_accel_ms:=100`. **Teil B**,
-nur bei bestandener Stellprobe: **begleitete Messfahrt durch die ganze
-Wohnung** (alle Zimmertüren offen, bis 40 min, kein Bestehen oder
-Durchfallen), höchstens zwei Fahrten. Was dafür nötig ist und was bewusst
-offen bleibt, steht im Abschnitt 15.11.2026 (nachts).
+**Das frühere aktive Problem „sitzt dicht an Hindernissen fest“:**
+Stellprobe in W-1 bestanden (Mülleimer zweimal, Ecke einmal, mit KM-1 B,
+KM-2 und 100 ms Anfahrzeit). Die Sperre, für die KM-2 gebaut wurde, trat
+dabei nicht auf (kein „approach“ in fünf Läufen); belegt ist, dass die
+Kontur unter Humble anliegt und bei jeder Rückfahrt umschaltet.
+
+**Aktiv (Roboter):** **W-1N**, [Auftrag](AGENTENAUFTRAG.md): nur lesende
+Auswertung von w1 und w2 mit `tools/kartierung/selbstheilung_ablauf.py`
+(Ziele und Wiederholungen, Grund jedes Abbruchs, Wartezeiten, Verlauf je
+Minute, häufigste Meldungen, Auszüge). Kein Stackstart, keine Fahrt.
 **Entscheidungen des Projektinhabers (15.11.2026):** Der Antrieb wird für
-die autonome Fahrt ausgelegt; 100 ms Anfahrzeit ist der Standard für den
-selbstheilenden Betrieb; die Wohnung kommt jetzt, zuerst als Messfahrt.
+die autonome Fahrt ausgelegt; 100 ms Anfahrzeit ist Standard; die Wohnung
+kommt jetzt, zuerst als Messfahrt.
 
 **In Simulation (Nutzerentscheidung 14.11.2026, MASTERPLAN §9 Regel 7
 Nachtrag): Schritt 2 „Erkundungstempo und Nachbarraum finden“**, Paket EK-1
@@ -115,7 +111,105 @@ jetzt selbst (15.11.) · AT-1b ausgewertet: Antrieb folgt Sprüngen, feinen
 Rampen nicht; Ursache ist die Anfahrzeit 2000 ms (15.11.) · AT-2
 bestanden: mit 100 ms folgt der Antrieb den Nav2-Rampen (15.11.) · SH-8c
 ausgewertet: Ecke zweimal befreit, Mülleimer vom Kollisionsmonitor
-festgehalten (15.11.).
+festgehalten (15.11.) · KM-2 gebaut und simuliert (15.11.) · W-1
+ausgewertet: Stellprobe bestanden, Wohnungsfahrt bleibt im Laborraum (15.11.).
+
+## 15.11.2026 (spät) – W-1 ausgewertet: Stellprobe bestanden, die Wohnungsfahrt bleibt im Laborraum
+
+Bericht `~/selbstheilung_jetson_bericht_w1.md` (Jetson, HEAD `d6a0416`,
+neuer Release `selbstheilung-w1-20261115_1801`, Build 182 s, 209 Tests
+bestanden, Profilzeilen wie erwartet einschließlich KM-2). Fünf Stackstarts,
+alle mit Mission und mit `hwt601_accel_ms:=100`; Vorprüfung je Start 67× OK
+(KM-2-Zeilen OK, auch „Kollisionsmonitor benutzt diese Kontur“).
+
+**Teil A, Stellprobe mit KM-2: bestanden.**
+
+| Probe | Urteil | Zeit bis 0,5 m | Rückfahrt | „approach“ | größtes Wackeln |
+|---|---|---|---|---|---|
+| s3a Mülleimer | `befreit` | 151,1 s | 0,244 m in 16,4 s (vom Explorer beendet) | 0 | 0,016 rad/s |
+| s3b Mülleimer | `befreit` | 94,7 s | 0,307 m in 20,8 s | 0 | 0,019 rad/s |
+| s2a Ecke | `befreit` | 136,9 s | zweimal 0,309 m in 20,9 s | 0 | 0,028 rad/s |
+
+Keine Berührung, kein Eingriff, kein Eigenecho; Christopher: „gut
+ausgewichen“, „nichts gewackelt“. Ruhewert des Wackelns 0,007 rad/s; die
+Messquelle war in allen Starts da. Die Kontur schaltete bei jeder
+Rückfahrt auf „Rückzug“ und zurück. **Die Sperre, für die KM-2 gebaut
+wurde, trat nicht auf** (kein „approach“ in fünf Läufen); KM-2 ist damit
+unter Humble verdrahtet und unschädlich, sein Nutzen real aber nicht
+gezeigt.
+
+**Teil B, Wohnungs-Messfahrt: Amadeus kam nicht aus dem Laborraum.**
+Offen waren Labor, Flur, Bad, Schlafzimmer und Küche (Fliesen in Bad und
+Küche), zu war das Wohnzimmer.
+
+| | w1 | w2 |
+|---|---|---|
+| Ende | „Hilfe benötigt“ nach 218,9 s, schräg in der Tür zum Flur | nach 1175 s auf Wunsch des Projektinhabers gestoppt |
+| Anläufe begonnen / erreicht / gescheitert / abgebrochen | 12 / 1 / 11 / 0 | 27 / 2 / 11 / 14 |
+| freie Fläche | 16,2 m² nach 2 min, 18,2 m² am Ende | 14,8 m² nach 2 min, 15,7 m² nach 10 min, 17,6 m² am Ende |
+| Weg / Drehung laut Odometrie | 3,3 m / 8,9 rad | 13,0 m / 126 rad (rund 20 volle Drehungen) |
+| „Controller patience exceeded“ | 11 | 34 |
+| „detected collision ahead“ | 353 | 1122 |
+| Zeitfehler („extrapolation into the future“) | 0 | 271 |
+| Rechenlast `slam_toolbox` | 7 % | steigt von 7 % auf 40–64 % |
+| Rückfahrten | 2 (0,308 m; 0,139 m abgebrochen) | 4 (0,13–0,33 m) |
+| größtes Wackeln | 0,21 rad/s in der Fahrt bei 134 s | 0,31 rad/s **im Stand** bei etwa 668 s |
+
+**Beobachtung des Projektinhabers (zu Teil B, sinngemäß wörtlich):** Der
+erste Teil hat sehr gut funktioniert. Der Scan mehrerer Räume hat überhaupt
+nicht funktioniert: Amadeus blieb im Labor, drehte sich unzählige Male im
+selben Bereich, fuhr immer wieder dieselben Stellen an und kam nicht aus
+dem Raum. Es wirkte unkoordiniert, ohne erkennbare Struktur. Ein Raum
+müsste in kurzer Zeit erfasst sein, und dann müsste er zum nächsten fahren.
+
+**Was belegt ist:**
+
+1. **Der Raum selbst ist schnell erfasst:** 85 % der Endfläche nach 121 s
+   (w1) und 181 s (w2). Danach kommt kaum Fläche dazu (w2: 0,9 m² zwischen
+   Minute 2 und 10).
+2. **Die Tür wird nicht geschafft.** w1 stand am Ende schräg (43°) in der
+   80-cm-Tür; die Mitte lag in der globalen Karte im Sperrbereich des
+   Türrahmens (Wert 99, hintere rechte Ecke 100), der Planer meldete achtmal
+   „failed to create plan“. In der lokalen Karte lagen tödliche Zellen im
+   Gehäuse hinten rechts (Türpfosten).
+3. **In w2 endeten 25 von 27 Anläufen ohne Ziel**, 14 davon mit „Goal
+   canceled“. Das Fahrtprotokoll zählt nur 12 Heilungen; mindestens 13
+   Anläufe endeten also, ohne dass der Explorer einen Fehlschlag verbuchte.
+4. **Die Zeit ging in Drehungen:** 126 rad bei 13 m Weg.
+5. **Die Zeitfehler begannen bei etwa 163 s** und häuften sich in den
+   Minuten 9–11, 14–15 und 17–18; dazu „Control loop missed its desired
+   rate“ und „Behavior Tree tick rate exceeded“.
+
+**Aus dem Code gelesen (erklärt Punkt 3, ist aber an den Daten noch nicht
+geprüft):** Der Explorer bricht einen laufenden Anlauf ab, sobald eine
+Quelle fehlt oder der HWT-Pfad „HOLD“ meldet (`stop_requested`). Ein
+solcher Abbruch zählt nicht als Fehlversuch: Das Ziel wird nicht
+zurückgestellt, und nach dem Warten wählt er wieder das beste Ziel, also
+meist dasselbe. Jeder neue Anlauf beginnt mit einer Drehung in die
+Wegrichtung. Dazu kommt die erste Stufe der Heilungsleiter, die dasselbe
+Ziel absichtlich noch einmal versucht.
+
+**Vermutungen, nicht gemessen:**
+
+- Warum die Anläufe zur Tür scheitern (Regler hält vor den Pfosten an;
+  Zellen im eigenen Umriss seit KM-1 B; Zeitfehler; Abbrüche durch Warten).
+- Worauf der Explorer in w2 gewartet hat.
+- Ob die Rechenlast Ursache oder Folge der vielen Drehungen ist.
+- Was die Wackelspitze im Stand war (äußere Einwirkung oder Messfehler);
+  der Projektinhaber hat dazu nichts berichtet.
+
+**Was W-1 für den Fahrplan bedeutet:** Die Messfahrt hat geliefert, wofür
+sie gedacht war. Vor Fliesen, niedrigen Möbeln und Zeitbudget steht das
+Verlassen des Raums. Schritt 2 des Fahrplans („Erkundung zielgerichtet“,
+am 14.11. in der Simulation vorbereitet) und die Türdurchfahrt gehören
+dazu; welche Änderung zuerst kommt, entscheiden die Zahlen aus W-1N.
+
+**Nächster Schritt (MASTERPLAN §9 Regel 4): W-1N**, nur lesend, mit dem
+neuen Werkzeug `tools/kartierung/selbstheilung_ablauf.py` (`03a980d`, 5
+Tests, zusätzlich an Simulationslogs gelaufen). Zum Vergleich der
+Simulationslauf Labor und Flur vom 15.11.: 12 Anläufe auf 9 verschiedene
+Ziele, 9 erreicht, kein Abbruch, kein Warten. W-1
+[archiviert](archive/20261115-w1-ausgewertet/README.md).
 
 ## 15.11.2026 (nachts) – Entscheidung: Wohnung jetzt; was die erste Wohnungsfahrt braucht
 

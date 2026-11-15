@@ -1674,6 +1674,26 @@ Fliesen, Zeitbudget, Erkundungstempo) in dieser Wohnung wirklich zählt,
 zeigt nur die Fahrt selbst; die Sicherheit trägt in dieser Fahrt die
 Begleitung, nicht die Technik. Die Freigabe gilt für W-1, nicht für
 unbegleitete Wohnungsfahrten.
+
+**Nachtrag 15.11.2026 (spät) – W-1:** Stellprobe mit KM-2 bestanden
+(Mülleimer zweimal, Ecke einmal, kein „approach“). Die Wohnungs-Messfahrt
+kam zweimal nicht aus dem Laborraum: w1 „Hilfe benötigt“ nach 219 s schräg
+in der 80-cm-Tür, w2 nach 19,6 min gestoppt (27 Anläufe, 2 erreicht, rund
+20 volle Drehungen bei 13 m Weg, 271 Zeitfehler, SLAM-Last bis 64 %). Der
+Projektinhaber: unkoordiniert, immer dieselben Ziele, keine Struktur; ein
+Raum müsste schnell erfasst sein und dann der nächste folgen. Die Zahlen
+geben ihm recht: Der Raum war nach 2–3 Minuten zu 85 % erfasst, danach ging
+die Zeit verloren. Lehren: (1) Die Messfahrt war richtig gewählt; sie hat
+in 25 Minuten gezeigt, dass vor allen vermuteten Wohnungsproblemen
+(Fliesen, niedrige Möbel, Budget) das Verlassen des Raums steht. (2) Mit
+folgendem Antrieb zeigt sich ein Mangel in Minuten, der im Kriechtempo
+ganze Testtage brauchte; der Raumwechsel war schon in SH-7 nicht
+bestätigt. (3) Aus dem Bericht allein lassen sich die Ursachen nicht
+trennen; statt einer Korrektur aus Vermutungen folgt wieder zuerst eine nur
+lesende Auswertung (W-1N) mit einem Werkzeug, das Ziele, Wiederholungen
+und Abbruchgründe zählt. (4) Der Code erklärt, warum dieselben Ziele
+wiederkehren können (Abbruch durch Warten zählt nicht als Fehlversuch);
+ob es hier so war, ist zu messen.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je
