@@ -227,12 +227,19 @@ auf den Rückwegen; Sprünge aus dem Stand sind mit `AT-2` gesperrt. Urteil
 `antrieb_folgt_rampen`: `ja`, wenn alle sechs Rampen-Abschnitte zwischen
 0,8 und 1,2 liegen.
 
-**Trockenlauf 15.11.** gegen eine nachgebildete Kette, deren Antrieb nach
-dem Modell rechnet: Mit 2000 ms und dem AT-1b-Programm kommen die echten
-Messwerte heraus (A 1,00; C 0,11 mit 0,002 → 0,012 m/s; E 0,11). Die beiden
-Läufe des AT-2-Programms (2000 ms und 100 ms) sind in diesem Stand noch
-nicht abgeschlossen; ihr Ergebnis steht im folgenden Nachtrag. **Bis dahin
-gilt der Auftrag AT-2 als nicht ausführbar.**
+**Trockenlauf 15.11.** gegen eine nachgebildete Kette (Glätter-Nullen,
+Kollisionsmonitor, Basis), deren Antrieb nach dem Modell rechnet; drei
+Fälle, alle ohne Abbruch und ohne fremde Nachrichten:
+
+| Fall | Ergebnis |
+|---|---|
+| AT-1b-Programm (A, C, E), 2000 ms | wie die echte Messung: A 1,00; C 0,11 (0,002 → 0,012 m/s); E 0,11 |
+| AT-2-Programm, 2000 ms | `nein`: C 0,11; G oben 0,06, wieder 0,56; R 0,17; E 0,11; Rückfahrt 0,012 m |
+| AT-2-Programm, 100 ms | `ja`: alle sechs Abschnitte 0,99–1,00; Wege C 0,52 m, G 0,59 m, R −0,11 m, S 0,51 m; Drehung 73°; Rückwege enden auf 2 mm am Ausgangspunkt |
+
+Der Trockenlauf prüft das Werkzeug und das Urteil gegen das Modell; ob der
+echte Antrieb sich bei 100 ms so verhält, zeigt erst AT-2. **Der Auftrag
+AT-2 ist damit ausführbar.**
 
 **Offen nach AT-2, je nach Ergebnis:** 100 ms als Standard für den
 selbstheilenden Betrieb (Entscheidung des Projektinhabers), dann die
