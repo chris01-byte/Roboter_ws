@@ -15,6 +15,15 @@ schreibt eine JSON-Zusammenfassung:
   - jede Rückwärtsfahrt (v < 0 auf /cmd_vel; RPP fährt nie rückwärts, also
     nur BackUp): Beginn, Dauer, kleinste Geschwindigkeit und die dabei laut
     /odom zurückgelegte Strecke (SH-8: 7 von 8 Rückfahrten an der Zeitgrenze),
+  - Tempo-Folge (ab 15.11.2026): befohlener Weg und Drehwinkel (Integral der
+    Befehle auf /cmd_vel während der Mission) gegen gefahrenen Weg und
+    Drehwinkel laut /odom. Anlass: Bis AT-2 setzte der Antrieb nur etwa ein
+    Fünftel um; diese Zahl zeigt in jeder Fahrt, ob er den Befehlen folgt,
+  - Wackeln (ab 15.11.2026): Drehrate um die beiden waagerechten Achsen aus
+    dem HWT601 (/hwt601/imu/data_raw), in Ruhe vor der Mission und während
+    der Fahrt, dazu die stärksten Sekunden mit dem Befehl dabei. Anlass:
+    Christopher sah in AT-2 Ruckeln beim Anfahren; bisher gab es dafür keine
+    Messgröße. Fehlt das Topic, steht dort „keine Daten“,
   - Lücken im VL53-Status (länger als 0,8 s),
   - Abdeckungskurve: freie, belegte und bekannte Kartenfläche alle 30 s
     während der Fahrt und die Zeit, bis 85/90/95 % der freien Endfläche
@@ -40,6 +49,10 @@ TERMINAL = ('success', 'partial', 'blocked', 'failed', 'canceled')
 SAUBERES_ENDE = ('exploration_complete', 'usable_partial', 'blocked_help_required')
 VL53_LUECKE_S = 0.8
 RUECKFAHRT_PAUSE_S = 1.0     # so lange ohne v < 0, dann gilt die Rückfahrt als beendet
+BEFEHL_MAX_DT_S = 0.25       # länger gilt ein Befehl an der Basis nicht (Watchdog)
+WACKELN_NAH_S = 1.5          # so lange nach Anfahren/Anhalten zählt eine Spitze dazu
+WACKELN_SPITZEN = 5
+IMU_TOPIC = '/hwt601/imu/data_raw'
 ABDECKUNG_TAKT_S = 30.0
 ABDECKUNG_ANTEILE = (0.85, 0.90, 0.95)
 MANUELL = (
@@ -71,6 +84,16 @@ class LaufProtokoll:
         self.strecke_m = 0.0
         self.rueckfahrten = []
         self._rueckfahrt = None          # offene Rückwärtsfahrt
+        # Tempo-Folge: Befehl gegen Odometrie, nur während der Mission.
+        self.folge = dict(befohlen_m=0.0, gefahren_m=0.0, befohlen_rad=0.0, gedreht_rad=0.0)
+        self._cmd_letzter = None         # (t, v, w)
+        self._gier_letzte = None
+        self._anfahren_um = None
+        self._anhalten_um = None
+        # Wackeln: Drehrate um die waagerechten Achsen.
+        self.wackeln_ruhe = dict(n=0, quadrate=0.0, max=0.0)
+        self.wackeln_fahrt = dict(n=0, quadrate=0.0, max=0.0)
+        self._wackeln_sekunden = {}      # Sekunde der Mission -> stärkster Wert
         self.vl53_letzte = None
         self.vl53_luecken = 0
         self.vl53_max_luecke_s = 0.0
@@ -145,6 +168,20 @@ class LaufProtokoll:
         self.cmd['max_w'] = max(self.cmd['max_w'], abs(w))
         if t is None:
             return
+        letzter = self._cmd_letzter
+        if letzter is not None:
+            if self.faehrt():
+                dt = min(t - letzter[0], BEFEHL_MAX_DT_S)
+                self.folge['befohlen_m'] += abs(letzter[1])*dt
+                self.folge['befohlen_rad'] += abs(letzter[2])*dt
+            stand, steht = (letzter[1] == 0.0 and letzter[2] == 0.0), (v == 0.0 and w == 0.0)
+            if stand and not steht:
+                self._anfahren_um = t
+            elif steht and not stand:
+                self._anhalten_um = t
+        elif v != 0.0 or w != 0.0:
+            self._anfahren_um = t
+        self._cmd_letzter = (t, v, w)
         if v < -1e-4:
             r = self._rueckfahrt
             if r is None:
@@ -171,16 +208,89 @@ class LaufProtokoll:
         self._ereignis(r['start'], 'rueckfahrt', **{k: v for k, v in eintrag.items()
                                                     if k != 't_s'})
 
-    def odom(self, x, y, t=None):
+    def odom(self, x, y, t=None, gier=None):
         if not (math.isfinite(x) and math.isfinite(y)):
             return
         if self.odom_letzte is not None:
             schritt = math.dist(self.odom_letzte, (x, y))
             if schritt < 0.5:          # Sprünge (Neustart, Reset) nicht addieren
                 self.strecke_m += schritt
+                if self.faehrt():
+                    self.folge['gefahren_m'] += schritt
         self.odom_letzte = (x, y)
+        if gier is not None and math.isfinite(gier):
+            if self._gier_letzte is not None and self.faehrt():
+                dreh = abs(math.atan2(math.sin(gier - self._gier_letzte),
+                                      math.cos(gier - self._gier_letzte)))
+                if dreh < 0.5:
+                    self.folge['gedreht_rad'] += dreh
+            self._gier_letzte = gier
         if t is not None:
             self._rueckfahrt_pruefen(t)
+
+    def imu(self, rate_x, rate_y, t):
+        """Drehrate um die beiden waagerechten Achsen (Nicken und Rollen)."""
+        wert = math.hypot(rate_x, rate_y)
+        if not math.isfinite(wert):
+            return
+        if self.faehrt():
+            ziel = self.wackeln_fahrt
+            sekunde = int(t - self.gestartet_um)
+            bisher = self._wackeln_sekunden.get(sekunde)
+            if bisher is None or wert > bisher['radps']:
+                cmd = self._cmd_letzter or (t, 0.0, 0.0)
+                if self._anfahren_um is not None and 0 <= t - self._anfahren_um <= WACKELN_NAH_S:
+                    lage = 'anfahren'
+                elif self._anhalten_um is not None and 0 <= t - self._anhalten_um <= WACKELN_NAH_S:
+                    lage = 'anhalten'
+                elif cmd[1] == 0.0 and cmd[2] == 0.0:
+                    lage = 'steht'
+                else:
+                    lage = 'fahrt'
+                self._wackeln_sekunden[sekunde] = dict(
+                    t_s=self._t(t), radps=wert, v=cmd[1], w=cmd[2], lage=lage)
+        elif self.gestartet_um is None:
+            ziel = self.wackeln_ruhe
+        else:
+            return
+        ziel['n'] += 1
+        ziel['quadrate'] += wert*wert
+        ziel['max'] = max(ziel['max'], wert)
+
+    def tempo_folge(self):
+        f = self.folge
+        return {
+            'befohlener_weg_m': round(f['befohlen_m'], 2),
+            'gefahrener_weg_m': round(f['gefahren_m'], 2),
+            'weg_gefahren_zu_befohlen': (round(f['gefahren_m']/f['befohlen_m'], 2)
+                                         if f['befohlen_m'] >= 0.2 else None),
+            'befohlene_drehung_rad': round(f['befohlen_rad'], 2),
+            'gedrehte_drehung_rad': round(f['gedreht_rad'], 2),
+            'drehung_gedreht_zu_befohlen': (round(f['gedreht_rad']/f['befohlen_rad'], 2)
+                                            if f['befohlen_rad'] >= 0.3 else None),
+        }
+
+    def wackeln(self):
+        def kennwerte(z):
+            if not z['n']:
+                return None
+            return {'messwerte': z['n'], 'rms_radps': round(math.sqrt(z['quadrate']/z['n']), 4),
+                    'max_radps': round(z['max'], 4)}
+        if not self.wackeln_ruhe['n'] and not self.wackeln_fahrt['n']:
+            return {'daten': 'keine Daten'}
+        spitzen = sorted(self._wackeln_sekunden.values(), key=lambda e: -e['radps'])
+        zaehler = {}
+        for eintrag in self._wackeln_sekunden.values():
+            zaehler[eintrag['lage']] = max(zaehler.get(eintrag['lage'], 0.0), eintrag['radps'])
+        return {
+            'groesse': 'Betrag der Drehrate um die beiden waagerechten Achsen, rad/s',
+            'ruhe_vor_der_mission': kennwerte(self.wackeln_ruhe),
+            'waehrend_der_mission': kennwerte(self.wackeln_fahrt),
+            'staerkste_je_lage_radps': {k: round(v, 4) for k, v in sorted(zaehler.items())},
+            'staerkste_sekunden': [
+                {k: (round(v, 4) if isinstance(v, float) else v) for k, v in e.items()}
+                for e in spitzen[:WACKELN_SPITZEN]],
+        }
 
     def stellprobe(self, x, y, t, schwelle_m):
         """Entfernung vom Standort beim Missionsstart; merkt das erste Erreichen."""
@@ -264,7 +374,7 @@ class LaufProtokoll:
                  else round(self.beendet_um - self.gestartet_um, 1))
         kriterien = self.kriterien()
         return {
-            'schema_version': 1,
+            'schema_version': 2,
             'dauer_s': dauer,
             'endzustand': {k: sh.get(k) for k in (
                 'state', 'outcome', 'reason', 'goals_reached', 'heals',
@@ -276,6 +386,8 @@ class LaufProtokoll:
                             for k, v in self.cmd.items()},
             'strecke_odom_m': round(self.strecke_m, 2),
             'rueckfahrten': self.rueckfahrten,
+            'tempo_folge': self.tempo_folge(),
+            'wackeln': self.wackeln(),
             'vl53_luecken': {'anzahl': self.vl53_luecken,
                              'max_s': round(self.vl53_max_luecke_s, 3)},
             'abdeckung': self.abdeckung_zeiten(),
@@ -321,6 +433,8 @@ def main(argv=None):
     parser.add_argument('--stellprobe-m', type=float, default=0.0,
                         help='Stellprobe: Ende, sobald der Roboter so weit vom Standort beim '
                              'Missionsstart entfernt ist (0 = aus)')
+    parser.add_argument('--imu-topic', default=IMU_TOPIC,
+                        help='sensor_msgs/Imu für die Messgröße Wackeln (nur lesend)')
     parser.add_argument('--stellprobe-fenster-s', type=float, default=300.0,
                         help='Stellprobe: Ende spätestens so lange nach dem Missionsstart')
     args = parser.parse_args(argv)
@@ -332,6 +446,7 @@ def main(argv=None):
     from rclpy.qos import (QoSProfile, DurabilityPolicy, ReliabilityPolicy,
                            qos_profile_sensor_data)
     from robot_interfaces.msg import NearFieldStatus
+    from sensor_msgs.msg import Imu
     from std_msgs.msg import Bool, String
 
     rclpy.init()
@@ -362,10 +477,16 @@ def main(argv=None):
                              qos_profile_sensor_data)
     def on_odom(m):
         x, y = m.pose.pose.position.x, m.pose.pose.position.y
-        protokoll.odom(x, y, jetzt())
+        q = m.pose.pose.orientation
+        gier = math.atan2(2*(q.w*q.z + q.x*q.y), 1 - 2*(q.y*q.y + q.z*q.z))
+        protokoll.odom(x, y, jetzt(), gier)
         protokoll.stellprobe(x, y, jetzt(), args.stellprobe_m)
 
     node.create_subscription(Odometry, '/odom', on_odom, qos_profile_sensor_data)
+    node.create_subscription(
+        Imu, args.imu_topic,
+        lambda m: protokoll.imu(m.angular_velocity.x, m.angular_velocity.y, jetzt()),
+        qos_profile_sensor_data)
     node.create_subscription(NearFieldStatus, '/near_field/status',
                              lambda m: protokoll.vl53(jetzt()), qos_profile_sensor_data)
     node.create_subscription(OccupancyGrid, '/map',

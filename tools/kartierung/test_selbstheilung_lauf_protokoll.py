@@ -81,7 +81,8 @@ def test_protocol_tool_stays_read_only():
     for forbidden in ('create_publisher', 'create_client', 'ActionClient', 'send_goal'):
         assert forbidden not in source
     # 8 seit 09.11.2026: /map für die Abdeckungskurve (nur lesend).
-    assert len(re.findall(r'create_subscription\(', source)) == 8
+    # 9 seit 15.11.2026: HWT601-Drehraten für die Messgröße Wackeln (nur lesend).
+    assert len(re.findall(r'create_subscription\(', source)) == 9
 
 
 def test_coverage_curve_samples_every_30_s_only_while_driving():
@@ -178,3 +179,84 @@ def test_reverse_drive_without_any_command_at_the_base_leaves_no_entry():
         p.cmd_vel(0.0, 0.0, float(i))
         p.odom(0.19, -0.19, i + 0.5)
     assert p.zusammenfassung()['rueckfahrten'] == []
+
+
+def _fahrt(p, tempo_anteil, dreh_anteil=1.0):
+    """Mission mit 10 s Fahrt bei 0,10 m/s und 4 s Drehen bei 0,25 rad/s (20 Hz)."""
+    p.explore(_sh('running'), 1.0)
+    x, gier = 0.0, 0.0
+    p.odom(x, 0.0, 1.0, gier)
+    for k in range(200):
+        t = 1.0 + k*0.05
+        p.cmd_vel(0.10, 0.0, t)
+        x += 0.10*tempo_anteil*0.05
+        p.odom(x, 0.0, t + 0.01, gier)
+    for k in range(80):
+        t = 11.0 + k*0.05
+        p.cmd_vel(0.0, 0.25, t)
+        gier += 0.25*dreh_anteil*0.05
+        p.odom(x, 0.0, t + 0.01, gier)
+    p.cmd_vel(0.0, 0.0, 15.0)
+
+
+def test_speed_tracking_shows_whether_the_drive_does_what_is_commanded():
+    """Bis AT-2 (15.11.2026) setzte der Antrieb nur etwa ein Fünftel um."""
+    folgt = LaufProtokoll(0.0)
+    _fahrt(folgt, 1.0)
+    f = folgt.zusammenfassung()['tempo_folge']
+    assert f['befohlener_weg_m'] == pytest.approx(1.0, abs=0.02)
+    assert f['weg_gefahren_zu_befohlen'] == pytest.approx(1.0, abs=0.03)
+    assert f['drehung_gedreht_zu_befohlen'] == pytest.approx(1.0, abs=0.03)
+    kriecht = LaufProtokoll(0.0)
+    _fahrt(kriecht, 0.2, 0.11)
+    f = kriecht.zusammenfassung()['tempo_folge']
+    assert f['weg_gefahren_zu_befohlen'] == pytest.approx(0.2, abs=0.02)
+    assert f['drehung_gedreht_zu_befohlen'] == pytest.approx(0.11, abs=0.02)
+    # Vor der Mission zählt nichts, und ohne nennenswerten Befehl gibt es kein Verhältnis.
+    leer = LaufProtokoll(0.0)
+    leer.cmd_vel(0.10, 0.0, 1.0)
+    leer.cmd_vel(0.10, 0.0, 2.0)
+    leer.odom(0.0, 0.0, 1.0, 0.0)
+    leer.odom(0.1, 0.0, 2.0, 0.0)
+    f = leer.zusammenfassung()['tempo_folge']
+    assert f['befohlener_weg_m'] == 0.0 and f['weg_gefahren_zu_befohlen'] is None
+
+
+def test_commands_older_than_the_base_watchdog_do_not_count_as_commanded_way():
+    p = LaufProtokoll(0.0)
+    p.explore(_sh('running'), 1.0)
+    p.cmd_vel(0.10, 0.0, 1.0)
+    p.cmd_vel(0.10, 0.0, 6.0)                 # 5 s Lücke: die Basis hielt nach 0,25 s
+    assert p.tempo_folge()['befohlener_weg_m'] == pytest.approx(0.03, abs=0.006)
+
+
+def test_wobble_is_measured_at_rest_and_while_driving_with_its_context():
+    """AT-2: Christopher sah Ruckeln beim Anfahren; dafür gab es keine Messgröße."""
+    p = LaufProtokoll(0.0)
+    for k in range(50):                        # Ruhe vor der Mission
+        p.imu(0.003, 0.004, 0.2 + k*0.01)
+    p.explore(_sh('running'), 1.0)
+    p.cmd_vel(0.0, 0.0, 1.0)
+    p.imu(0.004, 0.003, 1.5)                   # steht
+    p.cmd_vel(0.05, 0.0, 2.0)                  # fährt an
+    p.imu(0.06, 0.08, 2.3)                     # Spitze beim Anfahren: 0,10 rad/s
+    p.cmd_vel(0.10, 0.0, 4.0)
+    p.imu(0.012, 0.016, 5.2)                   # ruhige Fahrt: 0,02 rad/s
+    p.cmd_vel(0.0, 0.0, 8.0)                   # hält an
+    p.imu(0.03, 0.04, 8.4)                     # Spitze beim Anhalten: 0,05 rad/s
+    w = p.zusammenfassung()['wackeln']
+    assert w['ruhe_vor_der_mission'] == {'messwerte': 50, 'rms_radps': 0.005, 'max_radps': 0.005}
+    assert w['waehrend_der_mission']['max_radps'] == pytest.approx(0.10)
+    assert w['staerkste_je_lage_radps'] == {
+        'anfahren': 0.1, 'anhalten': 0.05, 'fahrt': 0.02, 'steht': 0.005}
+    erste = w['staerkste_sekunden'][0]
+    assert erste['lage'] == 'anfahren' and erste['v'] == 0.05 and erste['radps'] == 0.1
+    assert [e['lage'] for e in w['staerkste_sekunden']] == ['anfahren', 'anhalten', 'fahrt', 'steht']
+
+
+def test_wobble_without_imu_data_is_reported_as_missing_not_as_calm():
+    p = LaufProtokoll(0.0)
+    _fahrt(p, 1.0)
+    assert p.zusammenfassung()['wackeln'] == {'daten': 'keine Daten'}
+    p.imu(float('nan'), 0.0, 3.0)
+    assert p.zusammenfassung()['wackeln'] == {'daten': 'keine Daten'}
