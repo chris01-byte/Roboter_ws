@@ -625,6 +625,19 @@ def test_back_off_contour_covers_exactly_what_a_straight_back_off_enters():
             kontur_punkte(bad)
 
 
+def test_monitor_contour_node_starts_only_with_self_healing():
+    """KM-2 (SH-8c): the collision monitor held even the straight back-off."""
+    source = (PACKAGE_ROOT/'launch'/'nav_mapping.launch.py').read_text()
+    assert ("package='robot_navigation', executable='monitor_kontur',\n"
+            "                name='monitor_kontur', output='screen',\n"
+            "                condition=IfCondition(self_healing)),") in source
+    assert source.count("executable='monitor_kontur'") == 1
+    setup = (PACKAGE_ROOT/'setup.py').read_text()
+    assert "'monitor_kontur = '" in setup
+    real = (PACKAGE_ROOT/'launch'/'nav_real.launch.py').read_text()
+    assert 'monitor_kontur' not in real          # the frozen path stays as it was
+
+
 def test_back_off_contour_node_starts_only_with_self_healing():
     source = (PACKAGE_ROOT/'launch'/'nav_mapping.launch.py').read_text()
     assert ("package='robot_navigation', executable='rueckfahr_kontur',\n"

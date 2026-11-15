@@ -13,6 +13,15 @@
 # =====================================================================
 collision_monitor:
   ros__parameters:
+    # KM-2 (15.11.2026, nach SH-8c s3a): "approach" prueft gegen die Kontur des
+    # Knotens robot_navigation/monitor_kontur statt direkt gegen
+    # /local_costmap/published_footprint. Sie ist dieselbe volle gepolsterte
+    # Kontur, ausser bei reiner gerader Rueckwaertsfahrt (dann die
+    # Rueckfahrkontur aus AW-1). Anlass: Mit VL53-Punkten im 2-cm-Polsterband
+    # hielt der Kollisionsmonitor auch die Rueckfahrt vom Hindernis weg an.
+    # Rueckfall: diese drei Zeilen entfernen (oder self_healing:=false).
+    FootprintApproach:
+      footprint_topic: "kollisionsmonitor_kontur"
     vl53_left:
       min_height: -0.02
     vl53_right:

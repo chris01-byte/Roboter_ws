@@ -59,10 +59,17 @@ def test_self_healing_overlay_only_lowers_vl53_height_below_any_valid_point():
 
     overlay = yaml.safe_load((PACKAGE_ROOT / 'config' /
                               'collision_monitor_self_healing_overlay.yaml').read_text())
+    # KM-2 (15.11.2026, after SH-8c): "approach" checks against the contour of
+    # robot_navigation/monitor_kontur; everything else of the polygon is unchanged.
     assert overlay == {'collision_monitor': {'ros__parameters': {
+        'FootprintApproach': {'footprint_topic': 'kollisionsmonitor_kontur'},
         'vl53_left': {'min_height': -0.02}, 'vl53_right': {'min_height': -0.02}}}}
     mapping = _parameters('collision_monitor_mapping_params.yaml')
     assert mapping['vl53_left']['min_height'] == 0.05     # other modes unchanged
+    # Other modes keep the footprint of the local costmap for "approach".
+    assert mapping['FootprintApproach']['footprint_topic'] == '/local_costmap/published_footprint'
+    assert mapping['FootprintApproach']['action_type'] == 'approach'
+    assert mapping['FootprintApproach']['time_before_collision'] == 2.0
     # Geometry: lowest valid point is the bottom row at the range limit; it must
     # stay above the new limit, and the floor must stay out of range.
     sensor = yaml.safe_load((PACKAGE_ROOT / 'config' / 'vl53_params.yaml').read_text())

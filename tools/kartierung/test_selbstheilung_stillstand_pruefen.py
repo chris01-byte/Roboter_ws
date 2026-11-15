@@ -71,6 +71,8 @@ def test_profiles_flatten_to_live_parameter_names():
                                       'minimum_travel_heading': 0.35}}
     collision = _params('src/vl53_near_field/config/collision_monitor_self_healing_overlay.yaml')
     assert collision == {'/collision_monitor': {
+        # KM-2 (15.11.2026): "approach" prueft gegen die Kontur von monitor_kontur.
+        'FootprintApproach.footprint_topic': 'kollisionsmonitor_kontur',
         'vl53_left.min_height': -0.02, 'vl53_right.min_height': -0.02}}
     nested = _params('src/robot_navigation/config/nav2_params_real.yaml')
     assert '/local_costmap/local_costmap' in nested
@@ -193,14 +195,20 @@ def test_checker_stays_read_only():
 class _Graph:
     """Nachgebildeter ROS-Graph fuer die Verdrahtungspruefung."""
     def __init__(self, scan_publisher=True, costmap_liest_scan=True, kontur=True,
-                 footprint_topic='rueckfahr_kontur'):
+                 footprint_topic='rueckfahr_kontur', monitor_topic='kollisionsmonitor_kontur',
+                 monitor_knoten=('/monitor_kontur',)):
         self.footprint_topic = footprint_topic
+        self.monitor_topic = monitor_topic
         self.pubs = {'/cmd_vel_nav_raw': {'/controller_server', '/behavior_server'},
                      '/cmd_vel': {'/collision_monitor'},
                      '/scan_normiert': {'/scan_vereinheitlichen'} if scan_publisher else set(),
-                     '/rueckfahr_kontur': {'/rueckfahr_kontur'} if kontur else set()}
+                     '/rueckfahr_kontur': {'/rueckfahr_kontur'} if kontur else set(),
+                     '/kollisionsmonitor_kontur': set(monitor_knoten),
+                     '/local_costmap/published_footprint': {'/local_costmap/local_costmap'}}
         self.subs = {'/cmd_vel_nav_raw': {'/cmd_vel_mission_gate'},
                      '/rueckfahr_kontur': {'/behavior_server'},
+                     '/kollisionsmonitor_kontur': {'/collision_monitor'},
+                     '/local_costmap/published_footprint': {'/collision_monitor'},
                      '/speed_limit': {'/controller_server'},
                      '/scan_normiert': ({'/slam_toolbox', '/local_costmap/local_costmap'}
                                         if costmap_liest_scan else {'/slam_toolbox'})}
@@ -215,7 +223,8 @@ class _Graph:
         return {'/backup'}
 
     def get_params(self, node, names):
-        return {'speed_limit_topic': '/speed_limit', 'footprint_topic': self.footprint_topic}
+        return {'speed_limit_topic': '/speed_limit', 'footprint_topic': self.footprint_topic,
+                'FootprintApproach.footprint_topic': self.monitor_topic}
 
 
 def test_wiring_requires_the_lidar_in_the_local_costmap_since_x9():
@@ -234,6 +243,38 @@ def test_wiring_requires_the_lidar_in_the_local_costmap_since_x9():
     # Entscheidung 08.11.2026 (SH-7N): Rueckfahrkontur muss am Behavior-Server anliegen.
     assert not pruefe(kontur=False).bestanden
     assert not pruefe(footprint_topic='local_costmap/published_footprint').bestanden
+    # Entscheidung 15.11.2026 (KM-2): Der Kollisionsmonitor prueft gegen die Kontur
+    # des Knotens monitor_kontur; der SH-8c-Stand, ein fehlender oder ein zweiter
+    # Sender fallen durch.
+    assert not pruefe(monitor_topic='/local_costmap/published_footprint').bestanden
+    assert not pruefe(monitor_knoten=()).bestanden
+    assert not pruefe(monitor_knoten=('/monitor_kontur', '/fremd')).bestanden
+
+
+def test_monitor_contour_at_standstill_must_be_the_full_padded_one():
+    from selbstheilung_stillstand_pruefen import (VOLLE_KONTUR, kontur_gleich,
+                                                  monitorkontur_zeilen)
+    voll = list(VOLLE_KONTUR)
+    rueckzug = [(0.05, 0.22), (0.05, -0.22), (-0.13, -0.22), (-0.13, 0.22)]
+    assert kontur_gleich(voll[::-1], VOLLE_KONTUR)                 # Reihenfolge egal
+    assert kontur_gleich([(x + 0.003, y) for x, y in voll], VOLLE_KONTUR)
+    assert not kontur_gleich(rueckzug, VOLLE_KONTUR)
+    assert not kontur_gleich(voll[:3], VOLLE_KONTUR)
+
+    def ok(kontur, sicht):
+        return [z[1] for z in monitorkontur_zeilen(kontur, sicht)]
+
+    assert ok([('base_link', voll)]*3, [('base_link', voll)]) == [True, True]
+    assert ok([('base_link', voll)], []) == [True, None]           # Anzeige fehlt: nur Hinweis
+    assert ok([], [])[0] is False                                  # Knoten sendet nicht
+    assert ok([('base_link', rueckzug)], [])[0] is False           # Rückzug im Stand
+    assert ok([('odom', voll)], [])[0] is False
+    assert ok([('base_link', voll)], [('base_link', rueckzug)]) == [True, False]
+    # Die Zahlen sind die des Knotens.
+    monitor = (REPO/'src/robot_navigation/robot_navigation/monitor_kontur.py').read_text(
+        encoding='utf-8')
+    assert 'VOLL_PUNKTE = (0.33, 0.25, 0.33, -0.25, -0.13, -0.25, -0.13, 0.25)' in monitor
+    assert "declare_parameter('topic', 'kollisionsmonitor_kontur')" in monitor
 
 
 

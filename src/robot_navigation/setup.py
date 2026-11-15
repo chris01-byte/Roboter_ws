@@ -34,6 +34,8 @@ setup(
             'robot_navigation.global_scan_localizer:main',
             'rueckfahr_kontur = '
             'robot_navigation.rueckfahr_kontur:main',
+            'monitor_kontur = '
+            'robot_navigation.monitor_kontur:main',
         ],
     },
 )

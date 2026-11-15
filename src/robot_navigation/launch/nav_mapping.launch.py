@@ -147,6 +147,15 @@ def generate_launch_description():
                 package='robot_navigation', executable='rueckfahr_kontur',
                 name='rueckfahr_kontur', output='screen',
                 condition=IfCondition(self_healing)),
+            # KM-2 (Entscheidung 15.11.2026 nach SH-8c): Kontur fuer die
+            # "approach"-Pruefung des Kollisionsmonitors, nur mit
+            # self_healing:=true; das Overlay des Kollisionsmonitors verweist
+            # darauf. Volle gepolsterte Kontur, ausser bei reiner gerader
+            # Rueckwaertsfahrt. Publiziert nur Geometrie.
+            Node(
+                package='robot_navigation', executable='monitor_kontur',
+                name='monitor_kontur', output='screen',
+                condition=IfCondition(self_healing)),
             Node(
                 package='nav2_behaviors', executable='behavior_server',
                 name='behavior_server', output='screen',

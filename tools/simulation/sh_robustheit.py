@@ -695,6 +695,8 @@ def main(argv=None):
         starte('fahrtor', [exe('robot_navigation', 'cmd_vel_mission_gate'), *gate])
         # Rückfahrkontur für BackUp (08.11.2026), wie nav_mapping mit self_healing:=true.
         starte('rueckfahr_kontur', [exe('robot_navigation', 'rueckfahr_kontur')])
+        # Kontur für den Kollisionsmonitor (KM-2, 15.11.2026), wie nav_mapping.
+        starte('monitor_kontur', [exe('robot_navigation', 'monitor_kontur')])
         for knoten in zusatz_knoten:
             starte(knoten['name'], [exe(knoten['paket'], knoten['programm']),
                                     *[str(a) for a in knoten.get('argumente', [])]])

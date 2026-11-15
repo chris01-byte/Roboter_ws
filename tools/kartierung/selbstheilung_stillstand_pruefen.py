@@ -70,6 +70,11 @@ LIDAR_NAHBEREICH = '/scan_normiert'
 LOKALE_KOSTENKARTE = '/local_costmap/local_costmap'
 RUECKFAHRKONTUR = '/rueckfahr_kontur'
 RUECKFAHRKONTUR_KNOTEN = '/rueckfahr_kontur'
+# KM-2 (15.11.2026): Kontur für die „approach“-Prüfung des Kollisionsmonitors.
+MONITORKONTUR = '/kollisionsmonitor_kontur'
+MONITORKONTUR_KNOTEN = '/monitor_kontur'
+MONITOR_SICHT = '/collision_mapping_approach'      # was der Kollisionsmonitor benutzt
+VOLLE_KONTUR = ((0.33, 0.25), (0.33, -0.25), (-0.13, -0.25), (-0.13, 0.25))
 
 # Erwarteter Odometriepfad: HWT601-Gier + Encoder im EKF (slam_lidar_hwt601)
 # oder reine Encoder-Odometrie der Basis (slam_lidar).
@@ -627,6 +632,24 @@ def pruefe_verdrahtung(leser, ergebnis, explore_live):
                  f'Publisher {", ".join(sorted(kontur_pubs)) or "keine"}, '
                  f'Leser {", ".join(sorted(kontur_subs)) or "keine"}')
 
+    # Entscheidung 15.11.2026 (KM-2 nach SH-8c): „approach“ prueft gegen die
+    # Kontur des Knotens monitor_kontur, sonst haelt der Kollisionsmonitor auch
+    # die gerade Rueckfahrt an, sobald ein VL53-Punkt im Polsterband liegt.
+    schluessel = 'FootprintApproach.footprint_topic'
+    monitor = leser.get_params('/collision_monitor', [schluessel])
+    konfiguriert = None if monitor is None else monitor.get(schluessel)
+    kontur = (normalize_topic(konfiguriert)
+              if konfiguriert is not None and konfiguriert is not NOT_SET else None)
+    kontur_pubs = leser.publishers(kontur) if kontur else set()
+    kontur_subs = leser.subscribers(kontur) if kontur else set()
+    ergebnis.add('C Verdrahtung', 'Kollisionsmonitor-Kontur liegt am Kollisionsmonitor an',
+                 kontur == MONITORKONTUR and kontur_pubs == {MONITORKONTUR_KNOTEN}
+                 and '/collision_monitor' in kontur_subs,
+                 f'{schluessel} '
+                 f'{"nicht deklariert" if konfiguriert is NOT_SET else repr(konfiguriert)}, '
+                 f'Publisher {", ".join(sorted(kontur_pubs)) or "keine"}, '
+                 f'Leser {", ".join(sorted(kontur_subs)) or "keine"}')
+
     topic = normalize_topic((explore_live or {}).get('self_healing_speed_limit_topic', '/speed_limit'))
     controller = leser.get_params('/controller_server', ['speed_limit_topic'])
     configured = None if controller is None else controller.get('speed_limit_topic')
@@ -657,6 +680,67 @@ def pruefe_verdrahtung(leser, ergebnis, explore_live):
                  ', '.join(sorted(cmd_pubs)) or 'keine Publisher')
     if andere:
         ergebnis.add('C Verdrahtung', 'weitere /cmd_vel-Publisher', None, ', '.join(andere))
+
+
+def kontur_gleich(punkte, erwartet, toleranz_m=0.005):
+    """True, wenn beide Konturen dieselben Eckpunkte haben (Reihenfolge egal)."""
+    punkte, erwartet = list(punkte), list(erwartet)
+    if len(punkte) != len(erwartet):
+        return False
+    offen = list(erwartet)
+    for x, y in punkte:
+        treffer = next((e for e in offen
+                        if abs(e[0] - x) <= toleranz_m and abs(e[1] - y) <= toleranz_m), None)
+        if treffer is None:
+            return False
+        offen.remove(treffer)
+    return True
+
+
+def monitorkontur_zeilen(kontur, sicht):
+    """Zeilen (Name, ok, Detail) zur Kontur im Stand. ``kontur``/``sicht``: Liste
+    der empfangenen Polygone als (frame_id, [(x, y), …]) vom Knoten bzw. aus der
+    Sicht des Kollisionsmonitors."""
+    def text(eintraege):
+        if not eintraege:
+            return 'keine Nachricht'
+        frame, punkte = eintraege[-1]
+        return f'{len(eintraege)} Nachrichten, Rahmen {frame}, ' + str(
+            [(round(x, 3), round(y, 3)) for x, y in punkte])
+    zeilen = [(
+        'Kollisionsmonitor-Kontur im Stand ist die volle gepolsterte Kontur',
+        bool(kontur) and all(frame == 'base_link' and kontur_gleich(punkte, VOLLE_KONTUR)
+                             for frame, punkte in kontur),
+        text(kontur))]
+    if sicht:
+        zeilen.append((
+            'Kollisionsmonitor benutzt diese Kontur (seine eigene Sicht)',
+            all(kontur_gleich(punkte, VOLLE_KONTUR) for _, punkte in sicht), text(sicht)))
+    else:
+        zeilen.append(('Sicht des Kollisionsmonitors auf seine Kontur', None,
+                       f'keine Nachricht auf {MONITOR_SICHT} (nur Anzeige; die Verdrahtung '
+                       'steht in Bereich C)'))
+    return zeilen
+
+
+def pruefe_monitorkontur(leser, ergebnis, sekunden=2.0):
+    """C: Im Stand muss die Kontur für „approach“ die volle gepolsterte sein (KM-2)."""
+    from geometry_msgs.msg import PolygonStamped
+    kontur, sicht = [], []
+
+    def merke(ziel):
+        return lambda m: ziel.append(
+            (m.header.frame_id.lstrip('/'), [(p.x, p.y) for p in m.polygon.points]))
+
+    abos = [leser.node.create_subscription(PolygonStamped, MONITORKONTUR, merke(kontur), 10),
+            leser.node.create_subscription(PolygonStamped, MONITOR_SICHT, merke(sicht), 10)]
+    try:
+        leser.spin_for(sekunden)
+    finally:
+        for abo in abos:
+            leser.node.destroy_subscription(abo)
+    for name, ok, detail in monitorkontur_zeilen(kontur, sicht):
+        ergebnis.add('C Verdrahtung', name, ok, detail)
 
 
 def pruefe_odometrie(leser, ergebnis, explore_live, erwartet):
@@ -983,6 +1067,7 @@ def main(argv=None):
             ergebnis.drucken()
             return 2
         pruefe_verdrahtung(leser, ergebnis, explore_live)
+        pruefe_monitorkontur(leser, ergebnis)
         pruefe_odometrie(leser, ergebnis, explore_live, args.odometrie)
         pruefe_stillstand(leser, ergebnis, args.beobachten_s, aktiv=args.aktiv,
                           odometrie=args.odometrie)
