@@ -10,6 +10,8 @@ Reichweite.
   --topic /cmd_vel_smoothed  --freigabe AT-1    durch den Kollisionsmonitor
   --topic /cmd_vel           --freigabe AT-1b   DIREKT an die Basis, OHNE die
                                                 Nahbereichsbremse (VL53)
+  --topic /cmd_vel           --freigabe AT-2    wie AT-1b, aber nur Sollwerte
+                                                wie unter Nav2 (Programm unten)
 
 Anlass (14.11.2026): In sechs Fahrten kamen an der Basis 6,4–10,1 cm/s an,
 gefahren wurden 1,3–1,7 cm/s. In SH-8b legten vier Rückfahrten mit 30 s und
@@ -46,6 +48,23 @@ Sollwert und Halt im Wechsel, beide Proben waren unbrauchbar. Deshalb:
     Sollwert ab (fremder Sender, Langsam-Zone, Stopp des Kollisionsmonitors),
     heißt das Urteil ``gestoert`` und nicht ``unklar``.
 
+AT-2 (Freigabe des Projektinhabers vom 15.11.2026): AT-1b hat gezeigt, dass
+der Antrieb Sprüngen folgt, feinen Rampen aber nicht (Anfahrzeit 2000 ms je
+Sollwertänderung). AT-2 misst dasselbe mit kurzer Anfahrzeit (der Stack wird
+dafür mit ``hwt601_accel_ms:=100`` gestartet; das Werkzeug stellt nichts am
+Antrieb ein). Gefahren werden nur Befehlsformen, wie Nav2 sie sendet, jede
+Änderung begrenzt wie im Glätter (+0,12/−0,30 m/s², +0,30/−0,60 rad/s²):
+
+  C  Rampe auf 0,10 m/s, 6 s
+  G  Rampe auf 0,10 m/s, dann ab auf 0,04 m/s, dann auf 0,08 m/s
+  R  langsame Rückfahrt wie in der Langsam-Zone: Rampe auf −0,015 m/s, 8 s
+  E  Rampe drehen auf 0,25 rad/s, 6 s
+  S  Rampe auf 0,03 m/s, dann eine Stufe auf 0,10 m/s (wie beim Verlassen
+     der Langsam-Zone; die einzige Stufe im Programm)
+
+Auch die Rückwege fahren als Rampe an. Sprünge aus dem Stand (A, B, F, D)
+sind mit AT-2 gesperrt: Bei 100 ms ruckt dabei der hohe Aufbau.
+
 AT-1b (Freigabe des Projektinhabers vom 15.11.2026): Im laufenden Stack ist
 ohne Mission nur ``/cmd_vel`` frei, der Eingang der Basis hinter dem
 Kollisionsmonitor. Befehle dort umgehen die Nahbereichsbremse. Es schützen:
@@ -62,12 +81,19 @@ import time
 
 # Je Topic ein eigenes Freigabewort: Der direkte Weg zur Basis ist eine andere
 # Schutzlage und wurde getrennt freigegeben.
-FREIGABEN = {'/cmd_vel_smoothed': 'AT-1', '/cmd_vel': 'AT-1b'}
+FREIGABEN = {'/cmd_vel_smoothed': ('AT-1',), '/cmd_vel': ('AT-1b', 'AT-2')}
+# Je Freigabewort die erlaubten Phasen (zugleich Vorgabe und Reihenfolge).
+PROGRAMME = {'AT-1': 'A,B,C,F,D,E', 'AT-1b': 'A,B,C,F,D,E', 'AT-2': 'C,G,R,E,S'}
+SANFT = ('AT-2',)                    # Rückwege als Rampe statt als Sprung
 RATE_HZ = 20.0
 PAUSE_S = 3.0
 V_SPRUNG, V_KLEIN, V_MITTEL = 0.10, 0.02, 0.03
 W_SPRUNG = 0.25
 A_LIN, A_ROT = 0.12, 0.30            # wie velocity_smoother max_accel
+B_LIN, B_ROT = 0.30, 0.60            # wie velocity_smoother max_decel (Betrag)
+V_LANGSAM, V_WELLE_AB, V_WELLE_AUF = 0.03, 0.04, 0.08
+V_RUECK = -0.015                     # Rückfahrt in der Langsam-Zone (0,3 × 0,05 m/s)
+A_RUECK = 0.3*A_LIN                  # Rampe dazu: 0,0018 m/s je 20-Hz-Schritt
 V_ZURUECK = 0.05                     # wie die erlaubte Rückwärtsgrenze des Glätters
 GRENZE_VOR_M, GRENZE_ZURUECK_M = 0.90, 0.20
 GRENZE_GIER_RAD = 0.35
@@ -84,6 +110,24 @@ def rampe(ziel, beschleunigung, t):
     return min(ziel, schritte*beschleunigung/RATE_HZ)
 
 
+def gefuehrt(ziele, auf, ab):
+    """Sollwertfunktion t -> Wert: Zielwerte ``[(ab Sekunde, Wert), ...]``,
+    jede Änderung in 20-Hz-Schritten begrenzt wie im Glätter (``auf`` beim
+    Schnellerwerden, ``ab`` beim Langsamerwerden, je Sekunde)."""
+    dauer = ziele[-1][0] + 60.0
+    folge, wert = [], 0.0
+    for k in range(int(dauer*RATE_HZ)):
+        ziel = [w for von, w in ziele if von <= k/RATE_HZ + 1e-9][-1]
+        grenze = (auf if abs(ziel) > abs(wert) else ab)/RATE_HZ
+        wert += max(-grenze, min(grenze, ziel - wert))
+        folge.append(wert)
+    return lambda t: folge[min(len(folge) - 1, max(0, math.floor(t*RATE_HZ + 1e-9)))]
+
+
+_WELLE = gefuehrt([(0.0, V_SPRUNG), (3.0, V_WELLE_AB), (5.5, V_WELLE_AUF)], A_LIN, B_LIN)
+_RUECK = gefuehrt([(0.0, V_RUECK)], A_RUECK, B_LIN)
+_LANGSAM = gefuehrt([(0.0, V_LANGSAM)], A_LIN, B_LIN)
+
 # Phase: (Kennung, Art, Dauer s, Sollwertfunktion t -> (v, w), Beschreibung)
 PHASEN = (
     ('A', 'gerade', 5.0, lambda t: (V_SPRUNG, 0.0), 'Sprung vorwärts 0,10 m/s'),
@@ -96,6 +140,12 @@ PHASEN = (
     ('D', 'drehen', 6.0, lambda t: (0.0, W_SPRUNG), 'Sprung drehen 0,25 rad/s'),
     ('E', 'drehen', 6.0, lambda t: (0.0, rampe(W_SPRUNG, A_ROT, t)),
      'Rampe drehen auf 0,25 rad/s'),
+    ('G', 'gerade', 8.5, lambda t: (_WELLE(t), 0.0),
+     'Rampen wie Nav2: auf 0,10 m/s, ab auf 0,04 m/s (3 s), auf 0,08 m/s (5,5 s)'),
+    ('R', 'gerade', 8.0, lambda t: (_RUECK(t), 0.0),
+     'langsame Rückfahrt wie in der Langsam-Zone: Rampe auf −0,015 m/s'),
+    ('S', 'gerade', 8.0, lambda t: (_LANGSAM(t) if t < 4.0 else V_SPRUNG, 0.0),
+     'Rampe auf 0,03 m/s, dann Stufe auf 0,10 m/s (4 s) wie beim Verlassen der Langsam-Zone'),
 )
 # Abschnitte je Phase, über die ein Tempo gemittelt wird: (Name, von s, bis s, Sollwert).
 ABSCHNITTE = {
@@ -105,7 +155,15 @@ ABSCHNITTE = {
     'F': (('stufe_1', 1.5, 3.0, V_SPRUNG), ('stufe_2', 5.0, 7.0, V_MITTEL)),
     'D': (('ende', 4.0, 6.0, W_SPRUNG),),
     'E': (('ende', 4.0, 6.0, W_SPRUNG),),
+    'G': (('oben', 2.0, 3.0, V_SPRUNG), ('unten', 4.5, 5.5, V_WELLE_AB),
+          ('wieder', 7.5, 8.5, V_WELLE_AUF)),
+    'R': (('ende', 6.0, 8.0, V_RUECK),),
+    'S': (('langsam', 2.5, 4.0, V_LANGSAM), ('stufe', 6.5, 8.0, V_SPRUNG)),
 }
+# Abschnitte, an denen AT-2 entscheidet, ob der Antrieb Rampen folgt.
+RAMPEN_ABSCHNITTE = (('C', 'ende'), ('G', 'oben'), ('G', 'unten'), ('G', 'wieder'),
+                     ('R', 'ende'), ('E', 'ende'))
+FOLGT_VON, FOLGT_BIS = 0.8, 1.2
 
 
 def winkel(a):
@@ -216,24 +274,62 @@ def urteil(phasen):
             'drehen_rampe_ist_zu_soll': anteil('E', 'ende')}
 
 
+def urteil_rampen(phasen):
+    """AT-2, vorab festgelegt: Folgt der Antrieb Sollwerten, wie Nav2 sie sendet?
+
+    ``ja``: in allen Rampen-Abschnitten liegt Ist/Soll zwischen 0,8 und 1,2.
+    ``nein``: Vorwärtsrampe (C) und Drehrampe (E) beide unter 0,4 (wie AT-1b).
+    ``teilweise``: alles andere; die abweichenden Abschnitte sind genannt.
+    """
+    werte, gestoert = {}, []
+    for kennung, abschnitt in RAMPEN_ABSCHNITTE:
+        phase = phasen.get(kennung)
+        if phase is None or phase['abschnitte'][abschnitt]['ist_zu_soll'] is None:
+            return {'antrieb_folgt_rampen': 'nicht_auswertbar'}
+        werte[f'{kennung}/{abschnitt}'] = phase['abschnitte'][abschnitt]['ist_zu_soll']
+        if phase['abschnitte'][abschnitt].get('gestoert'):
+            gestoert.append(f'{kennung}/{abschnitt}')
+    if gestoert:
+        return {'antrieb_folgt_rampen': 'gestoert', 'gestoerte_abschnitte': gestoert,
+                'ist_zu_soll': werte}
+    daneben = [name for name, wert in werte.items() if not FOLGT_VON <= wert <= FOLGT_BIS]
+    if not daneben:
+        befund = 'ja'
+    elif werte['C/ende'] < .4 and werte['E/ende'] < .4:
+        befund = 'nein'
+    else:
+        befund = 'teilweise'
+    ergebnis = {'antrieb_folgt_rampen': befund, 'ist_zu_soll': werte,
+                'ausserhalb_0_8_bis_1_2': daneben}
+    stufe = phasen.get('S')
+    if stufe is not None:
+        ergebnis['stufe_langsam_zone_ist_zu_soll'] = stufe['abschnitte']['stufe']['ist_zu_soll']
+    return ergebnis
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     parser.add_argument('--freigabe', default='',
                         help='muss genau das Freigabewort zum Topic sein '
                              f'({FREIGABEN}), sonst wird nichts gesendet')
     parser.add_argument('--json', required=True, help='Ergebnis (lokal, nicht ins Repo)')
-    parser.add_argument('--phasen', default='A,B,C,F,D,E',
-                        help='Auswahl und Reihenfolge, z. B. "A,C"')
+    parser.add_argument('--phasen', default='',
+                        help='Auswahl und Reihenfolge aus dem Programm der Freigabe, '
+                             'z. B. "C,E"; Vorgabe: das ganze Programm')
     parser.add_argument('--topic', default=TOPIC, choices=sorted(FREIGABEN))
     args = parser.parse_args(argv)
-    if args.freigabe != FREIGABEN[args.topic]:
-        print(f'Keine Bewegung: --freigabe {FREIGABEN[args.topic]} fehlt '
+    if args.freigabe not in FREIGABEN[args.topic]:
+        print(f'Keine Bewegung: --freigabe {" oder ".join(FREIGABEN[args.topic])} fehlt '
               f'(Topic {args.topic}).', file=sys.stderr)
         return 2
-    gewaehlt = [k.strip().upper() for k in args.phasen.split(',') if k.strip()]
+    erlaubt = PROGRAMME[args.freigabe].split(',')
+    sanft = args.freigabe in SANFT
+    gewaehlt = [k.strip().upper() for k in (args.phasen or PROGRAMME[args.freigabe]).split(',')
+                if k.strip()]
     plan = {p[0]: p for p in PHASEN}
-    if not gewaehlt or any(k not in plan for k in gewaehlt):
-        print('Unbekannte Phase; erlaubt sind A, B, C, F, D, E.', file=sys.stderr)
+    if not gewaehlt or any(k not in erlaubt for k in gewaehlt):
+        print(f'Unbekannte Phase; erlaubt sind mit {args.freigabe}: {", ".join(erlaubt)}.',
+              file=sys.stderr)
         return 2
 
     import rclpy
@@ -369,20 +465,23 @@ def main(argv=None):
                 if grund:
                     ergebnis['abbruch'] = f'Phase {kennung}: {grund}'
                     break
-                # Zurück mit einem Sprung (voller Sollwert ab dem Anfahren).
+                # Zurück: mit einem Sprung (voller Sollwert ab dem Anfahren) oder,
+                # im sanften Programm, mit einer Rampe wie unter Nav2.
                 if art == 'gerade':
                     weg = lage(start, zustand['pose'])[0]
                     richtung = -1.0 if weg > 0 else 1.0
                     reihe, _, grund = fahre(
                         'gerade', abs(weg)/V_ZURUECK*2.0 + 5.0,
-                        lambda t, r=richtung: (r*V_ZURUECK, 0.0),
+                        lambda t, r=richtung: (
+                            r*(rampe(V_ZURUECK, A_LIN, t) if sanft else V_ZURUECK), 0.0),
                         zurueck_zu=lambda p, r=richtung: r*lage(start, p)[0] >= -0.01)
                 else:
                     fehler = lage(start, zustand['pose'])[2]
                     richtung = -1.0 if fehler > 0 else 1.0
                     reihe, _, grund = fahre(
                         'drehen', abs(fehler)/W_SPRUNG*2.0 + 8.0,
-                        lambda t, r=richtung: (0.0, r*W_SPRUNG),
+                        lambda t, r=richtung: (
+                            0.0, r*(rampe(W_SPRUNG, A_ROT, t) if sanft else W_SPRUNG)),
                         zurueck_zu=lambda p, r=richtung: r*lage(start, p)[2] >= -0.03)
                 rest = lage(start, zustand['pose'])
                 ergebnis['rueckwege'].append({
@@ -403,7 +502,10 @@ def main(argv=None):
 
     ergebnis['fremde_nachrichten'] = fremde_nachrichten(
         zustand['empfangen'], zustand['gesendet'])
-    ergebnis['urteil'] = urteil(ergebnis['phasen'])
+    if sanft:
+        ergebnis['urteil'] = urteil_rampen(ergebnis['phasen'])
+    else:
+        ergebnis['urteil'] = urteil(ergebnis['phasen'])
     os.makedirs(os.path.dirname(os.path.abspath(args.json)), exist_ok=True)
     with open(args.json, 'w', encoding='utf-8') as handle:
         json.dump(ergebnis, handle, ensure_ascii=False, indent=2)

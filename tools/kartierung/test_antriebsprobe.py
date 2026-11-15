@@ -19,7 +19,7 @@ def test_nothing_moves_without_the_exact_release_word(capsys):
 
 def test_direct_base_topic_needs_its_own_release_word(capsys):
     """Direkt an die Basis heißt ohne Kollisionsmonitor: eigenes Freigabewort."""
-    assert ap.FREIGABEN == {'/cmd_vel_smoothed': 'AT-1', '/cmd_vel': 'AT-1b'}
+    assert ap.FREIGABEN == {'/cmd_vel_smoothed': ('AT-1',), '/cmd_vel': ('AT-1b', 'AT-2')}
     assert ap.main(['--topic', '/cmd_vel', '--freigabe', 'AT-1',
                     '--json', '/nonexistent/x.json']) == 2
     assert 'AT-1b' in capsys.readouterr().err
@@ -44,20 +44,22 @@ def test_tool_publishes_exactly_one_topic_and_nothing_else_that_acts():
 
 def test_setpoints_stay_within_the_released_limits():
     plan = {p[0]: p for p in ap.PHASEN}
-    assert list(plan) == ['A', 'B', 'C', 'F', 'D', 'E']
-    weg_max = 0.0
+    assert list(plan) == ['A', 'B', 'C', 'F', 'D', 'E', 'G', 'R', 'S']
+    weg_max, weg_min = 0.0, 0.0
     for kennung, art, dauer, sollwert, _ in ap.PHASEN:
         weg, t = 0.0, 0.0
         while t < dauer:
             v, w = sollwert(t)
-            assert 0.0 <= v <= 0.10 + 1e-9 and 0.0 <= w <= 0.25 + 1e-9
+            assert -0.015 - 1e-9 <= v <= 0.10 + 1e-9 and 0.0 <= w <= 0.25 + 1e-9
             assert (v == 0.0) if art == 'drehen' else (w == 0.0)
+            assert v >= 0.0 or kennung == 'R'            # rückwärts nur die langsame Rückfahrt
             weg += v/ap.RATE_HZ
             t += 1.0/ap.RATE_HZ
-        weg_max = max(weg_max, weg)
+        weg_max, weg_min = max(weg_max, weg), min(weg_min, weg)
         assert dauer <= 9.0
-    # Auch bei voll umgesetzten Sollwerten bleibt jede Phase unter der Abbruchgrenze.
+    # Auch bei voll umgesetzten Sollwerten bleibt jede Phase klar in den Abbruchgrenzen.
     assert weg_max < ap.GRENZE_VOR_M - 0.15
+    assert weg_min > -ap.GRENZE_ZURUECK_M + 0.05
     assert ap.V_ZURUECK == 0.05
 
 
@@ -181,3 +183,86 @@ def test_speed_per_second_shows_whether_the_drive_follows_or_sticks():
     klebt = ap.auswertung('C', 'gerade', _reihe(6, lambda t: 0.006), [])
     assert klebt['tempo_je_s'] == pytest.approx([0.006]*6, abs=1e-4)
     assert ap.tempo_je_sekunde([], 'weg') == []
+
+
+def test_at2_programme_contains_only_commands_as_nav2_sends_them(capsys):
+    """AT-2: keine Sprünge aus dem Stand; jede Änderung begrenzt wie im Glätter,
+    mit einer einzigen gewollten Stufe (S, wie beim Verlassen der Langsam-Zone)."""
+    assert ap.PROGRAMME['AT-2'] == 'C,G,R,E,S' and ap.SANFT == ('AT-2',)
+    assert ap.main(['--topic', '/cmd_vel', '--freigabe', 'AT-2', '--phasen', 'A',
+                    '--json', '/nonexistent/x.json']) == 2
+    assert 'C, G, R, E, S' in capsys.readouterr().err
+    assert ap.main(['--topic', '/cmd_vel_smoothed', '--freigabe', 'AT-2',
+                    '--json', '/nonexistent/x.json']) == 2
+    assert ap.main(['--topic', '/cmd_vel', '--freigabe', 'AT-1b', '--phasen', 'G',
+                    '--json', '/nonexistent/x.json']) == 2       # G gehört nicht zu AT-1b
+    plan = {p[0]: p for p in ap.PHASEN}
+    stufen = 0
+    for kennung in ap.PROGRAMME['AT-2'].split(','):
+        _, art, dauer, sollwert, _ = plan[kennung]
+        index = 0 if art == 'gerade' else 1
+        auf, ab = (ap.A_LIN, ap.B_LIN) if art == 'gerade' else (ap.A_ROT, ap.B_ROT)
+        vorher = 0.0
+        for k in range(int(dauer*ap.RATE_HZ)):
+            wert = sollwert(k/ap.RATE_HZ)[index]
+            schritt = abs(wert) - abs(vorher)
+            if schritt > auf/ap.RATE_HZ + 1e-9:
+                stufen += 1
+                assert kennung == 'S' and wert == ap.V_SPRUNG and vorher == pytest.approx(0.03)
+            assert schritt >= -ab/ap.RATE_HZ - 1e-9
+            vorher = wert
+    assert stufen == 1
+    g = plan['G'][3]
+    assert g(2.9)[0] == pytest.approx(0.10) and g(5.0)[0] == pytest.approx(0.04)
+    assert g(8.0)[0] == pytest.approx(0.08)
+    r = plan['R'][3]
+    assert [round(r(k/20)[0], 4) for k in range(3)] == [-0.0018, -0.0036, -0.0054]
+    assert r(7.0)[0] == pytest.approx(-0.015)
+    # Rückwege fahren im sanften Programm als Rampe an.
+    assert 'rampe(V_ZURUECK, A_LIN, t) if sanft else V_ZURUECK' in QUELLE
+    assert 'rampe(W_SPRUNG, A_ROT, t) if sanft else W_SPRUNG' in QUELLE
+
+
+def _at2(c, g, r, e, an=None):
+    """Phasen C, G, R, E mit gegebenem Ist/Soll je Abschnitt."""
+    def phase(kennung, art, anteile):
+        abschnitte = ap.ABSCHNITTE[kennung]
+        def tempo_fn(t):
+            for (name, von, bis, soll), anteil in zip(abschnitte, anteile):
+                if t <= bis:
+                    return soll*anteil
+            return 0.0
+        dauer = abschnitte[-1][2]
+        if art == 'gerade':
+            reihe = _reihe(dauer, tempo_fn)
+        else:
+            reihe, gier, t = [], 0.0, 0.0
+            while t <= dauer + 1e-9:
+                reihe.append((round(t, 3), 0.0, gier))
+                gier += tempo_fn(t)/20
+                t += 0.05
+        befehle = [((von + bis)/2, (an or soll) if art == 'gerade' else 0.0,
+                    0.0 if art == 'gerade' else (an or soll))
+                   for _, von, bis, soll in abschnitte]
+        return ap.auswertung(kennung, art, reihe, befehle)
+    return {'C': phase('C', 'gerade', c), 'G': phase('G', 'gerade', g),
+            'R': phase('R', 'gerade', r), 'E': phase('E', 'drehen', e)}
+
+
+def test_at2_verdict_follows_the_rules_fixed_in_advance():
+    ja = ap.urteil_rampen(_at2([1.0], [0.98, 1.05, 1.0], [0.95], [1.0]))
+    assert ja['antrieb_folgt_rampen'] == 'ja' and ja['ausserhalb_0_8_bis_1_2'] == []
+    assert ja['ist_zu_soll']['R/ende'] == pytest.approx(0.95, abs=0.02)   # rückwärts positiv
+    # Wie AT-1b mit 2000 ms: beide Rampen unter 0,4.
+    nein = ap.urteil_rampen(_at2([0.11], [0.1, 0.4, 0.2], [0.1], [0.11]))
+    assert nein['antrieb_folgt_rampen'] == 'nein'
+    # Folgt beim Schnellerwerden, bremst aber auf der Rampe nicht mit (Ist über Soll).
+    teil = ap.urteil_rampen(_at2([1.0], [1.0, 1.8, 1.0], [1.0], [1.0]))
+    assert teil['antrieb_folgt_rampen'] == 'teilweise'
+    assert teil['ausserhalb_0_8_bis_1_2'] == ['G/unten']
+    # Fehlt eine Phase oder kam an der Basis nicht der Sollwert an: kein Urteil.
+    assert ap.urteil_rampen({'C': _at2([1], [1, 1, 1], [1], [1])['C']})[
+        'antrieb_folgt_rampen'] == 'nicht_auswertbar'
+    gestoert = ap.urteil_rampen(_at2([1.0], [1.0, 1.0, 1.0], [1.0], [1.0], an=0.001))
+    assert gestoert['antrieb_folgt_rampen'] == 'gestoert'
+    assert (ap.FOLGT_VON, ap.FOLGT_BIS) == (0.8, 1.2)
