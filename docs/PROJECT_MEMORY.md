@@ -1606,6 +1606,18 @@ gekostet und die Frage geklärt. (2) Die Tempoerhöhung vom 05.11. und alle
 Abstands- und Zeitgrenzen der Selbstheilungslinie wurden bei real einem
 Fünftel des Tempos erlebt; mit folgendem Antrieb zählen sie zum ersten Mal
 wirklich. Die nächste Fahrt ist deshalb eine Stellprobe, keine lange Fahrt.
+
+**Entscheidung des Projektinhabers 15.11.2026 – 100 ms ist der Standard für
+den selbstheilenden Betrieb:** Nach AT-2 (bestanden, Ruckeln beim Anfahren
+in zwei von zehn Fahrten gesehen) wird die Anfahrzeit 100 ms Standard; das
+Ruckeln wird hingenommen und ab jetzt im Fahrtprotokoll gemessen (Drehrate
+aus dem HWT601). Nicht gewählt: erst eine Anstiegsbegrenzung im Treiber
+bauen; erst das Tempo auf 0,10 m/s zurücknehmen. Nächster Schritt ist die
+Stellprobe SH-8c mit dieser einen Änderung, ohne Build und ohne volle
+Fahrt. Die Änderung vom 14.08.2026 (2000 ms, damals für das Steuerkreuz)
+ist damit für den selbstheilenden Betrieb zurückgenommen; der Wert in
+`base_hardware_params.yaml` bleibt vorerst 2000, der Betrieb setzt 100 über
+das Startargument, bis der nächste Build ihn im Launch verankert.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

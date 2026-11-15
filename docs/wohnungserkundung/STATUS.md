@@ -5,9 +5,10 @@
 Die gemeinsame Ursache von Kriechtempo und zu kurzer Rückfahrt ist gemessen
 (AT-1b) und die Gegenprobe bestanden (AT-2): **Mit 100 ms Anfahrzeit folgt
 der Antrieb den Befehlen, wie Nav2 sie sendet (Ist/Soll 0,96–1,03); mit
-2000 ms waren es 0,11–0,22.** Offen: Der Projektinhaber sah beim Anfahren
-ein Ruckeln des Aufbaus. **Kein aktiver Jetson-Auftrag**, bis er
-entschieden hat, ob 100 ms der Standard für den autonomen Betrieb wird.
+2000 ms waren es 0,11–0,22.** Der Projektinhaber hat 100 ms am 15.11.2026
+zum Standard für den selbstheilenden Betrieb erklärt; das beim Anfahren
+gesehene Ruckeln wird ab jetzt mitgemessen. **Aktiver Jetson-Auftrag:
+SH-8c**, dieselbe Stellprobe wie SH-8b mit dieser einen Änderung.
 Wo wir stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
@@ -43,14 +44,14 @@ Sollwertänderung auf seine Anfahrzeit von 2000 ms; nach einer Rampe in
 **Dazu aus der Simulation vom 14.11.:** Die freie Rückfahrt aus AW-1 ist
 nach hinten blind (Heck am Türpfosten in einem Lauf).
 
-**Aktiv (Roboter):** nichts. **AT-2 (15.11.) bestanden:** zweimal `ja`,
-alle Rampen-Abschnitte 0,96–1,03, langsame Rückfahrt 0,111 m in 8 s wie
-befohlen. Christopher sah Ruckeln beim Anfahren (Probe 1 erste Fahrt, Probe
-2 letzte Fahrt „sehr ruckelig“). **Offen ist die Entscheidung des
-Projektinhabers**, ob 100 ms der Standard für den selbstheilenden Betrieb
-wird. Danach folgt die Stellprobe mit genau dieser einen Änderung.
-**Leitentscheidung des Projektinhabers (15.11.2026):** Mit dem Steuerkreuz
-wird kaum noch gefahren; der Antrieb wird für die autonome Fahrt ausgelegt.
+**Aktiv (Roboter):** **SH-8c Stellprobe**, [Auftrag](AGENTENAUFTRAG.md):
+dieselben drei Stellen wie SH-8b (Mülleimer, Ecke, Garderobe), einzige
+Änderung `hwt601_accel_ms:=100`, kein Build, kein Teil B. Amadeus fährt
+dabei zum ersten Mal wirklich das befohlene Tempo (0,135 m/s). Dazu zwei
+neue Messgrößen im Fahrtprotokoll: Tempo-Folge und Wackeln.
+**Entscheidungen des Projektinhabers (15.11.2026):** Der Antrieb wird für
+die autonome Fahrt ausgelegt (mit dem Steuerkreuz wird kaum noch gefahren);
+100 ms Anfahrzeit ist der Standard für den selbstheilenden Betrieb.
 
 **In Simulation (Nutzerentscheidung 14.11.2026, MASTERPLAN §9 Regel 7
 Nachtrag): Schritt 2 „Erkundungstempo und Nachbarraum finden“**, Paket EK-1
@@ -77,7 +78,8 @@ speichern, Räume in der App, `go_to_room`).
 | Rückfahrt in der Langsam-Zone zu langsam (0,015 m/s; SH-8: 7 von 8 an der 30-s-Grenze, je etwa 0,15 m statt 0,3 m) | ein Problem zur Zeit; befreit hat er sich trotzdem, nur langsamer (3–4 min) | SH-8b misst die Strecke je Rückfahrt; reicht sie nicht zum Befreien oder kostet sie in vollen Fahrten viel Zeit |
 | KM-1 Variante „Kollisionsmonitor lässt Wegfahren zu“ (approach blockiert auch rückwärts) | sicherheitsrelevant (Kollisionsmonitor); Variante A verworfen; KM-1 B soll die Lage gar nicht erst entstehen lassen | SH-8b zeigt trotz KM-1 B „approach“ während einer Rückfahrt |
 | Niedrige Gegenstände seitlich (unter 0,75 m, nie von den VL53 gesehen): Simulation 13.11. berührte nach dem Befreien in 4 von 4 KM-1-B-Läufen eine Eimerseite | bekannte Sensorgrenze, nicht Teil des aktiven Problems; real bisher keine Berührung | vor Stufe 3 (Wohnung) oder bei der ersten realen Berührung; SH-8b-Teil B ohne Eimer |
-| Anstiegsbegrenzung im Motortreiber (jeder Sprung nach oben wird im Treiber zu einer Rampe von 0,12 m/s²; Bremsen und Stopp bleiben sofort) | Codeänderung an der Motorsteuerung; erst nötig, wenn das Rucken bei Sprüngen stört (Verlassen der Langsam-Zone: 0,7 m/s² für 0,1 s) | Christopher das Ruckeln im Betrieb als störend meldet oder die Karte dadurch leidet |
+| Anstiegsbegrenzung im Motortreiber (jeder Sprung nach oben wird im Treiber zu einer Rampe von 0,12 m/s²; Bremsen und Stopp bleiben sofort) | Codeänderung an der Motorsteuerung; erst nötig, wenn das Rucken bei Sprüngen stört (Verlassen der Langsam-Zone: 0,7 m/s² für 0,1 s) | Christopher das Ruckeln im Betrieb als störend meldet, die Messgröße `wackeln` deutliche Spitzen zeigt oder die Karte dadurch leidet |
+| Anfahrzeit 100 ms für `self_healing:=true` im Launch verankern (bisher Argument im Startbefehl) | braucht einen Build; erst nach Bestätigung im Betrieb | SH-8c bestanden, mit dem nächsten Build |
 | Handsteuerung (`teleop_joy`) sendet ebenfalls auf `/cmd_vel_smoothed`; neben dem laufenden Nav2-Stack bekäme auch sie die Nullbefehle des Glätters dazwischen | bisher nur aus AT-1 abgeleitet; die Handsteuerung wird mit `slam.launch.py` ohne Nav2 benutzt | jemand will neben dem laufenden Erkundungsstack von Hand fahren |
 | Fremde Änderungen in `~/roboter_ws` (15.11.: `docs/INVENTORY.md`, `tools/kartierung/README.md` geändert, drei `lidar_acryl_test`-Dateien neu) | nicht von dieser Linie; der Jetson-Agent hat sie nicht angefasst | vor dem nächsten Auftrag, der `~/roboter_ws` benutzt, oder wenn Christopher sie einordnet |
 | LiDAR meldet beim Start „communication is abnormal“ (SH-8: dreimal, nach Neustecken behoben) | Vorprüfung fängt es ab, keine Bewegung | tritt erneut auf (dann Kabel/USB prüfen) |
@@ -186,8 +188,33 @@ und 6): die Stellprobe an denselben drei Stellen wie SH-8b mit genau einer
 Änderung, `hwt601_accel_ms:=100`, ohne Build. Sie prüft das aktive Problem
 (Freifahren) zum ersten Mal mit einem Antrieb, der tut, was befohlen wird.
 
-**Nächster Schritt:** Entscheidung des Projektinhabers zu 100 ms als
-Standard; danach Auftrag.
+**Entscheidung des Projektinhabers (15.11.2026): 100 ms ist der Standard
+für den selbstheilenden Betrieb; als Nächstes die Stellprobe.** Zur Wahl
+standen außerdem „erst das Ruckeln beheben“ (Anstiegsbegrenzung im Treiber)
+und „erst langsamer“ (Tempo zurück auf 0,10 m/s, zweite Änderung im selben
+Test). Umsetzung:
+
+- **Auftrag [SH-8c](AGENTENAUFTRAG.md):** Stellprobe wie SH-8b Teil A, ohne
+  Build mit dem Release `selbstheilung-sh8b-20261114_1643` (enthält KM-1 B),
+  Start mit `hwt601_accel_ms:=100`; vor jeder Mission wird die Zeile
+  „Anfahrverhalten bestaetigt: Beschleunigen 100 ms“ geprüft. Kein Teil B:
+  Die volle Fahrt folgt erst nach der Auswertung, weil Amadeus hier zum
+  ersten Mal das befohlene Tempo fährt.
+- **Angepasst an das echte Tempo:** Das Protokoll endet 1 s (statt 5 s)
+  nach 0,5 m, damit der Missionsstopp kommt, bevor Amadeus einen weiteren
+  halben Meter gefahren ist. An der Garderobe sind hinten 0,7 m statt 0,5 m
+  frei, weil die Rückfahrt jetzt wirklich bis 0,4 m reicht.
+- **Neue Messgrößen im Fahrtprotokoll** (`e03cac3`, nur lesend, 15 Tests):
+  `tempo_folge` (Weg und Drehung gefahren zu befohlen; bis SH-8b etwa 0,2)
+  und `wackeln` (Drehrate um die waagerechten Achsen aus dem HWT601, in
+  Ruhe, während der Fahrt und in den stärksten Sekunden mit Lage
+  „anfahren“, „anhalten“, „fahrt“, „steht“).
+- **Standard im Startprofil:** Bis zum nächsten Build steht `100` als
+  Argument im Startbefehl jedes Auftrags. Mit dem nächsten Build wird der
+  Wert für `self_healing:=true` im Launch verankert (eigener kleiner
+  Schritt mit Vertragstest), sobald SH-8c ihn im Betrieb bestätigt hat.
+
+**Nächster Schritt:** SH-8c-Bericht auswerten.
 
 ## 15.11.2026 (mittags) – AT-1b ausgewertet: Der Antrieb folgt Sprüngen, aber keinen feinen Rampen
 
