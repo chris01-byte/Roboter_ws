@@ -1580,8 +1580,16 @@ gezielte Messung mit getrennten Befehlsformen hat unterschieden. (3) Vorab
 festgelegte Urteile brauchen einen Platz für „keins von beiden“; `unklar`
 war hier das wertvollste Ergebnis. (4) Die Streckenkalibrierung war nie das
 Problem (Hinweis des Projektinhabers vom 14.11.): Die Odometrie misst
-richtig, der Antrieb erreicht das Tempo nicht. Entscheidung zum nächsten
-Schritt (Anfahrzeit 100 ms messen oder Treiber anpassen) offen.
+richtig, der Antrieb erreicht das Tempo nicht.
+
+**Entscheidung des Projektinhabers 15.11.2026 – Antrieb für die autonome
+Fahrt auslegen:** Mit Controller und Steuerkreuz wird kaum noch gefahren.
+Zielzustand ist eine Rampe statt zwei: Nav2 (Glätter) macht das sanfte
+Anfahren und Bremsen, der Antrieb folgt dem Befehl möglichst direkt. Dass
+ein Sprung per Steuerkreuz dann wieder ruckt (Grund der Änderung vom
+14.08.), wird hingenommen. Erster Schritt ist die freigegebene Messfahrt
+AT-2 mit `hwt601_accel_ms:=100`; ob 100 ms Standard wird, entscheidet sich
+nach der Messung.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

@@ -7,8 +7,8 @@ kurzer Rückfahrt gemessen: **Der Antrieb folgt Sprüngen und Stufen voll,
 feinen Rampen (wie Nav2 sie sendet) nur mit 11–22 %.** Grund ist die
 Anfahrzeit des Antriebs von 2000 ms (seit 14.08.2026), die er auf jede
 einzelne Sollwertänderung anwendet (Abschnitt 15.11.2026 mittags).
-**Kein aktiver Jetson-Auftrag**, bis der Projektinhaber über den nächsten
-Schritt am Antrieb entschieden hat.
+**Aktiver Jetson-Auftrag: AT-2**, dieselbe Probe mit 100 ms Anfahrzeit und
+Sollwerten wie unter Nav2 (Freigabe des Projektinhabers 15.11.2026).
 Wo wir stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
@@ -44,11 +44,16 @@ Sollwertänderung auf seine Anfahrzeit von 2000 ms; nach einer Rampe in
 **Dazu aus der Simulation vom 14.11.:** Die freie Rückfahrt aus AW-1 ist
 nach hinten blind (Heck am Türpfosten in einem Lauf).
 
-**Aktiv (Roboter):** nichts. AT-1b (15.11.) ist ausgewertet. **Offen ist
-eine Entscheidung des Projektinhabers** zum nächsten Schritt am Antrieb
-(sicherheitsrelevanter Bereich Motorsteuerung, AGENTS §2.7): Vorschlag ist
-eine Messfahrt AT-2 mit kurzer Anfahrzeit des Antriebs (100 ms, der Stand
-bis 14.08.2026) und Sollwerten nur als Rampen wie unter Nav2.
+**Aktiv (Roboter):** **AT-2 Antriebsprobe mit 100 ms Anfahrzeit**,
+[Auftrag](AGENTENAUFTRAG.md), vom Projektinhaber am 15.11.2026 freigegeben
+(direkt an der Basis, freie Fläche, Hand am Not-Aus). Eine Änderung: das
+Startargument `hwt601_accel_ms:=100`. Gefahren werden nur Befehlsformen wie
+unter Nav2 (Rampen auf und ab, langsame Rückfahrt, Drehrampe, eine Stufe
+wie beim Verlassen der Langsam-Zone). Urteil vorab festgelegt: folgt der
+Antrieb den Rampen (`ja`, `teilweise`, `nein`, `gestoert`), dazu die
+Beobachtung, ob der Aufbau ruckt. **Leitentscheidung des Projektinhabers
+(15.11.2026):** Mit dem Steuerkreuz wird kaum noch gefahren; der Antrieb
+wird für die autonome Fahrt ausgelegt.
 
 **In Simulation (Nutzerentscheidung 14.11.2026, MASTERPLAN §9 Regel 7
 Nachtrag): Schritt 2 „Erkundungstempo und Nachbarraum finden“**, Paket EK-1
@@ -207,7 +212,34 @@ Empfohlen ist Weg 1 als nächster einzelner Schritt (MASTERPLAN §9 Regel 1:
 eine Änderung je Realtest); Weg 2 bleibt möglich, falls das Rucken stört.
 AT-1b [archiviert](archive/20261115-at1b-ausgewertet/README.md).
 
-**Nächster Schritt:** Entscheidung des Projektinhabers; danach Auftrag.
+**Entscheidung des Projektinhabers (15.11.2026):** Mit Controller und
+Steuerkreuz wird so gut wie nicht mehr gefahren; die Lösung soll der
+autonomen Navigation dienen. Daraus der Zielzustand: **eine Rampe statt
+zwei.** Das sanfte Anfahren und Bremsen macht allein Nav2 (Glätter), der
+Antrieb folgt dem Befehl möglichst direkt. Freigegeben ist Weg 1 als
+Messfahrt **AT-2** ([Auftrag](AGENTENAUFTRAG.md)): Stackstart mit
+`hwt601_accel_ms:=100`, direkt an der Basis, zwei Proben.
+
+**Werkzeug für AT-2** (`antriebsprobe.py --topic /cmd_vel --freigabe AT-2`,
+14 Tests, dazu 9 Tests des Modells): Programm C, G, R, E, S; jede Änderung
+ist begrenzt wie im Glätter (+0,12/−0,30 m/s², +0,30/−0,60 rad/s²), auch
+auf den Rückwegen; Sprünge aus dem Stand sind mit `AT-2` gesperrt. Urteil
+`antrieb_folgt_rampen`: `ja`, wenn alle sechs Rampen-Abschnitte zwischen
+0,8 und 1,2 liegen.
+
+**Trockenlauf 15.11.** gegen eine nachgebildete Kette, deren Antrieb nach
+dem Modell rechnet: Mit 2000 ms und dem AT-1b-Programm kommen die echten
+Messwerte heraus (A 1,00; C 0,11 mit 0,002 → 0,012 m/s; E 0,11). Die beiden
+Läufe des AT-2-Programms (2000 ms und 100 ms) sind in diesem Stand noch
+nicht abgeschlossen; ihr Ergebnis steht im folgenden Nachtrag. **Bis dahin
+gilt der Auftrag AT-2 als nicht ausführbar.**
+
+**Offen nach AT-2, je nach Ergebnis:** 100 ms als Standard für den
+selbstheilenden Betrieb (Entscheidung des Projektinhabers), dann die
+Stellprobe mit dieser einen Änderung. Die Bremszeit (400 ms) wird in AT-2
+nicht geändert; ob der Antrieb Bremsrampen folgt, zeigt Abschnitt G unten.
+
+**Nächster Schritt:** AT-2-Bericht auswerten.
 
 ## 15.11.2026 – AT-1 ausgewertet: Messung gestört, die Frage zum Antrieb ist offen
 
