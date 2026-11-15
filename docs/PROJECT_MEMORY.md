@@ -1693,7 +1693,12 @@ trennen; statt einer Korrektur aus Vermutungen folgt wieder zuerst eine nur
 lesende Auswertung (W-1N) mit einem Werkzeug, das Ziele, Wiederholungen
 und Abbruchgründe zählt. (4) Der Code erklärt, warum dieselben Ziele
 wiederkehren können (Abbruch durch Warten zählt nicht als Fehlversuch);
-ob es hier so war, ist zu messen.
+ob es hier so war, ist zu messen. (5) Aus den Einstellungen folgt, warum
+w1 mit „Hilfe benötigt“ endete: Der globale Planer rechnet mit einem Kreis
+von 0,28 m; in einer 80-cm-Tür bleibt ihm ein Streifen von rund 0,25 m,
+und wer daneben steht, bekommt keinen Weg. Die Türdurchfahrt ist real nie
+bestätigt worden (SH-7), die Simulation schafft dieselbe Türbreite. W-1N
+misst deshalb auch die Tür in der gesicherten Karte.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

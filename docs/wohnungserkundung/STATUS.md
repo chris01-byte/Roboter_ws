@@ -50,8 +50,10 @@ Kontur unter Humble anliegt und bei jeder Rückfahrt umschaltet.
 
 **Aktiv (Roboter):** **W-1N**, [Auftrag](AGENTENAUFTRAG.md): nur lesende
 Auswertung von w1 und w2 mit `tools/kartierung/selbstheilung_ablauf.py`
-(Ziele und Wiederholungen, Grund jedes Abbruchs, Wartezeiten, Verlauf je
-Minute, häufigste Meldungen, Auszüge). Kein Stackstart, keine Fahrt.
+(Ziele und Wiederholungen, Bezug jedes Anlaufs zur Tür, Grund jedes
+Abbruchs, Wartezeiten, Verlauf je Minute) und
+`tools/kartierung/karte_engstelle.py` (Türbreite und für den Planer freier
+Anteil in der gesicherten Karte). Kein Stackstart, keine Fahrt.
 **Entscheidungen des Projektinhabers (15.11.2026):** Der Antrieb wird für
 die autonome Fahrt ausgelegt; 100 ms Anfahrzeit ist Standard; die Wohnung
 kommt jetzt, zuerst als Messfahrt.
@@ -204,12 +206,48 @@ Verlassen des Raums. Schritt 2 des Fahrplans („Erkundung zielgerichtet“,
 am 14.11. in der Simulation vorbereitet) und die Türdurchfahrt gehören
 dazu; welche Änderung zuerst kommt, entscheiden die Zahlen aus W-1N.
 
-**Nächster Schritt (MASTERPLAN §9 Regel 4): W-1N**, nur lesend, mit dem
-neuen Werkzeug `tools/kartierung/selbstheilung_ablauf.py` (`03a980d`, 5
-Tests, zusätzlich an Simulationslogs gelaufen). Zum Vergleich der
-Simulationslauf Labor und Flur vom 15.11.: 12 Anläufe auf 9 verschiedene
-Ziele, 9 erreicht, kein Abbruch, kein Warten. W-1
-[archiviert](archive/20261115-w1-ausgewertet/README.md).
+**Noch am selben Abend aus Bericht, Code und Einstellungen belegt (ohne
+neue Messung am Roboter):**
+
+1. **Warum „Hilfe benötigt“ in w1** (Frage des Projektinhabers): Der
+   globale Planer rechnet Amadeus als Kreis mit 0,28 m Radius
+   (`robot_radius`, globale Kostenkarte). Jede Zelle näher als 0,28 m an
+   einem Hindernis ist für ihn gesperrt, und NavFn räumt nur die eine Zelle
+   unter dem Roboter frei. In einer 80-cm-Tür bleibt rechnerisch ein
+   Streifen von rund 0,25–0,30 m in der Mitte. Amadeus stand am Ende neben
+   diesem Streifen (Mitte Wert 99, alle Ringe bis 0,30 m ≥ 99); von dort
+   gibt es für den Planer keinen Weg, achtmal hintereinander, dann Hilfe.
+2. **Wie er dorthin kam:** Der Regler hielt viermal vor einem Hindernis an
+   („collision ahead“, 1,5 s Geduld, dreimal je Ziel). Die zweite Rückfahrt
+   brach der Explorer selbst nach 2,9 s und 0,139 m ab; danach stand
+   Amadeus im gesperrten Bereich. Den Grund des Abbruchs nennt der Bericht
+   nicht.
+3. **Schrägstand kostet Breite:** Die gepolsterte Kontur (0,46 m × 0,50 m)
+   braucht gerade 0,50 m, bei 43° aber 0,68 m. In einer 80-cm-Tür bleiben
+   dann 6 cm je Seite statt 15 cm.
+4. **13 der 14 Abbrüche in w2 stehen nicht in der Heilungsliste** (12
+   Heilungen: 11 Fehlschläge, 1 Zielzeit). Sie liefen also über den Weg
+   „Unterbrechung“ (`stop_requested`: HWT-HOLD oder eine fehlende Quelle);
+   die Stillstandserkennung im Anlauf ist im Profil aus. Nach einer solchen
+   Unterbrechung wählt der Explorer wieder das beste Ziel, ohne den Anlauf
+   zu zählen. Welche Bedingung es war, misst W-1N.
+5. **Die Simulation zeigt den Fehler nicht:** Im Lauf Labor und Flur vom
+   15.11. ist die Tür ebenfalls 0,80 m breit; dort erreichte Amadeus 9 von
+   12 Zielen, auch im Flur, ohne Abbruch und ohne Warten. Was real anders
+   ist (Türrahmen in der Karte, Anfahrwinkel, Zeitfehler), ist offen.
+
+**Nächster Schritt (MASTERPLAN §9 Regel 4): W-1N**, nur lesend, mit zwei
+Werkzeugen (`f1694a2`, 22 Tests, an Simulationslogs und synthetischen
+Karten gelaufen):
+
+- `tools/kartierung/selbstheilung_ablauf.py`: Ziele und Wiederholungen,
+  Anläufe der Reihe nach mit Abstand von Start und Ziel zur Tür, Grund
+  jedes Abbruchs, Warte- und HWT-Phasen, Rückfahrten, Verlauf je Minute.
+- `tools/kartierung/karte_engstelle.py`: lichte Weite der Tür in der
+  gesicherten Karte von w1, für den Planer freier Anteil (Karte und globale
+  Kostenkarte), Schrägstand und belegte Zellen in der Kontur.
+
+W-1 [archiviert](archive/20261115-w1-ausgewertet/README.md).
 
 ## 15.11.2026 (nachts) – Entscheidung: Wohnung jetzt; was die erste Wohnungsfahrt braucht
 
