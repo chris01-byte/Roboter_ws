@@ -234,6 +234,23 @@ geordnet beendet. Lokal neu: `$SH_PR/at1b/`. Antriebsregister unverändert
 nicht angefasst (fremde Änderungen dort unverändert), frühere Releases und
 Codex-Referenz unverändert, kein Autostart. Kein aktiver Auftrag danach.
 
+Nachtrag 15.11.2026 (nachmittags), tatsächliche Jetson-Wirkung AT-2: kein
+Build, kein neuer Release; Klon per `git pull --ff-only` auf `487de06`. Ein
+scharfer Stackstart ohne Mission mit **`hwt601_accel_ms:=100`**; die Basis
+bestätigte „Beschleunigen 100 ms, Bremsen 400 ms, Startdrehzahl 5 rpm“.
+Zwei Läufe von `antriebsprobe.py --topic /cmd_vel --freigabe AT-2`, direkt
+an der Basis ohne Kollisionsmonitor (Freigabe des Projektinhabers
+15.11.2026). Motoren liefen: je Probe drei Geradeausphasen bis 0,58 m mit
+höchstens 0,10 m/s, eine Rückfahrt 0,111 m mit 0,015 m/s, eine Drehphase
+bis 76° mit 0,25 rad/s, Rückwege als Rampe. Kein Kontakt, kein Eingriff,
+kein Not-Aus; Christopher sah Ruckeln des Aufbaus beim Anfahren in zwei von
+zehn Fahrten. Stack geordnet beendet. Lokal neu: `$SH_PR/at2/`. **Im
+Antrieb steht seitdem die Anfahrzeit 100 ms in Register `0x001E` beider
+Motoren; der nächste Start ohne das Argument schreibt wieder 2000 ms.**
+`~/roboter_ws` nicht angefasst (fremde Änderungen dort unverändert), frühere
+Releases und Codex-Referenz unverändert, kein Autostart. Kein aktiver
+Auftrag danach.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

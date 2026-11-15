@@ -1,14 +1,13 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 15.11.2026 (mittags):** Hauptlinie `self_healing`
+**Aktueller Stand 15.11.2026 (nachmittags):** Hauptlinie `self_healing`
 (Nutzerentscheidung 15.10.2026). Es gilt der **Fahrplan in MASTERPLAN §9**.
-Die Antriebsprobe AT-1b hat die gemeinsame Ursache von Kriechtempo und zu
-kurzer Rückfahrt gemessen: **Der Antrieb folgt Sprüngen und Stufen voll,
-feinen Rampen (wie Nav2 sie sendet) nur mit 11–22 %.** Grund ist die
-Anfahrzeit des Antriebs von 2000 ms (seit 14.08.2026), die er auf jede
-einzelne Sollwertänderung anwendet (Abschnitt 15.11.2026 mittags).
-**Aktiver Jetson-Auftrag: AT-2**, dieselbe Probe mit 100 ms Anfahrzeit und
-Sollwerten wie unter Nav2 (Freigabe des Projektinhabers 15.11.2026).
+Die gemeinsame Ursache von Kriechtempo und zu kurzer Rückfahrt ist gemessen
+(AT-1b) und die Gegenprobe bestanden (AT-2): **Mit 100 ms Anfahrzeit folgt
+der Antrieb den Befehlen, wie Nav2 sie sendet (Ist/Soll 0,96–1,03); mit
+2000 ms waren es 0,11–0,22.** Offen: Der Projektinhaber sah beim Anfahren
+ein Ruckeln des Aufbaus. **Kein aktiver Jetson-Auftrag**, bis er
+entschieden hat, ob 100 ms der Standard für den autonomen Betrieb wird.
 Wo wir stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
@@ -44,16 +43,14 @@ Sollwertänderung auf seine Anfahrzeit von 2000 ms; nach einer Rampe in
 **Dazu aus der Simulation vom 14.11.:** Die freie Rückfahrt aus AW-1 ist
 nach hinten blind (Heck am Türpfosten in einem Lauf).
 
-**Aktiv (Roboter):** **AT-2 Antriebsprobe mit 100 ms Anfahrzeit**,
-[Auftrag](AGENTENAUFTRAG.md), vom Projektinhaber am 15.11.2026 freigegeben
-(direkt an der Basis, freie Fläche, Hand am Not-Aus). Eine Änderung: das
-Startargument `hwt601_accel_ms:=100`. Gefahren werden nur Befehlsformen wie
-unter Nav2 (Rampen auf und ab, langsame Rückfahrt, Drehrampe, eine Stufe
-wie beim Verlassen der Langsam-Zone). Urteil vorab festgelegt: folgt der
-Antrieb den Rampen (`ja`, `teilweise`, `nein`, `gestoert`), dazu die
-Beobachtung, ob der Aufbau ruckt. **Leitentscheidung des Projektinhabers
-(15.11.2026):** Mit dem Steuerkreuz wird kaum noch gefahren; der Antrieb
-wird für die autonome Fahrt ausgelegt.
+**Aktiv (Roboter):** nichts. **AT-2 (15.11.) bestanden:** zweimal `ja`,
+alle Rampen-Abschnitte 0,96–1,03, langsame Rückfahrt 0,111 m in 8 s wie
+befohlen. Christopher sah Ruckeln beim Anfahren (Probe 1 erste Fahrt, Probe
+2 letzte Fahrt „sehr ruckelig“). **Offen ist die Entscheidung des
+Projektinhabers**, ob 100 ms der Standard für den selbstheilenden Betrieb
+wird. Danach folgt die Stellprobe mit genau dieser einen Änderung.
+**Leitentscheidung des Projektinhabers (15.11.2026):** Mit dem Steuerkreuz
+wird kaum noch gefahren; der Antrieb wird für die autonome Fahrt ausgelegt.
 
 **In Simulation (Nutzerentscheidung 14.11.2026, MASTERPLAN §9 Regel 7
 Nachtrag): Schritt 2 „Erkundungstempo und Nachbarraum finden“**, Paket EK-1
@@ -80,6 +77,7 @@ speichern, Räume in der App, `go_to_room`).
 | Rückfahrt in der Langsam-Zone zu langsam (0,015 m/s; SH-8: 7 von 8 an der 30-s-Grenze, je etwa 0,15 m statt 0,3 m) | ein Problem zur Zeit; befreit hat er sich trotzdem, nur langsamer (3–4 min) | SH-8b misst die Strecke je Rückfahrt; reicht sie nicht zum Befreien oder kostet sie in vollen Fahrten viel Zeit |
 | KM-1 Variante „Kollisionsmonitor lässt Wegfahren zu“ (approach blockiert auch rückwärts) | sicherheitsrelevant (Kollisionsmonitor); Variante A verworfen; KM-1 B soll die Lage gar nicht erst entstehen lassen | SH-8b zeigt trotz KM-1 B „approach“ während einer Rückfahrt |
 | Niedrige Gegenstände seitlich (unter 0,75 m, nie von den VL53 gesehen): Simulation 13.11. berührte nach dem Befreien in 4 von 4 KM-1-B-Läufen eine Eimerseite | bekannte Sensorgrenze, nicht Teil des aktiven Problems; real bisher keine Berührung | vor Stufe 3 (Wohnung) oder bei der ersten realen Berührung; SH-8b-Teil B ohne Eimer |
+| Anstiegsbegrenzung im Motortreiber (jeder Sprung nach oben wird im Treiber zu einer Rampe von 0,12 m/s²; Bremsen und Stopp bleiben sofort) | Codeänderung an der Motorsteuerung; erst nötig, wenn das Rucken bei Sprüngen stört (Verlassen der Langsam-Zone: 0,7 m/s² für 0,1 s) | Christopher das Ruckeln im Betrieb als störend meldet oder die Karte dadurch leidet |
 | Handsteuerung (`teleop_joy`) sendet ebenfalls auf `/cmd_vel_smoothed`; neben dem laufenden Nav2-Stack bekäme auch sie die Nullbefehle des Glätters dazwischen | bisher nur aus AT-1 abgeleitet; die Handsteuerung wird mit `slam.launch.py` ohne Nav2 benutzt | jemand will neben dem laufenden Erkundungsstack von Hand fahren |
 | Fremde Änderungen in `~/roboter_ws` (15.11.: `docs/INVENTORY.md`, `tools/kartierung/README.md` geändert, drei `lidar_acryl_test`-Dateien neu) | nicht von dieser Linie; der Jetson-Agent hat sie nicht angefasst | vor dem nächsten Auftrag, der `~/roboter_ws` benutzt, oder wenn Christopher sie einordnet |
 | LiDAR meldet beim Start „communication is abnormal“ (SH-8: dreimal, nach Neustecken behoben) | Vorprüfung fängt es ab, keine Bewegung | tritt erneut auf (dann Kabel/USB prüfen) |
@@ -102,7 +100,94 @@ ausgewertet: Befehle 6–10 cm/s, gefahren 1,3–1,7 cm/s (14.11.) · SH-8b
 ausgewertet: nicht bestanden, Rückfahrten 0,151 m (14.11.) · AT-1
 ausgewertet: Messung gestört, kein Urteil; Werkzeug erkennt fremde Sender
 jetzt selbst (15.11.) · AT-1b ausgewertet: Antrieb folgt Sprüngen, feinen
-Rampen nicht; Ursache ist die Anfahrzeit 2000 ms (15.11.).
+Rampen nicht; Ursache ist die Anfahrzeit 2000 ms (15.11.) · AT-2
+bestanden: mit 100 ms folgt der Antrieb den Nav2-Rampen (15.11.).
+
+## 15.11.2026 (nachmittags) – AT-2 ausgewertet: bestanden; mit 100 ms folgt der Antrieb den Nav2-Rampen
+
+Bericht `~/selbstheilung_jetson_bericht_at2.md` (Jetson, Klon `487de06`,
+Release `selbstheilung-sh8b-20261114_1643` ohne Build, 23 Tests bestanden,
+Vorprüfung 59× OK). Ein scharfer Stackstart mit `hwt601_accel_ms:=100`,
+keine Mission, zwei Proben direkt auf `/cmd_vel`. Die Basis meldete
+„Anfahrverhalten bestaetigt: Beschleunigen 100 ms, Bremsen 400 ms,
+Startdrehzahl 5 rpm“. Messung ungestört (0 Nachrichten auf `/cmd_vel` vor,
+zwischen und nach den Proben; an der Basis überall der Sollwert). Kein
+Abbruch, keine Berührung, kein Eingriff.
+
+| Abschnitt | Sollwert | Ist/Soll Probe 1 / 2 | Modell | AT-1b bei 2000 ms |
+|---|---|---|---|---|
+| C Ende (Rampe auf 0,10 m/s) | 0,10 m/s | 0,99 / 0,99 | 1,00 | 0,11 / 0,22 |
+| G oben | 0,10 m/s | 1,00 / 0,99 | 0,99 | – (Modell 0,05) |
+| G unten (Rampe ab) | 0,04 m/s | 0,98 / 1,00 | 1,03 | – |
+| G wieder (Rampe auf) | 0,08 m/s | 0,99 / 0,96 | 1,00 | – (Modell 0,56) |
+| R Ende (langsame Rückfahrt) | −0,015 m/s | 1,00 / 1,01 | 1,00 | – (Modell 0,16) |
+| E Ende (Drehrampe) | 0,25 rad/s | 1,01 / 1,03 | 1,00 | 0,11 / 0,11 |
+| S Stufe 0,03 → 0,10 m/s | 0,10 m/s | 0,99 / 0,99 | 1,00 | – |
+
+Wege: C 0,502 / 0,508 m (Vorhersage 0,49), G 0,568 / 0,584 m (0,56), R
+−0,111 / −0,111 m (0,11), E 76,1° / 73,9° (70°), S 0,502 / 0,500 m (0,49).
+Rückwege enden auf 8 mm am Ausgangspunkt.
+
+**Urteil: zweimal `ja`, bestanden.** Christopher: beide Male „Überall
+zügig“.
+
+**Was belegt ist:**
+
+1. Mit 100 ms Anfahrzeit setzt der Antrieb Rampen in 20-Hz-Schritten voll
+   um, vorwärts, beim Langsamerwerden, rückwärts im Kriechgang und beim
+   Drehen. Die Ursache aus AT-1b ist damit durch die Gegenprobe bestätigt.
+2. Die Vorhersage des Modells traf in allen Abschnitten auf wenige Prozent.
+   In den ersten zwei Sekunden war der echte Antrieb etwas schneller als
+   gerechnet (C: 0,025 / 0,077 m/s gemessen, 0,022 / 0,070 gerechnet).
+3. Die langsame Rückfahrt (der Engpass der Stellprobe) erreicht jetzt ihr
+   Tempo nach etwa 1,5 s; 0,3 m dauern damit rund 21 s statt nie.
+
+**Beobachtung zum Aufbau (Christopher, nicht gemessen):** Probe 1 „bei der
+ersten Fahrt beim anfahren hat es geruckelt“ (Phase C), Probe 2 „die letzte
+Fahrt war beim anfahren sehr ruckelig“ (Phase S, mit der Stufe 0,03 → 0,10
+m/s). Kein starkes Schwanken, kein Eingriff. In je vier von fünf Fahrten
+nannte er kein Ruckeln. Im Protokoll gibt es keine Messgröße dafür.
+
+**Einordnung des Ruckelns:**
+
+- Die Stufe in S ist rechnerisch die härteste Stelle: 0,07 m/s in 0,1 s,
+  also 0,7 m/s². So eine Stufe entsteht im Betrieb beim Verlassen der
+  Langsam-Zone, weil der Kollisionsmonitor hinter dem Glätter sitzt.
+- Beim Anfahren auf einer Rampe (C) rechnet das Modell mit höchstens 0,07
+  m/s². Warum es dort einmal ruckelte, ist nicht gemessen.
+- Zwischenwerte der Anfahrzeit helfen nach dem Modell nicht: Schon mit
+  200 ms erreicht der Antrieb nach einer Rampe nur 54 % (G oben), mit
+  300 ms 36 %. 100 ms ist der kleinste zugelassene Wert des Startarguments.
+- Falls das Rucken stört, wäre der gezielte Weg eine Anstiegsbegrenzung im
+  Motortreiber (jeder Sprung nach oben wird zu einer Rampe; Bremsen und
+  Stopp bleiben sofort). Das ist eine Codeänderung an der Motorsteuerung und
+  steht unter „Geparkt“.
+
+**Was sich für den Betrieb ändert, wenn 100 ms Standard wird:**
+
+- Amadeus fährt dann zum ersten Mal in der Selbstheilungslinie wirklich das
+  befohlene Tempo: im Profil 0,135 m/s vorwärts und 0,25 rad/s, in der
+  Langsam-Zone 30 % davon. Bisher waren es real 1,3–1,7 cm/s. Die Tempo-
+  erhöhung vom 05.11. (+35 %/+25 %) wurde beschlossen, als der Antrieb nur
+  ein Fünftel umsetzte.
+- AT-2 hat bis 0,10 m/s und 0,25 rad/s gemessen, nicht 0,135 m/s.
+- Bremswege und Abstände wurden für diese Geschwindigkeiten ausgelegt, sind
+  in der Selbstheilungslinie aber nur im Kriechtempo erlebt worden. Die
+  erste Fahrt mit folgendem Antrieb ist deshalb eine Stellprobe unter
+  Aufsicht, keine lange Fahrt (MASTERPLAN §9 Regel 6).
+- Die Bremszeit (400 ms) und der Stopp bei Nullbefehl sind unverändert.
+
+**Stand am Roboter:** Im Antrieb stehen bis zum nächsten Start 100 ms; jeder
+Start schreibt den Wert neu (ohne Argument 2000 ms). AT-2
+[archiviert](archive/20261115-at2-ausgewertet/README.md).
+
+**Vorschlag für den nächsten einzelnen Schritt** (MASTERPLAN §9 Regeln 1
+und 6): die Stellprobe an denselben drei Stellen wie SH-8b mit genau einer
+Änderung, `hwt601_accel_ms:=100`, ohne Build. Sie prüft das aktive Problem
+(Freifahren) zum ersten Mal mit einem Antrieb, der tut, was befohlen wird.
+
+**Nächster Schritt:** Entscheidung des Projektinhabers zu 100 ms als
+Standard; danach Auftrag.
 
 ## 15.11.2026 (mittags) – AT-1b ausgewertet: Der Antrieb folgt Sprüngen, aber keinen feinen Rampen
 

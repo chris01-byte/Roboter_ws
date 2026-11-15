@@ -1590,6 +1590,22 @@ ein Sprung per Steuerkreuz dann wieder ruckt (Grund der Änderung vom
 14.08.), wird hingenommen. Erster Schritt ist die freigegebene Messfahrt
 AT-2 mit `hwt601_accel_ms:=100`; ob 100 ms Standard wird, entscheidet sich
 nach der Messung.
+
+**Nachtrag 15.11.2026 (nachmittags) – AT-2 bestanden:** Mit 100 ms
+Anfahrzeit folgt der Antrieb den Befehlsformen von Nav2 voll (Ist/Soll
+0,96–1,03 in sechs Abschnitten, zwei Proben; bei 2000 ms 0,11–0,22). Das
+Rechenmodell hat alle Abschnitte auf wenige Prozent vorhergesagt; damit ist
+die Ursache nicht nur gemessen, sondern durch die Gegenprobe bestätigt. Der
+Projektinhaber sah beim Anfahren ein Ruckeln des Aufbaus (zwei von zehn
+Fahrten, einmal bei der Stufe wie beim Verlassen der Langsam-Zone); dafür
+gibt es noch keine Messgröße. Zwischenwerte der Anfahrzeit lösen es nach
+dem Modell nicht (200 ms: 54 % nach einer Rampe). Lehren: (1) Ein Modell,
+das eine Messung erklärt, wird an einer zweiten Messung mit geänderter
+Bedingung geprüft, bevor es Entscheidungen trägt; hier hat das eine Runde
+gekostet und die Frage geklärt. (2) Die Tempoerhöhung vom 05.11. und alle
+Abstands- und Zeitgrenzen der Selbstheilungslinie wurden bei real einem
+Fünftel des Tempos erlebt; mit folgendem Antrieb zählen sie zum ersten Mal
+wirklich. Die nächste Fahrt ist deshalb eine Stellprobe, keine lange Fahrt.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je
