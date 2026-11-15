@@ -20,10 +20,13 @@ schreibt eine JSON-Zusammenfassung:
     Drehwinkel laut /odom. Anlass: Bis AT-2 setzte der Antrieb nur etwa ein
     Fünftel um; diese Zahl zeigt in jeder Fahrt, ob er den Befehlen folgt,
   - Wackeln (ab 15.11.2026): Drehrate um die beiden waagerechten Achsen aus
-    dem HWT601 (/hwt601/imu/data_raw), in Ruhe vor der Mission und während
-    der Fahrt, dazu die stärksten Sekunden mit dem Befehl dabei. Anlass:
-    Christopher sah in AT-2 Ruckeln beim Anfahren; bisher gab es dafür keine
-    Messgröße. Fehlt das Topic, steht dort „keine Daten“,
+    dem HWT601 (/shadow/hwt601/imu/data_raw), in Ruhe vor der Mission und
+    während der Fahrt, dazu die stärksten Sekunden mit dem Befehl dabei.
+    Anlass: Christopher sah in AT-2 Ruckeln beim Anfahren; bisher gab es
+    dafür keine Messgröße. Fehlt das Topic, steht dort „keine Daten“, und
+    das Werkzeug meldet es schon beim Start („Messquelle Wackeln: FEHLT“).
+    In SH-8c blieb die Messung leer, weil hier der Name aus dem allgemeinen
+    Profil stand statt des Namens im laufenden Stack,
   - Lücken im VL53-Status (länger als 0,8 s),
   - Abdeckungskurve: freie, belegte und bekannte Kartenfläche alle 30 s
     während der Fahrt und die Zeit, bis 85/90/95 % der freien Endfläche
@@ -52,7 +55,9 @@ RUECKFAHRT_PAUSE_S = 1.0     # so lange ohne v < 0, dann gilt die Rückfahrt als
 BEFEHL_MAX_DT_S = 0.25       # länger gilt ein Befehl an der Basis nicht (Watchdog)
 WACKELN_NAH_S = 1.5          # so lange nach Anfahren/Anhalten zählt eine Spitze dazu
 WACKELN_SPITZEN = 5
-IMU_TOPIC = '/hwt601/imu/data_raw'
+IMU_TOPIC = '/shadow/hwt601/imu/data_raw'   # so heißt es im laufenden HWT-Stack
+WEG_SCHRITT_M = 0.005        # gefahrener Weg zählt in Schritten ab dieser Größe
+DREH_SCHRITT_RAD = 0.02      # ebenso die Drehung (Messrauschen summiert sich sonst auf)
 ABDECKUNG_TAKT_S = 30.0
 ABDECKUNG_ANTEILE = (0.85, 0.90, 0.95)
 MANUELL = (
@@ -85,9 +90,12 @@ class LaufProtokoll:
         self.rueckfahrten = []
         self._rueckfahrt = None          # offene Rückwärtsfahrt
         # Tempo-Folge: Befehl gegen Odometrie, nur während der Mission.
-        self.folge = dict(befohlen_m=0.0, gefahren_m=0.0, befohlen_rad=0.0, gedreht_rad=0.0)
+        self.folge = dict(befohlen_m=0.0, gefahren_m=0.0, befohlen_rad=0.0, gedreht_rad=0.0,
+                          gefahren_roh_m=0.0, gedreht_roh_rad=0.0)
         self._cmd_letzter = None         # (t, v, w)
         self._gier_letzte = None
+        self._weg_anker = None           # Punkt, ab dem der nächste Wegschritt zählt
+        self._gier_anker = None
         self._anfahren_um = None
         self._anhalten_um = None
         # Wackeln: Drehrate um die waagerechten Achsen.
@@ -216,15 +224,36 @@ class LaufProtokoll:
             if schritt < 0.5:          # Sprünge (Neustart, Reset) nicht addieren
                 self.strecke_m += schritt
                 if self.faehrt():
-                    self.folge['gefahren_m'] += schritt
+                    self.folge['gefahren_roh_m'] += schritt
+            else:
+                self._weg_anker = None
         self.odom_letzte = (x, y)
+        # Weg in Schritten ab 5 mm: Zittern der Position im Stand oder beim
+        # Drehen summiert sich so nicht zu Weg auf (SH-8c s1a: 2,35 roh).
+        if not self.faehrt() or self._weg_anker is None:
+            self._weg_anker = (x, y)
+        else:
+            schritt = math.dist(self._weg_anker, (x, y))
+            if schritt >= WEG_SCHRITT_M:
+                self.folge['gefahren_m'] += schritt
+                self._weg_anker = (x, y)
         if gier is not None and math.isfinite(gier):
+            def differenz(a, b):
+                return abs(math.atan2(math.sin(a - b), math.cos(a - b)))
             if self._gier_letzte is not None and self.faehrt():
-                dreh = abs(math.atan2(math.sin(gier - self._gier_letzte),
-                                      math.cos(gier - self._gier_letzte)))
+                dreh = differenz(gier, self._gier_letzte)
                 if dreh < 0.5:
-                    self.folge['gedreht_rad'] += dreh
+                    self.folge['gedreht_roh_rad'] += dreh
             self._gier_letzte = gier
+            if not self.faehrt() or self._gier_anker is None:
+                self._gier_anker = gier
+            else:
+                dreh = differenz(gier, self._gier_anker)
+                if dreh >= 0.5:
+                    self._gier_anker = gier
+                elif dreh >= DREH_SCHRITT_RAD:
+                    self.folge['gedreht_rad'] += dreh
+                    self._gier_anker = gier
         if t is not None:
             self._rueckfahrt_pruefen(t)
 
@@ -268,6 +297,10 @@ class LaufProtokoll:
             'gedrehte_drehung_rad': round(f['gedreht_rad'], 2),
             'drehung_gedreht_zu_befohlen': (round(f['gedreht_rad']/f['befohlen_rad'], 2)
                                             if f['befohlen_rad'] >= 0.3 else None),
+            # Summe aller Einzelschritte ohne Schwelle; liegt sie deutlich über
+            # dem Wert oben, zittert die Odometrie.
+            'gefahrener_weg_roh_m': round(f['gefahren_roh_m'], 2),
+            'gedrehte_drehung_roh_rad': round(f['gedreht_roh_rad'], 2),
         }
 
     def wackeln(self):
@@ -493,6 +526,14 @@ def main(argv=None):
                              lambda m: protokoll.karte(m.data, m.info.resolution, jetzt()),
                              latched)
 
+    # Messquelle prüfen, bevor die Fahrt beginnt: In SH-8c blieb „wackeln“ leer,
+    # weil das Topic anders hieß; das soll vor der Mission auffallen.
+    frist = jetzt() + 3.0
+    while jetzt() < frist and node.count_publishers(args.imu_topic) == 0:
+        rclpy.spin_once(node, timeout_sec=0.1)
+    sender = node.count_publishers(args.imu_topic)
+    print(f'Messquelle Wackeln: {"OK" if sender else "FEHLT"} '
+          f'({args.imu_topic}, {sender} Sender)', flush=True)
     print('Fahrtprotokoll läuft; wartet auf den Missionsstart.', flush=True)
     ende = jetzt() + args.max_s
     ende_grund = None

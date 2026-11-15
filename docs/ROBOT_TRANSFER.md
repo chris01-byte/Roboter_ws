@@ -251,6 +251,24 @@ Motoren; der nächste Start ohne das Argument schreibt wieder 2000 ms.**
 Releases und Codex-Referenz unverändert, kein Autostart. Kein aktiver
 Auftrag danach.
 
+Nachtrag 15.11.2026 (abends), tatsächliche Jetson-Wirkung SH-8c: kein Build,
+kein neuer Release; Klon per `git pull --ff-only` auf `63c2630`. Sieben
+scharfe Stackstarts mit `hwt601_accel_ms:=100` (je Start bestätigt:
+„Beschleunigen 100 ms, Bremsen 400 ms, Startdrehzahl 5 rpm“), davon vier mit
+Mission (Stellprobe an Mülleimern, zweimal Ecke, Garderobe); zwei Starts von
+„D Quellen“ abgefangen (Encoder 75–76 s alt, Zeitwache `fault_latched`),
+einer von Bereich F (LiDAR-Punkte an der Frontkante bei 3 cm vor den
+Jacken), jeweils ohne Bewegung. Amadeus fuhr erstmals das befohlene Tempo:
+an der Basis bis 0,135 m/s und 0,25 rad/s, zwei Rückfahrten 0,307 und
+0,308 m. Kein Kontakt, kein Eingriff, kein Not-Aus; an den Mülleimern stand
+die linke vordere Ecke 0–2 cm vor einem Eimer (VL53-Punkte im Polsterband),
+der Kollisionsmonitor hielt jede Bewegung an. Je Probe ein Missionsstart,
+dreimal ein Missionsstopp über `/mission_manager/command_json`. Stack je
+Start geordnet beendet. Lokal neu: `$SH_PR/sh8c_*`. Im Antrieb stehen
+weiter 100 ms. `~/roboter_ws` nicht angefasst (fremde Änderungen dort
+unverändert), frühere Releases und Codex-Referenz unverändert, kein
+Autostart. Kein aktiver Auftrag danach.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

@@ -1618,6 +1618,27 @@ Fahrt. Die Änderung vom 14.08.2026 (2000 ms, damals für das Steuerkreuz)
 ist damit für den selbstheilenden Betrieb zurückgenommen; der Wert in
 `base_hardware_params.yaml` bleibt vorerst 2000, der Betrieb setzt 100 über
 das Startargument, bis der nächste Build ihn im Launch verankert.
+
+**Nachtrag 15.11.2026 (abends) – SH-8c:** Erste Fahrten mit folgendem
+Antrieb. Die Ecke ist gelöst (zweimal `befreit` in etwa 92 s, Rückfahrt
+0,307 und 0,308 m in 21 s wie vom Modell vorhergesagt); kein Wackeln
+gesehen, Tempo „passend“. An den Mülleimern hielt der Kollisionsmonitor
+Amadeus fest: VL53-Punkte im 2-cm-Polsterband, „approach“ setzt auch die
+Rückfahrt auf null, danach „Hilfe benötigt“. Erkenntnis: Regler und
+Kollisionsmonitor teilen dieselbe gepolsterte Kontur, dazwischen liegt
+keine Reserve; ist die Sperre da, gibt es keinen Ausweg. KM-1 B verhindert
+das Heranfahren nicht, wenn Teile des Gegenstands noch nicht in der Karte
+stehen (runder Eimer, schmales VL53-Sichtfeld). Lehren: (1) Der Fehler
+„Messanordnung angenommen statt geprüft“ ist mir am selben Tag zweimal
+unterlaufen (AT-1: wer sendet auf dem Topic; SH-8c: wie heißt das IMU-Topic
+im laufenden Stack). Regel ab jetzt: Jeder Topic-Name in einem Werkzeug wird
+gegen die Startdatei des Stacks geprüft und per Test daran gebunden, und
+das Werkzeug meldet eine fehlende Quelle vor der Fahrt. (2) Eine neue
+Messgröße wird beim ersten Einsatz gegen eine bekannte Größe geprüft; die
+rohe Wegsumme lag an der Garderobe um den Faktor 2,35 daneben, die
+Rückfahrstrecke stimmte auf 1 %. (3) Die Stellprobe an drei verschiedenen
+Stellen hat sich bewährt: Sie trennte „Antrieb“ (alle Stellen) von
+„Kollisionsmonitor an niedrigen Gegenständen“ (nur Mülleimer).
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

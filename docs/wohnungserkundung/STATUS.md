@@ -1,14 +1,14 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 15.11.2026 (nachmittags):** Hauptlinie `self_healing`
+**Aktueller Stand 15.11.2026 (abends):** Hauptlinie `self_healing`
 (Nutzerentscheidung 15.10.2026). Es gilt der **Fahrplan in MASTERPLAN §9**.
-Die gemeinsame Ursache von Kriechtempo und zu kurzer Rückfahrt ist gemessen
-(AT-1b) und die Gegenprobe bestanden (AT-2): **Mit 100 ms Anfahrzeit folgt
-der Antrieb den Befehlen, wie Nav2 sie sendet (Ist/Soll 0,96–1,03); mit
-2000 ms waren es 0,11–0,22.** Der Projektinhaber hat 100 ms am 15.11.2026
-zum Standard für den selbstheilenden Betrieb erklärt; das beim Anfahren
-gesehene Ruckeln wird ab jetzt mitgemessen. **Aktiver Jetson-Auftrag:
-SH-8c**, dieselbe Stellprobe wie SH-8b mit dieser einen Änderung.
+Der Antrieb folgt seit dem 15.11. den Befehlen (Anfahrzeit 100 ms, Standard
+für den selbstheilenden Betrieb). **Stellprobe SH-8c: nicht bestanden, aber
+ein großer Schritt:** An der Ecke befreite sich Amadeus zweimal in etwa 92 s
+(Rückfahrt 0,31 m in 21 s; in SH-8b „Hilfe benötigt“). An den Mülleimern
+hielt ihn der Kollisionsmonitor wieder fest („approach“ während der
+Rückfahrt). **Kein aktiver Jetson-Auftrag;** der nächste Schritt läuft in
+der Simulation.
 Wo wir stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
@@ -35,23 +35,30 @@ Genau eine Liste. Jeder Auftrag bezieht sich auf eine Zeile. Neue Ideen
 kommen unter „Geparkt“, nicht sofort in den Code.
 
 **Das eine aktive Problem:** Amadeus sitzt dicht an Hindernissen fest.
-Stand SH-8b (14.11.): mit KM-1 B kein „approach“ mehr, aber Stellprobe an
-allen drei Stellen nicht bestanden, weil die Rückfahrt nur 0,15–0,22 m statt
-0,3 m schafft. **Gemeinsame Ursache mit dem Kriechtempo, in AT-1b gemessen
-(15.11.):** Der Antrieb folgt feinen Rampen nicht. Er verteilt jede
-Sollwertänderung auf seine Anfahrzeit von 2000 ms; nach einer Rampe in
-20-Hz-Schritten bestimmt der letzte kleine Schritt die Beschleunigung.
+Stand SH-8c (15.11.): Der Antrieb folgt jetzt den Befehlen, die Rückfahrt
+schafft ihre 0,3 m, die Ecke ist gelöst (zweimal `befreit`). **Übrig ist ein
+einzelner, gemessener Mechanismus an niedrigen Gegenständen:** Kommt ein
+VL53-Punkt in das 2-cm-Polsterband der Kontur, setzt der Kollisionsmonitor
+(„approach“) jede Bewegung auf null, auch die gerade Rückfahrt vom Hindernis
+weg. Regler und Kollisionsmonitor benutzen dieselbe gepolsterte Kontur; der
+Regler hält auf dem 5-cm-Raster an, eine Reserve dazwischen gibt es nicht.
 **Dazu aus der Simulation vom 14.11.:** Die freie Rückfahrt aus AW-1 ist
 nach hinten blind (Heck am Türpfosten in einem Lauf).
 
-**Aktiv (Roboter):** **SH-8c Stellprobe**, [Auftrag](AGENTENAUFTRAG.md):
-dieselben drei Stellen wie SH-8b (Mülleimer, Ecke, Garderobe), einzige
-Änderung `hwt601_accel_ms:=100`, kein Build, kein Teil B. Amadeus fährt
-dabei zum ersten Mal wirklich das befohlene Tempo (0,135 m/s). Dazu zwei
-neue Messgrößen im Fahrtprotokoll: Tempo-Folge und Wackeln.
+**Aktiv (Roboter):** nichts. SH-8c (15.11.) ist ausgewertet.
 **Entscheidungen des Projektinhabers (15.11.2026):** Der Antrieb wird für
-die autonome Fahrt ausgelegt (mit dem Steuerkreuz wird kaum noch gefahren);
-100 ms Anfahrzeit ist der Standard für den selbstheilenden Betrieb.
+die autonome Fahrt ausgelegt; 100 ms Anfahrzeit ist der Standard für den
+selbstheilenden Betrieb.
+
+**Aktiv (Simulation, für das aktive Problem): KM-2 „Rückzug aus der
+Sperre“.** Der geparkte Punkt „Kollisionsmonitor lässt Wegfahren zu“ ist
+fällig (seine Bedingung „approach während einer Rückfahrt trotz KM-1 B“ ist
+in SH-8c s3a eingetreten). Ansatz: Für eine reine gerade Rückwärtsfahrt
+prüft der Kollisionsmonitor gegen eine Kontur, deren Front am echten Gehäuse
+endet; Vorwärtsfahrt und Drehen behalten die volle gepolsterte Kontur
+(Variante A vom 09.11. nahm das Polster immer weg und wurde verworfen, weil
+das Gehäuse beim Drehen berührte). Kriterien und Ergebnis im Abschnitt
+15.11.2026 (abends).
 
 **In Simulation (Nutzerentscheidung 14.11.2026, MASTERPLAN §9 Regel 7
 Nachtrag): Schritt 2 „Erkundungstempo und Nachbarraum finden“**, Paket EK-1
@@ -73,10 +80,9 @@ speichern, Räume in der App, `go_to_room`).
 
 | Punkt | Grund für Parken | Wieder aufnehmen, wenn |
 |---|---|---|
-| KM-1 B (lokale Karte löscht nichts unter der Kontur) | in SH-8b nicht bestätigt: kein „approach“, aber nach der kurzen Rückfahrt verweigert der Regler jede Drehung | der Antrieb folgt den Befehlen von Nav2 (nach AT-2); dann dieselbe Stellprobe |
+| KM-1 B (lokale Karte löscht nichts unter der Kontur) | SH-8c: an der Ecke bestätigt (zweimal `befreit`); an den Mülleimern verhindert es das Heranfahren nicht (Teile des runden Eimers standen noch nicht in der Karte). Neu beobachtet: Hängt etwas auf LiDAR-Höhe über die Kontur (Jacken bei 3 cm), bleibt es als Hindernis im Gehäuse stehen (Bereich F fängt es ab) | bleibt im Code; Entscheidung „bestätigt“ erst mit einer bestandenen Stellprobe an allen drei Stellen |
 | Schritt 2 (EK-1 mit Lückenfilter, SH-9) | bei 1,3–1,7 cm/s Ist-Tempo erreicht Amadeus weiter entfernte Ziele nicht (2 von 42 über 1,5 m) | der Antrieb fährt, was befohlen wird |
-| Rückfahrt in der Langsam-Zone zu langsam (0,015 m/s; SH-8: 7 von 8 an der 30-s-Grenze, je etwa 0,15 m statt 0,3 m) | ein Problem zur Zeit; befreit hat er sich trotzdem, nur langsamer (3–4 min) | SH-8b misst die Strecke je Rückfahrt; reicht sie nicht zum Befreien oder kostet sie in vollen Fahrten viel Zeit |
-| KM-1 Variante „Kollisionsmonitor lässt Wegfahren zu“ (approach blockiert auch rückwärts) | sicherheitsrelevant (Kollisionsmonitor); Variante A verworfen; KM-1 B soll die Lage gar nicht erst entstehen lassen | SH-8b zeigt trotz KM-1 B „approach“ während einer Rückfahrt |
+| Rückfahrt in der Langsam-Zone dauert 21 s für 0,3 m (0,015 m/s). Die „zu kurze Rückfahrt“ aus SH-8/SH-8b war der Antrieb und ist seit SH-8c behoben (0,307 / 0,308 m) | reicht zum Befreien; ein Problem zur Zeit | die Rückfahrten in vollen Fahrten spürbar Zeit kosten |
 | Niedrige Gegenstände seitlich (unter 0,75 m, nie von den VL53 gesehen): Simulation 13.11. berührte nach dem Befreien in 4 von 4 KM-1-B-Läufen eine Eimerseite | bekannte Sensorgrenze, nicht Teil des aktiven Problems; real bisher keine Berührung | vor Stufe 3 (Wohnung) oder bei der ersten realen Berührung; SH-8b-Teil B ohne Eimer |
 | Anstiegsbegrenzung im Motortreiber (jeder Sprung nach oben wird im Treiber zu einer Rampe von 0,12 m/s²; Bremsen und Stopp bleiben sofort) | Codeänderung an der Motorsteuerung; erst nötig, wenn das Rucken bei Sprüngen stört (Verlassen der Langsam-Zone: 0,7 m/s² für 0,1 s) | Christopher das Ruckeln im Betrieb als störend meldet, die Messgröße `wackeln` deutliche Spitzen zeigt oder die Karte dadurch leidet |
 | Wackeln auf Fliesenfugen bei echtem Tempo (Frage des Projektinhabers 15.11.2026): Der HWT601 liefert im aktiven Stack **nur die Gierrate** für die Odometrie. Nicken und Rollen wertet niemand aus; es gibt weder eine Tempobegrenzung bei Wackeln noch ein Verwerfen gestörter Scans. Die Logik dafür liegt geprüft, aber unbenutzt in `robot_state_estimation/quality_core.py` (`ImuStabilityConfig`: 14°/s, 3° Lageänderung); ein Knoten und ein Start dafür fehlen | bisher nur auf glattem Boden gefahren; mit echtem Tempo auf Fliesen noch nie gemessen; ein Problem zur Zeit | vor Stufe 3 (Wohnung, Küchenfliesen): zuerst eine kurze Messfahrt über Fugen mit der neuen Messgröße `wackeln` (Tempo 0,135 und 0,08 m/s im Vergleich, Karte ansehen); erst danach entscheiden zwischen „langsamer bei Wackeln“ (über das vorhandene `/speed_limit`) und „gestörte Scans verwerfen“ |
@@ -104,7 +110,104 @@ ausgewertet: nicht bestanden, Rückfahrten 0,151 m (14.11.) · AT-1
 ausgewertet: Messung gestört, kein Urteil; Werkzeug erkennt fremde Sender
 jetzt selbst (15.11.) · AT-1b ausgewertet: Antrieb folgt Sprüngen, feinen
 Rampen nicht; Ursache ist die Anfahrzeit 2000 ms (15.11.) · AT-2
-bestanden: mit 100 ms folgt der Antrieb den Nav2-Rampen (15.11.).
+bestanden: mit 100 ms folgt der Antrieb den Nav2-Rampen (15.11.) · SH-8c
+ausgewertet: Ecke zweimal befreit, Mülleimer vom Kollisionsmonitor
+festgehalten (15.11.).
+
+## 15.11.2026 (abends) – SH-8c ausgewertet: Ecke gelöst, Mülleimer vom Kollisionsmonitor festgehalten
+
+Bericht `~/selbstheilung_jetson_bericht_sh8c.md` (Jetson, Klon `63c2630`,
+Release `selbstheilung-sh8b-20261114_1643` ohne Build, jeder Start mit
+`hwt601_accel_ms:=100`, „Beschleunigen 100 ms“ je Probe bestätigt, 37
+Werkzeugtests). Sieben Stackstarts, vier mit Mission. Keine Berührung, kein
+Eingriff, kein „process has died“. Christopher zu allen Proben: Aufbau nicht
+gewackelt, Tempo „Passend“.
+
+| Probe | Urteil | Zeit bis 0,5 m | Rückfahrt | „approach“ | SH-8b zum Vergleich |
+|---|---|---|---|---|---|
+| s3a Mülleimer | `nicht_befreit`, „Hilfe benötigt“ nach etwa 2 min (0,124 m) | – | eine, vom Kollisionsmonitor 16 s lang auf null gehalten | 1 | `nicht_befreit` (0,483 m) |
+| s2a Ecke | **`befreit`** | 91,6 s | **0,307 m in 20,6 s, erfolgreich** | 0 | „Hilfe benötigt“ (0,151 m) |
+| s2b Ecke | **`befreit`** | 93,4 s | **0,308 m in 20,8 s, erfolgreich** | 0 | „Hilfe benötigt“ (0,151 m) |
+| s1a Garderobe | `nicht_blockiert` (ohne Heilung weg, 110 s) | 110,0 s | keine | 0 | „Hilfe benötigt“ (0,151 m) |
+| s1a_nah (3 cm) | nicht gefahren: Vorprüfung Bereich F `FEHL` | – | – | – | – |
+
+**Urteil nach A7: nicht bestanden** (s3a; danach beendete der F-Befund vor
+s1a_nah den Auftrag regelgerecht; s3b und s1b entfielen).
+
+**Was belegt ist:**
+
+1. **Der Antrieb folgt auch in der echten Kette.** Die Rückfahrt mit
+   −0,015 m/s legte 0,307 und 0,308 m in 20,6 und 20,8 s zurück (413 und
+   418 Befehle, das sind 0,31 m); das Rechenmodell hatte „0,3 m in etwa
+   21 s“ vorhergesagt. Vorwärts kamen bis 0,135 m/s an der Basis an.
+2. **Die Ecke ist gelöst:** ein Fehlschlag, eine freie Rückfahrt, dann ein
+   erreichtes Ziel und weg. In SH-8b endete dieselbe Stelle mit „Hilfe“.
+3. **An den Mülleimern hält der Kollisionsmonitor Amadeus wieder fest**
+   (wie in SH-8 am 13.11.), Ablauf:
+   - Erstes Ziel (0,30 | −0,23) liegt dicht vor dem rechten Eimer. Amadeus
+     drehte 35° nach rechts und fuhr in der Langsam-Zone (0,015 m/s) 12 cm
+     schräg vor; dann verweigerte der Regler („detected collision ahead“).
+   - Seine linke vordere Ecke lag danach am rechten Eimer: tödliche Zellen
+     0–3 cm vor der gepolsterten Front, **102 VL53-Punkte im
+     2-cm-Polsterband** (Nachprüfung, links). Berührt hat er nicht.
+   - Zweiter Fehlschlag → Rückfahrt entlang der eigenen Spur (0,10 m). Im
+     selben Moment „Robot to approach“; an der Basis kam 16 s lang kein
+     Befehl ungleich null an, die Rückfahrt lief in die Zeitgrenze.
+   - Danach scheiterte jeder Anlauf nach etwa 11 s, bis „Hilfe benötigt“.
+     Eine zweite Rückfahrt gibt es je Stillstand nicht.
+4. **Warum KM-1 B das Heranfahren hier nicht verhindert hat:** Die Karte
+   kannte vom runden Eimer nur den Bogen, den die VL53 vom Startplatz aus
+   sahen. Beim Schwenken fuhr die Ecke in den Teil, der noch nicht
+   eingetragen war. Zudem hält der Regler erst an, wenn die gepolsterte
+   Kontur eine 5-cm-Zelle berührt; die echte Oberfläche kann dann schon im
+   Polsterband liegen.
+5. **Garderobe:** Bei 5 cm fuhr er ohne Heilung weg (`nicht_blockiert`). Bei
+   3 cm lagen 6410 LiDAR-Punkte an der Frontkante im Gehäuse (x ≈ 0,31 m),
+   vermutlich überhängende Jacken auf LiDAR-Höhe, kein Teil des Roboters
+   (Vermutung des Agenten, nicht geprüft). Mit KM-1 B stünde so etwas als
+   Hindernis im Gehäuse; Bereich F hat es abgefangen.
+
+**Einordnung:** Regler und Kollisionsmonitor arbeiten mit derselben Kontur
+(Gehäuse plus 2 cm). Zwischen „der Regler hält an“ und „der
+Kollisionsmonitor sperrt alles“ liegt keine Reserve. Ist die Sperre einmal
+da, gilt sie auch für die Bewegung vom Hindernis weg. Solange das so ist,
+endet jedes zu nahe Heranfahren an einen niedrigen Gegenstand mit „Hilfe
+benötigt“, gleich wie es dazu kam.
+
+**Zwei Messfehler in meinen Werkzeugen** (beide korrigiert, 17 Tests):
+
+- **`wackeln` blieb in allen Proben leer.** Im Protokoll stand der
+  Topic-Name aus dem allgemeinen Profil (`/hwt601/imu/data_raw`); im
+  laufenden Stack heißt er `/shadow/hwt601/imu/data_raw`. Das ist derselbe
+  Fehler wie bei AT-1: eine Annahme über die Messanordnung, nicht am
+  Startprofil geprüft. Der eigene Probelauf speiste genau das falsche Topic.
+  Neu: richtiger Name, ein Test bindet ihn an die Startdatei, und das
+  Werkzeug meldet schon vor der Mission „Messquelle Wackeln: OK/FEHLT“.
+- **`tempo_folge` ist als rohe Summe nicht belastbar:** s2a 1,00 / 1,09 und
+  s2b 1,12 / 1,13 sind plausibel, s1a 2,35 / 1,63 nicht. Die Ursache ist
+  nicht gemessen; nahe liegt, dass sich kleines Zittern der Odometrie über
+  3300 Messpunkte aufsummiert. Neu: Weg und Drehung zählen in Schritten ab
+  5 mm bzw. 0,02 rad; die rohe Summe steht zum Vergleich daneben. Gesichert
+  ist bisher nur die Rückfahrt (Strecke gegen Befehl auf 1 %).
+
+**Nicht belegt:** ob der Aufbau messbar wackelt (keine Daten; Christopher:
+nein); wie die Garderobe mit 100 ms ausgeht; ob eine volle Fahrt jetzt
+durchläuft.
+
+**Nächster Schritt (MASTERPLAN §9 Regeln 2 und 4): Simulation KM-2 „Rückzug
+aus der Sperre“**, Kriterien vor dem ersten Lauf:
+
+1. Die Sperre aus SH-8c s3a entsteht in der Simulation (Start dicht an einem
+   niedrigen Gegenstand mit VL53-Punkten im Polsterband), und der heutige
+   Stand kommt dort nicht weg.
+2. Mit KM-2 kommt Amadeus aus derselben Lage mit einer geraden Rückfahrt
+   weg, ohne dass das echte Gehäuse etwas berührt.
+3. Vorwärtsfahrt und Drehen bleiben gesperrt, solange Punkte im Polsterband
+   liegen (kein Rückfall auf Variante A).
+4. Die bisherigen Stellproben der Simulation (Mülleimer mittig, links,
+   rechts mit Drift) bleiben bei `befreit` ohne Gehäuseberührung.
+
+SH-8c [archiviert](archive/20261115-sh8c-ausgewertet/README.md).
 
 ## 15.11.2026 (nachmittags) – AT-2 ausgewertet: bestanden; mit 100 ms folgt der Antrieb den Nav2-Rampen
 

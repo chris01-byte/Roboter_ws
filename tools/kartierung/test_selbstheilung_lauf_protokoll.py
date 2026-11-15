@@ -260,3 +260,33 @@ def test_wobble_without_imu_data_is_reported_as_missing_not_as_calm():
     assert p.zusammenfassung()['wackeln'] == {'daten': 'keine Daten'}
     p.imu(float('nan'), 0.0, 3.0)
     assert p.zusammenfassung()['wackeln'] == {'daten': 'keine Daten'}
+
+
+def test_position_jitter_does_not_add_up_to_driven_way():
+    """SH-8c s1a meldete 2,35-mal so viel Weg wie befohlen. Der Weg zählt deshalb in
+    Schritten ab 5 mm; die rohe Summe steht daneben und zeigt das Zittern."""
+    p = LaufProtokoll(0.0)
+    p.explore(_sh('running'), 1.0)
+    for k in range(600):                       # 20 s Stand mit ±0,3 mm und ±1 mrad Zittern
+        t = 1.0 + k/30
+        p.cmd_vel(0.0, 0.0, t)
+        p.odom(0.0003*(-1)**k, 0.0, t, 0.001*(-1)**k)
+    for k in range(200):                       # dann 10 s Fahrt mit 0,10 m/s
+        t = 21.0 + k*0.05
+        p.cmd_vel(0.10, 0.0, t)
+        p.odom(0.10*(k + 1)*0.05, 0.0, t + 0.01, 0.0)
+    p.cmd_vel(0.0, 0.0, 31.0)
+    f = p.zusammenfassung()['tempo_folge']
+    assert f['gefahrener_weg_m'] == pytest.approx(1.0, abs=0.02)
+    assert f['weg_gefahren_zu_befohlen'] == pytest.approx(1.0, abs=0.03)
+    assert f['gefahrener_weg_roh_m'] > 1.3     # das Zittern steckt in der rohen Summe
+    assert f['gedrehte_drehung_rad'] == 0.0 and f['gedrehte_drehung_roh_rad'] > 1.0
+
+
+def test_default_imu_topic_is_the_one_of_the_running_hwt_stack():
+    import selbstheilung_lauf_protokoll as modul
+    assert modul.IMU_TOPIC == '/shadow/hwt601/imu/data_raw'
+    start = Path(__file__).parents[2] / 'src/robot_state_estimation/launch/hwt601_shadow.launch.py'
+    assert "'imu_topic': '/shadow/hwt601/imu/data_raw'" in start.read_text(encoding='utf-8')
+    quelle = Path(modul.__file__).read_text(encoding='utf-8')
+    assert 'Messquelle Wackeln' in quelle and 'count_publishers(args.imu_topic)' in quelle
