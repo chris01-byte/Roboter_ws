@@ -7,8 +7,9 @@ für den selbstheilenden Betrieb). **Stellprobe SH-8c: nicht bestanden, aber
 ein großer Schritt:** An der Ecke befreite sich Amadeus zweimal in etwa 92 s
 (Rückfahrt 0,31 m in 21 s; in SH-8b „Hilfe benötigt“). An den Mülleimern
 hielt ihn der Kollisionsmonitor wieder fest („approach“ während der
-Rückfahrt). **Kein aktiver Jetson-Auftrag;** der nächste Schritt läuft in
-der Simulation.
+Rückfahrt). Dafür gibt es seit dem Abend die Korrektur KM-2 (gerade
+Rückfahrt bleibt erlaubt), in der Simulation geprüft. **Aktiver
+Jetson-Auftrag: SH-8d**, Stellprobe mit KM-2, bei Erfolg eine volle Fahrt.
 Wo wir stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
@@ -45,20 +46,17 @@ Regler hält auf dem 5-cm-Raster an, eine Reserve dazwischen gibt es nicht.
 **Dazu aus der Simulation vom 14.11.:** Die freie Rückfahrt aus AW-1 ist
 nach hinten blind (Heck am Türpfosten in einem Lauf).
 
-**Aktiv (Roboter):** nichts. SH-8c (15.11.) ist ausgewertet.
+**Aktiv (Roboter):** **SH-8d**, [Auftrag](AGENTENAUFTRAG.md): Stellprobe
+(Mülleimer zweimal, Garderobe zweimal, Ecke einmal) mit genau einer
+Änderung, **KM-2 „Rückzug aus der Sperre“** (neuer Build), jeder Start mit
+`hwt601_accel_ms:=100`; bei bestandener Stellprobe eine volle
+Zwei-Raum-Fahrt. KM-2: Für eine reine gerade Rückwärtsfahrt prüft der
+Kollisionsmonitor gegen die Rückfahrkontur aus AW-1; Vorwärtsfahrt und
+Drehen behalten die volle gepolsterte Kontur. In der Simulation bestanden
+(Abschnitt 15.11.2026 abends, zweiter Teil).
 **Entscheidungen des Projektinhabers (15.11.2026):** Der Antrieb wird für
 die autonome Fahrt ausgelegt; 100 ms Anfahrzeit ist der Standard für den
 selbstheilenden Betrieb.
-
-**Aktiv (Simulation, für das aktive Problem): KM-2 „Rückzug aus der
-Sperre“.** Der geparkte Punkt „Kollisionsmonitor lässt Wegfahren zu“ ist
-fällig (seine Bedingung „approach während einer Rückfahrt trotz KM-1 B“ ist
-in SH-8c s3a eingetreten). Ansatz: Für eine reine gerade Rückwärtsfahrt
-prüft der Kollisionsmonitor gegen eine Kontur, deren Front am echten Gehäuse
-endet; Vorwärtsfahrt und Drehen behalten die volle gepolsterte Kontur
-(Variante A vom 09.11. nahm das Polster immer weg und wurde verworfen, weil
-das Gehäuse beim Drehen berührte). Kriterien und Ergebnis im Abschnitt
-15.11.2026 (abends).
 
 **In Simulation (Nutzerentscheidung 14.11.2026, MASTERPLAN §9 Regel 7
 Nachtrag): Schritt 2 „Erkundungstempo und Nachbarraum finden“**, Paket EK-1
@@ -83,7 +81,7 @@ speichern, Räume in der App, `go_to_room`).
 | KM-1 B (lokale Karte löscht nichts unter der Kontur) | SH-8c: an der Ecke bestätigt (zweimal `befreit`); an den Mülleimern verhindert es das Heranfahren nicht (Teile des runden Eimers standen noch nicht in der Karte). Neu beobachtet: Hängt etwas auf LiDAR-Höhe über die Kontur (Jacken bei 3 cm), bleibt es als Hindernis im Gehäuse stehen (Bereich F fängt es ab) | bleibt im Code; Entscheidung „bestätigt“ erst mit einer bestandenen Stellprobe an allen drei Stellen |
 | Schritt 2 (EK-1 mit Lückenfilter, SH-9) | bei 1,3–1,7 cm/s Ist-Tempo erreicht Amadeus weiter entfernte Ziele nicht (2 von 42 über 1,5 m) | der Antrieb fährt, was befohlen wird |
 | Rückfahrt in der Langsam-Zone dauert 21 s für 0,3 m (0,015 m/s). Die „zu kurze Rückfahrt“ aus SH-8/SH-8b war der Antrieb und ist seit SH-8c behoben (0,307 / 0,308 m) | reicht zum Befreien; ein Problem zur Zeit | die Rückfahrten in vollen Fahrten spürbar Zeit kosten |
-| Niedrige Gegenstände seitlich (unter 0,75 m, nie von den VL53 gesehen): Simulation 13.11. berührte nach dem Befreien in 4 von 4 KM-1-B-Läufen eine Eimerseite | bekannte Sensorgrenze, nicht Teil des aktiven Problems; real bisher keine Berührung | vor Stufe 3 (Wohnung) oder bei der ersten realen Berührung; SH-8b-Teil B ohne Eimer |
+| Niedrige Gegenstände seitlich (unter 0,75 m, nie von den VL53 gesehen): Simulation 13.11. berührte nach dem Befreien in 4 von 4 KM-1-B-Läufen eine Eimerseite, am 15.11. mit KM-2 in 4 von 4 (1 bis 4 min nach dem Befreien, beim Drehen). **Real am 15.11. (SH-8c s3a): linke vordere Ecke 0–2 cm vor einem Eimer, keine Berührung** | bekannte Sensorgrenze, nicht Teil des aktiven Problems; real bisher keine Berührung, aber mit echtem Tempo zum ersten Mal knapp. **Nächster Kandidat für das „eine aktive Problem“, sobald das Festsitzen gelöst ist** | vor Stufe 3 (Wohnung) oder bei der ersten realen Berührung; Stellproben enden deshalb sofort nach 0,5 m, volle Fahrten ohne Eimer |
 | Anstiegsbegrenzung im Motortreiber (jeder Sprung nach oben wird im Treiber zu einer Rampe von 0,12 m/s²; Bremsen und Stopp bleiben sofort) | Codeänderung an der Motorsteuerung; erst nötig, wenn das Rucken bei Sprüngen stört (Verlassen der Langsam-Zone: 0,7 m/s² für 0,1 s) | Christopher das Ruckeln im Betrieb als störend meldet, die Messgröße `wackeln` deutliche Spitzen zeigt oder die Karte dadurch leidet |
 | Wackeln auf Fliesenfugen bei echtem Tempo (Frage des Projektinhabers 15.11.2026): Der HWT601 liefert im aktiven Stack **nur die Gierrate** für die Odometrie. Nicken und Rollen wertet niemand aus; es gibt weder eine Tempobegrenzung bei Wackeln noch ein Verwerfen gestörter Scans. Die Logik dafür liegt geprüft, aber unbenutzt in `robot_state_estimation/quality_core.py` (`ImuStabilityConfig`: 14°/s, 3° Lageänderung); ein Knoten und ein Start dafür fehlen | bisher nur auf glattem Boden gefahren; mit echtem Tempo auf Fliesen noch nie gemessen; ein Problem zur Zeit | vor Stufe 3 (Wohnung, Küchenfliesen): zuerst eine kurze Messfahrt über Fugen mit der neuen Messgröße `wackeln` (Tempo 0,135 und 0,08 m/s im Vergleich, Karte ansehen); erst danach entscheiden zwischen „langsamer bei Wackeln“ (über das vorhandene `/speed_limit`) und „gestörte Scans verwerfen“ |
 | Anfahrzeit 100 ms für `self_healing:=true` im Launch verankern (bisher Argument im Startbefehl) | braucht einen Build; erst nach Bestätigung im Betrieb | SH-8c bestanden, mit dem nächsten Build |
@@ -208,6 +206,59 @@ aus der Sperre“**, Kriterien vor dem ersten Lauf:
    rechts mit Drift) bleiben bei `befreit` ohne Gehäuseberührung.
 
 SH-8c [archiviert](archive/20261115-sh8c-ausgewertet/README.md).
+
+### KM-2 in der Simulation (15.11.2026 abends): Kriterien 1 bis 3 erfüllt, 4 mit Einschränkung
+
+**KM-2** (`c8873c9`, nur `self_healing:=true`): Knoten
+`robot_navigation/monitor_kontur` publiziert die Kontur für die
+„approach“-Prüfung des Kollisionsmonitors auf `kollisionsmonitor_kontur`.
+Sie ist die volle gepolsterte Kontur (Gehäuse plus 2 cm), außer bei einem
+frischen Befehl „gerade rückwärts“ (v ≤ −0,004 m/s, |w| ≤ 0,02 rad/s,
+höchstens 0,3 s alt); dann ist es die Rückfahrkontur aus AW-1 (Front im
+Roboter, Heck mit Polster). Das Overlay des Kollisionsmonitors verweist
+darauf; Mapping- und Standardprofil bleiben unverändert. Die Langsam-Zone
+gilt weiter, auch rückwärts. 209 gezielte Tests.
+
+| Lauf (Simulation, idealer Antrieb) | Stellprobe | Gehäuse bis 0,5 m | erste Rückfahrt | „approach“ | später |
+|---|---|---|---|---|---|
+| Sperre 1 cm, **Stand SH-8c** | **`nicht_befreit`**, „Hilfe“ nach 113 s | 1,0 cm (Start) | 30 s auf null gehalten, keine Strecke | 1 | – |
+| Sperre 1 cm, **KM-2** | **`befreit`** nach 87 s | 1,0 cm (Start) | 0,303 m in 20,4 s | 1 (50 ms) | Berührung nach 145 s |
+| Mülleimer mittig, KM-2 | `befreit` nach 116 s (vorher 118 s) | 3,0 cm | 0,304 m | 2 | Berührung nach 158 s (vorher 173 s) |
+| Mülleimer links, KM-2 | `befreit` nach 79 s (vorher 80 s) | 3,5 cm | 0,304 m | 0 | Berührung nach 106 s (vorher 105 s) |
+| Mülleimer rechts mit Drift, KM-2 | `befreit` nach 64 s (vorher 64 s) | 1,8 cm | 0,304 m | 0 | Berührung nach 230 s |
+| Labor und Flur möbliert, KM-2 | Teilkarte, 98,5 %, 510 s, 9 Ziele | – | 0,305 m | 0 | keine Berührung (1,3 cm) |
+
+- **Kriterium 1 erfüllt:** Der Stand von SH-8c zeigt in der Simulation
+  dasselbe Bild wie real (eine Rückfahrt, vom Kollisionsmonitor bis zur
+  Zeitgrenze gehalten, danach acht Fehlschläge, „Hilfe benötigt“).
+- **Kriterium 2 erfüllt:** Mit KM-2 läuft die Rückfahrt aus derselben Lage
+  durch; bis 0,5 m Entfernung berührt das Gehäuse nichts.
+- **Kriterium 3 erfüllt:** Die Kontur schaltete in allen Läufen nur während
+  der Rückfahrten auf „Rückzug“ und danach sofort zurück (je Rückfahrt genau
+  ein Paar). Vorwärts und beim Drehen gilt die volle Kontur (Test).
+- **Kriterium 4 mit Einschränkung:** Die drei Mülleimer-Stellproben bleiben
+  bei `befreit` mit denselben Zeiten und ohne Berührung bis 0,5 m. „Ohne
+  Gehäuseberührung“ über den ganzen Lauf war als Kriterium falsch gestellt:
+  Schon vor KM-2 berührte das Gehäuse in diesen Welten nach dem Befreien
+  eine Eimerseite (geparkter Punkt „niedrige Gegenstände seitlich“). KM-2
+  ändert daran nichts, in beide Richtungen.
+- Die möblierte Zwei-Raum-Fahrt liegt im Bereich der früheren Läufe (455 bis
+  600 s, 97,7–98,5 %); ein einzelner Lauf, kein Beleg für eine Verbesserung.
+
+**Nicht belegt:** ob der Kollisionsmonitor unter Humble die Kontur genauso
+annimmt wie unter Jazzy (die Vorprüfung auf dem Roboter prüft das im Stand:
+Verdrahtung, Geometrie und, falls publiziert, seine eigene Sicht); ob die
+Simulation das Heranfahren an einen runden Eimer so zeigt wie real.
+
+**Auftrag [SH-8d](AGENTENAUFTRAG.md):** neuer Build (einzige Änderung KM-2),
+jeder Start mit `hwt601_accel_ms:=100`. Teil A: Mülleimer zweimal, Garderobe
+zweimal (ohne 3-cm-Wiederholung), Ecke einmal. Bestanden, wenn die
+Mülleimer und die Ecke `befreit` ergeben und nichts mit `nicht_befreit`,
+Berührung, Eingriff oder Eigenecho endet. Nur dann Teil B: eine volle
+Zwei-Raum-Fahrt ohne Mülleimer. Das Fahrtprotokoll misst Wackeln jetzt auf
+dem richtigen Topic und meldet die Quelle vor der Fahrt.
+
+**Nächster Schritt:** SH-8d-Bericht auswerten.
 
 ## 15.11.2026 (nachmittags) – AT-2 ausgewertet: bestanden; mit 100 ms folgt der Antrieb den Nav2-Rampen
 

@@ -1639,6 +1639,25 @@ rohe Wegsumme lag an der Garderobe um den Faktor 2,35 daneben, die
 Rückfahrstrecke stimmte auf 1 %. (3) Die Stellprobe an drei verschiedenen
 Stellen hat sich bewährt: Sie trennte „Antrieb“ (alle Stellen) von
 „Kollisionsmonitor an niedrigen Gegenständen“ (nur Mülleimer).
+
+**Nachtrag 15.11.2026 (abends) – KM-2, Rückzug aus der Sperre:** Der
+Kollisionsmonitor prüft „approach“ im Selbstheilungsbetrieb gegen eine
+Kontur aus einem eigenen Knoten (`monitor_kontur`): voll gepolstert für
+Vorwärtsfahrt, Drehen und Stand, die Rückfahrkontur aus AW-1 nur bei einem
+frischen Befehl „gerade rückwärts“. Begründung wie bei AW-1: Eine gerade
+Rückfahrt bewegt den Roboter nie auf etwas vor ihm oder neben ihm zu; die
+VL53 sehen ohnehin nur nach vorn. Variante A vom 09.11. (Polster immer weg)
+bleibt verworfen. In der Simulation zeigt der Stand von SH-8c dieselbe
+Sperre wie real, KM-2 löst sie; die übrigen Stellproben bleiben gleich.
+Lehren: (1) Der am 13.11. geparkte Punkt hatte eine klare Bedingung für die
+Wiederaufnahme; als sie eintrat, lag der Kandidat fest und musste nicht neu
+gesucht werden. (2) Ein vorab festgelegtes Kriterium („ohne
+Gehäuseberührung im ganzen Lauf“) war gegen den Ausgangsstand nicht
+geprüft und für ihn schon unerfüllbar; Kriterien werden künftig zuerst am
+Ausgangsstand gemessen. (3) Mit folgendem Antrieb rückt „niedrige
+Gegenstände seitlich“ nach vorn: real 0–2 cm an einem Eimer, in der
+Simulation Berührung in allen Läufen nach dem Befreien. Das ist der nächste
+Kandidat für das eine aktive Problem.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je
