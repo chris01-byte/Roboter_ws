@@ -71,15 +71,17 @@ der Tür zeigen. **Die Tür ist die nächste Korrektur, nicht diese.** Dasselbe 
 vorzeitiges „vollständig“: Meldet Amadeus die Fahrt als fertig, obwohl ein
 offener Raum fehlt, wird das genau so berichtet.
 
-**Stand der Simulation (16.11.2026, Antrieb folgt den Befehlen, drei
+**Stand der Simulation (16.11.2026, Antrieb folgt den Befehlen, fünf
 Läufe mit diesem Stand):** In zwei Läufen mit drei Räumen fuhr Amadeus durch
 beide Türen in alle drei Räume (6½ und 7½ Minuten, 8 Anläufe, 96–97 % der
-Fläche; Ende von selbst). In einem Lauf mit zwei Räumen blieb er hinter der
-Labortür hängen: Er stand im Flur vor der gegenüberliegenden Wand, setzte
-zweimal gerade zurück, **stieß mit dem Heck an den Türpfosten** und rief
-nach sieben Planerfehlern Hilfe. Das ist das Bild von W-1 Fahrt 1. In den
-beiden anderen Läufen streifte er spät eine niedrige Kiste bzw. einen
-Hocker seitlich (bekannte Grenze niedriger Dinge).
+Fläche; Ende von selbst); ohne EK-1 brauchte er dort 16 Anläufe und 10½
+Minuten. In zwei Läufen mit zwei Räumen fuhr er in den Flur und endete von
+selbst (4 und 7½ Minuten, 5 und 6 Anläufe). In einem Lauf mit zwei Räumen
+blieb er hinter der Labortür hängen: Er stand im Flur vor der
+gegenüberliegenden Wand, setzte zweimal gerade zurück, **stieß mit dem Heck
+an den Türpfosten** und rief nach sieben Planerfehlern Hilfe. Das ist das
+Bild von W-1 Fahrt 1. In zwei der fünf Läufe streifte er eine niedrige
+Kiste bzw. einen Hocker seitlich (bekannte Grenze niedriger Dinge).
 
 **Bekannte Grenzen, die Christopher absichert:**
 

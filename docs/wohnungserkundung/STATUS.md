@@ -68,7 +68,7 @@ darf bei 80–85 % als erfasst gelten; kommt kein Fortschritt mehr, sucht
 Amadeus dort nicht weiter und geht zum nächsten Raum.
 
 **In Simulation: die Tür.** Seit dem 16.11. stellt die Simulation den
-Fehler aus W-1 Fahrt 1 nach (ein Lauf von acht Türdurchfahrten: im Flur vor
+Fehler aus W-1 Fahrt 1 nach (eine von elf Türdurchfahrten mit EK-1: im Flur vor
 der Wand angehalten, zweimal gerade zurückgesetzt, Heck am Türpfosten, dann
 sieben Planerfehler und „Hilfe benötigt“). Daran wird die Korrektur der
 Türdurchfahrt entwickelt; auf den Roboter kommt sie erst nach SH-9.
@@ -180,24 +180,34 @@ Lücken, die Karten mit 78–93 % erfasstem Flur keine.
 | 3 Räume | s1 | Teilkarte (Rest unerreichbar) | 448 s | 8 (3 / 4 / 1) | 340 s | betreten nach 392 s, 96 % | 0,972 | **ja**, 242 s: niedriger Hocker seitlich, beim Drehen |
 | 2 Räume | s3 | **Hilfe benötigt** | 222 s | 12 (3 / 9 / 0) | 118 s | – | 0,968 | **ja**, 146 s: Heck am Türpfosten bei der zweiten Rückfahrt |
 | 3 Räume | s3 | vollständig | 395 s | 8 (4 / 3 / 1) | 40 s | betreten nach 156 s, 95 % | 0,964 | **ja**, 373 s: niedrige Kiste seitlich, am Ende |
+| 2 Räume | s1 | vollständig | 236 s | 5 (2 / 2 / 1) | 230 s | – | 0,975 | nein |
+| 2 Räume | s2 | vollständig | 446 s | 6 (2 / 4 / 0) | 328 s | – | 0,976 | nein (2,2 cm) |
+| 3 Räume, **ohne EK-1** | s1 | Teilkarte (Rest unerreichbar) | 623 s | 16 (14 / 2 / 0) | 100 s | betreten nach 132 s, 97 % | 0,976 | **ja**, 55 s: niedriger Mülleimer seitlich |
 
-Weitere Läufe (zwei Räume s1 und s2, drei Räume ohne EK-1) liefen bei
-Redaktionsschluss noch.
+Die drei letzten Zeilen kamen nach der Aktivierung von SH-9 dazu und ändern
+am Auftrag nichts. Welten für die Wiederholung:
+`tools/simulation/experimente/manifest_labor_flur_rauschen_schnell.json`
+und `manifest_drei_raeume_schnell.json`; Vergleich ohne EK-1 mit
+`vorher_sh9_ohne_ek1.yaml`.
 
 **Was das zeigt:**
-1. **Mit dem korrigierten Filter verlässt Amadeus den Laborraum und fährt in
-   den dritten Raum** (2 von 2 Drei-Raum-Läufen, je 8 Anläufe, 6½–7½ min).
+1. **Mit dem korrigierten Filter verlässt Amadeus den Laborraum** (5 von 5
+   Läufen; mit dem strengen Filter 3 von 5 in zwei Räumen) **und fährt in
+   den dritten Raum** (2 von 2 Drei-Raum-Läufen, je 8 Anläufe, 6½–7½ min;
+   ohne EK-1 16 Anläufe und 10½ min). Vier von fünf Läufen endeten von
+   selbst.
 2. **Die Simulation stellt den Türfehler aus W-1 nach** (Zwei-Raum-Lauf s3):
    durch die Tür in den Flur, dort vor der gegenüberliegenden Wand
    angehalten (nächste tödliche Zelle 3 cm vorn rechts), zweimal 0,3 m
    gerade zurück, Heck am Türpfosten, danach sieben Planerfehler und Hilfe.
    Die Rückfahrkontur ist 1 cm schmaler als das Gehäuse, und nach hinten
    sieht Amadeus nichts. In W-1 Fahrt 1 brach die zweite Rückfahrt nach
-   0,139 m ab, der Pfosten lag an der hinteren rechten Ecke. Bisher eine von
-   acht Türdurchfahrten.
-3. **Niedrige Dinge seitlich** (Hocker, Kiste) berührte er in 2 von 3 Läufen,
-   jeweils an Lücken neben Möbeln. Das ist die geparkte Grenze; mit dem
-   strengen Filter trat sie nicht auf, weil die Fahrten früher endeten. Real
+   0,139 m ab, der Pfosten lag an der hinteren rechten Ecke. Mit EK-1 bisher
+   eine von elf Türdurchfahrten.
+3. **Niedrige Dinge seitlich** (Hocker, Kiste) berührte er in 2 von 5 Läufen,
+   jeweils an Lücken neben Möbeln; ohne EK-1 im Vergleichslauf ebenfalls
+   (Mülleimer, nach 55 s). Das ist die geparkte Grenze; mit dem strengen
+   Filter trat sie nicht auf, weil die Fahrten früher endeten. Real
    gab es in rund zehn ganzen Fahrten keine solche Berührung; in SH-9 sind
    bewegliche niedrige Dinge weggeräumt.
 4. **D greift:** Ein Abbruch „kein Weggewinn“ nach 45 s; ein Anlauf lief
@@ -206,7 +216,7 @@ Redaktionsschluss noch.
    echten Protokollwerkzeug (65 Bilder in 75 s; an der Tür engste Breite
    0,68–0,74 m).
 
-**Grenzen:** Wenige Läufe (drei mit dem Stand von SH-9), eine angenommene
+**Grenzen:** Wenige Läufe (fünf mit dem Stand von SH-9), eine angenommene
 Möblierung, SLAM und Zeitverhalten in der Simulation ohne die Rückstände
 des Jetson. Die Simulation überschätzt Berührungen niedriger Dinge bisher
 gegenüber der echten Fahrt.
