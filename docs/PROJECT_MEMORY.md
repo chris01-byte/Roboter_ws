@@ -1724,6 +1724,24 @@ die Blickrichtung in der Karte, kein Messwert, und eine der Stützen stammte
 aus einer veralteten Datei; beides hat der Jetson-Agent aufgedeckt.
 (5) Entscheidung: zuerst EK-1 als SH-9; ein Raum gilt bei 80–85 % als
 erfasst, ohne Fortschritt geht es zum nächsten.
+
+**Nachtrag 16.11.2026 (abends) – EK-1 vor SH-9 in der Simulation:** Die
+Prüfung auf dem heutigen Stand hat zwei Dinge gefunden, bevor sie am Roboter
+Zeit gekostet hätten. (1) Der Lückenfilter (EK-1 B) ließ in der 1-cm-Karte
+auch die Tür durchfallen: Die Fahrt endete als „vollständig“ mit halb
+erfasstem Flur. Am 14.11. hatte ich dasselbe Bild („fertig, ohne in den Flur
+zu fahren“) als Produktfrage eingeordnet statt nachzumessen; gemessen lagen
+die Frontier-Zellen 5–9 cm vor dem „tiefen“ Unbekannten. (2) Die erste
+Korrektur (5 cm Rand) war zu großzügig und zählte die Lücken einer
+Regalfront als Öffnung; erst mit Wandabstand trennt der Filter. Lehre: eine
+Korrektur zuerst an gespeicherten Karten gegenprüfen, auch auf das, was sie
+neu hereinlässt. (3) Die Simulation stellt jetzt den Türfehler aus W-1 nach
+(Rückfahrt mit dem Heck an den Pfosten, danach Planerfehler und Hilfe); seit
+der Antrieb in der Simulation wie der echte folgt und EK-1 Amadeus direkt
+zur Tür bringt. Damit kann die Türkorrektur erstmals in der Simulation
+entwickelt werden. (4) Das langsame Drehen in der Langsam-Zone (2,5°/s) ist
+erklärt: RPP begrenzt den Drehbefehl auf „gemessene Drehrate + 0,1 rad/s“,
+der Kollisionsmonitor nimmt davon 30 %; Ruhewert 0,043 rad/s, wie gemessen.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

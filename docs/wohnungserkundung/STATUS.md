@@ -1,17 +1,17 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 16.11.2026:** Hauptlinie `self_healing`
-(Nutzerentscheidung 15.10.2026). Es gilt der **Fahrplan in MASTERPLAN §9**.
-Der Antrieb folgt den Befehlen (Anfahrzeit 100 ms). **W-1 (15.11.)** kam
-zweimal nicht aus dem Laborraum; **W-1N (16.11., nur lesend)** zeigt zwei
-verschiedene Ursachen (Tür in Fahrt 1, veraltete Lokalisierung mit
+**Aktueller Stand 16.11.2026 (abends):** Hauptlinie `self_healing`
+(Nutzerentscheidung 15.10.2026). Es gilt der **Fahrplan in MASTERPLAN §9**
+mit dem Nachtrag vom 16.11. Der Antrieb folgt den Befehlen (Anfahrzeit
+100 ms). **W-1 (15.11.)** kam zweimal nicht aus dem Laborraum; **W-1N
+(16.11.)** zeigt zwei Ursachen (Tür in Fahrt 1, veraltete Lokalisierung mit
 Neuanläufen in Fahrt 2). **Einwand des Projektinhabers (16.11.):** Am 08.11.
 kam Amadeus durch die Tür, jetzt nicht mehr; und der vereinbarte
-Suchmechanismus war nicht zu sehen. Beides trifft zu: Seit dem 08.11. gab es
-vier Änderungen ohne eine ganze Fahrt dazwischen, und der Suchmechanismus
-(EK-1) war in W-1 ausgeschaltet. **Nächster Realtest: SH-9, EK-1
-einschalten**, zwei Räume; bis der Auftrag geschrieben ist, gibt es keinen
-aktiven Jetson-Auftrag.
+Suchmechanismus war nicht zu sehen. Beides trifft zu. **Aktiver
+Jetson-Auftrag: SH-9**, der Suchmechanismus EK-1 ist eingeschaltet
+(`bab7cc7`), Fahrt durch Labor, Flur und Schlafzimmer. Die Simulation zeigt
+seit dem 16.11. auch den Türfehler aus W-1 (Rückfahrt mit dem Heck an den
+Pfosten); die Tür ist die nächste Korrektur.
 Wo wir stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
@@ -55,21 +55,23 @@ KM-2 und 100 ms Anfahrzeit). Die Sperre, für die KM-2 gebaut wurde, trat
 dabei nicht auf (kein „approach“ in fünf Läufen); belegt ist, dass die
 Kontur unter Humble anliegt und bei jeder Rückfahrt umschaltet.
 
-**Aktiv (Roboter):** kein Auftrag. **Als Nächstes: SH-9, EK-1 einschalten**
-(Fahrplan Schritt 2, Entscheidung des Projektinhabers vom 16.11.2026: der
-vereinbarte Suchmechanismus zuerst): Teilschwenk am Start und in neuen
-Bereichen, nur Lücken ab 0,5 m Breite, Anlauf nach 45 s ohne Weggewinn
-abbrechen. Zwei Räume (Labor und Flur) wie in SH-7, mit einer Aufzeichnung
-für die Tür. Der Auftrag wird geschrieben, sobald EK-1 in der Simulation auf
-dem heutigen Stand geprüft ist.
+**Aktiv (Roboter):** **SH-9**, [Auftrag](AGENTENAUFTRAG.md): EK-1
+eingeschaltet (A Teilschwenk 90°, B nur Lücken ab 0,5 m mit 5 cm Rand und
+8 cm Wandabstand, D Abbruch nach 45 s ohne Weggewinn; `bab7cc7`, 249
+gezielte Tests). Fahrbereich Laborraum, Flur und Schlafzimmer (Freigabe des
+Projektinhabers vom 16.11.2026 für diesen Auftrag), begleitet, höchstens
+zwei Fahrten von je höchstens 20 Minuten. Mitlesend: Nahbild der lokalen
+Karte, Auswertung gleich am Jetson. Kriterien E1–E6 und K im Auftrag.
 **Entscheidungen des Projektinhabers (15./16.11.2026):** Der Antrieb wird
 für die autonome Fahrt ausgelegt; 100 ms Anfahrzeit ist Standard. Ein Raum
 darf bei 80–85 % als erfasst gelten; kommt kein Fortschritt mehr, sucht
 Amadeus dort nicht weiter und geht zum nächsten Raum.
 
-**In Simulation: EK-1 (A + B + D) auf dem heutigen Stand** (KM-1 B, KM-2,
-Antrieb folgt den Befehlen). Die Läufe vom 14.11. rechneten noch mit dem
-trägen Antrieb. Stand im Abschnitt 16.11.2026.
+**In Simulation: die Tür.** Seit dem 16.11. stellt die Simulation den
+Fehler aus W-1 Fahrt 1 nach (ein Lauf von acht Türdurchfahrten: im Flur vor
+der Wand angehalten, zweimal gerade zurückgesetzt, Heck am Türpfosten, dann
+sieben Planerfehler und „Hilfe benötigt“). Daran wird die Korrektur der
+Türdurchfahrt entwickelt; auf den Roboter kommt sie erst nach SH-9.
 
 **Fahrplan danach (Stand 16.11.2026):** SH-9 (EK-1, zwei Räume) → Tür
 (Planungsstreifen, Verkeilen; Daten aus SH-9) und SLAM-Rückstand bei
@@ -92,7 +94,7 @@ durch die Tür; Stellproben allein genügen dafür nicht.
 | In der globalen Kostenkarte lagen in W-1 Fahrt 1 tödliche Zellen unter dem Roboter (89 in der Kontur), die in der SLAM-Karte fehlen; Herkunft offen (das Löschen unter der Kontur ist dort eingeschaltet) | nur am laufenden Stack zu messen | SH-9: die Aufzeichnung vergleicht Karte und Kostenkarte am Roboter |
 | Fahrtor und Explorer schreiben den Grund einer Sperre oder eines Abbruchs nicht mit (W-1 Fahrt 1: Rückfahrt 40 ms nach einer Fahrtorsperre abgebrochen, Grund unbekannt) | Änderung am Fahrtor ist sicherheitsrelevant und wird getrennt gebaut | mit dem nächsten Build, der ohnehin das Fahrtor berührt, oder wenn der Grund erneut fehlt |
 | `planner_server` schreibt für Ziele am Kartenrand je Anlauf tausende Zeilen „worldToMap failed“ (20040 in 30 s) | stört nur das Log | die Logs zu groß werden |
-| `karte_engstelle.py` misst an 1-cm-Karten zwischen Wand und Einzelzellen statt zwischen den beiden Türseiten (W-1N: 0,20 m statt 0,78 m) | Korrektur mit dem nächsten Werkzeugstand | vor dem nächsten Einsatz des Werkzeugs |
+| Lücken neben Möbeln (kurze Frontiers von 0,3–0,4 m an tiefem Unbekanntem, zum Beispiel die Nische zwischen Regal und Wand) werden vor der Tür angefahren, weil sie näher liegen; in der Simulation führte das zu Berührungen niedriger Dinge | braucht eine Zielwahl nach Nutzen (EK-2) | SH-9 zeigt, dass solche Lücken real Zeit kosten oder Amadeus in enge Lagen bringen |
 | Rückfahrt in der Langsam-Zone dauert 21 s für 0,3 m (0,015 m/s). Die „zu kurze Rückfahrt“ aus SH-8/SH-8b war der Antrieb und ist seit SH-8c behoben (0,307 / 0,308 m) | reicht zum Befreien; ein Problem zur Zeit | die Rückfahrten in vollen Fahrten spürbar Zeit kosten |
 | Niedrige Gegenstände seitlich (unter 0,75 m, nie von den VL53 gesehen): Simulation 13.11. berührte nach dem Befreien in 4 von 4 KM-1-B-Läufen eine Eimerseite, am 15.11. mit KM-2 in 4 von 4 (1 bis 4 min nach dem Befreien, beim Drehen). **Real am 15.11. (SH-8c s3a): linke vordere Ecke 0–2 cm vor einem Eimer, keine Berührung** | bekannte Sensorgrenze, nicht Teil des aktiven Problems; real bisher keine Berührung, aber mit echtem Tempo zum ersten Mal knapp. **Nächster Kandidat für das „eine aktive Problem“, sobald das Festsitzen gelöst ist** | vor Stufe 3 (Wohnung) oder bei der ersten realen Berührung; Stellproben enden deshalb sofort nach 0,5 m, volle Fahrten ohne Eimer |
 | Anstiegsbegrenzung im Motortreiber (jeder Sprung nach oben wird im Treiber zu einer Rampe von 0,12 m/s²; Bremsen und Stopp bleiben sofort) | Codeänderung an der Motorsteuerung; erst nötig, wenn das Rucken bei Sprüngen stört (Verlassen der Langsam-Zone: 0,7 m/s² für 0,1 s) | Christopher das Ruckeln im Betrieb als störend meldet, die Messgröße `wackeln` deutliche Spitzen zeigt oder die Karte dadurch leidet |
@@ -125,7 +127,101 @@ ausgewertet: Ecke zweimal befreit, Mülleimer vom Kollisionsmonitor
 festgehalten (15.11.) · KM-2 gebaut und simuliert (15.11.) · W-1
 ausgewertet: Stellprobe bestanden, Wohnungsfahrt bleibt im Laborraum (15.11.)
 · W-1N ausgewertet: Tür in Fahrt 1, veraltete Lokalisierung in Fahrt 2
-(16.11.).
+(16.11.) · EK-1 auf dem heutigen Stand simuliert, Lückenfilter korrigiert,
+Türfehler in der Simulation nachgestellt (16.11.).
+
+## 16.11.2026 (abends) – EK-1 in der Simulation auf dem heutigen Stand: Lückenfilter korrigiert, Türfehler nachgestellt, SH-9 aktiviert
+
+**Anlass:** Vor SH-9 musste EK-1 mit dem heutigen Stand geprüft werden
+(KM-1 B, KM-2, Antrieb folgt den Befehlen); die Läufe vom 14.11. rechneten
+mit dem trägen Antrieb. Welt wie am 14.11. (Laborraum 4,3 × 4,3 m möbliert,
+0,80-m-Tür, Flur 1,5 × 4 m, LiDAR-Rauschen 1 cm), Antrieb jetzt mit 0,15 s
+Zeitkonstante statt 1,3 s. Neu eine Welt mit **drei Räumen** (dazu ein
+Zimmer hinter dem Flur mit zweiter 0,80-m-Tür, Schrank und niedrigem Tisch).
+
+**1. EK-1 wie am 14.11. vorgeschlagen (strenger Lückenfilter):**
+
+| Welt | Start | Ende | Dauer | Anläufe (erreicht / gescheitert / abgebrochen) | Flur betreten | drittes Zimmer | Abdeckung | Berührung |
+|---|---|---|---|---|---|---|---|---|
+| 2 Räume, ohne EK-1 | s1 | Teilkarte | 427 s | 12 (7 / 5 / 0) | 95 s | – | 0,978 | nein |
+| 2 Räume | s1 | vollständig | 214 s | 3 (1 / 2 / 0) | **nie** (Flur zu 78 % erfasst) | – | 0,929 | nein |
+| 2 Räume | s2 | vollständig | 198 s | 4 (1 / 2 / 1) | 195 s | – | 0,969 | nein |
+| 2 Räume | s3 | vollständig | 277 s | 5 (3 / 1 / 1) | 270 s | – | 0,971 | nein |
+| 2 Räume (Produktprofil) | s3 | vollständig | 192 s | 3 (2 / 1 / 0) | **nie** (Flur zu 53 % erfasst) | – | 0,860 | nein |
+| 3 Räume | s1 | vollständig | 268 s | 4 (2 / 2 / 0) | 247 s | **nie** (zu 67 % erfasst) | 0,900 | nein |
+| 3 Räume | s3 | vollständig | 204 s | 4 (3 / 1 / 0) | 50 s | **nie** (zu 84 % erfasst) | 0,934 | nein |
+
+EK-1 halbiert Zeit und Anläufe. **Aber:** In einem Lauf meldete Amadeus
+„vollständig“, obwohl der Flur erst zur Hälfte erfasst war.
+
+**2. Ursache des vorzeitigen „vollständig“ (an den gespeicherten Endkarten
+gemessen):** Teil B zählte eine Frontier nur, wenn die freie Zelle
+unmittelbar an tiefes Unbekanntes grenzt. In der 1-cm-Karte liegt am Rand
+eines Sichtschattens (Türpfosten) ein ausgefranster Streifen aus einzelnen
+freien Strahlen und Unbekanntem dazwischen; die Frontier-Zellen lagen im
+Median 5–9 cm vor dem tiefen Unbekannten. In der Karte mit dem halben Flur
+hatten die beiden Türfrontiers 720 und 288 Zellen, davon nur 7 und 28
+unmittelbar an tiefem Unbekanntem (Schwelle 30). Echte Karten sind rauer
+als die der Simulation.
+
+**3. Korrektur am Lückenfilter (`bd31447`, nachgeschärft `bab7cc7`):** Das
+tiefe Unbekannte wächst um 5 cm (`self_healing_gap_reach_m`), aber nur durch
+unbekannte Zellen, die weiter als 8 cm von jeder belegten Zelle entfernt
+sind. Der Wandabstand kam nach dem ersten Lauf dazu: Ohne ihn zählten die
+Lücken einer Regalfront als Öffnung, Amadeus fuhr darauf zu und endete nach
+211 s mit „Hilfe benötigt“ (3,3 cm vom Regal). An acht gespeicherten
+Endkarten: Die drei Karten mit vorzeitigem „vollständig“ behalten 1–2
+Lücken, die Karten mit 78–93 % erfasstem Flur keine.
+
+**4. EK-1 mit korrigiertem Filter (Stand von SH-9):**
+
+| Welt | Start | Ende | Dauer | Anläufe (erreicht / gescheitert / abgebrochen) | Flur betreten | drittes Zimmer | Abdeckung | Berührung |
+|---|---|---|---|---|---|---|---|---|
+| 3 Räume | s1 | Teilkarte (Rest unerreichbar) | 448 s | 8 (3 / 4 / 1) | 340 s | betreten nach 392 s, 96 % | 0,972 | **ja**, 242 s: niedriger Hocker seitlich, beim Drehen |
+| 2 Räume | s3 | **Hilfe benötigt** | 222 s | 12 (3 / 9 / 0) | 118 s | – | 0,968 | **ja**, 146 s: Heck am Türpfosten bei der zweiten Rückfahrt |
+| 3 Räume | s3 | vollständig | 395 s | 8 (4 / 3 / 1) | 40 s | betreten nach 156 s, 95 % | 0,964 | **ja**, 373 s: niedrige Kiste seitlich, am Ende |
+
+Weitere Läufe (zwei Räume s1 und s2, drei Räume ohne EK-1) liefen bei
+Redaktionsschluss noch.
+
+**Was das zeigt:**
+1. **Mit dem korrigierten Filter verlässt Amadeus den Laborraum und fährt in
+   den dritten Raum** (2 von 2 Drei-Raum-Läufen, je 8 Anläufe, 6½–7½ min).
+2. **Die Simulation stellt den Türfehler aus W-1 nach** (Zwei-Raum-Lauf s3):
+   durch die Tür in den Flur, dort vor der gegenüberliegenden Wand
+   angehalten (nächste tödliche Zelle 3 cm vorn rechts), zweimal 0,3 m
+   gerade zurück, Heck am Türpfosten, danach sieben Planerfehler und Hilfe.
+   Die Rückfahrkontur ist 1 cm schmaler als das Gehäuse, und nach hinten
+   sieht Amadeus nichts. In W-1 Fahrt 1 brach die zweite Rückfahrt nach
+   0,139 m ab, der Pfosten lag an der hinteren rechten Ecke. Bisher eine von
+   acht Türdurchfahrten.
+3. **Niedrige Dinge seitlich** (Hocker, Kiste) berührte er in 2 von 3 Läufen,
+   jeweils an Lücken neben Möbeln. Das ist die geparkte Grenze; mit dem
+   strengen Filter trat sie nicht auf, weil die Fahrten früher endeten. Real
+   gab es in rund zehn ganzen Fahrten keine solche Berührung; in SH-9 sind
+   bewegliche niedrige Dinge weggeräumt.
+4. **D greift:** Ein Abbruch „kein Weggewinn“ nach 45 s; ein Anlauf lief
+   trotzdem 150 s bis zur Zielzeit (er bewegte sich, ohne anzukommen).
+5. Das Nahbild und die Zähler der Suche laufen in der Simulation mit dem
+   echten Protokollwerkzeug (65 Bilder in 75 s; an der Tür engste Breite
+   0,68–0,74 m).
+
+**Grenzen:** Wenige Läufe (drei mit dem Stand von SH-9), eine angenommene
+Möblierung, SLAM und Zeitverhalten in der Simulation ohne die Rückstände
+des Jetson. Die Simulation überschätzt Berührungen niedriger Dinge bisher
+gegenüber der echten Fahrt.
+
+**Entscheidung des Projektinhabers (16.11.2026, Fahrbereich):** Laborraum,
+Flur und Schlafzimmer; Bad, Küche und Wohnzimmer zu. Der dritte Raum ist
+nötig, damit Amadeus den Laborraum verlassen muss.
+
+**SH-9 ist aktiv** ([Auftrag](AGENTENAUFTRAG.md)): EK-1 als die eine
+Änderung, höchstens zwei Fahrten von je höchstens 20 Minuten, Kriterien
+E1–E6 (EK-1 aktiv und Schwenk; an der Labortür in 5 min; im Flur in 10 min;
+im Schlafzimmer; Ende von selbst nach dem Schlafzimmer; kein Ziel öfter als
+dreimal) und K (keine Berührung, kein Eingriff). Erwartung: Die Tür kann
+wie am 15.11. scheitern; dann liefern Nahbild und Kostenkarten das Bild
+dazu, und die Tür ist die nächste Korrektur.
 
 ## 16.11.2026 – W-1N ausgewertet; Einwand des Projektinhabers: Rückschritt an der Tür, Suchmechanismus war aus
 

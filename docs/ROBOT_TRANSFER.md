@@ -298,7 +298,14 @@ auf `fcef2cc` gebracht (10 Dateien, Werkzeuge und Dokumente). Lokal neu nur
 Dateien unter `$SH_PR/w1n/` (Ausgaben der Werkzeuge, drei eigene Leseskripte
 des Agenten). `SH_REL` zeigt weiter auf `selbstheilung-w1-20261115_1801`.
 `~/roboter_ws`, Releases, Kalibrierung und Autostart unverändert; danach
-keine Amadeus-Knoten aktiv. Kein aktiver Auftrag (SH-9 in Vorbereitung).
+keine Amadeus-Knoten aktiv.
+
+Stand 16.11.2026 (abends), **noch keine Jetson-Wirkung:** Auftrag SH-9 ist
+erteilt (`bab7cc7`, Profil mit EK-1). Er wird einen neuen Release
+`selbstheilung-sh9-<STAMP>` bauen und `SH_REL` darauf stellen (Rückfall:
+`…/selbstheilung-w1-20261115_1801`), höchstens vier Stackstarts mit
+`hwt601_accel_ms:=100`, Fahrbereich Laborraum, Flur und Schlafzimmer. Die
+tatsächliche Wirkung wird nach dem Bericht hier nachgetragen.
 
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
