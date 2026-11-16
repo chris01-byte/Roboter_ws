@@ -308,8 +308,9 @@ def deep_unknown_mask(occupancy: np.ndarray, resolution: float,
 
 
 def deep_reach_mask(occupancy: np.ndarray, deep: Optional[np.ndarray], resolution: float,
-                    reach_m: float) -> Optional[np.ndarray]:
-    """Tiefes Unbekanntes samt dem ausgefransten Rand davor.
+                    reach_m: float, wall_guard_m: float = .08,
+                    occupied_threshold: int = 65) -> Optional[np.ndarray]:
+    """Tiefes Unbekanntes samt dem ausgefransten Rand davor, aber nicht an Wänden.
 
     Korrektur zu EK-1 Teil B (16.11.2026, Simulation vor SH-9): In der
     1-cm-Karte grenzt Freies selten unmittelbar an tiefes Unbekanntes. Am
@@ -321,9 +322,13 @@ def deep_reach_mask(occupancy: np.ndarray, deep: Optional[np.ndarray], resolutio
     zu 67 % erfasst waren.
 
     Das tiefe Unbekannte wächst hier um ``reach_m``, aber **nur durch
-    unbekannte Zellen**. Ein Streifen vor einer Wand bleibt draußen (die Wand
-    trennt ihn vom Unbekannten dahinter), ebenso ein Schattenkeil mitten im
-    Raum; ein Loch in einer Wand zählt weiter nur mit seiner eigenen Breite.
+    unbekannte Zellen, die weiter als ``wall_guard_m`` von jeder belegten
+    Zelle entfernt sind**. Ein Streifen vor einer Wand bleibt draußen, ebenso
+    ein Schattenkeil mitten im Raum. Der Wandabstand ist nötig: Wand- und
+    Möbelfronten sind in der 1-cm-Karte löchrig, und dahinter liegt tiefes
+    Unbekanntes. Ohne ihn zählten die Lücken einer Regalfront als Öffnung;
+    in der Simulation fuhr Amadeus darauf zu und saß nach 211 s fest. An
+    einer Tür fehlen dadurch nur die Zellen dicht an den Pfosten.
     ``reach_m <= 0`` lässt die Maske unverändert (strenge Nachbarschaft).
     """
     if deep is None:
@@ -331,8 +336,11 @@ def deep_reach_mask(occupancy: np.ndarray, deep: Optional[np.ndarray], resolutio
     schritte = int(round(reach_m/resolution)) if reach_m > 0 and resolution > 0 else 0
     if schritte < 1:
         return deep
-    return binary_dilation(np.asarray(deep, dtype=bool), iterations=schritte,
-                           mask=np.asarray(occupancy) < 0)
+    occupancy = np.asarray(occupancy)
+    wachsen = occupancy < 0
+    if wall_guard_m > 0:
+        wachsen &= distance_transform_edt(occupancy < occupied_threshold) > wall_guard_m/resolution
+    return binary_dilation(np.asarray(deep, dtype=bool), iterations=schritte, mask=wachsen)
 
 
 def _an_tiefem(free: np.ndarray, deep: np.ndarray) -> np.ndarray:

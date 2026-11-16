@@ -88,7 +88,7 @@ durch die Tür; Stellproben allein genügen dafür nicht.
 | Rückschritt an der Tür eingrenzen: AW-1, KM-1 B, KM-2 und Antrieb 100 ms kamen seit SH-7 ohne ganze Fahrt dazwischen. KM-1 B lässt sich zur Laufzeit abschalten (`footprint_clearing_enabled`, in Humble umschaltbar) | erst sehen, ob die Tür mit EK-1 gelingt | die Tür in SH-9 nicht gelingt |
 | SLAM-Rückstand bei vielen Drehungen (W-1 Fahrt 2: Last 7 → 64 %, `map→odom` bis 1,7 s alt; jede Drehung über 0,35 rad legt einen Knoten an, auch auf der Stelle) | mit EK-1 sind die Fahrten kürzer und drehen weniger; in der Wohnung kommt es wieder | SH-9 ausgewertet, spätestens vor der nächsten Wohnungsfahrt |
 | Abbruch bei veralteter Lokalisierung zählt nicht als Fehlversuch; danach wird dasselbe Ziel neu angefahren (W-1 Fahrt 2: 13 von 14) | Ursache ist der SLAM-Rückstand (Zeile darüber) | zusammen mit dem SLAM-Rückstand |
-| Drehen in der Langsam-Zone nur mit 0,044 rad/s (2,5°/s): 30 % vom Kollisionsmonitor mal 59 % aus der Tempogrenze vor Unbekanntem; woher die 59 % beim Drehen kommen, ist nicht geklärt (RPP begrenzt nur das Fahrtempo) | ein Problem zur Zeit | die Zeitanteile in SH-9 weiter vom Drehen bestimmt sind |
+| Drehen in der Langsam-Zone nur mit 0,043 rad/s (2,5°/s) statt 0,075 rad/s. Ursache gerechnet und zur Messung passend: RPP begrenzt beim Drehen auf der Stelle seinen Befehl auf „gemessene Drehrate + `max_angular_accel` × 0,05 s“ (2,0 rad/s² → + 0,1 rad/s); der Kollisionsmonitor nimmt davon 30 %. Der Kreis schwingt sich bei w = 0,3 × (w + 0,1) = 0,043 rad/s ein (gemessen 0,043–0,044; nach Verlassen der Zone 0,143, dann 0,25). Mit `max_angular_accel` ab 3,5 rad/s² wären es die gedachten 0,075 rad/s; die Drehbeschleunigung begrenzt ohnehin der Glätter (0,30 rad/s²) | eine Änderung je Realtest; ändert das Verhalten dicht an Hindernissen | SH-9 ausgewertet und die Zeitanteile weiter vom Drehen bestimmt sind |
 | In der globalen Kostenkarte lagen in W-1 Fahrt 1 tödliche Zellen unter dem Roboter (89 in der Kontur), die in der SLAM-Karte fehlen; Herkunft offen (das Löschen unter der Kontur ist dort eingeschaltet) | nur am laufenden Stack zu messen | SH-9: die Aufzeichnung vergleicht Karte und Kostenkarte am Roboter |
 | Fahrtor und Explorer schreiben den Grund einer Sperre oder eines Abbruchs nicht mit (W-1 Fahrt 1: Rückfahrt 40 ms nach einer Fahrtorsperre abgebrochen, Grund unbekannt) | Änderung am Fahrtor ist sicherheitsrelevant und wird getrennt gebaut | mit dem nächsten Build, der ohnehin das Fahrtor berührt, oder wenn der Grund erneut fehlt |
 | `planner_server` schreibt für Ziele am Kartenrand je Anlauf tausende Zeilen „worldToMap failed“ (20040 in 30 s) | stört nur das Log | die Logs zu groß werden |
@@ -193,9 +193,13 @@ Aufrufe Exit 0; kein Stackstart, keine Fahrt).
   tödliche Zelle auf der gepolsterten Kontur, gibt er keinen Befehl aus,
   auch keine Drehung. Seit KM-1 B (14.11.) löscht die lokale Karte dort
   nichts mehr.
-- 0,044 rad/s entspricht 0,25 rad/s × 0,3 (Langsam-Zone) × 0,59 (Tempogrenze
-  vor Unbekanntem 0,08 von 0,135 m/s). RPP wendet die Tempogrenze nur auf
-  das Fahrtempo an; wo sie auf die Drehung wirkt, ist nicht geklärt.
+- 0,044 rad/s beim Drehen in der Langsam-Zone: Die erste Lesart (Tempogrenze
+  vor Unbekanntem) war falsch. RPP begrenzt beim Drehen auf der Stelle
+  seinen Befehl auf „gemessene Drehrate + 0,1 rad/s“ (`max_angular_accel`
+  2,0 rad/s² × 0,05 s), der Kollisionsmonitor nimmt davon 30 %; das ergibt
+  als Ruhewert w = 0,3 × (w + 0,1) = 0,043 rad/s. Dazu passt der Auszug bei
+  584–587 s: −0,043, −0,044, nach „continue normal operation“ −0,143, dann
+  −0,250.
 
 **Korrekturen an früheren Aussagen (auch im Abschnitt 15.11. spät):**
 1. **„Schräg (43°) in der Tür“ war nicht gemessen.** 43,3° ist die

@@ -110,6 +110,7 @@ def test_ragged_edge_in_front_of_deep_unknown_still_counts_as_a_door():
     nah = deep_reach_mask(grid, deep, RES, 0.05)
     assert nah.dtype == bool and nah.shape == grid.shape and (nah | ~deep).all()
     assert not nah[grid >= 0].any()                   # wächst nur durch unbekannte Zellen
+    assert nah[151, 430] and not nah[151, 423]        # nur die letzten 5 cm vor dem Tiefen
     assert frontier_cells_remaining(grid, 30, deep=nah) == 1
     (ziel,) = frontier_goals(grid, RES, _welt, (1.0, 1.5), min_size_cells=30, deep=nah)
     assert ziel.frontier_xy[0] > 4.2 and 1.1 <= ziel.frontier_xy[1] <= 1.9
@@ -136,9 +137,39 @@ def test_reach_does_not_bring_back_strips_wedges_or_wall_holes():
     tiefe = frontier_goals(grid, RES, _welt, (1.0, 1.5), min_size_cells=30, deep=nah)
     assert len(tiefe) == 1 and abs(tiefe[0].frontier_xy[0] - 4.195) < 0.02
     assert frontier_cells_remaining(grid, 30, deep=nah) == 1
-    # Das Loch zählt weiter nur mit seiner eigenen Breite (2 Zellen).
+    # Das Loch in der 2 cm dicken Wand zählt gar nicht: dicht an Belegtem wächst nichts.
     assert frontier_cells_remaining(grid, 3, deep=nah) == 1
-    assert frontier_cells_remaining(grid, 2, deep=nah) == 2
+    assert frontier_cells_remaining(grid, 2, deep=nah) == 1
+    assert frontier_cells_remaining(grid, 2, deep=deep_reach_mask(grid, deep, RES, 0.05,
+                                                                  wall_guard_m=0.0)) == 2
+
+
+def test_ragged_furniture_front_with_unknown_behind_is_not_an_opening():
+    """Simulation 16.11.2026: Lücken einer Regalfront zählten als Öffnung, Amadeus saß fest."""
+    grid = _raum()
+    # Regal an der linken Wand, 0,4 m tief und 1,6 m lang: Der LiDAR sieht nur die Front
+    # (2 cm dick, jede dritte Zelle fehlt), dahinter ist alles unbekannt bis nach draußen.
+    grid[60:220, 18:60] = -1
+    grid[60:220, 58:60] = 100
+    grid[58:60, 18:60] = 100                           # Seitenwände des Regals
+    grid[220:222, 18:60] = 100
+    grid[63:218:3, 58:60] = -1
+    grid[63:218:3, 60:62] = -1                         # und davor je ein unbekannter Fleck
+    deep = deep_unknown_mask(grid, RES, 0.25)
+    assert deep[140, 40]                               # hinter der Front ist es tief
+    assert frontier_cells_remaining(grid, 30, deep=deep) == 0      # streng: keine Öffnung
+    ohne_wandabstand = deep_reach_mask(grid, deep, RES, 0.05, wall_guard_m=0.0)
+    mit_wandabstand = deep_reach_mask(grid, deep, RES, 0.05)
+    assert frontier_cells_remaining(grid, 30, deep=ohne_wandabstand) >= 1
+    assert frontier_cells_remaining(grid, 30, deep=mit_wandabstand) == 0
+    assert frontier_goals(grid, RES, _welt, (1.0, 1.5), min_size_cells=30,
+                          deep=mit_wandabstand) == []
+    # Die Tür daneben zählt weiter.
+    grid[110:190, 420:422] = -1
+    tief = deep_unknown_mask(grid, RES, 0.25)
+    (ziel,) = frontier_goals(grid, RES, _welt, (1.0, 1.5), min_size_cells=30,
+                             deep=deep_reach_mask(grid, tief, RES, 0.05))
+    assert abs(ziel.frontier_xy[0] - 4.195) < 0.02
 
 
 def test_reach_zero_or_missing_mask_changes_nothing():
