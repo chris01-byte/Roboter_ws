@@ -1,14 +1,17 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 15.11.2026 (spät):** Hauptlinie `self_healing`
-(Nutzerentscheidung 15.10.2026). Es gilt der **Fahrplan in MASTERPLAN §9**
-mit dem Nachtrag vom 15.11. (Wohnung jetzt, zuerst als Messfahrt). Der
-Antrieb folgt den Befehlen (Anfahrzeit 100 ms). **W-1 (15.11.):** Die
-Stellprobe mit KM-2 ist bestanden (Mülleimer zweimal, Ecke einmal). **Die
-Wohnungsfahrt kam zweimal nicht aus dem Laborraum heraus**; der
-Projektinhaber sah unzählige Drehungen und immer wieder dieselben Ziele.
-**Aktiver Jetson-Auftrag: W-1N**, eine nur lesende Auswertung der
-aufgezeichneten Fahrten; es wird nichts gefahren.
+**Aktueller Stand 16.11.2026:** Hauptlinie `self_healing`
+(Nutzerentscheidung 15.10.2026). Es gilt der **Fahrplan in MASTERPLAN §9**.
+Der Antrieb folgt den Befehlen (Anfahrzeit 100 ms). **W-1 (15.11.)** kam
+zweimal nicht aus dem Laborraum; **W-1N (16.11., nur lesend)** zeigt zwei
+verschiedene Ursachen (Tür in Fahrt 1, veraltete Lokalisierung mit
+Neuanläufen in Fahrt 2). **Einwand des Projektinhabers (16.11.):** Am 08.11.
+kam Amadeus durch die Tür, jetzt nicht mehr; und der vereinbarte
+Suchmechanismus war nicht zu sehen. Beides trifft zu: Seit dem 08.11. gab es
+vier Änderungen ohne eine ganze Fahrt dazwischen, und der Suchmechanismus
+(EK-1) war in W-1 ausgeschaltet. **Nächster Realtest: SH-9, EK-1
+einschalten**, zwei Räume; bis der Auftrag geschrieben ist, gibt es keinen
+aktiven Jetson-Auftrag.
 Wo wir stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
@@ -29,18 +32,22 @@ HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
 
-## Arbeitsliste (roter Faden nach MASTERPLAN §9) – Stand 15.11.2026
+## Arbeitsliste (roter Faden nach MASTERPLAN §9) – Stand 16.11.2026
 
 Genau eine Liste. Jeder Auftrag bezieht sich auf eine Zeile. Neue Ideen
 kommen unter „Geparkt“, nicht sofort in den Code.
 
 **Das eine aktive Problem (seit W-1, 15.11.): Amadeus verlässt den Raum
-nicht.** Der Raum ist nach etwa 2 Minuten zu 85 % erfasst; danach kommt er
-nicht durch die 80-cm-Tür und fährt dieselben Ziele immer wieder an (w2:
-27 Anläufe, 2 erreicht, 14 abgebrochen, 11 gescheitert, rund 20 volle
-Drehungen bei 13 m Weg). Gemessen sind bisher nur die Zahlen; die Ursachen
-(Türdurchfahrt, Zielwahl nach Abbrüchen, Zeitfehler und Rechenlast) sind
-Vermutungen, bis W-1N ausgewertet ist.
+nicht.** Gemessen (W-1N, 16.11.): Der Raum ist nach 2–3 Minuten zu 85 %
+erfasst. In Fahrt 1 scheiterten danach alle 10 Ziele hinter der 78-cm-Tür;
+Amadeus stand am Ende neben dem 22 cm breiten Streifen, den der Planer in
+der Tür zulässt. In Fahrt 2 kam er der Tür nie näher als 0,87 m: 12 von 14
+Abbrüchen kamen von veralteter Lokalisierung (SLAM-Rückstand über 1,5 s),
+danach begann 13-mal derselbe Anlauf neu; 71 % der Fahrzeit waren
+Drehbefehle. **Am 08.11. (SH-7) fuhr Amadeus in 2 von 3 Fahrten durch
+dieselbe Tür.** Seitdem kamen AW-1, KM-1 B, KM-2 und der schnelle Antrieb
+ohne eine ganze Fahrt dazwischen; welche Änderung die Tür verschlechtert
+hat, ist nicht gemessen. Der Suchmechanismus EK-1 war in W-1 aus.
 
 **Das frühere aktive Problem „sitzt dicht an Hindernissen fest“:**
 Stellprobe in W-1 bestanden (Mülleimer zweimal, Ecke einmal, mit KM-1 B,
@@ -48,41 +55,44 @@ KM-2 und 100 ms Anfahrzeit). Die Sperre, für die KM-2 gebaut wurde, trat
 dabei nicht auf (kein „approach“ in fünf Läufen); belegt ist, dass die
 Kontur unter Humble anliegt und bei jeder Rückfahrt umschaltet.
 
-**Aktiv (Roboter):** **W-1N**, [Auftrag](AGENTENAUFTRAG.md): nur lesende
-Auswertung von w1 und w2 mit `tools/kartierung/selbstheilung_ablauf.py`
-(Ziele und Wiederholungen, Bezug jedes Anlaufs zur Tür, Grund jedes
-Abbruchs, Wartezeiten, Verlauf je Minute) und
-`tools/kartierung/karte_engstelle.py` (Türbreite und für den Planer freier
-Anteil in der gesicherten Karte). Kein Stackstart, keine Fahrt.
-**Entscheidungen des Projektinhabers (15.11.2026):** Der Antrieb wird für
-die autonome Fahrt ausgelegt; 100 ms Anfahrzeit ist Standard; die Wohnung
-kommt jetzt, zuerst als Messfahrt.
+**Aktiv (Roboter):** kein Auftrag. **Als Nächstes: SH-9, EK-1 einschalten**
+(Fahrplan Schritt 2, Entscheidung des Projektinhabers vom 16.11.2026: der
+vereinbarte Suchmechanismus zuerst): Teilschwenk am Start und in neuen
+Bereichen, nur Lücken ab 0,5 m Breite, Anlauf nach 45 s ohne Weggewinn
+abbrechen. Zwei Räume (Labor und Flur) wie in SH-7, mit einer Aufzeichnung
+für die Tür. Der Auftrag wird geschrieben, sobald EK-1 in der Simulation auf
+dem heutigen Stand geprüft ist.
+**Entscheidungen des Projektinhabers (15./16.11.2026):** Der Antrieb wird
+für die autonome Fahrt ausgelegt; 100 ms Anfahrzeit ist Standard. Ein Raum
+darf bei 80–85 % als erfasst gelten; kommt kein Fortschritt mehr, sucht
+Amadeus dort nicht weiter und geht zum nächsten Raum.
 
-**In Simulation (Nutzerentscheidung 14.11.2026, MASTERPLAN §9 Regel 7
-Nachtrag): Schritt 2 „Erkundungstempo und Nachbarraum finden“**, Paket EK-1
-für SH-9. Stand im Abschnitt 14.11.2026: möblierte Welt mit Flur, neuer
-Teil B „nur Lücken, in die Amadeus passt“ (Code vorhanden, ausgeschaltet).
-**Der Vorschlag ruht seit dem Abend:** Anhang Z zeigt, dass Amadeus real nur
-mit etwa 1 cm/s vorankommt und Ziele über 1,5 m fast nie erreicht. Der
-zweite Lauf zeigt, wo es verloren geht: Die Fahrbefehle stimmen, der Antrieb
-setzt nur etwa ein Fünftel um. Auf den Roboter geht nichts, bevor SH-8b
-ausgewertet ist. Für das
-aktive Problem ist in der Simulation nichts offen (Mülleimer-Stellprobe:
-SH-8-Stand 0 von 3 befreit, KM-1 B 4 von 4).
+**In Simulation: EK-1 (A + B + D) auf dem heutigen Stand** (KM-1 B, KM-2,
+Antrieb folgt den Befehlen). Die Läufe vom 14.11. rechneten noch mit dem
+trägen Antrieb. Stand im Abschnitt 16.11.2026.
 
-**Fahrplan danach (Nachtrag 15.11.2026):** W-1 auswerten → nach den Daten
-entscheiden, was die Wohnung als Nächstes braucht (Kandidaten: niedrige
-Gegenstände seitlich, Fliesen, Erkundungstempo aus Schritt 2, Zeitbudget)
-→ Abnahme der Wohnung (Stufe 3, drei Läufe) → Schritt 5 Raumziele (Karte
-speichern, Räume in der App, `go_to_room`). Zurückgestellt: die zwei
-weiteren Zwei-Raum-Fahrten für Prototyp 2.
+**Fahrplan danach (Stand 16.11.2026):** SH-9 (EK-1, zwei Räume) → Tür
+(Planungsstreifen, Verkeilen; Daten aus SH-9) und SLAM-Rückstand bei
+Drehungen → Wohnung erneut (Messfahrt) → Abnahme der Wohnung (Stufe 3, drei
+Läufe) → Schritt 5 Raumziele (Karte speichern, Räume in der App,
+`go_to_room`). **Regel aus dem 16.11.:** Nach jeder Änderung am Fahr- oder
+Kartenverhalten folgt vor der nächsten Änderung eine ganze Zwei-Raum-Fahrt
+durch die Tür; Stellproben allein genügen dafür nicht.
 
 **Geparkt (mit Grund):**
 
 | Punkt | Grund für Parken | Wieder aufnehmen, wenn |
 |---|---|---|
 | KM-1 B (lokale Karte löscht nichts unter der Kontur) | SH-8c: an der Ecke bestätigt (zweimal `befreit`); an den Mülleimern verhindert es das Heranfahren nicht (Teile des runden Eimers standen noch nicht in der Karte). Neu beobachtet: Hängt etwas auf LiDAR-Höhe über die Kontur (Jacken bei 3 cm), bleibt es als Hindernis im Gehäuse stehen (Bereich F fängt es ab) | bleibt im Code; Entscheidung „bestätigt“ erst mit einer bestandenen Stellprobe an allen drei Stellen |
-| Schritt 2 (EK-1 mit Lückenfilter, SH-9) | bei 1,3–1,7 cm/s Ist-Tempo erreicht Amadeus weiter entfernte Ziele nicht (2 von 42 über 1,5 m) | der Antrieb fährt, was befohlen wird |
+| Tür: Der Planer rechnet mit 0,28 m Radius, in der 78-cm-Tür bleiben ihm 22 cm; wer daneben steht, bekommt keinen Weg (SH-7 Fahrt 3 am 08.11. und W-1 Fahrt 1). Dazu Verkeilen in der Tür und Rückfahrt mit dem Heck an den Pfosten (Simulation 14.11.) | eine Änderung je Realtest; zuerst EK-1 (SH-9) | SH-9 ausgewertet; die Aufzeichnung dort zeigt, was an der Tür geschieht |
+| Rückschritt an der Tür eingrenzen: AW-1, KM-1 B, KM-2 und Antrieb 100 ms kamen seit SH-7 ohne ganze Fahrt dazwischen. KM-1 B lässt sich zur Laufzeit abschalten (`footprint_clearing_enabled`, in Humble umschaltbar) | erst sehen, ob die Tür mit EK-1 gelingt | die Tür in SH-9 nicht gelingt |
+| SLAM-Rückstand bei vielen Drehungen (W-1 Fahrt 2: Last 7 → 64 %, `map→odom` bis 1,7 s alt; jede Drehung über 0,35 rad legt einen Knoten an, auch auf der Stelle) | mit EK-1 sind die Fahrten kürzer und drehen weniger; in der Wohnung kommt es wieder | SH-9 ausgewertet, spätestens vor der nächsten Wohnungsfahrt |
+| Abbruch bei veralteter Lokalisierung zählt nicht als Fehlversuch; danach wird dasselbe Ziel neu angefahren (W-1 Fahrt 2: 13 von 14) | Ursache ist der SLAM-Rückstand (Zeile darüber) | zusammen mit dem SLAM-Rückstand |
+| Drehen in der Langsam-Zone nur mit 0,044 rad/s (2,5°/s): 30 % vom Kollisionsmonitor mal 59 % aus der Tempogrenze vor Unbekanntem; woher die 59 % beim Drehen kommen, ist nicht geklärt (RPP begrenzt nur das Fahrtempo) | ein Problem zur Zeit | die Zeitanteile in SH-9 weiter vom Drehen bestimmt sind |
+| In der globalen Kostenkarte lagen in W-1 Fahrt 1 tödliche Zellen unter dem Roboter (89 in der Kontur), die in der SLAM-Karte fehlen; Herkunft offen (das Löschen unter der Kontur ist dort eingeschaltet) | nur am laufenden Stack zu messen | SH-9: die Aufzeichnung vergleicht Karte und Kostenkarte am Roboter |
+| Fahrtor und Explorer schreiben den Grund einer Sperre oder eines Abbruchs nicht mit (W-1 Fahrt 1: Rückfahrt 40 ms nach einer Fahrtorsperre abgebrochen, Grund unbekannt) | Änderung am Fahrtor ist sicherheitsrelevant und wird getrennt gebaut | mit dem nächsten Build, der ohnehin das Fahrtor berührt, oder wenn der Grund erneut fehlt |
+| `planner_server` schreibt für Ziele am Kartenrand je Anlauf tausende Zeilen „worldToMap failed“ (20040 in 30 s) | stört nur das Log | die Logs zu groß werden |
+| `karte_engstelle.py` misst an 1-cm-Karten zwischen Wand und Einzelzellen statt zwischen den beiden Türseiten (W-1N: 0,20 m statt 0,78 m) | Korrektur mit dem nächsten Werkzeugstand | vor dem nächsten Einsatz des Werkzeugs |
 | Rückfahrt in der Langsam-Zone dauert 21 s für 0,3 m (0,015 m/s). Die „zu kurze Rückfahrt“ aus SH-8/SH-8b war der Antrieb und ist seit SH-8c behoben (0,307 / 0,308 m) | reicht zum Befreien; ein Problem zur Zeit | die Rückfahrten in vollen Fahrten spürbar Zeit kosten |
 | Niedrige Gegenstände seitlich (unter 0,75 m, nie von den VL53 gesehen): Simulation 13.11. berührte nach dem Befreien in 4 von 4 KM-1-B-Läufen eine Eimerseite, am 15.11. mit KM-2 in 4 von 4 (1 bis 4 min nach dem Befreien, beim Drehen). **Real am 15.11. (SH-8c s3a): linke vordere Ecke 0–2 cm vor einem Eimer, keine Berührung** | bekannte Sensorgrenze, nicht Teil des aktiven Problems; real bisher keine Berührung, aber mit echtem Tempo zum ersten Mal knapp. **Nächster Kandidat für das „eine aktive Problem“, sobald das Festsitzen gelöst ist** | vor Stufe 3 (Wohnung) oder bei der ersten realen Berührung; Stellproben enden deshalb sofort nach 0,5 m, volle Fahrten ohne Eimer |
 | Anstiegsbegrenzung im Motortreiber (jeder Sprung nach oben wird im Treiber zu einer Rampe von 0,12 m/s²; Bremsen und Stopp bleiben sofort) | Codeänderung an der Motorsteuerung; erst nötig, wenn das Rucken bei Sprüngen stört (Verlassen der Langsam-Zone: 0,7 m/s² für 0,1 s) | Christopher das Ruckeln im Betrieb als störend meldet, die Messgröße `wackeln` deutliche Spitzen zeigt oder die Karte dadurch leidet |
@@ -94,7 +104,6 @@ weiteren Zwei-Raum-Fahrten für Prototyp 2.
 | E Lückensuche auf gröberem Raster (5 cm) | Nutzen unbelegt; gröberes SLAM-Raster (X12) brachte Wege näher an Türpfosten | reale Abdeckungskurven zeigen, dass kleine Lücken in der Ferne Zeit kosten |
 | F mehr Tempo vor Unbekanntem (bisher 0,08 m/s) | Sicherheitsfrage, eigene Prüfung nötig | nach dem Erkundungspaket, falls die Fahrzeit noch zu lang ist |
 | Geschlossene Holztür im Flur vom LiDAR nicht eingetragen | erzeugt eine falsche Lücke; Ursache offen | vor Stufe 3 (Prüfung im Stand vor der Tür) |
-| Tür in SH-7 Fahrt 3 für den Planer zu schmal | einmalig, Ursache in der Karte nicht gemessen | tritt in einer vollen Fahrt erneut auf |
 | Mission-Manager meldet am Ende `failed` bei Teilkarte | betrifft nur die Anzeige (App, WE-M7) | vor Schritt 5 |
 | VL53-Aussetzer bis etwa 12 s | Ursache offen; der Explorer wartet und fährt weiter | werden sie häufiger oder länger |
 
@@ -114,7 +123,158 @@ Rampen nicht; Ursache ist die Anfahrzeit 2000 ms (15.11.) · AT-2
 bestanden: mit 100 ms folgt der Antrieb den Nav2-Rampen (15.11.) · SH-8c
 ausgewertet: Ecke zweimal befreit, Mülleimer vom Kollisionsmonitor
 festgehalten (15.11.) · KM-2 gebaut und simuliert (15.11.) · W-1
-ausgewertet: Stellprobe bestanden, Wohnungsfahrt bleibt im Laborraum (15.11.).
+ausgewertet: Stellprobe bestanden, Wohnungsfahrt bleibt im Laborraum (15.11.)
+· W-1N ausgewertet: Tür in Fahrt 1, veraltete Lokalisierung in Fahrt 2
+(16.11.).
+
+## 16.11.2026 – W-1N ausgewertet; Einwand des Projektinhabers: Rückschritt an der Tür, Suchmechanismus war aus
+
+Bericht `~/selbstheilung_jetson_bericht_w1n.md` (Jetson, HEAD `fcef2cc`, nur
+lesend aus `w1_runw1` und `w1_runw2`; 22 Werkzeugtests bestanden, alle
+Aufrufe Exit 0; kein Stackstart, keine Fahrt).
+
+**Die zwei Fahrten scheiterten aus zwei verschiedenen Gründen.**
+
+| | Fahrt 1 (w1) | Fahrt 2 (w2) |
+|---|---|---|
+| Anläufe / verschiedene Ziele / wiederholt | 12 / 9 / 3 | 27 / 11 / 16 (ein Ziel 8×, eines 6×) |
+| erreicht / gescheitert / abgebrochen | 1 / 11 / 0 | 2 / 11 / 14 |
+| Anläufe mit Start näher als 1 m an der Tür | 10, alle gescheitert | 3, alle abgebrochen; kleinster Abstand 0,87 m |
+| Anläufe mit Ziel hinter der Tür | 10, alle gescheitert | 0 |
+| Abbruchgrund | – | 12× `localization_missing_or_stale`, 1× Zielzeit, 1× HWT-HOLD |
+| Zeitfehler `odom→map` im Regler | 0 | 271, ab Minute 10 je 24–51 pro Minute |
+| Anteil Drehbefehle / Vorwärtsbefehle in den Anläufen | 36 % / 21 % (39 % ohne Befehl) | 71 % / 14 % |
+| Anteil Langsam-Zone | 3 % | 42 % |
+| Wartezeit des Explorers | 0 s | 8 s |
+
+**Fahrt 1, die Tür (gemessen):**
+1. Amadeus war nach etwa 140 s in der Tür (Anlauf 4 endete 0,14 m vor der
+   späteren Hilfe-Stelle). Ab 157 s stand er; sieben weitere Anläufe
+   scheiterten nach je 6,5–6,8 s im Planer.
+2. Die Tür ist in der Karte 0,78 m breit (kleinster Abstand der beiden
+   großen Wandgruppen, vom Jetson-Agenten nachgemessen). Rechnerisch bleibt
+   dem Planer mit 0,28 m Radius ein Streifen von 0,22 m.
+3. Die Robotermitte lag 0,25 m von der einen und 0,55 m von der anderen
+   Türseite, also etwa 0,14 m neben der Türmitte und außerhalb des
+   Streifens. In der SLAM-Karte liegt die nächste belegte Zelle an der
+   hinteren rechten Ecke (11 Zellen in der gepolsterten Kontur, 1 in der
+   Kontur ohne Polster).
+4. In der **globalen Kostenkarte** lagen zusätzlich 89 tödliche Zellen in
+   der Kontur (117 mit Polster), die nächste 6 cm von der Mitte; die nächste
+   für den Planer freie Zelle war 0,38 m entfernt. In der SLAM-Karte fehlen
+   diese Zellen. Herkunft offen (die globale Hindernisebene löscht laut
+   Einstellung unter der Kontur).
+5. Die zweite Rückfahrt wurde vom Explorer abgebrochen, 40 ms nachdem das
+   Fahrtor auf „blocked“ ging. Kein Warten und kein HWT-HOLD zu dieser Zeit,
+   keine Logzeile des Explorers. Der Grund steht nirgends.
+6. Karte und globale Kostenkarte laufen mit 1 cm Auflösung.
+
+**Fahrt 2, veraltete Lokalisierung und Neuanläufe (gemessen):**
+1. Bei 12 der 14 Abbrüche steht 0,04–0,29 s vorher „harte Quellenstörung
+   (localization_missing_or_stale); Nav2-Abbruch“. `map→base_link` war dabei
+   1,0–1,7 s alt; der Explorer bricht ab 1,5 s ab, das Fahrtor sperrt ab
+   0,8 s.
+2. Nach 13 der 14 Abbrüche begann der nächste Anlauf 0,2–2,2 s später auf
+   **dasselbe** Ziel. Diese Abbrüche stehen nicht in der Heilungsliste.
+3. Der Rückstand ist `map→odom` von `slam_toolbox`: bis Minute 9 meist unter
+   0,05 s, ab Minute 10 bis 1,3 s (Median 0,68 s). Rechenlast 7 → 64 %.
+4. Die ersten acht Minuten gingen ohne Zeitfehler verloren: Anläufe 3–7 zu
+   Zielen im Raum (2,7–3,5 m von der Tür) endeten mit Zielzeit oder
+   „collision ahead“; ein Anlauf über 1,39 m bestand zu 119 von 150 s aus
+   Drehbefehlen.
+5. Gedreht wurde in den Anläufen im Median mit 0,044 rad/s (2,5°/s).
+
+**Aus dem Code dazu (gelesen, nicht neu gemessen):**
+- `slam_toolbox` stempelt `map→odom` mit der Zeit des zuletzt angenommenen
+  Scans plus 0,2 s. Blockiert die Scanverarbeitung länger, altert die
+  Transformation. Ein Knoten entsteht nach 0,25 m Weg oder 0,35 rad Drehung,
+  auch bei Drehung auf der Stelle; in Fahrt 2 wurden 126 rad gedreht.
+- RPP prüft zuerst die aktuelle Pose (`isCollisionImminent`): Liegt eine
+  tödliche Zelle auf der gepolsterten Kontur, gibt er keinen Befehl aus,
+  auch keine Drehung. Seit KM-1 B (14.11.) löscht die lokale Karte dort
+  nichts mehr.
+- 0,044 rad/s entspricht 0,25 rad/s × 0,3 (Langsam-Zone) × 0,59 (Tempogrenze
+  vor Unbekanntem 0,08 von 0,135 m/s). RPP wendet die Tempogrenze nur auf
+  das Fahrtempo an; wo sie auf die Drehung wirkt, ist nicht geklärt.
+
+**Korrekturen an früheren Aussagen (auch im Abschnitt 15.11. spät):**
+1. **„Schräg (43°) in der Tür“ war nicht gemessen.** 43,3° ist die
+   Blickrichtung in der Karte, deren Achsen vom Startplatz abhängen. Das
+   Werkzeug `karte_engstelle.py` hat in der 1-cm-Karte die Lücke zwischen
+   einer Wand und einzelnen belegten Zellen vermessen (0,20 m, „44°“); diese
+   Zahlen sind keine Türmaße. Der Schrägstand ist offen.
+2. **„In der lokalen Karte lagen tödliche Zellen im Gehäuse hinten rechts“
+   ist nicht belegt.** Die gesicherte lokale Kostenkarte von w1 stammt von
+   28 s vor dem Missionsstart (`ros2 topic echo --once` bekam die
+   zwischengespeicherte Nachricht der Vorprüfung). Für die Stelle hinten
+   rechts sprechen weiter die SLAM-Karte und die globale Kostenkarte.
+3. **Fahrt 2 war kein Türproblem.** Amadeus kam dort nie an die Tür.
+4. **„Die Türdurchfahrt ist real nie bestätigt worden“ (PROJECT_MEMORY,
+   15.11.) war falsch.** In SH-7 (08.11.) fuhr Amadeus in 2 von 3 Fahrten
+   durch die 80-cm-Tür, einmal auch zurück; in der dritten war die Tür in
+   der Karte für den Planer zu schmal (SH-7N Punkt 4).
+
+**Einwand des Projektinhabers (16.11.2026, sinngemäß wörtlich):** „Wir gehen
+gerade in die falsche Richtung. Der Roboter hat in vergangenen Tests den
+Flur erreicht und schafft das jetzt nicht mehr; das ist ein Rückschritt.
+Warum fährt er kreuz und quer? Wir hatten einen Suchmechanismus vereinbart,
+der den Raum kontrolliert abscannt, zu kleine Lücken auslässt und zügig den
+Raum verlässt. 80 oder 85 % sind in Ordnung; entsteht kein Fortschritt mehr,
+darf er nicht immer weiter suchen.“
+
+**Was daran belegt ist:**
+1. **Rückschritt:** 08.11. zwei von drei Fahrten durch die Tür, 15.11. keine
+   von zwei. Erreichte Ziele in 20 min: SH-6 8–10, W-1 Fahrt 2 zwei, obwohl
+   der Antrieb seit dem 15.11. etwa fünfmal schneller fährt.
+2. **Vier Änderungen ohne ganze Fahrt dazwischen:** AW-1 und AW-1b (09.11.),
+   KM-1 B (SH-8b, 14.11.), KM-2 (15.11.), Anfahrzeit 100 ms (15.11.). SH-8,
+   SH-8b und SH-8c waren Stellproben an Mülleimern, Ecke und Garderobe; die
+   ganze Fahrt („Teil B“) entfiel jedes Mal. Regel 1 (eine Änderung je
+   Realtest) war je Test eingehalten, aber keine der vier ist an der Tür
+   oder in einer ganzen Fahrt geprüft. Welche die Tür verschlechtert hat,
+   ist deshalb nicht bekannt.
+3. **Die Tür war schon am 08.11. knapp** (SH-7 Fahrt 3, SH-7N Punkt 4). Das
+   stand als „einmalig“ unter „Geparkt“ und wurde nicht verfolgt.
+4. **Der Suchmechanismus EK-1 war in W-1 aus.** Er ist gebaut und am 14.11.
+   in der Simulation geprüft (A Teilschwenk, B Lücken ab 0,5 m, D Abbruch
+   nach 45 s: 5 statt 13–14 Anläufe, 245–282 s statt 455–742 s). Im
+   Produktprofil ist keiner der Schalter gesetzt
+   (`self_healing_scan_rad`, `self_healing_gap_depth_m`,
+   `self_healing_attempt_stall_s`, alle 0). Er stand unter „Geparkt“ mit der
+   Bedingung „der Antrieb fährt, was befohlen wird“. Diese Bedingung war
+   seit AT-2 (15.11.) erfüllt; W-1 lief trotzdem ohne ihn, weil die
+   Wohnungsfahrt mit KM-2 als einziger Änderung vorgezogen wurde. Dem
+   Projektinhaber wurde das nicht deutlich gesagt.
+5. **Der schnelle Antrieb hat die alte Suche verschärft:** Dieselben
+   Drehbefehle werden jetzt ausgeführt statt zu einem Fünftel; mehr Drehung
+   je Minute bedeutet mehr SLAM-Knoten je Minute und früheren Rückstand.
+
+**Entscheidung des Projektinhabers (16.11.2026):** Der vereinbarte
+Suchmechanismus kommt zuerst. Ein Raum darf bei 80–85 % als erfasst gelten;
+ohne Fortschritt sucht Amadeus dort nicht weiter und geht zum nächsten Raum.
+
+**Was daraus folgt:**
+- Die geplante Türprobe als reine Messung entfällt.
+- **Nächster Realtest: SH-9, EK-1 (A + B + D) einschalten**, zwei Räume
+  (Labor und Flur, übrige Türen zu) wie in SH-7. Das ist die eine Änderung.
+  Mitlesend läuft eine Aufzeichnung für die Tür (lokale Karte an der Kontur
+  bei jedem Halt des Reglers, Karte gegen globale Kostenkarte am Roboter).
+- Vorher: EK-1 in der Simulation auf dem heutigen Stand (KM-1 B, KM-2,
+  Antrieb folgt den Befehlen); die Läufe vom 14.11. rechneten mit dem trägen
+  Antrieb.
+- Die Tür (Planungsstreifen, Verkeilen, Rückfahrt am Pfosten) und der
+  SLAM-Rückstand sind die nächsten Korrekturen, je eine je Realtest; beide
+  stehen unter „Geparkt“ mit Wiederaufnahme nach SH-9.
+- **Neue Regel:** Nach jeder Änderung am Fahr- oder Kartenverhalten folgt
+  vor der nächsten Änderung eine ganze Zwei-Raum-Fahrt durch die Tür.
+
+**Offen:** Schrägstand in der Tür; Herkunft der tödlichen Zellen unter dem
+Roboter in der globalen Kostenkarte; Grund der Fahrtorsperre vor dem
+Abbruch der Rückfahrt; Wackelspitze im Stand in Fahrt 2 (0,31 rad/s, kein
+Fahrbefehl; Christopher wurde dazu nicht befragt); ob Startplatz und
+Richtung in Fahrt 2 dieselben waren (das erste Ziel war praktisch dasselbe).
+
+W-1N [archiviert](archive/20261116-w1n-ausgewertet/README.md).
 
 ## 15.11.2026 (spät) – W-1 ausgewertet: Stellprobe bestanden, die Wohnungsfahrt bleibt im Laborraum
 
@@ -170,7 +330,10 @@ müsste in kurzer Zeit erfasst sein, und dann müsste er zum nächsten fahren.
    (w1) und 181 s (w2). Danach kommt kaum Fläche dazu (w2: 0,9 m² zwischen
    Minute 2 und 10).
 2. **Die Tür wird nicht geschafft.** w1 stand am Ende schräg (43°) in der
-   80-cm-Tür; die Mitte lag in der globalen Karte im Sperrbereich des
+   80-cm-Tür [**Korrektur 16.11.:** 43° ist die Blickrichtung in der Karte,
+   kein gemessener Schrägstand; die tödlichen Zellen „im Gehäuse hinten
+   rechts“ der lokalen Karte stammen aus einer veralteten Datei und sind
+   nicht belegt; siehe Abschnitt 16.11.]; die Mitte lag in der globalen Karte im Sperrbereich des
    Türrahmens (Wert 99, hintere rechte Ecke 100), der Planer meldete achtmal
    „failed to create plan“. In der lokalen Karte lagen tödliche Zellen im
    Gehäuse hinten rechts (Türpfosten).
@@ -223,7 +386,8 @@ neue Messung am Roboter):**
    Amadeus im gesperrten Bereich. Den Grund des Abbruchs nennt der Bericht
    nicht.
 3. **Schrägstand kostet Breite:** Die gepolsterte Kontur (0,46 m × 0,50 m)
-   braucht gerade 0,50 m, bei 43° aber 0,68 m. In einer 80-cm-Tür bleiben
+   braucht gerade 0,50 m, bei 43° aber 0,68 m [**Korrektur 16.11.:** die
+   Rechnung stimmt, der Schrägstand von 43° ist aber nicht gemessen]. In einer 80-cm-Tür bleiben
    dann 6 cm je Seite statt 15 cm.
 4. **13 der 14 Abbrüche in w2 stehen nicht in der Heilungsliste** (12
    Heilungen: 11 Fehlschläge, 1 Zielzeit). Sie liefen also über den Weg

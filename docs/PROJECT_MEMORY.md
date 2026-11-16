@@ -1696,9 +1696,34 @@ wiederkehren können (Abbruch durch Warten zählt nicht als Fehlversuch);
 ob es hier so war, ist zu messen. (5) Aus den Einstellungen folgt, warum
 w1 mit „Hilfe benötigt“ endete: Der globale Planer rechnet mit einem Kreis
 von 0,28 m; in einer 80-cm-Tür bleibt ihm ein Streifen von rund 0,25 m,
-und wer daneben steht, bekommt keinen Weg. Die Türdurchfahrt ist real nie
-bestätigt worden (SH-7), die Simulation schafft dieselbe Türbreite. W-1N
-misst deshalb auch die Tür in der gesicherten Karte.
+und wer daneben steht, bekommt keinen Weg. ~~Die Türdurchfahrt ist real nie
+bestätigt worden (SH-7)~~ **(falsch, Korrektur 16.11.: in SH-7 fuhr Amadeus
+in 2 von 3 Fahrten durch die Tür)**, die Simulation schafft dieselbe
+Türbreite. W-1N misst deshalb auch die Tür in der gesicherten Karte.
+
+**Nachtrag 16.11.2026 – W-1N und der Einwand des Projektinhabers:** W-1N
+(nur lesend) zeigt zwei Ursachen: In Fahrt 1 scheiterten alle 10 Ziele
+hinter der 78-cm-Tür (der Planer lässt dort 22 cm zu, Amadeus stand
+daneben); in Fahrt 2 kam er nie an die Tür, weil 12 von 14 Anläufen wegen
+veralteter Lokalisierung (SLAM-Rückstand bis 1,7 s) abbrachen und 13-mal
+derselbe Anlauf neu begann. Der Projektinhaber wandte ein: Am 08.11. kam
+Amadeus durch die Tür, jetzt nicht mehr; und der vereinbarte Suchmechanismus
+sei nicht zu sehen gewesen. Beides stimmt. Lehren: (1) **Stellproben
+ersetzen keine ganze Fahrt.** Seit SH-7 kamen vier Änderungen (AW-1, KM-1 B,
+KM-2, Antrieb 100 ms), jede einzeln an Mülleimern und Ecke geprüft, keine an
+der Tür; die ganze Fahrt entfiel dreimal. Jetzt lässt sich der Rückschritt
+keiner Änderung zuordnen. Neue Regel: nach jeder Änderung am Fahr- oder
+Kartenverhalten eine ganze Zwei-Raum-Fahrt durch die Tür, bevor die nächste
+kommt. (2) **Geparktes hat eine Wiederaufnahmebedingung, die geprüft werden
+muss.** EK-1 (Suchmechanismus) war geparkt, „bis der Antrieb fährt, was
+befohlen wird“; das war seit AT-2 erfüllt, W-1 lief trotzdem ohne ihn. Die
+knappe Tür aus SH-7N stand als „einmalig“ geparkt. (3) **Dem Projektinhaber
+ausdrücklich sagen, was in einem Test nicht eingeschaltet ist**, nicht nur
+im Plan vermerken. (4) Eigene Lesarten als solche führen: „43° schräg“ war
+die Blickrichtung in der Karte, kein Messwert, und eine der Stützen stammte
+aus einer veralteten Datei; beides hat der Jetson-Agent aufgedeckt.
+(5) Entscheidung: zuerst EK-1 als SH-9; ein Raum gilt bei 80–85 % als
+erfasst, ohne Fortschritt geht es zum nächsten.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

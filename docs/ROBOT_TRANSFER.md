@@ -291,6 +291,15 @@ nicht angefasst (fremde Änderungen dort unverändert), ältere Releases und
 Codex-Referenz unverändert, kein Autostart. Aktiver Auftrag danach: W-1N
 (nur lesend).
 
+Nachtrag 16.11.2026, tatsächliche Jetson-Wirkung W-1N: **nur gelesen**, kein
+Stackstart, keine Fahrt, kein Build. Der Klon
+`~/roboter_worktrees/selbstheilung-v2` wurde per Fast-forward von `d6a0416`
+auf `fcef2cc` gebracht (10 Dateien, Werkzeuge und Dokumente). Lokal neu nur
+Dateien unter `$SH_PR/w1n/` (Ausgaben der Werkzeuge, drei eigene Leseskripte
+des Agenten). `SH_REL` zeigt weiter auf `selbstheilung-w1-20261115_1801`.
+`~/roboter_ws`, Releases, Kalibrierung und Autostart unverändert; danach
+keine Amadeus-Knoten aktiv. Kein aktiver Auftrag (SH-9 in Vorbereitung).
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit
