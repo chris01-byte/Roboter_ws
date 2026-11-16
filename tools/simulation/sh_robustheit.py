@@ -568,7 +568,9 @@ def main(argv=None):
 
         def on_odom(self, m):
             x, y, t = m.pose.pose.position.x, m.pose.pose.position.y, time.monotonic()
-            protokoll.odom(x, y, t)
+            q = m.pose.pose.orientation
+            gier = math.atan2(2*(q.w*q.z + q.x*q.y), 1 - 2*(q.y*q.y + q.z*q.z))
+            protokoll.odom(x, y, t, gier)
             # Stellprobe wie am Roboter (MASTERPLAN §9 Regel 6), nur mit Manifestwert.
             protokoll.stellprobe(x, y, t, stellprobe_m)
 
@@ -581,6 +583,9 @@ def main(argv=None):
             i = msg.info
             self.lokal = (np.asarray(msg.data, dtype=np.int16).reshape(i.height, i.width),
                           i.resolution, i.origin.position.x, i.origin.position.y)
+            # Nahbild wie am Roboter (Fahrtprotokoll Schema 3, 16.11.2026).
+            protokoll.lokale_karte(msg.data, i.width, i.height, i.resolution,
+                                   (i.origin.position.x, i.origin.position.y), time.monotonic())
 
         def on_plan(self, msg):
             # Karte ~ Odometrie ~ Startpose; SLAM-Drift (wenige cm) bleibt als Fehler.

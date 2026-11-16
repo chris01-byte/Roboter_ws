@@ -277,13 +277,39 @@ def zeitversatz(anlaeufe, ereignisse):
     return None, 'keine Zuordnung'
 
 
-def abbruchgrund(anlauf, warten, hwt, versatz):
-    """Grund für „Goal canceled“: Wartephase oder HWT-Zustand, der dabei begann."""
+def heilungen_mit_grund(ereignisse, protokoll):
+    """Zeit (Protokoll) und Grund jeder Heilung: Zählerstand gegen den Heilungsverlauf."""
+    verlauf = protokoll.get('heilungsverlauf') or []
+    zaehler = [e['heals'] for e in ereignisse
+               if e.get('art') == 'selbstheilung' and isinstance(e.get('heals'), int)]
+    # Der Explorer behält nur die letzten 40 Einträge; ältere Heilungen bleiben ohne Grund.
+    fehlend = max(0, (max(zaehler) if zaehler else 0) - len(verlauf))
+    heilungen, bisher = [], None
+    for e in ereignisse:
+        n = e.get('heals') if e.get('art') == 'selbstheilung' else None
+        if not isinstance(n, int):
+            continue
+        if bisher is not None and n > bisher:
+            for nummer in range(bisher + 1, n + 1):
+                stelle = nummer - 1 - fehlend
+                eintrag = verlauf[stelle] if 0 <= stelle < len(verlauf) else {}
+                heilungen.append((e['t_s'], eintrag.get('reason')))
+        bisher = n
+    return heilungen
+
+
+def abbruchgrund(anlauf, warten, hwt, versatz, heilungen=()):
+    """Grund für „Goal canceled“: Zielzeit, EK-1 D, Wartephase oder HWT-Zustand."""
     if anlauf['dauer_s'] is not None and anlauf['dauer_s'] >= ZEITGRENZE_S:
         return 'zielzeit_abgelaufen'
     if versatz is None:
         return 'nicht_zuordenbar'
     t = anlauf['ende'] - versatz
+    for t_heilung, grund in heilungen:
+        # EK-1 D: Der Explorer bricht nach 45 s ohne Weggewinn selbst ab und
+        # verbucht das als Fehlversuch (das Protokoll sieht es bis 2 s später).
+        if grund == 'nav_no_progress' and -FENSTER_NACH_S <= t - t_heilung <= 2.0:
+            return 'kein_weggewinn'
     for beginn, _, grund in warten:
         if -FENSTER_VOR_S <= beginn - t <= FENSTER_NACH_S:
             return f'warten:{grund}'
@@ -490,10 +516,11 @@ def auswerten(log_text, protokoll, tuer=None):
     abbrueche = Counter()
     faelle = []
     gruende = {}
+    heilungen = heilungen_mit_grund(ereignisse, protokoll)
     for nummer, a in enumerate(anlaeufe, 1):
         if a['ausgang'] != 'abgebrochen':
             continue
-        grund = abbruchgrund(a, warten, hwt, versatz)
+        grund = abbruchgrund(a, warten, hwt, versatz, heilungen)
         gruende[nummer] = grund
         abbrueche[grund] += 1
         faelle.append(dict(ende_s=round(a['ende'] - (beginn_log or 0.0), 1),

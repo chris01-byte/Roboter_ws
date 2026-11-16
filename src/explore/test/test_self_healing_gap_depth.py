@@ -6,7 +6,7 @@ Eigene Datei, damit die gezielte Testliste des laufenden Auftrags SH-8b
 import numpy as np
 
 from explore.self_healing import (
-    deep_unknown_mask, frontier_cells_remaining, frontier_goals)
+    deep_reach_mask, deep_unknown_mask, frontier_cells_remaining, frontier_goals)
 
 RES = 0.01
 
@@ -82,3 +82,68 @@ def test_fully_known_or_tiny_maps_do_not_crash():
     assert not deep_unknown_mask(np.zeros((5, 5), dtype=np.int16), RES, 0.25).any()
     assert deep_unknown_mask(np.zeros((0, 0), dtype=np.int16), RES, 0.25) is None
     assert deep_unknown_mask(np.full((3, 3), -1, dtype=np.int16), RES, 0.25).all()
+
+
+def _raum_mit_ausgefranster_tuer():
+    """Tür 0,80 m in der rechten Wand; dahinter ein ausgefranster Strahlenkamm.
+
+    Wie in der echten 1-cm-Karte am Rand eines Sichtschattens: Hinter der
+    Öffnung liegen einzelne Strahlen frei (jede zweite Zeile), unterschiedlich
+    weit (2 bis 10 cm), dazwischen bleibt es unbekannt. Nur wenige Strahlen
+    reichen bis an das tiefe Unbekannte.
+    """
+    grid = _raum()
+    grid[110:190, 420:422] = 0                        # Türöffnung, frei gesehen
+    for nummer, zeile in enumerate(range(110, 190, 2)):
+        grid[zeile, 422:422 + 2 + (nummer*7) % 9] = 0  # Strahl, 2 bis 10 cm lang
+    return grid
+
+
+def test_ragged_edge_in_front_of_deep_unknown_still_counts_as_a_door():
+    """Simulation 16.11.2026: Fahrt „vollständig“ mit halbem Flur, weil die Tür durchfiel."""
+    grid = _raum_mit_ausgefranster_tuer()
+    deep = deep_unknown_mask(grid, RES, 0.25)
+    # Streng: Nur die längsten Strahlen berühren das tiefe Unbekannte; das reicht nicht.
+    assert frontier_cells_remaining(grid, 30, deep=deep) == 0
+    assert frontier_goals(grid, RES, _welt, (1.0, 1.5), min_size_cells=30, deep=deep) == []
+    # Mit Rand 5 cm durch Unbekanntes: Die Tür zählt wieder.
+    nah = deep_reach_mask(grid, deep, RES, 0.05)
+    assert nah.dtype == bool and nah.shape == grid.shape and (nah | ~deep).all()
+    assert not nah[grid >= 0].any()                   # wächst nur durch unbekannte Zellen
+    assert frontier_cells_remaining(grid, 30, deep=nah) == 1
+    (ziel,) = frontier_goals(grid, RES, _welt, (1.0, 1.5), min_size_cells=30, deep=nah)
+    assert ziel.frontier_xy[0] > 4.2 and 1.1 <= ziel.frontier_xy[1] <= 1.9
+    # Eine durchgehend frei gesehene Linie trennt: Dahinter beginnt eine neue Frontier,
+    # der Rand davor zählt nicht mehr zum tiefen Unbekannten.
+    getrennt = _raum_mit_ausgefranster_tuer()
+    getrennt[:, 436] = 0
+    tief = deep_unknown_mask(getrennt, RES, 0.25)
+    nah = deep_reach_mask(getrennt, tief, RES, 0.05)
+    assert tief[150, 438] and nah[150, 438] and not nah[150, 434]
+
+
+def test_reach_does_not_bring_back_strips_wedges_or_wall_holes():
+    grid = _raum()
+    grid[110:190, 420:422] = -1                       # Tür 0,80 m in der rechten Wand
+    grid[60:62, 18:20] = -1                           # 2-cm-Loch in der linken Wand
+    grid[200:204, 100:300] = -1                       # 4 cm breiter Schattenkeil, 2 m lang
+    grid[20:22, 150:300] = -1                         # 2-cm-Streifen vor der unteren Wand
+    deep = deep_unknown_mask(grid, RES, 0.25)
+    nah = deep_reach_mask(grid, deep, RES, 0.05)
+    # Der Streifen liegt 2 cm vor der Wand, das Unbekannte 2 cm dahinter: durch die
+    # belegte Wand wächst die Maske nicht.
+    assert not nah[21, 200] and not nah[202, 200]
+    tiefe = frontier_goals(grid, RES, _welt, (1.0, 1.5), min_size_cells=30, deep=nah)
+    assert len(tiefe) == 1 and abs(tiefe[0].frontier_xy[0] - 4.195) < 0.02
+    assert frontier_cells_remaining(grid, 30, deep=nah) == 1
+    # Das Loch zählt weiter nur mit seiner eigenen Breite (2 Zellen).
+    assert frontier_cells_remaining(grid, 3, deep=nah) == 1
+    assert frontier_cells_remaining(grid, 2, deep=nah) == 2
+
+
+def test_reach_zero_or_missing_mask_changes_nothing():
+    grid = _raum_mit_ausgefranster_tuer()
+    deep = deep_unknown_mask(grid, RES, 0.25)
+    assert deep_reach_mask(grid, deep, RES, 0.0) is deep
+    assert deep_reach_mask(grid, deep, RES, 0.004) is deep       # unter einer halben Zelle
+    assert deep_reach_mask(grid, None, RES, 0.05) is None

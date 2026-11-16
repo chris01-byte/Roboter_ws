@@ -457,6 +457,8 @@ class LaufProtokoll:
             'endzustand': {k: sh.get(k) for k in (
                 'state', 'outcome', 'reason', 'goals_reached', 'heals',
                 'deferred_goals', 'track_backs', 'look_arounds')},
+            # EK-1 (ab 16.11.2026): Schwenks, ausgelassene schmale Lücken, Ziele ohne Kartengewinn.
+            'suche': {k: sh.get(k) for k in ('scans', 'shallow_frontiers', 'visited_without_gain')},
             'heilungsverlauf': (sh.get('ladder') or {}).get('history'),
             'karte_speicherbar': (self.explore_status or {}).get('map_ready_to_save'),
             'hwt_endzustand': self.hwt_zustand,

@@ -28,7 +28,7 @@ from robot_interfaces.action import ExploreArea
 from .action_client import SerializedActionClient as ActionClient
 from .self_healing import (
     FATAL, WAIT, classify, HealingLadder, RETRY, LOOK_AROUND, TRACK_BACK,
-    REQUEST_HELP, TrackRecorder, deep_unknown_mask, frontier_goals,
+    REQUEST_HELP, TrackRecorder, deep_reach_mask, deep_unknown_mask, frontier_goals,
     frontier_cells_remaining, obstacle_clearance, reachable_goal_mask, rotation_clear,
     unknown_ahead_fraction)
 
@@ -111,6 +111,12 @@ class SelfHealingRuntime:
         # Schattenkeile und Strahllücken werden nicht angefahren und halten das
         # Ende nicht auf (SH-8: 14 von 26 Zielen näher als 0,5 m). 0 = aus.
         self._self_healing_gap_depth_m = number('self_healing_gap_depth_m', 0., 0., 1.)
+        # Rand vor dem tiefen Unbekannten (16.11.2026): so weit darf ein
+        # ausgefranster Rand aus unbekannten Zellen zwischen Freiem und tiefem
+        # Unbekanntem liegen. Ohne ihn fiel in der 1-cm-Karte auch die Tür zum
+        # Nachbarraum durch den Filter (Fahrt „vollständig“ mit halbem Flur).
+        # 0 = strenge Nachbarschaft wie am 14.11.2026.
+        self._self_healing_gap_reach_m = number('self_healing_gap_reach_m', .05, 0., .2)
         # „Nicht vom Fleck gekommen“: weniger als stuck_move_m seit Beginn des
         # Versuchs; dann kommt die Spur-Rückfahrt sofort (Entscheidung 04.11.2026).
         self._self_healing_stuck_move_m = number('self_healing_stuck_move_m', .05, .01, .3)
@@ -492,6 +498,8 @@ class SelfHealingRuntime:
                                  goal_shift_max_m=self._self_healing_goal_shift_max_m)
             gap_depth = getattr(self, '_self_healing_gap_depth_m', 0.)
             deep = deep_unknown_mask(occupancy, info.resolution, gap_depth)
+            deep = deep_reach_mask(occupancy, deep, info.resolution,
+                                   getattr(self, '_self_healing_gap_reach_m', .05))
             if deep is not None:
                 selection.update(deep=deep)
                 status['shallow_frontiers'] = max(

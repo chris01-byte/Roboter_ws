@@ -113,6 +113,35 @@ explore_node:
     self_healing_stuck_move_m: 0.05
     self_healing_backup_action: backup
 
+    # EK-1 "Erkundung zielgerichtet, Teil 1" eingeschaltet (Entscheidung
+    # Projektinhaber 16.11.2026; Fahrplan MASTERPLAN §9 Schritt 2, SH-9). Bis
+    # dahin stand keiner dieser Werte im Profil (Code-Standard 0 = aus); die
+    # Wohnungsfahrt W-1 vom 15.11.2026 lief ohne sie.
+    # A Teilschwenk: am Start und nach einem erreichten Ziel, das mindestens
+    #   2,5 m von allen frueheren Schwenks entfernt liegt, dreht Amadeus sich um
+    #   90 Grad. Der Mast verdeckt einen Teil des LiDAR; ohne Drehung bleibt
+    #   dort eine Luecke in der Karte. Nur bei nachweislich freiem Drehkreis.
+    # B Nur Luecken, in die Amadeus passt: Eine Frontier zaehlt nur an
+    #   Unbekanntem, das mindestens 0,5 m breit ist (2 x 0,25 m). Schmale
+    #   Schattenkeile, Strahlluecken und Streifen vor Waenden werden nicht
+    #   angefahren und halten das Ende nicht auf. Zwischen Freiem und diesem
+    #   Unbekannten darf ein bis zu 5 cm breiter ausgefranster Rand liegen
+    #   (gap_reach_m; Korrektur 16.11.2026: ohne ihn fiel in der 1-cm-Karte
+    #   auch die Tuer zum Nachbarraum durch den Filter, und die Fahrt endete
+    #   als "vollstaendig" mit halbem Flur).
+    # D Kuerzere Fehlversuche: Kommt Amadeus in 45 s nicht mindestens 0,25 m
+    #   von der Stelle, endet der Anlauf als Fehlversuch (Heilungsleiter)
+    #   statt nach 150 s.
+    # Simulation 14.11.2026 (traeger Antrieb): 5 statt 13-14 Anlaeufe, 245-282 s
+    # statt 455-742 s. Simulation 16.11.2026 (Antrieb folgt den Befehlen):
+    # siehe STATUS. Ohne C (Zeitfenster "gut genug"): das Ende ergibt sich
+    # geometrisch. Rueckfall: diese fuenf Zeilen entfernen.
+    self_healing_scan_rad: 1.5708
+    self_healing_scan_spacing_m: 2.5
+    self_healing_gap_depth_m: 0.25
+    self_healing_gap_reach_m: 0.05
+    self_healing_attempt_stall_s: 45.0
+
     # Entscheidung Projektinhaber 15.10.2026: solange der Korridor vor dem
     # Roboter (1,0 m lang, 0,5 m breit) zu mehr als 2 % nicht kartiert ist,
     # faehrt RPP absolut langsamer (nav2 speed_limit; 0,06 m/s bis 05.11.2026,

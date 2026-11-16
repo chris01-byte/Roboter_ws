@@ -362,3 +362,15 @@ def test_near_pictures_are_taken_once_a_second_only_while_driving():
     assert s['schema_version'] == 3
     ohne = LaufProtokoll(0.0)
     assert ohne.zusammenfassung()['nahbild'] is None
+
+
+def test_search_counters_of_ek1_are_kept_in_the_summary():
+    p = LaufProtokoll(0.0)
+    p.explore(_sh('running', scans=0, shallow_frontiers=0), 1.0)
+    p.explore(_sh('success', goals=3, outcome='exploration_complete', reason='exploration_complete',
+                  scans=2, shallow_frontiers=41, visited_without_gain=1), 60.0)
+    assert p.zusammenfassung()['suche'] == dict(scans=2, shallow_frontiers=41, visited_without_gain=1)
+    alt = LaufProtokoll(0.0)
+    alt.explore(_sh('running'), 1.0)
+    assert alt.zusammenfassung()['suche'] == dict(scans=None, shallow_frontiers=None,
+                                                  visited_without_gain=None)

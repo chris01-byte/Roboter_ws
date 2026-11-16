@@ -207,6 +207,13 @@ Selbstheilungslinie mit Arbeitsregeln, Schritten und Paketen.
 10.11.2026, Nachtrag (Nutzerentscheidung nach Standortbestimmung): §9 Regeln
 6 (gezielte Probe vor langer Fahrt) und 7 (ein Problem zur Zeit), Schritt 1
 mit Stellprobe.
+14.11.2026, Nachtrag: §9 Regel 7 (nächster Schritt darf in der Simulation
+vorbereitet werden). 15.11.2026, Nachtrag: Wohnung vorgezogen, zuerst als
+Messfahrt W-1.
+16.11.2026, Nachtrag (Nutzerentscheidung nach W-1N): zuerst der
+Suchmechanismus EK-1 als SH-9, Fahrbereich Labor, Flur und Schlafzimmer;
+Produktvorgabe 80–85 % je Raum; Arbeitsregel 8 (nach jeder Änderung eine
+ganze Fahrt durch eine Tür).
 
 ## 9. Fahrplan der Selbstheilungslinie (Nutzerentscheidung 09.11.2026)
 
@@ -287,6 +294,37 @@ zieht deshalb **Schritt 4 (Wohnung) vor**:
   festgelegt** (drei Läufe, alle zugänglichen Räume, Karte mindestens 90 %,
   kein Kontakt). W-1 ist dafür keine Wertung.
 
+**Nachtrag (Nutzerentscheidung 16.11.2026): zuerst der Suchmechanismus;
+nach jeder Änderung eine ganze Fahrt.** W-1 kam zweimal nicht aus dem
+Laborraum (W-1N: in Fahrt 1 scheiterte die Tür, in Fahrt 2 brachen die
+Anläufe wegen veralteter Lokalisierung ab und begannen neu). Der
+Projektinhaber stellte fest: Am 08.11. gelang die Tür, jetzt nicht mehr; und
+der vereinbarte Suchmechanismus war nicht zu sehen. Beides trifft zu; EK-1
+war in W-1 ausgeschaltet.
+
+- **Nächster Realtest ist SH-9 = Schritt 2:** EK-1 einschalten (A
+  Teilschwenk, B nur Lücken ab 0,5 m, D Abbruch nach 45 s ohne Weggewinn).
+  Das ist die eine Verhaltensänderung.
+- **Fahrbereich für SH-9, vom Projektinhaber am 16.11.2026 freigegeben:**
+  Laborraum, Flur und Schlafzimmer; Bad, Küche und Wohnzimmer zu; begleitet
+  mit der Hand am Not-Aus; zwei Fahrten von höchstens 20 Minuten. Der
+  dritte Raum ist nötig, damit Amadeus den Laborraum verlassen muss. Die
+  Freigabe gilt für SH-9, nicht allgemein.
+- **Produktvorgabe des Projektinhabers:** Ein Raum darf bei 80–85 % als
+  erfasst gelten. Entsteht kein Fortschritt mehr, sucht Amadeus dort nicht
+  weiter und fährt zum nächsten Raum.
+- **Arbeitsregel 8 (aus dem Einwand vom 16.11., gilt bis auf Widerruf des
+  Projektinhabers): Nach jeder Änderung am Fahr- oder Kartenverhalten folgt
+  vor der nächsten Änderung eine ganze Fahrt durch mindestens eine Tür.**
+  Eine Stellprobe (Regel 6) prüft eine Lage, nicht das Ganze. Grund:
+  Zwischen SH-7 (08.11.) und W-1 (15.11.) kamen AW-1, KM-1 B, KM-2 und die
+  Anfahrzeit 100 ms nur mit Stellproben auf den Roboter; der Rückschritt an
+  der Tür lässt sich keiner davon zuordnen.
+- **Danach, je eine Änderung je Realtest:** die Türdurchfahrt
+  (Planungsstreifen von 22 cm in der 78-cm-Tür, Verkeilen, Rückfahrt am
+  Pfosten), dann der Rückstand der Positionsbestimmung bei langen Fahrten,
+  dann die Wohnung erneut als Messfahrt.
+
 ### 9.3 Pakete
 
 - **AW-1 „Abstand halten und wegkommen“** (`19c8cb9`, Entscheidung
@@ -300,11 +338,15 @@ zieht deshalb **Schritt 4 (Wohnung) vor**:
   Rückfahrkontur. Vor einem Einsatz am Roboter im Stand zu messen: Eigenechos
   (Mast im LiDAR-Sichtfeld).
 - **EK-1 „Erkundung zielgerichtet, Teil 1“** (Ideen A, C, D vom
-  09.11.2026): A Rundblick am Start (360° in Segmenten, wegen des Masts
-  nötig) und nach dem Betreten eines neuen Bereichs; C „gut genug“-Ende,
-  wenn die bekannte Fläche über einige Minuten oder Ziele kaum noch wächst;
-  D kürzere Fehlversuche (Abbruch ohne Annäherung nach etwa 45 s statt
-  150 s, schwer erreichbare Lücken nur einmal).
+  09.11.2026, B vom 14.11.2026; **seit 16.11.2026 im Produktprofil
+  eingeschaltet als A + B + D**): A Teilschwenk um 90° am Start und nach
+  einem erreichten Ziel mindestens 2,5 m vom letzten Schwenk (wegen des
+  Masts nötig); B nur Lücken, hinter denen mindestens 0,5 m Unbekanntes
+  liegt (schmale Schattenkeile und Streifen vor Wänden zählen nicht und
+  halten das Ende nicht auf); D kürzere Fehlversuche (Abbruch nach 45 s
+  ohne 0,25 m Weggewinn statt nach 150 s). C („gut genug“-Ende über ein
+  Zeitfenster) ist gebaut und bleibt aus; mit B ergibt sich das Ende
+  geometrisch.
 - **EK-2 „Erkundung zielgerichtet, Teil 2“** (Idee B): Ziele nach erwartetem
   Nutzen (unbekannte Fläche, die von dort sichtbar würde) statt nach Nähe;
   kleine eingeschlossene Lücken ignorieren.

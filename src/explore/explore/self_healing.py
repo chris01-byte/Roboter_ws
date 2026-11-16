@@ -19,7 +19,7 @@ import math
 from typing import Callable, List, Optional, Sequence, Tuple
 
 import numpy as np
-from scipy.ndimage import distance_transform_edt, label
+from scipy.ndimage import binary_dilation, distance_transform_edt, label
 
 FATAL = 'fatal'
 HELP = 'help'
@@ -305,6 +305,34 @@ def deep_unknown_mask(occupancy: np.ndarray, resolution: float,
     kern = distance_transform_edt(unknown) >= radius
     offen = (distance_transform_edt(~kern) <= radius) & unknown
     return offen[pad:-pad, pad:-pad]
+
+
+def deep_reach_mask(occupancy: np.ndarray, deep: Optional[np.ndarray], resolution: float,
+                    reach_m: float) -> Optional[np.ndarray]:
+    """Tiefes Unbekanntes samt dem ausgefransten Rand davor.
+
+    Korrektur zu EK-1 Teil B (16.11.2026, Simulation vor SH-9): In der
+    1-cm-Karte grenzt Freies selten unmittelbar an tiefes Unbekanntes. Am
+    Rand eines Sichtschattens (Türpfosten) liegen einzelne Strahlen frei und
+    dazwischen schmale unbekannte Streifen; die Frontier-Zellen lagen im
+    Median 5-9 cm vor dem tiefen Unbekannten. Mit der strengen Nachbarschaft
+    fiel deshalb auch die Tür zum Nachbarraum durch den Filter, und die Fahrt
+    endete als „vollständig“, obwohl der Flur zu 53 % und ein drittes Zimmer
+    zu 67 % erfasst waren.
+
+    Das tiefe Unbekannte wächst hier um ``reach_m``, aber **nur durch
+    unbekannte Zellen**. Ein Streifen vor einer Wand bleibt draußen (die Wand
+    trennt ihn vom Unbekannten dahinter), ebenso ein Schattenkeil mitten im
+    Raum; ein Loch in einer Wand zählt weiter nur mit seiner eigenen Breite.
+    ``reach_m <= 0`` lässt die Maske unverändert (strenge Nachbarschaft).
+    """
+    if deep is None:
+        return None
+    schritte = int(round(reach_m/resolution)) if reach_m > 0 and resolution > 0 else 0
+    if schritte < 1:
+        return deep
+    return binary_dilation(np.asarray(deep, dtype=bool), iterations=schritte,
+                           mask=np.asarray(occupancy) < 0)
 
 
 def _an_tiefem(free: np.ndarray, deep: np.ndarray) -> np.ndarray:

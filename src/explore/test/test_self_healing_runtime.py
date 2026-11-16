@@ -48,6 +48,14 @@ def test_profile_starts_real_node_with_self_healing_owner():
         assert node._self_healing_unknown_speed == pytest.approx(.08)
         assert node._initial_scan_speed == pytest.approx(.10)
         assert node._self_healing_speed_pub.topic_name == '/speed_limit'
+        # Entscheidung 16.11.2026 (SH-9): EK-1 A, B und D eingeschaltet, C bleibt aus.
+        assert node._self_healing_scan_rad == pytest.approx(math.pi/2, abs=1e-4)
+        assert node._self_healing_scan_spacing_m == pytest.approx(2.5)
+        assert node._self_healing_gap_depth_m == pytest.approx(.25)
+        assert node._self_healing_gap_reach_m == pytest.approx(.05)
+        assert node._self_healing_attempt_stall_s == pytest.approx(45.)
+        assert node._self_healing_attempt_stall_m == pytest.approx(.25)
+        assert node._self_healing_saturation_window_s == 0.
         node._status_phase = node._status_message = 'idle'
         published = []
         node._status_pub = SimpleNamespace(publish=lambda m: published.append(m.data))
@@ -602,6 +610,24 @@ def test_ek1_stalled_attempt_is_cut_after_stall_time(monkeypatch):
     assert history and all(h['reason'] == 'nav_no_progress' for h in history)
     # Jeder Anlauf endet nach rund 45 s statt nach 150 s.
     assert all(b-a < 60. for a, b in zip(starts, starts[1:3]))
+
+
+def test_ek1_is_switched_on_in_the_profile_with_the_simulated_values():
+    """SH-9 (16.11.2026): genau fünf Zeilen im Profil; Rückfall = diese Zeilen entfernen."""
+    import yaml
+    profil = yaml.safe_load((CONFIG/'self_healing_params.yaml').read_text(encoding='utf-8'))
+    werte = profil['explore_node']['ros__parameters']
+    ek1 = {k: v for k, v in werte.items() if k in (
+        'self_healing_scan_rad', 'self_healing_scan_spacing_m', 'self_healing_gap_depth_m',
+        'self_healing_gap_reach_m', 'self_healing_attempt_stall_s', 'self_healing_attempt_stall_m',
+        'self_healing_saturation_window_s', 'self_healing_saturation_growth',
+        'self_healing_saturation_big_frontier_m')}
+    assert ek1 == dict(self_healing_scan_rad=1.5708, self_healing_scan_spacing_m=2.5,
+                       self_healing_gap_depth_m=0.25, self_healing_gap_reach_m=0.05,
+                       self_healing_attempt_stall_s=45.0)
+    experiment = yaml.safe_load((Path(__file__).resolve().parents[3]/'tools'/'simulation'
+                                 / 'experimente'/'ek1_abd.yaml').read_text(encoding='utf-8'))
+    assert experiment['sh_treiber']['explorer_parameter'] == ek1     # wie simuliert
 
 
 def test_ek1_parts_are_off_by_default(monkeypatch):

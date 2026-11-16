@@ -165,6 +165,30 @@ def test_controller_stops_are_shown_with_the_near_picture_and_narrow_places_are_
     assert 'keine Daten' in ab.text(alt) and 'kein Nahbild in der Nähe' in ab.text(alt)
 
 
+def test_a_cancel_after_45_s_without_progress_is_named_as_such():
+    """EK-1 D (SH-9): Der Explorer bricht selbst ab und verbucht einen Fehlversuch."""
+    log, protokoll = _fahrt()
+    sh = lambda t, goals, heals: dict(
+        t_s=t, art='selbstheilung', state='running', outcome='in_progress', reason=None,
+        waiting_for=None, goals_reached=goals, heals=heals, deferred_goals=0, track_backs=0,
+        look_arounds=0)
+    # Abbruch im Log bei 300 s = 310 s Protokoll; die Heilung erscheint dort bei 311 s.
+    protokoll['ereignisse'] = [e for e in protokoll['ereignisse'] if e['t_s'] < 311.0] + [
+        sh(300.0, 1, 0), sh(311.0, 1, 1), sh(320.0, 1, 2)]
+    protokoll['heilungsverlauf'] = [dict(at=1.0, reason='nav_no_progress', action='retry'),
+                                    dict(at=9.0, reason='nav_aborted', action='defer')]
+    e = ab.auswerten(log, protokoll)
+    assert e['abbruchgruende']['kein_weggewinn'] == 1
+    assert 'kein_warten_im_fenster' not in e['abbruchgruende']
+    assert e['anlaeufe'][-1]['grund'] == 'kein_weggewinn'
+    assert ab.heilungen_mit_grund(ab.ereignisse_aus(protokoll)[0], protokoll) == [
+        (311.0, 'nav_no_progress'), (320.0, 'nav_aborted')]
+    # Der Explorer behält nur die letzten Einträge: ältere Heilungen bleiben ohne Grund.
+    protokoll['heilungsverlauf'] = protokoll['heilungsverlauf'][1:]
+    assert ab.heilungen_mit_grund(ab.ereignisse_aus(protokoll)[0], protokoll) == [
+        (311.0, None), (320.0, 'nav_aborted')]
+
+
 def test_cancellations_are_attributed_to_what_the_explorer_waited_for():
     log, protokoll = _fahrt()
     e = ab.auswerten(log, protokoll)
