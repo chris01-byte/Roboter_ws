@@ -156,3 +156,88 @@ def test_output_has_no_map_coordinates_and_the_tool_only_reads(tmp_path, capsys)
     for verboten in ('rclpy', 'subprocess', 'socket', 'create_publisher', 'os.remove', 'unlink'):
         assert verboten not in quelle
     assert quelle.count("open(") == 2 and quelle.count("'w'") == 1   # eine Eingabe, ein lokales JSON
+
+
+def _feinkarte(tmp_path, einzelzellen=()):
+    """1-cm-Karte 3 m x 3 m: Wand bei i = 150, Tür 78 Zellen (j 111..188), dazu Einzelzellen."""
+    n = 300
+    pixel = bytearray()
+    for zeile in range(n):
+        j = n - 1 - zeile
+        for i in range(n):
+            belegt = (i == 150 and not 111 <= j <= 188) or (i, j) in einzelzellen
+            pixel.append(0 if belegt else 254)
+    (tmp_path/'fein.pgm').write_bytes(b'P5\n%d %d\n255\n' % (n, n) + bytes(pixel))
+    (tmp_path/'fein.yaml').write_text(
+        'image: fein.pgm\nmode: trinary\nresolution: 0.01\norigin: [-1.5, -1.5, 0]\n'
+        'negate: 0\noccupied_thresh: 0.65\nfree_thresh: 0.25\n', encoding='utf-8')
+    return tmp_path/'fein.yaml'
+
+
+def test_single_cells_in_a_fine_map_do_not_replace_the_door_posts(tmp_path):
+    """W-1N: 0,20 m zwischen Wand und Einzelzelle gemessen, die Tür war 0,78 m breit."""
+    # Eine Einzelzelle und ein Grüppchen aus vier Zellen in der Durchfahrt, 0,20 m vom Pfosten.
+    einzel = {(150, 131), (152, 131), (153, 131), (152, 132), (153, 132)}
+    gitter = ke.karte_laden(_feinkarte(tmp_path, einzel))
+    punkt = gitter.mitte(150, 120)                              # zwischen Pfosten und Einzelzelle
+    e = ke.auswerten(gitter, punkt)
+    g = e['engstelle']
+    assert g['lichte_weite_m'] == 0.78 and g['zellmitten_m'] == 0.79
+    assert min(g['gruppen']) >= 10                              # nur tragende Gruppen
+    assert g['rechnerisch_frei_m'] == 0.23 and g['frei_m'] <= 0.02  # Einzelzellen sperren den Streifen
+    assert e['tragende_gruppen'] == 2 and e['einzelzellen_gruppen'] == 2
+    assert e['einzelzellen_naechste_m'] == pytest.approx(0.11, abs=0.006)
+    m = e['engstelle_mit_einzelzellen']
+    assert m['lichte_weite_m'] == 0.2 and sorted(m['gruppen'])[0] == 1
+    ausgabe = ke.text(e)
+    assert 'zwischen tragenden Gruppen' in ausgabe and 'Mit Einzelzellen ist die Stelle enger: 0.2 m' in ausgabe
+    # Ohne Einzelzellen: gleiche Tür, kein Zusatz, der Streifen ist frei.
+    sauber = ke.auswerten(ke.karte_laden(_feinkarte(tmp_path)), punkt)
+    assert sauber['engstelle']['lichte_weite_m'] == 0.78
+    assert sauber['engstelle_mit_einzelzellen'] is None and sauber['einzelzellen_gruppen'] == 0
+    assert sauber['engstelle']['frei_m'] == pytest.approx(0.22, abs=0.02)
+    assert ke.tragend([(0, 0)]*10, 0.01) and not ke.tragend([(0, 0)]*9, 0.01)
+    assert ke.tragend([(0, 0)]*2, 0.05) and not ke.tragend([(0, 0)], 0.05)
+
+
+def test_the_last_complete_costmap_message_is_used_and_its_stamp_is_reported():
+    """W-1: `echo --once` lieferte eine 28 s alte, zwischengespeicherte lokale Karte."""
+    alt = _kostenkarte().replace('sec: 1794765880', 'sec: 1794765000')
+    alt = re.sub(r'(?m)^- 100$', '- 0', alt)                    # alte Nachricht ohne Hindernisse
+    neu = _kostenkarte()
+    abgeschnitten = _kostenkarte().split('data:')[0] + 'data:\n- 0\n- 0\n'
+    gitter = ke.kostenkarte_lesen(alt + neu + abgeschnitten)
+    assert gitter.nachrichten == 3
+    assert gitter.stempel_s == pytest.approx(1794765880.000000012)
+    e = ke.auswerten(gitter, TUERMITTE)
+    assert e['engstelle']['lichte_weite_m'] == 0.8              # aus der zweiten, vollständigen
+    assert e['zeitstempel_s'] == gitter.stempel_s and e['nachrichten_in_der_datei'] == 3
+    assert 'Zeitstempel der Nachricht: 1794765880' in ke.text(e)
+    nur_alt = ke.kostenkarte_lesen(alt)
+    assert nur_alt.nachrichten == 1 and ke.auswerten(nur_alt, TUERMITTE)['engstelle'] is None
+    with pytest.raises(ke.Eingabefehler, match='erwartet 6400 Zellen, gefunden 2'):
+        ke.kostenkarte_lesen(abgeschnitten)                      # nur eine, und die ist unvollständig
+
+
+def test_lethal_costmap_cells_missing_in_the_map_are_counted(tmp_path, capsys):
+    """W-1N: 89 tödliche Zellen in der Kontur der globalen Kostenkarte, keine davon in der Karte."""
+    karte = ke.karte_laden(_karte(tmp_path))
+    text = _kostenkarte().splitlines()
+    kopf = next(i for i, z in enumerate(text) if z.startswith('data:')) + 1
+    for i, j in ((41, 40), (42, 41), (44, 39), (50, 40)):       # drei nahe dem Punkt, eine weiter weg
+        text[kopf + j*N + i] = '- 100'
+    kosten = ke.kostenkarte_lesen('\n'.join(text))
+    punkt = karte.mitte(42, 40)
+    v = ke.vergleich_mit_karte(kosten, karte, punkt, gier_grad=0.0)
+    assert v['davon_nicht_in_der_karte'] == 4
+    assert v['davon_in_der_gepolsterten_kontur'] == 3           # die vierte liegt 0,40 m voraus
+    assert v['toedliche_zellen'] == 4 + sum(
+        1 for j in range(N) if j not in TUER_J
+        and math.dist(karte.mitte(WAND_I, j), punkt) <= 0.5)
+    ohne_gier = ke.vergleich_mit_karte(kosten, karte, punkt)
+    assert ohne_gier['davon_in_der_gepolsterten_kontur'] is None
+    (tmp_path/'k.txt').write_text('\n'.join(text), encoding='utf-8')
+    assert ke.main(['--kostenkarte', str(tmp_path/'k.txt'), '--punkt', str(punkt[0]), str(punkt[1]),
+                    '--gier', '0', '--vergleich', str(tmp_path/'karte.yaml')]) == 0
+    assert 'davon 4 nicht in der Karte belegt, davon 3 in der gepolsterten Kontur' in \
+        capsys.readouterr().out

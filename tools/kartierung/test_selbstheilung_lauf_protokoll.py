@@ -1,3 +1,4 @@
+import math
 import re
 from pathlib import Path
 
@@ -82,7 +83,8 @@ def test_protocol_tool_stays_read_only():
         assert forbidden not in source
     # 8 seit 09.11.2026: /map für die Abdeckungskurve (nur lesend).
     # 9 seit 15.11.2026: HWT601-Drehraten für die Messgröße Wackeln (nur lesend).
-    assert len(re.findall(r'create_subscription\(', source)) == 9
+    # 10 seit 16.11.2026: lokale Kostenkarte für das Nahbild (nur lesend).
+    assert len(re.findall(r'create_subscription\(', source)) == 10
 
 
 def test_coverage_curve_samples_every_30_s_only_while_driving():
@@ -290,3 +292,73 @@ def test_default_imu_topic_is_the_one_of_the_running_hwt_stack():
     assert "'imu_topic': '/shadow/hwt601/imu/data_raw'" in start.read_text(encoding='utf-8')
     quelle = Path(modul.__file__).read_text(encoding='utf-8')
     assert 'Messquelle Wackeln' in quelle and 'count_publishers(args.imu_topic)' in quelle
+
+
+def _gitter(toedlich, n=120, aufloesung=0.05, ursprung=(-3.0, -3.0)):
+    """Lokale Kostenkarte 6 m x 6 m; ``toedlich`` sind Weltpunkte, deren Zelle 100 bekommt."""
+    werte = [0]*(n*n)
+    for x, y in toedlich:
+        i = int((x - ursprung[0])//aufloesung)
+        j = int((y - ursprung[1])//aufloesung)
+        werte[j*n + i] = 100
+    return werte, n, n, aufloesung, ursprung
+
+
+def test_near_picture_gives_cells_in_robot_coordinates_and_the_width_of_the_place():
+    """W-1N (16.11.2026): an der Tür fehlte das Bild dessen, was den Regler anhielt."""
+    from selbstheilung_lauf_protokoll import nahbild, kontur_seite
+    # Zwei Türpfosten links und rechts neben dem Roboter, Zellmitten bei y = +-0,425 m.
+    pfosten = [(0.11, 0.41), (0.11, -0.41)]
+    bild = nahbild(*_gitter(pfosten), (0.0, 0.0, 0.0))
+    rechts, links = sorted(bild['zellen'], key=lambda z: z[1])      # Zentimeter, vor / links
+    assert abs(rechts[0] - 12.5) <= 0.5 and abs(rechts[1] + 42.5) <= 0.5
+    assert abs(links[0] - 12.5) <= 0.5 and abs(links[1] - 42.5) <= 0.5
+    assert bild['in_kontur'] == 0 and bild['in_kontur_ohne_polster'] == 0
+    assert bild['links_m'] == pytest.approx(0.17, abs=0.01)         # 0,425 - 0,23 - 0,02
+    assert bild['rechts_m'] == pytest.approx(0.17, abs=0.01)
+    assert bild['breite_m'] == pytest.approx(0.85, abs=0.02)        # Zellmitte zu Zellmitte
+    assert bild['naechste_m'] == pytest.approx(0.17, abs=0.01)
+    assert bild['seite'] in ('links', 'rechts')
+    # Um 90 Grad gedreht liegt ein Punkt in Welt-y vor dem Roboter.
+    gedreht = nahbild(*_gitter([(0.01, 0.51)]), (0.0, 0.0, math.pi/2))
+    (vor, quer), = gedreht['zellen']
+    assert abs(vor - 52.5) <= 0.5 and abs(quer + 2.5) <= 0.5 and gedreht['seite'] == 'vorn'
+    assert gedreht['links_m'] is None and gedreht['breite_m'] is None
+    # Eine Zelle im Gehäuse und eine nur im 2-cm-Polster.
+    innen = nahbild(*_gitter([(0.21, 0.01), (0.32, 0.01)]), (0.0, 0.0, 0.0))
+    assert innen['in_kontur'] == 2 and innen['in_kontur_ohne_polster'] == 1
+    assert innen['naechste_m'] == 0.0 and innen['seite'] == 'vorn'
+    # Weit weg oder nichts: kein Fehler, leeres Bild.
+    leer = nahbild(*_gitter([(2.0, 2.0)]), (0.0, 0.0, 0.0))
+    assert leer['zellen'] == [] and leer['naechste_m'] is None and leer['seite'] is None
+    assert nahbild([0]*10, 120, 120, 0.05, (-3.0, -3.0), (0.0, 0.0, 0.0)) is None
+    assert kontur_seite(0.40, 0.30) == (pytest.approx(math.hypot(0.07, 0.05)), 'vorn links')
+    assert kontur_seite(-0.20, 0.0) == (pytest.approx(0.07), 'hinten')
+    assert kontur_seite(0.0, -0.24) == (0.0, 'rechts')
+
+
+def test_near_pictures_are_taken_once_a_second_only_while_driving():
+    p = LaufProtokoll(0.0)
+    karte = _gitter([(0.11, 0.41), (0.11, -0.41)])
+    p.odom(0.0, 0.0, 0.5, 0.0)
+    p.lokale_karte(*karte, 0.6)                                  # vor der Mission: nichts
+    assert p.nahbilder == []
+    p.explore(_sh('running'), 1.0)
+    p.cmd_vel(0.0, 0.25, 1.9)
+    p.odom(0.0, 0.0, 1.9, 0.0)
+    p.lokale_karte(*karte, 2.0)
+    p.lokale_karte(*karte, 2.5)                                  # zu früh
+    p.lokale_karte(*karte, 3.6)                                  # letzter Befehl 1,7 s alt
+    p.explore(_sh('blocked', outcome='blocked_help_required', reason='help_required:x'), 5.0)
+    p.lokale_karte(*karte, 6.0)                                  # nach der Mission: nichts
+    s = p.zusammenfassung()
+    assert [b['fahrt_s'] for b in s['nahbilder']] == [1.0, 2.6]
+    assert s['nahbilder'][0]['befehl'] == [0.0, 0.25] and s['nahbilder'][1]['befehl'] is None
+    assert s['nahbilder'][0]['breite_m'] == pytest.approx(0.85, abs=0.02)
+    assert s['nahbild'] == dict(bilder=2, mit_zellen_in_gepolsterter_kontur=0,
+                                mit_zellen_in_kontur_ohne_polster=0,
+                                engste_breite_am_roboter_m=pytest.approx(0.85, abs=0.02),
+                                bilder_mit_breite_unter_0_9_m=2)
+    assert s['schema_version'] == 3
+    ohne = LaufProtokoll(0.0)
+    assert ohne.zusammenfassung()['nahbild'] is None

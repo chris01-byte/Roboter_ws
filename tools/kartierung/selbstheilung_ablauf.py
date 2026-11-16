@@ -22,6 +22,9 @@ Aufzeichnungen, ohne neue Fahrt:
      vom Startplatz aus gesehen hinter ihr?
   8. Warte- und HWT-Phasen der Reihe nach und die Rückfahrten mit ihrem
      Ausgang; bei einer abgebrochenen Rückfahrt der Grund wie bei den Zielen.
+  9. Nahbild (Fahrtprotokoll ab Schema 3): was die lokale Karte um den
+     Roboter zeigte, als der Regler anhielt („Controller patience exceeded“),
+     und die Engstellen der Fahrt (Breite am Roboter unter 0,9 m).
 
 Eingaben: das ``launch.log`` der Fahrt und das ``protokoll.json`` des
 Fahrtprotokolls. Die Ausgabe enthält keine Koordinaten; Ziele erscheinen nur
@@ -58,6 +61,9 @@ TUER_NAH_M = 1.0                 # näher als so gilt ein Standort als „an der
 RUECKFAHRT_ENDE = (('backup completed successfully', 'vollständig'),
                    ('backup failed', 'gescheitert'), ('Canceling backup', 'abgebrochen'))
 PHASEN_HOECHSTENS = 60
+ENGSTELLE_M = 0.9                # schmaler als so gilt eine Stelle als Engstelle
+NAHBILD_FENSTER_S = 1.5          # so weit darf das Nahbild vom Reglerhalt entfernt liegen
+ENGSTELLE_PAUSE_S = 3.0          # so lange ohne enges Bild, dann ist die Engstelle vorbei
 
 
 def log_eintraege(text):
@@ -331,6 +337,60 @@ def phasenliste(warten, hwt, versatz, beginn_log):
             for b, e, was in sorted(phasen)]
 
 
+def nahbild_zum_zeitpunkt(nahbilder, t_prot, fenster_s=NAHBILD_FENSTER_S):
+    """Das Nahbild, das einem Zeitpunkt (Protokollzeit) am nächsten liegt."""
+    if not nahbilder:
+        return None
+    bild = min(nahbilder, key=lambda b: abs(b['t_s'] - t_prot))
+    return bild if abs(bild['t_s'] - t_prot) <= fenster_s else None
+
+
+def reglerhalte(eintraege, nahbilder, versatz, beginn_log):
+    """Je „Controller patience exceeded“: was die lokale Karte um den Roboter zeigte."""
+    if versatz is None or beginn_log is None:
+        return []
+    halte = []
+    for t, _, knoten, meldung in eintraege:
+        if knoten != 'controller_server' or 'Controller patience exceeded' not in meldung:
+            continue
+        bild = nahbild_zum_zeitpunkt(nahbilder, t - versatz)
+        halt = dict(halt_s=round(t - beginn_log, 1), nahbild=bild is not None)
+        if bild is not None:
+            halt.update({k: bild.get(k) for k in (
+                'in_kontur', 'in_kontur_ohne_polster', 'naechste_m', 'seite',
+                'links_m', 'rechts_m', 'breite_m')})
+        halte.append(halt)
+    return halte
+
+
+def engstellen(nahbilder, versatz, beginn_log):
+    """Abschnitte der Fahrt, in denen die Stelle am Roboter schmaler als 0,9 m war."""
+    if versatz is None or beginn_log is None:
+        return []
+    abschnitte, offen = [], None
+    for bild in nahbilder:
+        eng = bild.get('breite_m') is not None and bild['breite_m'] < ENGSTELLE_M
+        if offen is not None and bild['t_s'] - offen['_letzte'] > ENGSTELLE_PAUSE_S:
+            abschnitte.append(offen)
+            offen = None
+        if not eng:
+            continue
+        if offen is None:
+            offen = dict(beginn_s=round(bild['t_s'] + versatz - beginn_log, 1), bilder=0,
+                         engste_breite_m=bild['breite_m'], meiste_zellen_in_kontur=0,
+                         _erste=bild['t_s'], _letzte=bild['t_s'])
+        offen['bilder'] += 1
+        offen['_letzte'] = bild['t_s']
+        offen['engste_breite_m'] = min(offen['engste_breite_m'], bild['breite_m'])
+        offen['meiste_zellen_in_kontur'] = max(offen['meiste_zellen_in_kontur'],
+                                               bild.get('in_kontur') or 0)
+    if offen is not None:
+        abschnitte.append(offen)
+    for a in abschnitte:
+        a['dauer_s'] = round(a.pop('_letzte') - a.pop('_erste'), 1)
+    return abschnitte
+
+
 def summen(phasen):
     aus = {}
     for beginn, ende, grund in phasen:
@@ -458,6 +518,7 @@ def auswerten(log_text, protokoll, tuer=None):
     for fall in faelle:
         del fall['_ende']
     dauer = None if beginn_log is None else round(ende_log - beginn_log, 1)
+    nahbilder = protokoll.get('nahbilder') or []
     der_reihe_nach = reihenfolge(anlaeufe, gruende, beginn_log, tuer)
     rueckfahrten = []
     for r in rueckfahrten_aus_log(eintraege):
@@ -489,6 +550,9 @@ def auswerten(log_text, protokoll, tuer=None):
         nach_dem_erfassen=drittel,
         anlaeufe=der_reihe_nach, tuerbezug=tuerbezug(der_reihe_nach),
         phasen=phasenliste(warten, hwt, versatz, beginn_log), rueckfahrten=rueckfahrten,
+        nahbild=protokoll.get('nahbild'),
+        reglerhalte=reglerhalte(eintraege, nahbilder, versatz, beginn_log),
+        engstellen=engstellen(nahbilder, versatz, beginn_log),
         minuten=minuten(anlaeufe, eintraege, warten, kurve, beginn_log, ende_log, versatz),
         haeufigste_meldungen=meldungen(eintraege, beginn_log),
         auszuege=auszuege)
@@ -549,6 +613,29 @@ def text(ergebnis):
         aus.append(f"  {ph['beginn_s']:8.1f} {ph['dauer_s']:6.1f}  {ph['was']}")
     if len(phasen) > PHASEN_HOECHSTENS:
         aus.append(f'  … {len(phasen) - PHASEN_HOECHSTENS} weitere ausgelassen (stehen im JSON)')
+    aus += ['', f"Nahbild (lokale Karte bis 0,8 m um den Roboter, einmal je Sekunde): "
+                f"{ergebnis['nahbild'] or 'keine Daten (Fahrtprotokoll vor Schema 3)'}"]
+    if ergebnis['engstellen']:
+        aus.append(f'Engstellen (Breite am Roboter unter {ENGSTELLE_M} m): '
+                   'Beginn s, Dauer s, engste Breite m, meiste tödliche Zellen in der Kontur')
+        for e in ergebnis['engstellen']:
+            aus.append(f"  {e['beginn_s']:8.1f} {e['dauer_s']:6.1f} {e['engste_breite_m']:6.2f} "
+                       f"{e['meiste_zellen_in_kontur']:4d}")
+    if ergebnis['reglerhalte']:
+        aus.append('Reglerhalte („Controller patience exceeded“): Zeit s, tödliche Zellen in der '
+                   'Kontur mit / ohne Polster, nächste Zelle m und Seite, frei links m, frei '
+                   'rechts m, Breite m')
+
+        def zahl(wert):
+            return '   -' if wert is None else f'{wert:4.2f}'
+
+        for h in ergebnis['reglerhalte']:
+            if not h['nahbild']:
+                aus.append(f"  {h['halt_s']:8.1f}  kein Nahbild in der Nähe")
+                continue
+            aus.append(f"  {h['halt_s']:8.1f} {h['in_kontur']:3d} / {h['in_kontur_ohne_polster']:<3d} "
+                       f"{zahl(h['naechste_m'])} {(h['seite'] or '-'):<13s} "
+                       f"{zahl(h['links_m'])} {zahl(h['rechts_m'])} {zahl(h['breite_m'])}")
     aus += ['', 'Min. beg. err. gesch. abgebr. warten s  frei m²  Koll.voraus Geduld TF-Zuk. '
                 'TF-Pose Takt Queue kein Weg Rückf.']
     for m in ergebnis['minuten']:

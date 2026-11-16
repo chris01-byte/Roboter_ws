@@ -31,6 +31,12 @@ schreibt eine JSON-Zusammenfassung:
   - Abdeckungskurve: freie, belegte und bekannte Kartenfläche alle 30 s
     während der Fahrt und die Zeit, bis 85/90/95 % der freien Endfläche
     erreicht waren (Fahrplan MASTERPLAN §9, 09.11.2026),
+  - Nahbild (ab 16.11.2026): einmal je Sekunde die tödlichen Zellen der
+    lokalen Kostenkarte bis 0,8 m um den Roboter, in Roboterkoordinaten
+    (vor, links, in cm), dazu wie viele in der Kontur liegen, der freie Platz
+    links und rechts und die Breite der Stelle. Anlass: In W-1 hielt der
+    Regler an der Tür an („collision ahead“), und niemand konnte sagen, was
+    er dort sah; die gesicherte Karte war veraltet. Keine Kartenkoordinaten,
   - die automatisch prüfbaren Kriterien der Abnahmestufe 1,
   - mit --stellprobe-m: Stellprobe (MASTERPLAN §9, Regel 6). Gemessen wird
     die Entfernung vom Standort beim Missionsstart; das Protokoll endet,
@@ -59,6 +65,11 @@ IMU_TOPIC = '/shadow/hwt601/imu/data_raw'   # so heißt es im laufenden HWT-Stac
 WEG_SCHRITT_M = 0.005        # gefahrener Weg zählt in Schritten ab dieser Größe
 DREH_SCHRITT_RAD = 0.02      # ebenso die Drehung (Messrauschen summiert sich sonst auf)
 ABDECKUNG_TAKT_S = 30.0
+NAHBILD_TAKT_S = 1.0         # so oft wird die lokale Karte um den Roboter festgehalten
+NAHBILD_UMKREIS_M = 0.8      # tödliche Zellen bis zu diesem Abstand von base_link
+# Kontur wie in nav2_params_real.yaml (lokale Kostenkarte) und ihr Polster.
+KONTUR_VORN_M, KONTUR_HINTEN_M, KONTUR_HALB_M, KONTUR_POLSTER_M = 0.31, 0.11, 0.23, 0.02
+KOSTEN_TOEDLICH = 100
 ABDECKUNG_ANTEILE = (0.85, 0.90, 0.95)
 MANUELL = (
     'kein Kontakt mit Hindernissen oder Wänden (Beobachtung Christopher)',
@@ -108,6 +119,10 @@ class LaufProtokoll:
         self.hwt_zustand = None
         self.abdeckung = []
         self._abdeckung_letzte = None
+        # Nahbild: tödliche Zellen der lokalen Karte um den Roboter (W-1N: an der
+        # Tür fehlte das Bild dessen, was den Regler anhielt).
+        self.nahbilder = []
+        self._nahbild_letztes = None
         # Stellprobe: Entfernung vom Standort beim Missionsstart.
         self.stellprobe_start = None
         self.stellprobe_max_m = 0.0
@@ -375,6 +390,36 @@ class LaufProtokoll:
                                    fahrt_s=round(t - self.gestartet_um, 1),
                                    **flaechen(werte, aufloesung)))
 
+    def lokale_karte(self, werte, breite, hoehe, aufloesung, ursprung, t):
+        """Nahbild: höchstens einmal je Sekunde und nur während der Fahrt."""
+        if not self.faehrt() or self.odom_letzte is None or self._gier_letzte is None:
+            return
+        if self._nahbild_letztes is not None and t - self._nahbild_letztes < NAHBILD_TAKT_S:
+            return
+        bild = nahbild(werte, breite, hoehe, aufloesung, ursprung,
+                       (self.odom_letzte[0], self.odom_letzte[1], self._gier_letzte))
+        if bild is None:
+            return
+        self._nahbild_letztes = t
+        befehl = self._cmd_letzter
+        frisch = befehl is not None and t - befehl[0] <= BEFEHL_MAX_DT_S
+        self.nahbilder.append(dict(
+            t_s=self._t(t), fahrt_s=round(t - self.gestartet_um, 1),
+            befehl=[round(befehl[1], 3), round(befehl[2], 3)] if frisch else None, **bild))
+
+    def nahbild_uebersicht(self):
+        """Wie oft tödliche Zellen in der Kontur lagen und wie eng es war."""
+        if not self.nahbilder:
+            return None
+        breiten = sorted(b['breite_m'] for b in self.nahbilder if b['breite_m'] is not None)
+        return dict(
+            bilder=len(self.nahbilder),
+            mit_zellen_in_gepolsterter_kontur=sum(b['in_kontur'] > 0 for b in self.nahbilder),
+            mit_zellen_in_kontur_ohne_polster=sum(
+                b['in_kontur_ohne_polster'] > 0 for b in self.nahbilder),
+            engste_breite_am_roboter_m=breiten[0] if breiten else None,
+            bilder_mit_breite_unter_0_9_m=sum(b < 0.9 for b in breiten))
+
     def abdeckung_zeiten(self):
         """Fahrzeit bis zu 85/90/95 % der freien Fläche am Ende (Endfläche = 100 %)."""
         if not self.abdeckung:
@@ -407,7 +452,7 @@ class LaufProtokoll:
                  else round(self.beendet_um - self.gestartet_um, 1))
         kriterien = self.kriterien()
         return {
-            'schema_version': 2,
+            'schema_version': 3,
             'dauer_s': dauer,
             'endzustand': {k: sh.get(k) for k in (
                 'state', 'outcome', 'reason', 'goals_reached', 'heals',
@@ -425,6 +470,8 @@ class LaufProtokoll:
                              'max_s': round(self.vl53_max_luecke_s, 3)},
             'abdeckung': self.abdeckung_zeiten(),
             'abdeckungskurve': self.abdeckung,
+            'nahbild': self.nahbild_uebersicht(),
+            'nahbilder': self.nahbilder,
             'kriterien_automatisch': kriterien,
             'automatisch_erfuellt': all(kriterien.values()),
             'kriterien_manuell': list(MANUELL),
@@ -442,6 +489,78 @@ def flaechen(werte, aufloesung):
     bekannt = int(np.count_nonzero(zellen >= 0))
     return dict(frei_m2=round(frei*zelle_m2, 2), belegt_m2=round(belegt*zelle_m2, 2),
                 bekannt_m2=round(bekannt*zelle_m2, 2))
+
+
+def kontur_seite(x, y, vorn=KONTUR_VORN_M, hinten=KONTUR_HINTEN_M, halb=KONTUR_HALB_M,
+                 polster=KONTUR_POLSTER_M):
+    """Abstand eines Punkts (Roboterkoordinaten) zur gepolsterten Kontur und seine Seite.
+
+    Innerhalb ist der Abstand 0 und die Seite die nächste Kante; außerhalb
+    nennt die Seite, wohin der Punkt liegt („vorn links“ für eine Ecke).
+    """
+    v, h, b = vorn + polster, hinten + polster, halb + polster
+    aussen_x = max(x - v, -h - x, 0.0)
+    aussen_y = max(abs(y) - b, 0.0)
+    laengs = 'vorn' if x > v else 'hinten' if x < -h else ''
+    quer = ('links' if y > 0 else 'rechts') if abs(y) > b else ''
+    if not laengs and not quer:                                 # in der Kontur: nächste Kante
+        kanten = {'vorn': v - x, 'hinten': x + h, 'links': b - y, 'rechts': y + b}
+        return 0.0, min(kanten, key=kanten.get)
+    return math.hypot(aussen_x, aussen_y), ' '.join(t for t in (laengs, quer) if t)
+
+
+def nahbild(werte, breite, hoehe, aufloesung, ursprung, pose, umkreis_m=NAHBILD_UMKREIS_M):
+    """Tödliche Zellen einer Kostenkarte um den Roboter, in Roboterkoordinaten.
+
+    ``pose`` ist (x, y, Gier) im Rahmen der Karte. Ergebnis ohne
+    Kartenkoordinaten: Zellen als [vor, links] in Zentimetern, wie viele in der
+    Kontur liegen, die nächste Zelle zur gepolsterten Kontur, der freie Platz
+    links und rechts neben dem Roboter und daraus die Breite der Stelle.
+    """
+    if not (aufloesung > 0 and breite > 0 and hoehe > 0) or len(werte) != breite*hoehe:
+        return None
+    x0, y0, gier = pose
+    c, s = math.cos(gier), math.sin(gier)
+    n = int(math.ceil(umkreis_m/aufloesung))
+    i0 = int(math.floor((x0 - ursprung[0])/aufloesung))
+    j0 = int(math.floor((y0 - ursprung[1])/aufloesung))
+    zellen, in_kontur, ohne_polster = [], 0, 0
+    naechste = None
+    links = rechts = None
+    for j in range(max(0, j0 - n), min(hoehe, j0 + n + 1)):
+        zeile = j*breite
+        for i in range(max(0, i0 - n), min(breite, i0 + n + 1)):
+            if werte[zeile + i] < KOSTEN_TOEDLICH:
+                continue
+            dx = ursprung[0] + (i + .5)*aufloesung - x0
+            dy = ursprung[1] + (j + .5)*aufloesung - y0
+            if dx*dx + dy*dy > umkreis_m*umkreis_m:
+                continue
+            x, y = c*dx + s*dy, -s*dx + c*dy                    # vor dem Roboter, links von ihm
+            zellen.append([round(x*100), round(y*100)])
+            abstand, seite = kontur_seite(x, y)
+            if abstand == 0.0:
+                in_kontur += 1
+                if -KONTUR_HINTEN_M <= x <= KONTUR_VORN_M and abs(y) <= KONTUR_HALB_M:
+                    ohne_polster += 1
+            if naechste is None or abstand < naechste[0]:
+                naechste = (abstand, seite)
+            if -KONTUR_HINTEN_M <= x <= KONTUR_VORN_M:           # neben dem Roboter
+                frei = abs(y) - KONTUR_HALB_M - KONTUR_POLSTER_M
+                if y > 0 and (links is None or frei < links):
+                    links = frei
+                if y < 0 and (rechts is None or frei < rechts):
+                    rechts = frei
+    kontur_breite = 2*(KONTUR_HALB_M + KONTUR_POLSTER_M)
+    return dict(
+        in_kontur=in_kontur, in_kontur_ohne_polster=ohne_polster,
+        naechste_m=None if naechste is None else round(naechste[0], 2),
+        seite=None if naechste is None else naechste[1],
+        links_m=None if links is None else round(links, 2),
+        rechts_m=None if rechts is None else round(rechts, 2),
+        breite_m=(None if links is None or rechts is None
+                  else round(links + rechts + kontur_breite, 2)),
+        zellen=zellen)
 
 
 # ---------------------------------------------------------------------------
@@ -466,6 +585,8 @@ def main(argv=None):
     parser.add_argument('--stellprobe-m', type=float, default=0.0,
                         help='Stellprobe: Ende, sobald der Roboter so weit vom Standort beim '
                              'Missionsstart entfernt ist (0 = aus)')
+    parser.add_argument('--lokale-karte', default='/local_costmap/costmap',
+                        help='lokale Kostenkarte für das Nahbild (nur lesend)')
     parser.add_argument('--imu-topic', default=IMU_TOPIC,
                         help='sensor_msgs/Imu für die Messgröße Wackeln (nur lesend)')
     parser.add_argument('--stellprobe-fenster-s', type=float, default=300.0,
@@ -525,6 +646,12 @@ def main(argv=None):
     node.create_subscription(OccupancyGrid, '/map',
                              lambda m: protokoll.karte(m.data, m.info.resolution, jetzt()),
                              latched)
+    node.create_subscription(
+        OccupancyGrid, args.lokale_karte,
+        lambda m: protokoll.lokale_karte(
+            m.data, m.info.width, m.info.height, m.info.resolution,
+            (m.info.origin.position.x, m.info.origin.position.y), jetzt()),
+        latched)
 
     # Messquelle prüfen, bevor die Fahrt beginnt: In SH-8c blieb „wackeln“ leer,
     # weil das Topic anders hieß; das soll vor der Mission auffallen.

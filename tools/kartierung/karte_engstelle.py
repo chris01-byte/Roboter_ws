@@ -19,11 +19,25 @@ misst an den gesicherten Dateien, wie es wirklich war:
      Breite braucht seine Kontur bei diesem Schrägstand, und liegen belegte
      Zellen in der Kontur?
 
+Stand 16.11.2026 (nach W-1N): In 1-cm-Karten liegen an Wandrändern und in
+Durchfahrten einzelne belegte Zellen. Die Engstelle wird deshalb zwischen
+**tragenden Gruppen** gemessen (mindestens 0,10 m aneinanderhängende Zellen);
+kleinere Gruppen stehen getrennt als „Einzelzellen“ dabei, mit der Lücke, die
+sie zusätzlich verengen. In W-1N maß das Werkzeug 0,20 m zwischen einer Wand
+und einer Einzelzelle; die Tür war 0,78 m breit.
+
 Eingabe ist genau eine der beiden:
 
   --karte KARTE.yaml     Karte von ``map_saver_cli`` (yaml und pgm)
   --kostenkarte DATEI    Textausgabe von
                          ``ros2 topic echo --once --full-length <…/costmap>``
+
+Eine Textdatei mit mehreren Nachrichten (``ros2 topic echo`` einige Sekunden
+lang) wird bis zur **letzten vollständigen** gelesen; die erste ist bei
+Kostenkarten oft eine alte, zwischengespeicherte (W-1: 28 s vor dem
+Missionsstart). Der Zeitstempel der gelesenen Nachricht steht in der Ausgabe.
+Mit ``--vergleich KARTE.yaml`` zählt das Werkzeug zu einer Kostenkarte die
+tödlichen Zellen nahe dem Punkt, die in der Karte nicht belegt sind.
 
 Der Punkt (``--punkt X Y``) und die Blickrichtung (``--gier GRAD``) gelten im
 Rahmen der Datei (Karte und globale Kostenkarte: ``map``). Mit ``--mitte``
@@ -44,6 +58,9 @@ UMKREIS_M = 1.2                  # so weit um den Punkt wird gesucht
 TIEFE_M = 0.45                   # so weit darf der Punkt neben der Linie der Engstelle liegen
 PLANUNGSRADIUS_M = 0.28          # robot_radius der globalen Kostenkarte
 KOSTEN_GESPERRT, KOSTEN_BELEGT = 99, 100
+TRAGEND_M = 0.10                 # so viele aneinanderhängende Zellen gelten als Wand oder Pfosten
+VERGLEICH_UMKREIS_M = 0.5        # Kostenkarte gegen Karte: nur nahe dem Punkt
+VERGLEICH_TOLERANZ_M = 0.03      # so weit darf die passende belegte Kartenzelle entfernt sein
 # Kontur wie in nav2_params_real.yaml (lokale Kostenkarte), Polster 2 cm.
 VORN_M, HINTEN_M, HALBE_BREITE_M, POLSTER_M = 0.31, 0.11, 0.23, 0.02
 
@@ -55,11 +72,13 @@ class Eingabefehler(ValueError):
 class Gitter:
     """Zellen mit Klasse (frei, belegt, unbekannt, gesperrt) und, bei Kostenkarten, Kostenwert."""
 
-    def __init__(self, breite, hoehe, aufloesung, ursprung, klassen, art, werte=None):
+    def __init__(self, breite, hoehe, aufloesung, ursprung, klassen, art, werte=None,
+                 stempel_s=None, nachrichten=1):
         if len(klassen) != breite*hoehe:
             raise Eingabefehler(f'erwartet {breite*hoehe} Zellen, gefunden {len(klassen)}')
         self.breite, self.hoehe, self.aufloesung = breite, hoehe, aufloesung
         self.ursprung, self.klassen, self.art, self.werte = ursprung, klassen, art, werte
+        self.stempel_s, self.nachrichten = stempel_s, nachrichten
 
     def zelle(self, x, y):
         i = math.floor((x - self.ursprung[0])/self.aufloesung)
@@ -111,11 +130,11 @@ def karte_laden(yaml_pfad):
 GANZZAHL = re.compile(r'-?\d+')
 
 
-def kostenkarte_lesen(text):
-    """Textausgabe von ``ros2 topic echo --once --full-length`` einer OccupancyGrid."""
+def _eine_kostenkarte(zeilen):
+    """Eine Nachricht (Zeilen zwischen zwei ``---``) als Gitter."""
     kopf, daten = {}, []
-    daten_art, in_ursprung, in_position = None, False, False
-    for roh in text.splitlines():
+    daten_art, in_ursprung, in_position, in_stempel = None, False, False, False
+    for roh in zeilen:
         zeile = roh.strip()
         if '...' in zeile and (daten_art is not None or zeile.startswith('data:')):
             raise Eingabefehler('Daten gekürzt („...“): ohne --full-length gesichert')
@@ -139,6 +158,9 @@ def kostenkarte_lesen(text):
             else:
                 daten_art = 'block'
             continue
+        if zeile.startswith('stamp:'):
+            in_stempel = True
+            continue
         if zeile.startswith('origin:'):
             in_ursprung, in_position = True, False
             continue
@@ -149,6 +171,11 @@ def kostenkarte_lesen(text):
             in_ursprung = in_position = False
             continue
         try:
+            if in_stempel and zeile.startswith('sec:') and 'stempel' not in kopf:
+                kopf['stempel'] = float(zeile.split(':', 1)[1])
+            if in_stempel and zeile.startswith('nanosec:'):
+                kopf['stempel'] = kopf.get('stempel', 0.0) + float(zeile.split(':', 1)[1])/1e9
+                in_stempel = False
             for name in ('resolution', 'width', 'height'):
                 if zeile.startswith(name + ':') and name not in kopf:
                     kopf[name] = float(zeile.split(':', 1)[1])
@@ -167,7 +194,38 @@ def kostenkarte_lesen(text):
     klassen = [UNBEKANNT if w < 0 else BELEGT if w >= KOSTEN_BELEGT
                else GESPERRT if w >= KOSTEN_GESPERRT else FREI for w in daten]
     return Gitter(breite, hoehe, kopf['resolution'], (kopf['x'], kopf['y']), klassen,
-                  'kostenkarte', daten)
+                  'kostenkarte', daten, stempel_s=kopf.get('stempel'))
+
+
+def kostenkarte_lesen(text):
+    """Textausgabe von ``ros2 topic echo --full-length`` einer OccupancyGrid.
+
+    Bei mehreren Nachrichten gilt die letzte vollständige (die erste ist bei
+    Kostenkarten oft eine alte, zwischengespeicherte).
+    """
+    bloecke, aktuell = [], []
+    for zeile in text.splitlines():
+        if zeile.strip() == '---':
+            bloecke.append(aktuell)
+            aktuell = []
+        else:
+            aktuell.append(zeile)
+    bloecke.append(aktuell)
+    bloecke = [b for b in bloecke if any(z.strip() for z in b)]
+    if not bloecke:
+        raise Eingabefehler('Kopf unvollständig, es fehlt: resolution, width, height, x, y')
+    fehler = None
+    for nummer in range(len(bloecke) - 1, -1, -1):
+        try:
+            gitter = _eine_kostenkarte(bloecke[nummer])
+        except Eingabefehler as grund:
+            fehler = fehler or grund
+            if len(bloecke) == 1 or 'gekürzt' in str(grund):
+                raise
+            continue                     # letzte Nachricht abgeschnitten: die davor nehmen
+        gitter.nachrichten = len(bloecke)
+        return gitter
+    raise fehler
 
 
 def belegte_im_umkreis(gitter, punkt, umkreis_m):
@@ -198,6 +256,11 @@ def gruppen(zellen):
                         rand.append(nachbar)
         ergebnis.append(gruppe)
     return sorted(ergebnis, key=len, reverse=True)
+
+
+def tragend(gruppe, aufloesung):
+    """Ob eine Gruppe belegter Zellen als Wand oder Pfosten zählt (mindestens 0,10 m)."""
+    return len(gruppe)*aufloesung >= TRAGEND_M - 1e-9
 
 
 def engstellen(gitter, punkt, zellgruppen, tiefe_m):
@@ -306,6 +369,36 @@ def kontur_lage(punkt, gier_rad, belegte_mitten, vorn, hinten, halb, polster):
                                       seite=seite))
 
 
+def vergleich_mit_karte(kosten, karte, punkt, gier_grad=None, umkreis_m=VERGLEICH_UMKREIS_M,
+                        toleranz_m=VERGLEICH_TOLERANZ_M, vorn=VORN_M, hinten=HINTEN_M,
+                        halb=HALBE_BREITE_M, polster=POLSTER_M):
+    """Tödliche Zellen der Kostenkarte nahe dem Punkt, die in der Karte nicht belegt sind.
+
+    Solche Zellen stammen nicht aus der SLAM-Karte, sondern aus der
+    Hindernisebene (VL53, Kamera). Beide Dateien müssen denselben Rahmen haben.
+    """
+    belegte_karte = [karte.mitte(i, j) for i, j in
+                     belegte_im_umkreis(karte, punkt, umkreis_m + toleranz_m + karte.aufloesung)]
+    c = s = None
+    if gier_grad is not None:
+        c, s = math.cos(math.radians(gier_grad)), math.sin(math.radians(gier_grad))
+    toedlich = ohne = ohne_in_kontur = 0
+    for i, j in belegte_im_umkreis(kosten, punkt, umkreis_m):
+        toedlich += 1
+        mitte = kosten.mitte(i, j)
+        if any(math.dist(mitte, m) <= toleranz_m + 1e-9 for m in belegte_karte):
+            continue
+        ohne += 1
+        if c is not None:
+            dx, dy = mitte[0] - punkt[0], mitte[1] - punkt[1]
+            x, y = c*dx + s*dy, -s*dx + c*dy
+            if -(hinten + polster) <= x <= vorn + polster and abs(y) <= halb + polster:
+                ohne_in_kontur += 1
+    return dict(umkreis_m=umkreis_m, toleranz_m=toleranz_m, toedliche_zellen=toedlich,
+                davon_nicht_in_der_karte=ohne,
+                davon_in_der_gepolsterten_kontur=ohne_in_kontur if c is not None else None)
+
+
 def auswerten(gitter, punkt, gier_grad=None, umkreis_m=UMKREIS_M, tiefe_m=TIEFE_M,
               radius_m=PLANUNGSRADIUS_M, vorn=VORN_M, hinten=HINTEN_M, halb=HALBE_BREITE_M,
               polster=POLSTER_M):
@@ -317,13 +410,23 @@ def auswerten(gitter, punkt, gier_grad=None, umkreis_m=UMKREIS_M, tiefe_m=TIEFE_
     belegte_mitten = [gitter.mitte(i, j) for i, j in
                       belegte_im_umkreis(gitter, punkt, umkreis_m + radius_m + gitter.aufloesung)]
     zellgruppen = gruppen(belegte)
-    funde = engstellen(gitter, punkt, zellgruppen, tiefe_m)
+    grosse = [g for g in zellgruppen if tragend(g, gitter.aufloesung)]
+    kleine = [g for g in zellgruppen if not tragend(g, gitter.aufloesung)]
+    funde = engstellen(gitter, punkt, grosse, tiefe_m)
+    # Zum Vergleich mit allen Gruppen: Einzelzellen können die Stelle weiter verengen.
+    mit_einzelzellen = engstellen(gitter, punkt, zellgruppen, tiefe_m)
     namen = {FREI: 'frei', BELEGT: 'belegt', UNBEKANNT: 'unbekannt', GESPERRT: 'gesperrt'}
     naechste_belegte = abstand_zur_naechsten_belegten(punkt, belegte_mitten)
     ergebnis = dict(
         quelle=gitter.art, aufloesung_m=round(gitter.aufloesung, 4),
         umkreis_m=umkreis_m, planungsradius_m=radius_m if gitter.art == 'karte' else None,
         belegte_zellen_im_umkreis=len(belegte), gruppen=[len(g) for g in zellgruppen],
+        tragende_gruppen=len(grosse), einzelzellen_gruppen=len(kleine),
+        einzelzellen_naechste_m=(round(min(
+            math.dist(punkt, gitter.mitte(i, j)) for g in kleine for i, j in g), 2)
+            if kleine else None),
+        zeitstempel_s=gitter.stempel_s, nachrichten_in_der_datei=gitter.nachrichten,
+        engstelle_mit_einzelzellen=None,
         punkt=dict(
             klasse=namen[gitter.klasse(*zelle)], kostenwert=gitter.wert(*zelle),
             naechste_belegte_zelle_m=(None if math.isinf(naechste_belegte)
@@ -346,6 +449,12 @@ def auswerten(gitter, punkt, gier_grad=None, umkreis_m=UMKREIS_M, tiefe_m=TIEFE_
         ergebnis['weitere_engstellen'] = [
             dict(lichte_weite_m=round(f['weite'] - gitter.aufloesung, 2), gruppen=list(f['gruppen']))
             for f in funde[1:3]]
+    if mit_einzelzellen and (not funde or mit_einzelzellen[0]['weite'] < funde[0]['weite'] - 1e-9):
+        enger = mit_einzelzellen[0]
+        ergebnis['engstelle_mit_einzelzellen'] = dict(
+            lichte_weite_m=round(enger['weite'] - gitter.aufloesung, 2),
+            gruppen=list(enger['gruppen']),
+            **streifen(gitter, enger, belegte_mitten, radius_m))
     if gier_grad is not None:
         gier = math.radians(gier_grad)
         lage = kontur_lage(punkt, gier, belegte_mitten, vorn, hinten, halb, polster) or {}
@@ -371,7 +480,13 @@ def text(e):
     kosten = e['quelle'] == 'kostenkarte'
     aus = [f"Quelle: {'Kostenkarte' if kosten else 'Karte'}, Auflösung {e['aufloesung_m']} m; "
            f"belegte Zellen im Umkreis {e['umkreis_m']} m: {e['belegte_zellen_im_umkreis']} "
-           f"in {len(e['gruppen'])} Gruppen (Größen {e['gruppen'][:8]})"]
+           f"in {len(e['gruppen'])} Gruppen (Größen {e['gruppen'][:8]}); davon tragend "
+           f"{e['tragende_gruppen']}, Einzelzellen-Gruppen {e['einzelzellen_gruppen']}"
+           + (f" (nächste {e['einzelzellen_naechste_m']} m vom Punkt)"
+              if e['einzelzellen_naechste_m'] is not None else '')]
+    if kosten:
+        aus.append(f"Zeitstempel der Nachricht: {e['zeitstempel_s']} s; Nachrichten in der Datei: "
+                   f"{e['nachrichten_in_der_datei']} (gelesen: die letzte vollständige)")
     p = e['punkt']
     aus.append(f"Punkt: {p['klasse']}"
                + (f", Kostenwert {p['kostenwert']}" if kosten else '')
@@ -380,11 +495,11 @@ def text(e):
                + f"; nächste für den Planer freie Zelle {p['naechste_fuer_planer_freie_zelle_m']} m")
     g = e['engstelle']
     if g is None:
-        aus.append('Engstelle am Punkt: keine gefunden (keine zwei getrennten Seiten um den Punkt)')
+        aus.append('Engstelle am Punkt: keine gefunden (keine zwei tragenden Seiten um den Punkt)')
     else:
-        aus.append(f"Engstelle am Punkt: lichte Weite {g['lichte_weite_m']} m (Zellmitten "
-                   f"{g['zellmitten_m']} m) zwischen Gruppen mit {g['gruppen'][0]} und "
-                   f"{g['gruppen'][1]} Zellen")
+        aus.append(f"Engstelle am Punkt (zwischen tragenden Gruppen): lichte Weite "
+                   f"{g['lichte_weite_m']} m (Zellmitten {g['zellmitten_m']} m) zwischen Gruppen "
+                   f"mit {g['gruppen'][0]} und {g['gruppen'][1]} Zellen")
         aus.append(f"  Punkt {g['punkt_neben_der_mitte_m']} m neben der Mitte der Engstelle, "
                    f"{g['punkt_neben_der_linie_m']} m vor oder hinter ihrer Linie")
         if kosten:
@@ -399,6 +514,17 @@ def text(e):
         for w in e['weitere_engstellen']:
             aus.append(f"  Weitere Engstelle am Punkt: {w['lichte_weite_m']} m (Gruppen "
                        f"{w['gruppen'][0]} und {w['gruppen'][1]} Zellen)")
+    m = e['engstelle_mit_einzelzellen']
+    if m:
+        aus.append(f"Mit Einzelzellen ist die Stelle enger: {m['lichte_weite_m']} m (Gruppen "
+                   f"{m['gruppen'][0]} und {m['gruppen'][1]} Zellen); für den Planer frei "
+                   f"{m['frei_m']} m der Linie")
+    v = e.get('vergleich')
+    if v:
+        aus.append(f"Vergleich mit der Karte (Umkreis {v['umkreis_m']} m): {v['toedliche_zellen']} "
+                   f"tödliche Zellen, davon {v['davon_nicht_in_der_karte']} nicht in der Karte belegt"
+                   + (f", davon {v['davon_in_der_gepolsterten_kontur']} in der gepolsterten Kontur"
+                      if v['davon_in_der_gepolsterten_kontur'] is not None else ''))
     lage = e['lage']
     if lage:
         if 'schraegstand_grad' in lage:
@@ -431,8 +557,13 @@ def main(argv=None):
     parser.add_argument('--radius', type=float, default=PLANUNGSRADIUS_M,
                         help='Planungsradius für Karten (Standard 0,28 m)')
     parser.add_argument('--umkreis', type=float, default=UMKREIS_M)
+    parser.add_argument('--vergleich', metavar='KARTE.yaml',
+                        help='nur mit --kostenkarte: tödliche Zellen zählen, die in dieser '
+                             'Karte nicht belegt sind (gleicher Rahmen)')
     parser.add_argument('--json', help='Ergebnis zusätzlich als JSON (lokal, nicht ins Repo)')
     args = parser.parse_args(argv)
+    if args.vergleich and not args.kostenkarte:
+        parser.error('--vergleich braucht --kostenkarte')
     try:
         if args.karte:
             gitter = karte_laden(args.karte)
@@ -443,6 +574,9 @@ def main(argv=None):
                  (gitter.ursprung[0] + gitter.breite*gitter.aufloesung/2,
                   gitter.ursprung[1] + gitter.hoehe*gitter.aufloesung/2))
         ergebnis = auswerten(gitter, punkt, args.gier, umkreis_m=args.umkreis, radius_m=args.radius)
+        if args.vergleich:
+            ergebnis['vergleich'] = vergleich_mit_karte(
+                gitter, karte_laden(args.vergleich), punkt, args.gier)
     except (Eingabefehler, OSError, ValueError) as fehler:
         print(f'FEHLER: {fehler}', file=sys.stderr)
         return 2

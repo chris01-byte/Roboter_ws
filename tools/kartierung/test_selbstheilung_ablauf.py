@@ -138,6 +138,33 @@ def test_wait_phases_and_backups_are_listed_with_the_reason_for_a_canceled_backu
     assert ohne['phasen'] == [] and ohne['rueckfahrten'][0]['grund'] == 'nicht_zuordenbar'
 
 
+def test_controller_stops_are_shown_with_the_near_picture_and_narrow_places_are_listed():
+    log, protokoll = _fahrt()                       # Reglerhalt im Log bei 41 s = 51 s Protokoll
+    bild = lambda t, breite, innen=0, seite='links', links=0.1, rechts=0.1: dict(
+        t_s=t, fahrt_s=t - 20.0, befehl=None, in_kontur=innen, in_kontur_ohne_polster=0,
+        naechste_m=0.0 if innen else 0.05, seite=seite, links_m=links, rechts_m=rechts,
+        breite_m=breite, zellen=[[10, 30]])
+    protokoll['nahbilder'] = [bild(48.0, 1.6), bild(49.0, 0.74), bild(50.0, 0.72, 2, 'vorn links'),
+                              bild(51.2, 0.70, 3, 'vorn links', 0.02, 0.18), bild(52.0, 0.71),
+                              bild(60.0, None), bild(200.0, 0.8)]
+    protokoll['nahbild'] = dict(bilder=7, mit_zellen_in_gepolsterter_kontur=2)
+    e = ab.auswerten(log, protokoll)
+    (halt,) = e['reglerhalte']
+    assert halt == dict(halt_s=31.0, nahbild=True, in_kontur=3, in_kontur_ohne_polster=0,
+                        naechste_m=0.0, seite='vorn links', links_m=0.02, rechts_m=0.18,
+                        breite_m=0.70)
+    assert e['engstellen'] == [
+        dict(beginn_s=29.0, bilder=4, engste_breite_m=0.70, meiste_zellen_in_kontur=3, dauer_s=3.0),
+        dict(beginn_s=180.0, bilder=1, engste_breite_m=0.8, meiste_zellen_in_kontur=0, dauer_s=0.0)]
+    ausgabe = ab.text(e)
+    assert 'Reglerhalte' in ausgabe and 'vorn links' in ausgabe and 'Engstellen' in ausgabe
+    assert '[10, 30]' not in ausgabe                               # die Zellen bleiben im Protokoll
+    # Ohne Nahbilder (ältere Protokolle): der Halt wird genannt, ohne Bild.
+    alt = ab.auswerten(*_fahrt())
+    assert alt['reglerhalte'] == [dict(halt_s=31.0, nahbild=False)] and alt['engstellen'] == []
+    assert 'keine Daten' in ab.text(alt) and 'kein Nahbild in der Nähe' in ab.text(alt)
+
+
 def test_cancellations_are_attributed_to_what_the_explorer_waited_for():
     log, protokoll = _fahrt()
     e = ab.auswerten(log, protokoll)
