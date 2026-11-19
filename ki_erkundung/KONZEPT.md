@@ -142,10 +142,15 @@ Türpfosten, Schwellen, Türblätter und der Boden dahinter schon. Ob das der
 KI genügt, ist die erste Frage an den Trockenlauf.
 
 **Vorschläge.** Das LiDAR (0,75 m hoch, 292° Sichtfeld, 0,245 m vor der
-Antriebsmitte) liefert während der Drehung Scans. Daraus entsteht ein
-Rundum-Profil des Standpunkts. Eine **Öffnung** ist eine Lücke zwischen zwei
-Kanten, hinter der es mindestens 0,5 m frei weitergeht. Jede Öffnung bekommt
-eine Nummer und ihre Maße: Breite, Entfernung, Richtung, freie Tiefe.
+Antriebsmitte) liefert während der Drehung Scans. Aus ihnen wird zuerst der
+Drehwinkel jeder Aufnahme bestimmt (deshalb ist es gleich, ob Amadeus mit dem
+Joystick oder von Hand gedreht wird), dann ein Rundum-Profil des Standpunkts.
+Eine **Öffnung** ist eine Lücke von 0,55 bis 2,5 m zwischen zwei Kanten,
+hinter der es frei weitergeht: quer zur Lücke gemessen im Mittel mindestens
+0,6 m, damit das 0,42 m lange Gehäuse hineinpasst. Eine flache Schranknische
+zählt nicht. Jede Öffnung bekommt eine Nummer und ihre Maße: Breite,
+Entfernung, Richtung, freie Tiefe. Unter 0,60 m Breite wird sie gezeigt,
+aber als zu schmal vermerkt.
 
 **Nummern im Bild.** Jede Nummer wird an der vermessenen Stelle in die Fotos
 gezeichnet (am Boden der Öffnung) und in eine Kartenskizze von oben. Grund:
@@ -315,6 +320,9 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
 | Eine volle Blickrunde dauert gut eine Minute und belastet die Ortung (viele Drehschritte) | bekannt; nur einmal je Raum und im Zweifel |
 | Auswahl des Bild-Sprach-Modells | offen; KI-0 vergleicht zwei bis drei |
 | Personen im Bild und im Scan (Begleitung mit Not-Aus) | können als falsche Öffnung erscheinen; in KI-0 beobachten |
+| Breite der Öffnungen | in der künstlichen Beispielwelt 3–7 cm zu schmal gemessen (vorsichtige Seite); in KI-0 an der bekannten 78-cm-Tür prüfen |
+| Öffnung bei sehr flachem Blick (Standpunkt dicht an der Wand) | wird nicht angeboten, weil die freie Tiefe dahinter nicht zu sehen ist; zählt in K0-6 |
+| Zeitstempel von Kamera und LiDAR am echten Roboter | Zuordnung Bild zu Scan nach Stempel (höchstens 0,15 s Abstand); erst in KI-0 prüfbar |
 | Anschluss an die vorhandene Erkundung | offen; Entscheidung vor KI-2 |
 | Späteres Kundengerät ohne eigenen KI-Rechner | Produktfrage, nicht Teil dieser Stufen |
 
@@ -322,3 +330,6 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
 
 - 19.11.2026, v1.0: Erstfassung nach Entscheidung des Projektinhabers
   (eigene Linie, eigener Ordner, vorhandener KI-Rechner, SH-9 parallel).
+- 19.11.2026, Nachtrag am selben Tag: Regel für Öffnungen in §5 nach den
+  ersten Tests genauer gefasst; drei Punkte in §11 ergänzt. Keine Änderung
+  an Rollen, Grenzen, Stufen oder Kriterien.

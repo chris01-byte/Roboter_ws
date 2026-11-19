@@ -18,8 +18,11 @@ fährt.**
 | [KONZEPT.md](KONZEPT.md) | Das verbindliche Konzept dieser Linie: Rollen, Ablauf, Schnittstellen, Stufen mit vorab festgelegten Kriterien, Nicht-Ziele, Rückfall |
 | [STATUS.md](STATUS.md) | **Einziger** Iststand dieser Linie: Arbeitsliste, Nachweise, genau ein nächster Schritt |
 | `lotse/` | Der „Kopf“: reines Python ohne ROS. Vermessene Vorschläge, Nummern im Bild, Frage an die KI, Prüfung der Antwort, Auswertung |
-| `werkzeuge/` | Aufrufbare Werkzeuge (Trockenlauf, Aufnahme von Blickrunden, künstliche Beispielrunde) |
-| `tests/` | Tests dieser Linie |
+| `werkzeuge/blickrunde_aufnehmen.py` | Auf dem Jetson: hört während einer Drehung mit und speichert Bilder, Tiefenbilder und Scans als Blickrunde. Nur lesend; legt außerhalb des Repositorys ab |
+| `werkzeuge/trockenlauf.py` | Auf dem KI-Rechner: Blickrunden aufbereiten (Drehwinkel, acht Bilder, Öffnungen, Nummern, Skizze) und die KI befragen |
+| `werkzeuge/trockenlauf_auswerten.py` | Antworten gegen die Angaben des Menschen halten; Bericht zu den Kriterien K0-1 bis K0-6 |
+| `werkzeuge/beispielrunde_erzeugen.py` | Künstliche Blickrunde (ausgedachtes Zimmer) zum Ausprobieren und Testen |
+| `tests/` | Tests dieser Linie, darunter die Trennregeln als Tests (`test_trennung.py`) |
 
 ## Trennregeln (verbindlich, MASTERPLAN §10)
 
@@ -54,8 +57,12 @@ entfernen. Sonst ändert sich nichts.
 Voraussetzung: Python 3.10 oder neuer, `numpy`, `Pillow`.
 
 ```bash
-# Tests dieser Linie
+# Tests dieser Linie (ohne ROS wird der eine ROS-Test übersprungen)
 python3 -m pytest -q -p no:cacheprovider ki_erkundung/tests
+
+# mit ROS, abgeschottet von einem laufenden Roboter
+env -u CYCLONEDDS_URI ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 \
+    python3 -m pytest -q -p no:cacheprovider ki_erkundung/tests
 
 # Eine künstliche Blickrunde erzeugen (kein echtes Bild, keine echte Wohnung)
 python3 ki_erkundung/werkzeuge/beispielrunde_erzeugen.py --ausgabe /tmp/ki_beispiel
