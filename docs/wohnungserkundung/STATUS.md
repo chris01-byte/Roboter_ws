@@ -1,6 +1,14 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 19.11.2026 (abends):** Hauptlinie `self_healing`
+**GEPARKT seit 19.11.2026 (spät), Entscheidung des Projektinhabers:** Die
+Hauptlinie `self_healing` hat keinen Auftrag und wird nicht weiterentwickelt;
+gearbeitet wird an der KI-Erkundung (`ki_erkundung/`, MASTERPLAN §10). Der
+Auftrag SH-9N (nur lesend) wurde zurückgezogen und nicht ausgeführt
+([Archiv](archive/20261119-sh9n-zurueckgezogen/README.md)). Der Rückschritt
+gegenüber dem 08.11. ist nicht eingegrenzt. Alles Folgende beschreibt den
+Stand beim Parken.
+
+**Stand beim Parken, 19.11.2026 (abends):** Hauptlinie `self_healing`
 (Nutzerentscheidung 15.10.2026), Fahrplan in MASTERPLAN §9. **SH-9 (19.11.)
 ist nicht bestanden:** eine Fahrt von 13,4 Minuten, 16 Anläufe, **kein Ziel
 erreicht**, Labortür nicht durchfahren, Ende mit „Hilfe benötigt“. Der Raum
@@ -10,10 +18,11 @@ war nach 60 s zu 85 % erfasst; danach drehte Amadeus fast nur auf der Stelle
 fuhr Amadeus zweimal durch dieselbe Tür. Das trifft zu: Am 08.11. (SH-7)
 erreichte er 5, 12 und 7 Ziele. Seitdem kamen fünf Änderungen auf den
 Roboter (AW-1, KM-1 B, KM-2, Antrieb 100 ms, EK-1); welche den Rückschritt
-bringt, ist nicht gemessen. **Aktiver Jetson-Auftrag: SH-9N, nur lesend**
-(die gespeicherten Fahrten vom 08.11., 15.11. und 19.11. mit denselben
-Werkzeugen nebeneinander). **Bis der Rückschritt eingegrenzt ist, kommt
-keine weitere Verhaltensänderung auf den Roboter.**
+bringt, ist nicht gemessen. Vorgesehen war SH-9N, nur lesend (die
+gespeicherten Fahrten vom 08.11., 15.11. und 19.11. mit denselben Werkzeugen
+nebeneinander); zurückgezogen mit dem Parken. **Wird die Linie wieder
+aufgenommen, kommt zuerst diese Eingrenzung, vor jeder weiteren
+Verhaltensänderung.**
 **Seit 19.11.2026** gibt es daneben die getrennte Entwicklungslinie
 „KI-Erkundung“ (MASTERPLAN §10, Stand nur in
 [ki_erkundung/STATUS.md](../../ki_erkundung/STATUS.md)); an dieser
@@ -71,11 +80,13 @@ KM-2 und 100 ms Anfahrzeit). Die Sperre, für die KM-2 gebaut wurde, trat
 dabei nicht auf (kein „approach“ in fünf Läufen); belegt ist, dass die
 Kontur unter Humble anliegt und bei jeder Rückfahrt umschaltet.
 
-**Aktiv (Roboter):** **SH-9N**, [Auftrag](AGENTENAUFTRAG.md): nur lesend,
-kein Stackstart, Christopher wird nicht gebraucht. Die sechs gespeicherten
+**Aktiv (Roboter):** nichts; die Linie ist geparkt. **Zurückgezogen:
+SH-9N**
+([Archiv](archive/20261119-sh9n-zurueckgezogen/README.md)), nur lesend,
+kein Stackstart. Er hätte die sechs gespeicherten
 Fahrten (SH-7 dreimal, W-1 zweimal, SH-9 einmal) mit denselben heutigen
-Werkzeugen auswerten und die Einstellungen der drei Releases nebeneinander
-legen. **Zuletzt gefahren: SH-9 (nicht bestanden,
+Werkzeugen ausgewertet und die Einstellungen der drei Releases
+nebeneinander gelegt. **Zuletzt gefahren: SH-9 (nicht bestanden,
 [Archiv](archive/20261119-sh9-ausgewertet/README.md)):** EK-1
 eingeschaltet (A Teilschwenk 90°, B nur Lücken ab 0,5 m mit 5 cm Rand und
 8 cm Wandabstand, D Abbruch nach 45 s ohne Weggewinn; `bab7cc7`, 249

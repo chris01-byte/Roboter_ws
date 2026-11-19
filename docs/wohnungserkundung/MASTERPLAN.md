@@ -39,6 +39,14 @@
 > und unbeeinflusst; die Hauptlinie `self_healing` läuft mit §9 weiter.
 > Verbindlich in **§10** und in
 > [ki_erkundung/KONZEPT.md](../../ki_erkundung/KONZEPT.md).
+>
+> **Nutzerentscheidung 19.11.2026 (spät) – Hauptlinie geparkt, KI-Erkundung
+> ist die aktive Arbeit:** Nach SH-9 (kein Ziel erreicht, Tür nicht
+> durchfahren) wird die Hauptlinie `self_healing` geparkt: keine
+> Weiterentwicklung, kein Auftrag, alles bleibt erhalten und umschaltbar.
+> Der Rückschritt gegenüber dem 08.11. wird vorerst nicht eingegrenzt.
+> Gearbeitet wird an der KI-Erkundung (§10). §9 beschreibt den Stand der
+> geparkten Linie; seine Arbeitsregeln gelten für Realtests weiter.
 
 **Verbindliche Zielrichtung:** Hardwareanbindung und bewährte ROS-Basis erhalten; die metrische Erkundung vereinfachen; geeignete Open-Source-Komponenten gezielt integrieren. Fortschritt wird durch bestandene Abnahmen belegt. Zusätzliche Sonderfälle ohne nachgewiesenen Nutzen sind keine Integrationsstrategie.
 
@@ -226,6 +234,8 @@ ganze Fahrt durch eine Tür).
 19.11.2026, Nachtrag (Nutzerentscheidung): §10 zweite, getrennte
 Entwicklungslinie „KI-Erkundung“ im Ordner `ki_erkundung/`; Hauptlinie und
 §9 unverändert.
+19.11.2026 (spät), Nachtrag (Nutzerentscheidung nach SH-9): Hauptlinie
+geparkt; die KI-Erkundung (§10) ist die aktive Arbeit.
 19.11.2026, zweiter Nachtrag (Klarstellungen des Projektinhabers): §10.2 an
 KONZEPT v1.1 angepasst (kein Joystick, Verbindung zum KI-Rechner wie bei der
 Objekterkennung, KI-0 „Erstes Sehen“, KI-1 „Blickrunden aus eigener Kraft“,
@@ -396,7 +406,9 @@ nur [ki_erkundung/STATUS.md](../../ki_erkundung/STATUS.md).
    ausgeschaltet verhaltensgleich, getrennt getestet (AGENTS §2.7).
 3. **Die Hauptlinie bleibt, wie sie ist.** §9, die Arbeitsliste im STATUS
    und der Auftrag in `AGENTENAUFTRAG.md` gelten unverändert und bleiben für
-   den Roboter maßgeblich.
+   den Roboter maßgeblich. **Seit 19.11.2026 (spät) ist sie geparkt:** Sie
+   hat keinen Auftrag; ihr Code, ihre Profile und ihre Releases bleiben
+   unverändert erhalten.
 4. **Ein Auftrag am Roboter.** Zu jeder Zeit läuft am Roboter genau ein
    Auftrag. Ein Auftrag der KI-Linie wird erst durch ausdrückliche Übergabe
    des Projektinhabers aktiv.

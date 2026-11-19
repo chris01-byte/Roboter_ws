@@ -205,6 +205,11 @@ ausdrückliche Übergabe des Projektinhabers; am Roboter läuft immer nur ein
 Auftrag. Die Grenzen dieses Abschnitts (ein Navigationsbesitzer, kein
 zusätzlicher Navigator/Supervisor, Schutzkette unverändert) gelten auch für
 sie. Kamerabilder der Wohnung bleiben auf Jetson und KI-Rechner.
+**Seit 19.11.2026 (spät, Nutzerentscheidung):** Die Hauptlinie ist geparkt
+(kein Auftrag, keine Weiterentwicklung, alles bleibt erhalten); gearbeitet
+wird an der KI-Erkundung. Für die Hauptlinie nichts starten, bauen oder
+fahren, solange `docs/wohnungserkundung/AGENTENAUFTRAG.md` keinen Auftrag
+nennt.
 Aktueller Zugang, Grenzen und tatsächliche Nachweise stehen ausschließlich im STATUS;
 fehlender Zugang sperrt nur die davon abhängige Arbeit.
 Der Plan erhält einen schlanken metrischen

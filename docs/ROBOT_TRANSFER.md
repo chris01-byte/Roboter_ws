@@ -319,8 +319,10 @@ Beginn hat der Agent nach Christophers Antwort einen fremden LiDAR-Test aus
 `~/roboter_ws` mit einem SIGINT beendet. Lokal neu: `$SH_PR/sh9_runf1`,
 `sh9_runf1b`, `sh9_runf1c` (Karten und Kostenkarten bleiben dort). Nichts in
 `~/roboter_ws` geändert; kein Commit, kein Push. Danach keine
-Amadeus-Knoten aktiv. Aktiver Auftrag jetzt: SH-9N, nur lesend (Ausgabe nach
-`~/selbstheilung_sh9n`), ohne Jetson-Wirkung auf Releases oder Stack.
+Amadeus-Knoten aktiv. Der danach erteilte Auftrag SH-9N (nur lesend) wurde
+am selben Abend zurückgezogen und nicht ausgeführt; die Hauptlinie ist seit
+19.11.2026 (spät) geparkt und hat keinen Auftrag. Keine weitere
+Jetson-Wirkung.
 
 Stand 19.11.2026, **keine Jetson-Wirkung:** Die getrennte Entwicklungslinie
 „KI-Erkundung“ ist im Repository angelegt (Ordner `ki_erkundung/`,

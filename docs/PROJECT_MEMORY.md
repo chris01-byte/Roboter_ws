@@ -1853,3 +1853,17 @@ gezeigt; sie ist für diese Frage kein Beleg. (4) Die Suche war nie der
 Engpass dieser Fahrt: Der Raum war nach 60 s zu 85 % erfasst. Nächster
 Schritt: SH-9N, nur lesend; danach nach Entscheidung des Projektinhabers eine
 Vergleichsfahrt mit dem unveränderten Release vom 08.11.
+
+**Nachtrag 19.11.2026 (spät) – Hauptlinie geparkt, KI-Erkundung aktiv
+(Projektinhaber):** Nach SH-9 hat der Projektinhaber die vorgeschlagene
+Eingrenzung des Rückschritts (SH-9N nur lesend, dann Vergleichsfahrt mit dem
+Release vom 08.11.) abgelehnt und entschieden: Die Hauptlinie wird geparkt,
+es wird mit der KI-Erkundung begonnen. Festgehalten für später: Der Stand
+vom 08.11. (`selbstheilung-sh7-20261108_1617`) liegt unverändert auf dem
+Jetson; der zurückgezogene Auftrag SH-9N liegt als Vorlage im Archiv. Folge
+für die KI-Linie: Sie kann sich nicht darauf stützen, dass die Hauptlinie
+fährt. Ihr Fahrteil muss deshalb einfach sein und ohne die Bahnverfolgung
+auskommen, an der SH-9 scheiterte. Ausgangspunkt der Überlegung: Das
+vorhandene Fahrtor lässt vom Erkunder schon heute genau zwei begrenzte
+Bewegungen zu, Drehen auf der Stelle (Rundblick) und Geradeausfahrt mit
+kleiner Lenkkorrektur (frühere Türdurchfahrt).

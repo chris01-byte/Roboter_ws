@@ -7,6 +7,14 @@ und am KI-Rechner ist für diese Linie noch nichts gelaufen**; es wurde noch
 kein echtes Bild und keine echte KI verwendet. In der Hauptlinie läuft
 parallel der Realtest SH-9; dieser Ordner berührt ihn nicht.
 
+**Seit 19.11.2026 (spät) ist dies die aktive Arbeit:** Der Projektinhaber
+hat die Hauptlinie nach SH-9 geparkt (kein Ziel erreicht, Tür nicht
+durchfahren) und entschieden, mit der KI-Erkundung zu beginnen. Folge: Diese
+Linie kann sich nicht darauf stützen, dass die Hauptlinie fährt. Die Stufen
+KI-1 („Mitlauf bei Fahrten der Hauptlinie“) und KI-3 („die vorhandene
+Navigation fährt“) müssen deshalb neu gefasst werden; der Aufbau wird gerade
+mit dem Projektinhaber abgestimmt.
+
 Dies ist der einzige Iststand dieser Linie. Der Stand der Hauptlinie steht
 ausschließlich in `docs/wohnungserkundung/STATUS.md`.
 
@@ -129,4 +137,6 @@ zum KI-Rechner (Lotsen-Dienst und Gegenstück).
 
 ## Genau ein nächster Schritt
 
-Auftrag KI-0 „Erstes Sehen“ schreiben, sobald SH-9 ausgewertet ist.
+Aufbau der Linie mit dem Projektinhaber abstimmen (Fahrteil ohne die
+Bahnverfolgung der Hauptlinie; Reihenfolge der ersten Schritte), dann
+KONZEPT auf v1.2 fortschreiben und den Auftrag KI-0 „Erstes Sehen“ schreiben.
