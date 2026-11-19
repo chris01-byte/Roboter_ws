@@ -1837,3 +1837,19 @@ nötig), KI-1 „Blickrunden aus eigener Kraft“. Für die volle Drehung am Sta
 fehlt ein Zugang von außen: `nav_mapping.launch.py` gibt dem Erkunder im
 Selbstheilungsbetrieb fest `self_healing_params.yaml`. Das wird eine eigene,
 freizugebende Änderung der Hauptlinie nach SH-9.
+
+**Nachtrag 19.11.2026 (spät) – SH-9 nicht bestanden; Lehre zum Rückschritt:**
+SH-9 erreichte kein Ziel (16 Anläufe), 75 % der Fahrbefehle waren Drehen, die
+Labortür wurde nicht durchfahren. Am 08.11. (SH-7) waren es 5, 12 und 7 Ziele
+und zwei Durchfahrten in drei Fahrten. Der Projektinhaber hatte den
+Rückschritt schon am 16.11. benannt. Lehren: (1) Kommt ein Stand, der etwas
+konnte, es nicht mehr, wird zuerst der alte Stand gegengeprüft und der
+Unterschied eingegrenzt; neue Funktionen kommen erst danach. Am 16.11. wurde
+stattdessen EK-1 als sechste Änderung daraufgesetzt. (2) Ein Schwellwert aus
+der Simulation (EK-1 D, 45 s) gehört nicht ungeprüft auf den Roboter, wenn
+eine dafür maßgebliche reale Größe (Drehrate) bekannt anders ist. (3) Die
+Simulation hat das reale Verhalten (Drehen auf der Stelle, kein Ziel) nicht
+gezeigt; sie ist für diese Frage kein Beleg. (4) Die Suche war nie der
+Engpass dieser Fahrt: Der Raum war nach 60 s zu 85 % erfasst. Nächster
+Schritt: SH-9N, nur lesend; danach nach Entscheidung des Projektinhabers eine
+Vergleichsfahrt mit dem unveränderten Release vom 08.11.

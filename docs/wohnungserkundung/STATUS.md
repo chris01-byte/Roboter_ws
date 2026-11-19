@@ -1,17 +1,19 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 16.11.2026 (abends):** Hauptlinie `self_healing`
-(Nutzerentscheidung 15.10.2026). Es gilt der **Fahrplan in MASTERPLAN §9**
-mit dem Nachtrag vom 16.11. Der Antrieb folgt den Befehlen (Anfahrzeit
-100 ms). **W-1 (15.11.)** kam zweimal nicht aus dem Laborraum; **W-1N
-(16.11.)** zeigt zwei Ursachen (Tür in Fahrt 1, veraltete Lokalisierung mit
-Neuanläufen in Fahrt 2). **Einwand des Projektinhabers (16.11.):** Am 08.11.
-kam Amadeus durch die Tür, jetzt nicht mehr; und der vereinbarte
-Suchmechanismus war nicht zu sehen. Beides trifft zu. **Aktiver
-Jetson-Auftrag: SH-9**, der Suchmechanismus EK-1 ist eingeschaltet
-(`bab7cc7`), Fahrt durch Labor, Flur und Schlafzimmer. Die Simulation zeigt
-seit dem 16.11. auch den Türfehler aus W-1 (Rückfahrt mit dem Heck an den
-Pfosten); die Tür ist die nächste Korrektur.
+**Aktueller Stand 19.11.2026 (abends):** Hauptlinie `self_healing`
+(Nutzerentscheidung 15.10.2026), Fahrplan in MASTERPLAN §9. **SH-9 (19.11.)
+ist nicht bestanden:** eine Fahrt von 13,4 Minuten, 16 Anläufe, **kein Ziel
+erreicht**, Labortür nicht durchfahren, Ende mit „Hilfe benötigt“. Der Raum
+war nach 60 s zu 85 % erfasst; danach drehte Amadeus fast nur auf der Stelle
+(75 % der Befehlszeit, zusammen rund 15 volle Umdrehungen bei 8,7 m Weg).
+**Einwand des Projektinhabers (19.11.):** keinerlei Verbesserung; am 08.11.
+fuhr Amadeus zweimal durch dieselbe Tür. Das trifft zu: Am 08.11. (SH-7)
+erreichte er 5, 12 und 7 Ziele. Seitdem kamen fünf Änderungen auf den
+Roboter (AW-1, KM-1 B, KM-2, Antrieb 100 ms, EK-1); welche den Rückschritt
+bringt, ist nicht gemessen. **Aktiver Jetson-Auftrag: SH-9N, nur lesend**
+(die gespeicherten Fahrten vom 08.11., 15.11. und 19.11. mit denselben
+Werkzeugen nebeneinander). **Bis der Rückschritt eingegrenzt ist, kommt
+keine weitere Verhaltensänderung auf den Roboter.**
 **Seit 19.11.2026** gibt es daneben die getrennte Entwicklungslinie
 „KI-Erkundung“ (MASTERPLAN §10, Stand nur in
 [ki_erkundung/STATUS.md](../../ki_erkundung/STATUS.md)); an dieser
@@ -36,12 +38,22 @@ HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
 
-## Arbeitsliste (roter Faden nach MASTERPLAN §9) – Stand 16.11.2026
+## Arbeitsliste (roter Faden nach MASTERPLAN §9) – Stand 19.11.2026
 
 Genau eine Liste. Jeder Auftrag bezieht sich auf eine Zeile. Neue Ideen
 kommen unter „Geparkt“, nicht sofort in den Code.
 
-**Das eine aktive Problem (seit W-1, 15.11.): Amadeus verlässt den Raum
+**Das eine aktive Problem (Stand 19.11.): Mit dem heutigen Stand erreicht
+Amadeus seine Ziele nicht mehr; der Stand vom 08.11. konnte es.** SH-9: 0 von
+16 Anläufen erreicht, 74,5 s Vorwärtsfahrt in 13,4 Minuten, 502,7 s Drehen
+(Drehrate im Median 0,058 rad/s), 616× „collision ahead“, 18× Reglerhalt, am
+Ende 38× kein Plan, obwohl Amadeus frei stand. Die Suche ist nicht das
+Problem (Raum nach 60 s zu 85 % erfasst), das Fahren ist es. Zuerst wird der
+Rückschritt eingegrenzt (SH-9N, dann eine Vergleichsfahrt mit dem
+unveränderten Release vom 08.11., wenn der Projektinhaber zustimmt). Die
+folgenden Absätze beschreiben den Stand bis W-1.
+
+**Bis W-1 (15.11.): Amadeus verlässt den Raum
 nicht.** Gemessen (W-1N, 16.11.): Der Raum ist nach 2–3 Minuten zu 85 %
 erfasst. In Fahrt 1 scheiterten danach alle 10 Ziele hinter der 78-cm-Tür;
 Amadeus stand am Ende neben dem 22 cm breiten Streifen, den der Planer in
@@ -59,7 +71,12 @@ KM-2 und 100 ms Anfahrzeit). Die Sperre, für die KM-2 gebaut wurde, trat
 dabei nicht auf (kein „approach“ in fünf Läufen); belegt ist, dass die
 Kontur unter Humble anliegt und bei jeder Rückfahrt umschaltet.
 
-**Aktiv (Roboter):** **SH-9**, [Auftrag](AGENTENAUFTRAG.md): EK-1
+**Aktiv (Roboter):** **SH-9N**, [Auftrag](AGENTENAUFTRAG.md): nur lesend,
+kein Stackstart, Christopher wird nicht gebraucht. Die sechs gespeicherten
+Fahrten (SH-7 dreimal, W-1 zweimal, SH-9 einmal) mit denselben heutigen
+Werkzeugen auswerten und die Einstellungen der drei Releases nebeneinander
+legen. **Zuletzt gefahren: SH-9 (nicht bestanden,
+[Archiv](archive/20261119-sh9-ausgewertet/README.md)):** EK-1
 eingeschaltet (A Teilschwenk 90°, B nur Lücken ab 0,5 m mit 5 cm Rand und
 8 cm Wandabstand, D Abbruch nach 45 s ohne Weggewinn; `bab7cc7`, 249
 gezielte Tests). Fahrbereich Laborraum, Flur und Schlafzimmer (Freigabe des
@@ -70,6 +87,12 @@ Karte, Auswertung gleich am Jetson. Kriterien E1–E6 und K im Auftrag.
 für die autonome Fahrt ausgelegt; 100 ms Anfahrzeit ist Standard. Ein Raum
 darf bei 80–85 % als erfasst gelten; kommt kein Fortschritt mehr, sucht
 Amadeus dort nicht weiter und geht zum nächsten Raum.
+
+**Simulation, Einschränkung (19.11.):** Die Simulation hat das Verhalten
+aus SH-9 nicht gezeigt; mit EK-1 verließen dort alle fünf Läufe den Raum.
+Für die Frage „fährt Amadeus real seine Ziele an“ ist sie derzeit nicht
+aussagekräftig. Bis das geklärt ist, wird aus ihr kein Wert mehr auf den
+Roboter übernommen.
 
 **In Simulation: die Tür.** Seit dem 16.11. stellt die Simulation den
 Fehler aus W-1 Fahrt 1 nach (eine von elf Türdurchfahrten mit EK-1: im Flur vor
@@ -140,6 +163,82 @@ ausgewertet: Stellprobe bestanden, Wohnungsfahrt bleibt im Laborraum (15.11.)
 · W-1N ausgewertet: Tür in Fahrt 1, veraltete Lokalisierung in Fahrt 2
 (16.11.) · EK-1 auf dem heutigen Stand simuliert, Lückenfilter korrigiert,
 Türfehler in der Simulation nachgestellt (16.11.).
+
+## 19.11.2026 (abends) – SH-9 ausgewertet: nicht bestanden, kein Ziel erreicht; Einwand des Projektinhabers: Rückschritt gegenüber dem 08.11.
+
+Lokaler Agent, Release `selbstheilung-sh9-20261119_1932` (HEAD `c567c2d`,
+Build 168 s, 14/14 Präfixe, 249 Tests). Drei Stackstarts: Der erste fiel in
+der Vorprüfung durch (15 LiDAR-Punkte im Gehäuse; Christopher: „da lag was
+von mir“, Neustart auf seine Anweisung, abweichend vom Auftrag), der zweite
+an alten Encoderdaten (Regel „D Quellen“), der dritte bestand (67× OK). Eine
+Fahrt, 801,5 s; die zweite lehnte Christopher ab („keinerlei Verbesserungen
+zu der alten Software gesehen“). Aufbau laut Christopher: Labor- und
+Schlafzimmertür offen, übrige zu; Durchfahrt 850 mm; Flur 1,3 m breit mit
+Jacken- und Schuhregal.
+
+**Ergebnis nach den vorab festgelegten Kriterien: nicht bestanden.** E1
+(EK-1 aktiv) erfüllt; E3, E4, E5, E6 nicht; E2 und K nicht feststellbar
+(Fragen dazu unbeantwortet; laut Protokoll kein Not-Aus, kein Fehlerende).
+
+| | SH-7 (08.11.) | W-1 (15.11.) | SH-9 (19.11.) |
+|---|---|---|---|
+| Stand | Release `selbstheilung-sh7-20261108_1617` | dazu AW-1, KM-1 B, KM-2, Antrieb 100 ms | dazu EK-1 |
+| Fahrten | 3 (25–32 min) | 2 | 1 (13,4 min) |
+| Erreichte Ziele | 5 / 12 / 7 | Fahrt 2: 2 | **0 von 16 Anläufen** |
+| Durch die Labortür | 2 von 3 | 0 von 2 | 0 von 1 |
+| Anteil Drehen an den Fahrbefehlen | nicht ausgewertet | 71 % (Fahrt 2) | 75 % |
+
+**Gemessen in SH-9:**
+1. **Die Suche war nicht das Problem:** Raum nach 60 s zu 85 %, nach 211 s zu
+   95 % erfasst; in den folgenden knapp 10 Minuten kamen 0,8 m² dazu.
+2. **Amadeus fuhr kaum:** in den Anläufen 74,5 s vorwärts (befohlen 5,4 m),
+   502,7 s Drehen, Drehrate im Median 0,058 rad/s (3,3°/s). Über die ganze
+   Fahrt 96 rad Drehung (rund 15 Umdrehungen) bei 8,7 m Weg.
+3. **Der Regler hielt an:** 616× „detected collision ahead“, 18× „Controller
+   patience exceeded“; an diesen Stellen lag keine tödliche Zelle in der
+   Kontur, die nächste meist 2–37 cm vorn links oder vorn rechts.
+4. **EK-1 D griff viermal:** Die Anläufe 3 bis 5 endeten nach 45,1 / 58,8 /
+   45,1 s; davon waren 42–52 s Drehen und 2–3 s Vorwärtsfahrt.
+5. **Mehr Bewegung als befohlen:** Weg 1,44-fach, Drehung 1,32-fach
+   (W-1 Fahrt 2: 1,19 und 1,36).
+6. **Ende:** ab Minute 10,5 38× „failed to create plan“; die letzten sieben
+   Anläufe scheiterten nach 6–23 s. Amadeus stand dabei frei (nächste
+   belegte Zelle 1,08 m), etwa 1 m vom Startplatz.
+7. Einmal stand er an einer 0,86 m breiten Stelle (3,6 s, bei 71 s); kurz
+   danach vier Reglerhalte mit Hindernis 2–10 cm vor den vorderen Ecken und
+   eine Rückfahrt von 0,31 m. Ob das die Labortür war, ist nicht belegt (die
+   Durchfahrt ist laut Christopher 0,85 m breit).
+8. SLAM-Last 4 % → 38 %; eine VL53-Lücke von 5,6 s; Wackeln klein
+   (höchstens 0,026 rad/s).
+
+**Vermutet, nicht gemessen:**
+- EK-1 D bricht Anläufe ab, während Amadeus noch dreht: Bei 0,058 rad/s
+  dauert eine halbe Drehung 54 s, die Schwelle liegt bei 45 s.
+- Das langsame Drehen selbst (seit 16.11. bekannt und geparkt) und das
+  Anhalten des Reglers nahe an Hindernissen (KM-1 B: seit 13.11. bleibt
+  unter der Kontur nichts gelöscht).
+- Der schnelle Antrieb (seit 15.11.) führt zu mehr Bewegung als befohlen.
+Welche der fünf Änderungen seit dem 08.11. den Rückschritt bringt, lässt
+sich aus SH-9 allein nicht sagen.
+
+**Fehler der Cloud-Planung, festgehalten:**
+1. Der Rückschritt war am 16.11. benannt („welche Änderung die Tür
+   verschlechtert hat, ist nicht gemessen“) und wurde trotzdem geparkt. Mit
+   EK-1 kam eine sechste Änderung auf einen Stand, der schon nicht mehr
+   fuhr. Richtig wäre gewesen, zuerst den Stand vom 08.11. gegenzuprüfen.
+2. Die Schwelle von EK-1 D (45 s) stammt aus der Simulation. Die reale
+   Drehrate war seit dem 16.11. als sehr klein bekannt.
+3. Die Simulation zeigte dieses Verhalten nicht (alle fünf Läufe mit EK-1
+   verließen den Raum). Sie bildet das reale Drehen nicht ab; ihre Ergebnisse
+   wurden trotzdem als Begründung für SH-9 verwendet.
+
+**Entscheidung der Auswertung:** keine neue Verhaltensänderung. Nächster
+Schritt ist **SH-9N** (nur lesend): die gespeicherten Fahrten vom 08.11.,
+15.11. und 19.11. mit denselben Werkzeugen nebeneinander, dazu die
+Einstellungen der drei Releases. Danach, wenn der Projektinhaber zustimmt:
+eine Vergleichsfahrt mit dem unveränderten Release vom 08.11.; fährt er
+heute wieder, werden die Änderungen einzeln zurückgeholt, jede mit einer
+ganzen Fahrt durch die Tür (Arbeitsregel 8).
 
 ## 19.11.2026 – Entscheidung des Projektinhabers: zweite, getrennte Linie „KI-Erkundung“; SH-9 läuft unverändert
 

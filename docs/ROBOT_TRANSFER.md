@@ -307,6 +307,21 @@ erteilt (`bab7cc7`, Profil mit EK-1). Er wird einen neuen Release
 `hwt601_accel_ms:=100`, Fahrbereich Laborraum, Flur und Schlafzimmer. Die
 tatsächliche Wirkung wird nach dem Bericht hier nachgetragen.
 
+Nachtrag 19.11.2026 (abends), tatsächliche Jetson-Wirkung SH-9: **neuer
+Release** `~/.local/share/amadeus/releases/selbstheilung-sh9-20261119_1932`
+(14 Pakete, HEAD `c567c2d`, 249 Tests); `SH_REL` in
+`~/roboter_worktrees/selbstheilung-v2.env` zeigt jetzt darauf (Rückfall
+`selbstheilung-w1-20261115_1801`; frühere Releases unverändert, darunter
+`selbstheilung-sh7-20261108_1617`). Drei Stackstarts mit
+`hwt601_accel_ms:=100`, eine scharfe Fahrt von 801,5 s im Laborraum, Ende
+„Hilfe benötigt“, kein Not-Aus laut Protokoll, kein „process has died“. Vor
+Beginn hat der Agent nach Christophers Antwort einen fremden LiDAR-Test aus
+`~/roboter_ws` mit einem SIGINT beendet. Lokal neu: `$SH_PR/sh9_runf1`,
+`sh9_runf1b`, `sh9_runf1c` (Karten und Kostenkarten bleiben dort). Nichts in
+`~/roboter_ws` geändert; kein Commit, kein Push. Danach keine
+Amadeus-Knoten aktiv. Aktiver Auftrag jetzt: SH-9N, nur lesend (Ausgabe nach
+`~/selbstheilung_sh9n`), ohne Jetson-Wirkung auf Releases oder Stack.
+
 Stand 19.11.2026, **keine Jetson-Wirkung:** Die getrennte Entwicklungslinie
 „KI-Erkundung“ ist im Repository angelegt (Ordner `ki_erkundung/`,
 MASTERPLAN §10). Auf dem Jetson und auf dem KI-Rechner ist dafür nichts
