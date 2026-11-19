@@ -82,10 +82,13 @@ def test_falsche_gefaehrliche_verworfene_und_fehlende_antworten_werden_getrennt_
 
 def test_antwortzeit_zaehlt_nur_bei_geladenem_modell_und_modelle_getrennt():
     runden = [runde('r', [antwort('a', 1, dauer=40.0, laden=30.0),
-                          antwort('a', 1, wiederholung=1, dauer=9.0),
-                          antwort('a', 1, wiederholung=2, dauer=11.0),
-                          antwort('b', 1, dauer=50.0)])]
+                          antwort('a', 1, wiederholung=1, dauer=1.3),
+                          antwort('b', 1, dauer=50.0)]),
+              runde('s', [antwort('a', 1, dauer=9.0), antwort('a', 1, wiederholung=1, dauer=1.2)]),
+              runde('t', [antwort('a', 1, dauer=11.0)])]
     ergebnis = werte_aus(runden, {'r': {'ausgaenge': [1]}})
+    # gezählt: erste Antworten bei geladenem Modell (9 s, 11 s); nicht das
+    # Laden (40 s) und nicht die Wiederholungen aus dem Zwischenspeicher
     assert ergebnis['modelle']['a']['K0-4_median_s'] == 10.0
     assert ergebnis['modelle']['a']['K0-4_p95_s'] == 11.0
     assert '95 % bis 11.0 s' in bericht(ergebnis)

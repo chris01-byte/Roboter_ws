@@ -34,12 +34,36 @@ nur die App mit dem Roboter.
 ## Arbeitsliste
 
 **Aktiv: Auftrag KI-0 „Erstes Sehen“** ([AUFTRAG.md](AUFTRAG.md)), im Stand,
-ohne Bewegung; geschrieben am 19.11.2026, wartet auf die Übergabe durch den
-Projektinhaber. Teil A auf dem KI-Rechner (Modell laden, erste Antwort am
-künstlichen Beispiel, Lotsen-Dienst starten), Teil B auf dem Jetson (Kamera
-und LiDAR, Standbilder, Frage über die Verbindung, Urteil des
-Projektinhabers). Reihenfolge laut Projektinhaber: erst prüfen, ob die KI
-die Tür erkennt, dann die Türdurchfahrt.
+ohne Bewegung. **Teil A (KI-Rechner) lief am 19.11.2026 bis A5** und steht
+dort: Der Lotsen-Dienst kann nicht starten, weil die Netzwerkschnittstelle,
+an die das DDS des KI-Dienstes gebunden ist (`enp4s0`), keine Verbindung
+hat. Der Agent hat richtig nichts am Netz geändert. Fortsetzung über den
+„A-Nachtrag“ im Auftrag, dann Teil B (Jetson). Reihenfolge laut
+Projektinhaber: erst prüfen, ob die KI die Tür erkennt, dann die
+Türdurchfahrt.
+
+**Teil A, erster echter Lauf (19.11.2026, Bericht des Agenten auf dem
+KI-Rechner):**
+- Stand `8347f2b` frisch nach `~/ki_erkundung_ws` geklont (`~/roboter_ws`
+  unberührt). Tests: 157 bestanden, nachdem das pytest-Plugin
+  `launch_testing` abgeschaltet war (`PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`).
+- Modelle: `qwen3.5:9b` (6,6 GB) und `qwen3-vl:8b` (6,2 GB) geladen;
+  Grafikspeicher danach 7,7 von 24 GB belegt.
+- Künstliches Beispielzimmer, `qwen3.5:9b` ohne Denken: dreimal **Wahl 1**,
+  gültig nach Schema; 37,5 s (davon etwa 20 s Laden), dann 1,35 s und 1,32 s.
+  **Nummer 1 ist dort die Glastür zum Balkon**, Nummer 2 die Tür zum Flur.
+  Das Modell hat also dreimal die Glastür als Ausgang gewählt. Einschränkung:
+  Die Glastür ist im gezeichneten Bild nur als heller Rahmen mit dem Balkon
+  dahinter zu sehen; ein Urteil über echte Glastüren ist das nicht. Für K0-2
+  ist es eine Warnung, die Teil B prüfen muss.
+- Die 1,3 s der Wiederholungen kamen vermutlich aus dem Zwischenspeicher
+  des Dienstes (gleiche Frage); eine neue Frage dauert eher um 17 s. Folge:
+  K0-4 zählt nur die erste Antwort je Frage, K0-5 vergleicht zwei getrennte
+  Aufnahmen derselben Ansicht (KONZEPT, Änderungsprotokoll).
+- Mit Denken: zweimal keine Antwort nach 60 s. Die Werkzeuge hatten dabei
+  still ohne Denkschalter und ohne Schema wiederholt und den Fehlertext des
+  Dienstes verworfen. Behoben: genau eine Anfrage wie angegeben, der
+  Fehlertext steht in der Ausgabe.
 
 **Als Nächstes in der Entwicklung (ohne Roboter): der Fahrteil.** Vorgabe
 des Projektinhabers: nichts Neues erfinden, sondern an den Türdurchfahrten
@@ -120,6 +144,8 @@ zum KI-Rechner (Lotsen-Dienst und Gegenstück).
 | 19.11.2026 | Tests dieser Linie | Python 3.12, numpy 1.26, Pillow 10.2, ROS 2 Jazzy, abgeschottet | 157 bestanden; darunter Aufnahme über echte ROS-Themen und die Strecke Roboter → Lotsen-Dienst → gespieltes Ollama (Antwort, „beschäftigt“, Zeitgrenze, unbrauchbare Frage, fehlender Dienst) |
 | 19.11.2026 | Quelltext auf Python 3.10 lesbar | Syntaxprüfung aller Python-Dateien | bestanden |
 | 19.11.2026 | Hauptlinie unberührt | 249 gezielte Tests aus dem SH-9-Auftrag; `git diff` außerhalb dieses Ordners | 249 bestanden; keine bestehende Datei geändert außer den Verweisen |
+| 19.11.2026 | KI-0 Teil A bis A5 | KI-Rechner, echtes Ollama | Tests 157 bestanden (mit abgeschaltetem Plugin); `qwen3.5:9b` antwortet gültig nach Schema, wählt im Beispielzimmer dreimal die Glastür; mit Denken keine Antwort in 60 s; Lotsen-Dienst wegen fehlender Netzverbindung nicht gestartet |
+| 19.11.2026 | Werkzeuge nach Teil A korrigiert | Entwicklungsumgebung | kein stiller Ersatzversuch mehr, Fehlertext des Dienstes, Ausgabe mit Einordnung und Raum; Tests 150 bestanden, 2 übersprungen (ohne ROS) und 158 bestanden (mit ROS) |
 | 19.11.2026 | Angaben des HomeMy-Konzepts | Ollama-Bibliothek, arXiv | `qwen3.5:9b` und `qwen3-vl:8b` vorhanden, beide mit Bildeingabe; Mobility VLA setzt eine vorab aufgenommene Führung voraus; LocalNav: 26 % / 37 % / 42 % Erfolg (lokal ohne und mit Nachtraining, Cloud) |
 
 **Gemessen an der künstlichen Beispielwelt** (ausgedachtes Zimmer mit
@@ -146,8 +172,9 @@ zum KI-Rechner (Lotsen-Dienst und Gegenstück).
 - **Kein echtes Bild, kein echter Scan, keine echte KI.** Ob ein Modell auf
   dem KI-Rechner an echten Bildern dieser Kamera Türen erkennt und richtig
   wählt, ist offen. Das ist die Frage von KI-0 und KI-1.
-- **Echtes Ollama.** Antwortschema, Denkschalter und mehrere Bilder je Frage
-  sind nur gegen eine Attrappe geprüft, nicht gegen `qwen3.5:9b`.
+- **Echtes Ollama:** Antwortschema und neun Bilder je Frage laufen mit
+  `qwen3.5:9b` (Teil A). Offen: Denkschalter, `qwen3-vl:8b`, die Zeit einer
+  neuen Frage ohne Zwischenspeicher.
 - **Zielsysteme.** Jetson (Python 3.10, ROS 2 Humble) und KI-Rechner
   (RoboStack Humble, Python 3.12); die ROS-Tests liefen hier unter Jazzy.
 - **Echtes WLAN.** Die Strecke lief nur innerhalb eines Rechners.
@@ -156,6 +183,6 @@ zum KI-Rechner (Lotsen-Dienst und Gegenstück).
 
 ## Genau ein nächster Schritt
 
-Aufbau der Linie mit dem Projektinhaber abstimmen (Fahrteil ohne die
-Bahnverfolgung der Hauptlinie; Reihenfolge der ersten Schritte), dann
-KONZEPT auf v1.2 fortschreiben und den Auftrag KI-0 „Erstes Sehen“ schreiben.
+KI-0 fortsetzen: Christopher verbindet den KI-Rechner mit dem Netz wie beim
+Einrichten im August (Kabel), dann A-Nachtrag N1 bis N3 auf dem KI-Rechner,
+dann Teil B auf dem Jetson.

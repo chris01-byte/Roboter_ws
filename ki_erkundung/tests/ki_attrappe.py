@@ -50,7 +50,7 @@ class Attrappe:
                 anfrage = json.loads(self.rfile.read(laenge).decode('utf-8'))
                 attrappe.anfragen.append(anfrage)
                 if attrappe.denkschalter_ablehnen and 'think' in anfrage:
-                    self._sende(400, b'{"error": "think wird nicht unterstuetzt"}')
+                    self._sende(400, b'{"error": "model does not support thinking"}')
                     return
                 if attrappe.schema_ablehnen and isinstance(anfrage.get('format'), dict):
                     self._sende(400, b'{"error": "format wird nicht unterstuetzt"}')

@@ -1,5 +1,6 @@
 """Verbindung zum KI-Rechner (hier: zur Attrappe auf 127.0.0.1)."""
 import base64
+import json
 import socket
 import time
 
@@ -33,12 +34,17 @@ def test_frage_geht_mit_bildern_und_schema_hinaus_und_antwort_kommt_zurueck(ki_a
     assert roh.als_dict()['fehler'] is None and 'text' not in roh.als_dict()
 
 
-def test_aelterer_dienst_ohne_schema_wird_einmal_mit_json_zwang_gefragt(ki_attrappe):
+def test_abgelehntes_schema_wird_gemeldet_nicht_still_ersetzt(ki_attrappe):
     ki_attrappe.schema_ablehnen = True
-    ki_attrappe.antworten.append('{"wahl": null}')
     roh = frage_stellen(FRAGE, BILDER, 'pruefmodell', url=ki_attrappe.url)
-    assert roh.fehler is None and not roh.mit_schema and roh.text == '{"wahl": null}'
-    assert [a['format'] for a in ki_attrappe.anfragen] == [FRAGE.schema, 'json']
+    assert roh.fehler == 'http_400' and roh.text is None and roh.mit_schema
+    assert roh.meta['meldung'] == 'format wird nicht unterstuetzt'
+    assert len(ki_attrappe.anfragen) == 1
+    ki_attrappe.antworten.append('{"wahl": null}')
+    von_hand = frage_stellen(FRAGE, BILDER, 'pruefmodell', url=ki_attrappe.url,
+                             mit_schema=False)
+    assert von_hand.fehler is None and not von_hand.mit_schema
+    assert ki_attrappe.anfragen[-1]['format'] == 'json'
 
 
 def test_zu_langsame_antwort_endet_an_der_zeitgrenze(ki_attrappe):
@@ -97,19 +103,19 @@ def test_denkschalter_wird_nur_gesendet_wenn_er_gesetzt_ist(ki_attrappe):
     assert ki_attrappe.anfragen[2]['think'] is True and an.als_dict()['denken'] is True
 
 
-def test_dienst_ohne_denkschalter_wird_ohne_ihn_erneut_gefragt(ki_attrappe):
+def test_abgelehnter_denkschalter_wird_mit_meldung_berichtet(ki_attrappe):
     ki_attrappe.denkschalter_ablehnen = True
-    ki_attrappe.antworten.append('{"wahl": 1}')
-    roh = frage_stellen(FRAGE, BILDER, 'pruefmodell', url=ki_attrappe.url, denken=False)
-    assert roh.fehler is None and roh.denken is None and roh.mit_schema
-    assert ['think' in a for a in ki_attrappe.anfragen] == [True, False]
-    # lehnt er auch das Schema ab, folgt der einfache JSON-Zwang
-    ki_attrappe.anfragen.clear()
-    ki_attrappe.schema_ablehnen = True
-    ki_attrappe.antworten.append('{"wahl": null}')
     roh = frage_stellen(FRAGE, BILDER, 'pruefmodell', url=ki_attrappe.url, denken=True)
-    assert roh.fehler is None and not roh.mit_schema and roh.denken is None
-    assert [a['format'] == 'json' for a in ki_attrappe.anfragen] == [False, False, True]
+    assert roh.fehler == 'http_400' and roh.denken is True and roh.mit_schema
+    assert roh.meta == {'meldung': 'model does not support thinking'}
+    assert len(ki_attrappe.anfragen) == 1 and ki_attrappe.anfragen[0]['think'] is True
+
+
+def test_denktext_wird_gezaehlt_aber_nicht_gespeichert(ki_attrappe):
+    ki_attrappe.antworten.append({'roh': json.dumps({
+        'message': {'content': '{"wahl": 1}', 'thinking': 'x' * 1234}}).encode()})
+    roh = frage_stellen(FRAGE, BILDER, 'pruefmodell', url=ki_attrappe.url, denken=True)
+    assert roh.fehler is None and roh.meta['denktext_zeichen'] == 1234
 
 
 def test_umgebung_nennt_fassung_des_dienstes_und_kennung_des_modells(ki_attrappe):

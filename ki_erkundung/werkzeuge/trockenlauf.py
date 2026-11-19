@@ -156,12 +156,20 @@ def main(argv=None) -> int:
                                       denken=denken, weg=weg)
                     eintrag['antworten'].append(antwort)
                     if antwort['fehler']:
-                        kurz = f'keine Antwort ({antwort["fehler"]})'
+                        meldung = (antwort.get('meta') or {}).get('meldung')
+                        kurz = (f'keine Antwort ({antwort["fehler"]}'
+                                + (f': {meldung}' if meldung else '') + ')')
                     elif antwort['pruefung']['gueltig']:
-                        kurz = f'Wahl {antwort["pruefung"]["wahl"]}'
+                        p = antwort['pruefung']
+                        arten = ', '.join(f'{k}={v}' for k, v in p['arten'].items())
+                        kurz = f'Wahl {p["wahl"]} [{arten}] Raum {p["raum"]!r}'
                     else:
                         kurz = f'verworfen {antwort["pruefung"]["fehler"]}'
-                    print(f'  {modell} #{nummer + 1}: {kurz}, {antwort["dauer_s"]} s')
+                    meta = antwort.get('meta') or {}
+                    zeiten = (f' (laden {meta["load_s"]} s, Bild/Text eingelesen '
+                              f'{meta.get("prompt_eval_count")} Teile)'
+                              if 'load_s' in meta else '')
+                    print(f'  {modell} #{nummer + 1}: {kurz}, {antwort["dauer_s"]} s{zeiten}')
         ergebnis['runden'].append(eintrag)
         with open(ausgabe / 'ergebnis.json', 'w', encoding='utf-8') as datei:
             json.dump(ergebnis, datei, indent=1, ensure_ascii=False)

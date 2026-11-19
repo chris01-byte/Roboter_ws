@@ -106,9 +106,13 @@ def werte_aus(runden: Sequence[dict], wahrheiten: Dict[str, dict]) -> dict:
                 if a['pruefung']['arten'].get(str(nr)) == art:
                     art_richtig += 1
 
-        # K0-4: nur Antworten bei geladenem Modell (Ladezeit unter 1 s)
+        # K0-4: nur die erste Antwort je Frage und nur bei geladenem Modell.
+        # Wiederholungen derselben Frage kommen aus dem Zwischenspeicher des
+        # Dienstes (erster echter Lauf 19.11.2026: 37 s, dann 1,3 s und 1,3 s)
+        # und würden die Zeit schönen.
         zeiten = [a['dauer_s'] for _, a in erhalten
-                  if (a.get('meta') or {}).get('load_s', 0.0) < 1.0]
+                  if a.get('wiederholung', 0) == 0
+                  and (a.get('meta') or {}).get('load_s', 0.0) < 1.0]
         gleich = mehrfach = 0               # K0-5
         for r in runden:
             eigene = [a for a in r.get('antworten', []) if a['modell'] == modell]

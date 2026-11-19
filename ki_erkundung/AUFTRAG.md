@@ -4,6 +4,11 @@
 übergibt. Zwei Teile: **Teil A für den KI-Rechner**, **Teil B für den
 Jetson**. Teil A muss vor Teil B laufen.
 
+**Stand 19.11.2026 (spät): Teil A lief bis A5.** Ergebnis und Folgen stehen
+in `STATUS.md`. Neu ist der Abschnitt **„A-Nachtrag“** unten; er ersetzt A4
+bis A6 für die Fortsetzung. Teil B wurde angepasst (eine Antwort je Frage,
+Denken nur nach A-Nachtrag, eine Ansicht zweimal).
+
 **Frage dieses Auftrags:** Erkennt ein Bildmodell auf dem KI-Rechner an
 echten Bildern der Kamera von Amadeus, welche vermessene Öffnung die Tür ist,
 und wie lange braucht es dafür? Nichts fährt.
@@ -77,8 +82,11 @@ umg 'cd ~/ki_erkundung_ws && env -u CYCLONEDDS_URI ROS_DOMAIN_ID=227 ROS_LOCALHO
      python3 -m pytest -q -p no:cacheprovider ki_erkundung/tests 2>&1 | tail -5'
 ```
 
-Erwartung: `157 passed` (ohne ROS im Aufruf: `149 passed, 2 skipped`). Fehlt
-`pytest` in der Umgebung, das berichten und weitermachen.
+Erwartung: `158 passed` (ohne ROS im Aufruf: `150 passed, 2 skipped`). Fehlt
+`pytest` in der Umgebung, das berichten und weitermachen. In der
+Pixi-Umgebung des KI-Rechners bricht pytest 9 am Plugin `launch_testing` ab;
+dort `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` vor den Aufruf setzen (Befund
+19.11.2026).
 
 ### A3 – Bildmodell laden
 
@@ -129,6 +137,62 @@ kill -INT "$(cat ~/ki_trockenlauf_ki0/lotse_dienst.pid)"; sleep 2
 tail -20 ~/ki_trockenlauf_ki0/lotse_dienst.log
 systemctl is-active amadeus-ki.service
 ```
+
+### A-Nachtrag (19.11.2026, spät) – Fortsetzung nach dem ersten Lauf
+
+Gilt statt A4 bis A6 für die Fortsetzung. Grund: Im ersten Lauf wählte das
+Modell dreimal Nummer 1; im Beispielzimmer ist **Nummer 1 die Glastür zum
+Balkon**, Nummer 2 die Tür zum Flur. Die Läufe mit Denken endeten ohne
+Antwort; die Werkzeuge hatten dabei still mit anderen Einstellungen
+wiederholt und den Fehlertext des Dienstes nicht festgehalten. Beides ist
+behoben; jetzt wird genau einmal so gefragt wie angegeben, und der Fehlertext
+steht in der Ausgabe.
+
+**N1 – neuen Stand holen und Tests:**
+
+```bash
+git -C ~/ki_erkundung_ws fetch origin claude/blissful-pasteur-s1eivj
+git -C ~/ki_erkundung_ws checkout --detach FETCH_HEAD; git -C ~/ki_erkundung_ws rev-parse HEAD
+umg 'cd ~/ki_erkundung_ws && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 env -u CYCLONEDDS_URI \
+     ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 python3 -m pytest -q -p no:cacheprovider ki_erkundung/tests 2>&1 | tail -3'
+```
+
+**N2 – das Beispiel noch einmal, je Einstellung genau eine Frage:**
+
+```bash
+B=~/ki_trockenlauf_ki0/beispiel; A=~/ki_trockenlauf_ki0
+umg "cd ~/ki_erkundung_ws && python3 ki_erkundung/werkzeuge/trockenlauf.py --runden $B \
+     --ausgabe $A/n2_qwen35_ohne --modell qwen3.5:9b --denken aus"
+umg "cd ~/ki_erkundung_ws && python3 ki_erkundung/werkzeuge/trockenlauf.py --runden $B \
+     --ausgabe $A/n2_qwen3vl --modell qwen3-vl:8b"
+umg "cd ~/ki_erkundung_ws && python3 ki_erkundung/werkzeuge/trockenlauf.py --runden $B \
+     --ausgabe $A/n2_qwen35_denken --modell qwen3.5:9b --denken an --zeitgrenze 180"
+```
+
+Jede Ausgabezeile wörtlich berichten (sie nennt jetzt Wahl, Einordnung jeder
+Nummer, Raum, Ladezeit und eingelesene Teile, bei einem Fehler den Text des
+Dienstes). Dazu je Lauf aus `ergebnis.json` die `begruendung`. Wechselt das
+Modell, enthält die erste Zeile die Ladezeit; das ist erwartet.
+
+**N3 – Lotsen-Dienst starten, sobald das Netz steht.** Der Dienst benutzt
+dieselbe Umgebung wie `amadeus-ki.service`. Ist deren DDS an eine
+Netzwerkschnittstelle gebunden, die keine Verbindung hat (Befund: `enp4s0`),
+wird **keine neue DDS-Datei angelegt und nichts am Netz geändert**
+(AGENTS §2.7). Christopher stellt die Verbindung her, wie sie beim Einrichten
+im August war (Kabel einstecken). Danach:
+
+```bash
+ip -br link | grep -v "^lo"
+umg 'nohup env --default-signal=INT python3 ~/ki_erkundung_ws/ki_erkundung/werkzeuge/lotse_dienst.py \
+     --modell qwen3.5:9b > ~/ki_trockenlauf_ki0/lotse_dienst.log 2>&1 < /dev/null & echo $! > ~/ki_trockenlauf_ki0/lotse_dienst.pid'
+sleep 5; cat ~/ki_trockenlauf_ki0/lotse_dienst.pid; tail -3 ~/ki_trockenlauf_ki0/lotse_dienst.log
+umg 'timeout 10 ros2 topic echo --once /ki_erkundung/lotse_status_json'
+```
+
+Der Dienst bleibt für Teil B laufen; danach A6. Das Modell im Dienst ist
+`qwen3.5:9b`; zeigt N2, dass `qwen3-vl:8b` die Glastür richtig einordnet und
+`qwen3.5:9b` nicht, stattdessen `--modell qwen3-vl:8b` nehmen und das
+berichten.
 
 ### Bericht Teil A
 
@@ -208,10 +272,20 @@ NAME=labor_tuer_vorn; cd ~/roboter_worktrees/selbstheilung-v2
 python3 ki_erkundung/werkzeuge/blickrunde_aufnehmen.py --name "$NAME" --dauer 8 | tee "$KI/${NAME}_aufnahme.txt"
 RUNDE=$(ls -d ~/.local/share/amadeus/ki_erkundung/blickrunden/${NAME}_* | tail -1); echo "$RUNDE"
 python3 ki_erkundung/werkzeuge/trockenlauf.py --runden "$RUNDE" --ausgabe "$KI/${NAME}_ohne" \
-  --ueber-ros --denken aus --wiederholungen 3 | tee "$KI/${NAME}_ohne.txt"
-python3 ki_erkundung/werkzeuge/trockenlauf.py --runden "$RUNDE" --ausgabe "$KI/${NAME}_mit" \
-  --ueber-ros --denken an --wiederholungen 2 | tee "$KI/${NAME}_mit.txt"
+  --ueber-ros --denken aus | tee "$KI/${NAME}_ohne.txt"
 ```
+
+Nur wenn im A-Nachtrag N2 das Denken eine Antwort in höchstens 180 s
+geliefert hat, zusätzlich:
+
+```bash
+python3 ki_erkundung/werkzeuge/trockenlauf.py --runden "$RUNDE" --ausgabe "$KI/${NAME}_mit" \
+  --ueber-ros --denken an --zeitgrenze 180 | tee "$KI/${NAME}_mit.txt"
+```
+
+Mehrfaches Fragen derselben Frage ist entfallen: Die Wiederholungen kamen im
+ersten Lauf aus dem Zwischenspeicher (1,3 s statt etwa 17 s) und sagen nichts
+über die Wiederholbarkeit.
 
 Danach Christopher das Blatt `$KI/${NAME}_ohne/${NAME}/uebersicht.jpg` zeigen
 (das Foto mit den Nummern und die Skizze) und die Antworten der KI aus
@@ -239,6 +313,9 @@ B4 für bis zu fünf weitere Ansichten wiederholen, wenn Christopher Amadeus
 von Hand umstellt oder dreht: zum Beispiel Tür von der Seite, Tür weiter
 weg, Blick auf ein Fenster oder einen Spiegel, Blick in eine Zimmerecke ohne
 Ausgang. Mindestens eine Ansicht mit der offenen Labortür ist nötig.
+Zum Schluss die erste Ansicht noch einmal aufnehmen (Amadeus an dieselbe
+Stelle, `NAME` mit Zusatz `_2`): Das ist die Wiederholbarkeit mit neuen
+Bildern.
 
 ### B6 – beenden
 

@@ -101,6 +101,21 @@ def _nutzlast(frage: Frage, bilder: Sequence[bytes], modell: str,
     return nutzlast
 
 
+def _meldung(fehler: urllib.error.HTTPError) -> Optional[str]:
+    """Fehlertext des Dienstes (Ollama schickt ``{"error": "..."}``), gekürzt."""
+    try:
+        roh = fehler.read().decode('utf-8', errors='replace')
+    except (OSError, ValueError):
+        return None
+    try:
+        daten = json.loads(roh)
+        if isinstance(daten, dict) and isinstance(daten.get('error'), str):
+            roh = daten['error']
+    except ValueError:
+        pass
+    return roh.strip()[:300] or None
+
+
 def frage_stellen(frage: Frage, bilder: Sequence[bytes], modell: str,
                   url: str = STANDARD_URL, zeitgrenze_s: float = 60.0,
                   optionen: Optional[dict] = None, mit_schema: bool = True,
@@ -111,55 +126,48 @@ def frage_stellen(frage: Frage, bilder: Sequence[bytes], modell: str,
     (zum Beispiel Qwen3.5). ``False`` schaltet es ab (kürzere Antwortzeit),
     ``True`` an, ``None`` sendet nichts und lässt die Vorgabe des Modells.
 
-    Lehnt der Dienst die Anfrage ab (ältere Fassung, Modell ohne
-    Denkschalter), wird erst ohne Denkschalter und dann mit einfachem
-    JSON-Zwang statt Schema wiederholt; was am Ende galt, steht in der
-    Rohantwort.
+    Gefragt wird genau so, wie angegeben, und genau einmal. Lehnt der Dienst
+    ab, steht sein Fehlertext in ``meta['meldung']``. Es gibt bewusst keinen
+    stillen Ersatzversuch mit anderen Einstellungen: Eine Messung soll
+    zeigen, was mit den angefragten Einstellungen geschieht.
+    (Bis 19.11.2026 wurde bei Ablehnung ohne Denkschalter und ohne Schema
+    wiederholt; im ersten echten Lauf verdeckte das, was schiefging.)
     """
     ziel = url.rstrip('/') + '/api/chat'
     beginn = time.monotonic()
 
-    def versuch(schema: bool, schalter: Optional[bool]) -> Rohantwort:
-        def ohne(fehler: str) -> Rohantwort:
-            return Rohantwort(None, time.monotonic() - beginn, fehler, schema,
-                              denken=schalter)
-        try:
-            roh = _post(ziel, _nutzlast(frage, bilder, modell, schema, optionen, schalter),
-                        max(0.1, zeitgrenze_s - (time.monotonic() - beginn)))
-        except urllib.error.HTTPError as fehler:
-            return ohne(f'http_{fehler.code}')
-        except (socket.timeout, TimeoutError):
-            return ohne('zeitgrenze')
-        except urllib.error.URLError as fehler:
-            grund = getattr(fehler, 'reason', None)
-            return ohne('zeitgrenze' if isinstance(grund, (socket.timeout, TimeoutError))
-                        else 'nicht_erreichbar')
-        except (ValueError, OSError):
-            return ohne('antwort_unlesbar')
-        text = (roh.get('message') or {}).get('content') if isinstance(roh, dict) else None
-        if not isinstance(text, str):
-            return ohne('antwort_unlesbar')
-        meta = {}
-        for schluessel in ('total_duration', 'load_duration', 'prompt_eval_duration',
-                           'eval_duration'):
-            if isinstance(roh.get(schluessel), (int, float)):
-                meta[schluessel.replace('duration', 's')] = round(roh[schluessel] / 1e9, 3)
-        for schluessel in ('prompt_eval_count', 'eval_count'):
-            if isinstance(roh.get(schluessel), int):
-                meta[schluessel] = roh[schluessel]
-        return Rohantwort(text, time.monotonic() - beginn, None, schema, meta, schalter)
+    def ohne(fehler: str, meldung: Optional[str] = None) -> Rohantwort:
+        return Rohantwort(None, time.monotonic() - beginn, fehler, mit_schema,
+                          {'meldung': meldung} if meldung else {}, denken)
 
-    folge = [(mit_schema, denken)]
-    if denken is not None:
-        folge.append((mit_schema, None))
-    if mit_schema:
-        folge.append((False, None))
-    ergebnis = versuch(*folge[0])
-    for schema, schalter in folge[1:]:
-        if ergebnis.fehler not in ('http_400', 'http_500'):
-            break
-        ergebnis = versuch(schema, schalter)
-    return ergebnis
+    try:
+        roh = _post(ziel, _nutzlast(frage, bilder, modell, mit_schema, optionen, denken),
+                    max(0.1, zeitgrenze_s))
+    except urllib.error.HTTPError as fehler:
+        return ohne(f'http_{fehler.code}', _meldung(fehler))
+    except (socket.timeout, TimeoutError):
+        return ohne('zeitgrenze')
+    except urllib.error.URLError as fehler:
+        grund = getattr(fehler, 'reason', None)
+        return ohne('zeitgrenze' if isinstance(grund, (socket.timeout, TimeoutError))
+                    else 'nicht_erreichbar')
+    except (ValueError, OSError):
+        return ohne('antwort_unlesbar')
+    text = (roh.get('message') or {}).get('content') if isinstance(roh, dict) else None
+    if not isinstance(text, str):
+        return ohne('antwort_unlesbar')
+    meta = {}
+    for schluessel in ('total_duration', 'load_duration', 'prompt_eval_duration',
+                       'eval_duration'):
+        if isinstance(roh.get(schluessel), (int, float)):
+            meta[schluessel.replace('duration', 's')] = round(roh[schluessel] / 1e9, 3)
+    for schluessel in ('prompt_eval_count', 'eval_count'):
+        if isinstance(roh.get(schluessel), int):
+            meta[schluessel] = roh[schluessel]
+    gedacht = (roh.get('message') or {}).get('thinking')
+    if isinstance(gedacht, str) and gedacht:
+        meta['denktext_zeichen'] = len(gedacht)
+    return Rohantwort(text, time.monotonic() - beginn, None, mit_schema, meta, denken)
 
 
 def modelle(url: str = STANDARD_URL, zeitgrenze_s: float = 5.0) -> Optional[List[str]]:

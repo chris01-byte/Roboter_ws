@@ -337,7 +337,7 @@ an, welche Nummern echte Ausgänge sind:
 | K0-2 Keine gefährliche Wahl | Nie wählt die KI eine Nummer, die in Wahrheit Glas oder Spiegel ist |
 | K0-3 Form | Höchstens 10 % der Antworten werden von der Prüfung verworfen |
 | K0-4 Zeit | Antwortzeit im Mittel (Median) höchstens 20 s, längste höchstens 45 s, bei geladenem Modell; zusätzlich wird der Wert genannt, den 95 % der Antworten einhalten |
-| K0-5 Wiederholbarkeit | Dreimal dieselbe Frage: in mindestens 90 % der Runden dieselbe Wahl |
+| K0-5 Wiederholbarkeit | Zwei getrennte Aufnahmen derselben Ansicht: in mindestens 90 % der Paare dieselbe Wahl |
 | K0-6 Vorschläge | In mindestens 90 % der Runden, in denen ein Ausgang zu sehen ist, ist er unter den vermessenen Vorschlägen (misst die Vermessung, nicht die KI) |
 | K0-7 Kamera | Sichtfeld aus den Kameradaten bestimmt; Rechenlast der Kamera auf dem Jetson gemessen (nur Messung) |
 
@@ -447,6 +447,13 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   Modellkandidaten, Denkschalter und nachvollziehbare Modellangaben; Ankunft
   bestätigen (§4); Einordnung von Mobility VLA und LocalNav (§9); §13.
   Rollen, Grenzen und Schwellen der Kriterien unverändert.
+
+- 19.11.2026, Nachtrag nach dem ersten echten Lauf (Teil A von KI-0):
+  K0-5 neu gefasst. Dieselbe Frage mehrfach zu stellen misst nichts: Bei
+  Temperatur 0 und Zwischenspeicher des Dienstes kommt dieselbe Antwort in
+  1,3 s statt 17 s. Gemessen wird jetzt an zwei getrennten Aufnahmen
+  derselben Ansicht; die Schwelle bleibt 90 %. K0-4 zählt nur die erste
+  Antwort je Frage.
 
 ## 13. Übernommen aus dem HomeMy-Konzept des Projektinhabers
 
