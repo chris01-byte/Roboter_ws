@@ -13,6 +13,9 @@ Aufrufe:
     python3 trockenlauf.py --runden ORDNER --ausgabe ORDNER \\
         --modell MODELL_A --modell MODELL_B --wiederholungen 3
 
+    # auf dem Roboter: den Lotsen-Dienst auf dem KI-Rechner über ROS fragen
+    python3 trockenlauf.py --runden ORDNER --ausgabe ORDNER --ueber-ros
+
 Die Ausgabe (markierte Fotos, Skizzen, Ergebnisdatei) enthält Bilder und
 Maße der Wohnung. Sie bleibt auf dem KI-Rechner und gehört nicht ins
 Repository.
@@ -30,7 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from lotse import SCHEMA_VERSION  # noqa: E402
 from lotse.ablauf import befrage, bereite_vor  # noqa: E402
 from lotse.blickrunde import Blickrunde, runden_finden  # noqa: E402
-from lotse.ki_rechner import STANDARD_URL, modelle  # noqa: E402
+from lotse.ki_rechner import STANDARD_URL, modelle, umgebung  # noqa: E402
 
 
 def _speichere_ansicht(vorbereitung, ordner: Path) -> None:
@@ -63,12 +66,21 @@ def main(argv=None) -> int:
                               'die nur ein Bild annehmen)')
     eingabe.add_argument('--kontext', type=int, default=8192,
                          help='Kontextlänge des Modells (num_ctx)')
+    eingabe.add_argument('--denken', choices=('an', 'aus'), default=None,
+                         help='Denkschalter des Modells (zum Beispiel Qwen3.5); '
+                              'ohne Angabe gilt die Vorgabe des Modells')
+    eingabe.add_argument('--ueber-ros', action='store_true',
+                         help='über den Lotsen-Dienst auf dem KI-Rechner fragen '
+                              '(vom Roboter aus); das Modell bestimmt der Dienst')
     eingabe.add_argument('--nur-markieren', action='store_true',
                          help='nicht fragen, nur aufbereiten')
     wahl = eingabe.parse_args(argv)
 
-    if not wahl.nur_markieren and not wahl.modell:
-        eingabe.error('--modell angeben oder --nur-markieren setzen')
+    if not wahl.nur_markieren and not wahl.modell and not wahl.ueber_ros:
+        eingabe.error('--modell, --ueber-ros oder --nur-markieren angeben')
+    if wahl.ueber_ros and wahl.modell:
+        eingabe.error('mit --ueber-ros bestimmt der Lotsen-Dienst das Modell')
+    denken = {'an': True, 'aus': False, None: None}[wahl.denken]
     ordner = runden_finden(wahl.runden)
     if not ordner:
         print(f'Keine Blickrunde unter {wahl.runden} gefunden.', file=sys.stderr)
@@ -76,7 +88,23 @@ def main(argv=None) -> int:
     ausgabe = Path(wahl.ausgabe)
     ausgabe.mkdir(parents=True, exist_ok=True)
 
-    if not wahl.nur_markieren:
+    verbindung, weg, umgebungen = None, None, {}
+    if wahl.ueber_ros:
+        import rclpy
+        from ki_verbindung_ros import Verbindung
+        if not rclpy.ok():
+            rclpy.init()
+        verbindung = Verbindung()
+        status = verbindung.status(warten_s=8.0)
+        if not status or not status.get('bereit'):
+            print('Der Lotsen-Dienst auf dem KI-Rechner ist nicht zu hören oder '
+                  f'nicht bereit (Status: {status}).', file=sys.stderr)
+            verbindung.schliessen()
+            return 3
+        wahl.modell = [str(status.get('modell'))]
+        umgebungen = {wahl.modell[0]: status.get('umgebung') or {}}
+        weg = verbindung.frage_stellen
+    elif not wahl.nur_markieren:
         vorhanden = modelle(wahl.url)
         if vorhanden is None:
             print(f'Der KI-Rechner antwortet nicht unter {wahl.url}.', file=sys.stderr)
@@ -87,6 +115,7 @@ def main(argv=None) -> int:
             print(f'Diese Modelle sind dort nicht vorhanden: {fehlend}. '
                   f'Vorhanden: {vorhanden}', file=sys.stderr)
             return 3
+        umgebungen = {m: umgebung(m, wahl.url) for m in wahl.modell}
 
     ergebnis = {
         'schema_version': SCHEMA_VERSION,
@@ -95,6 +124,10 @@ def main(argv=None) -> int:
             'modelle': wahl.modell, 'wiederholungen': wahl.wiederholungen,
             'zeitgrenze_s': wahl.zeitgrenze, 'bilder': wahl.bilder,
             'mosaik': wahl.mosaik, 'kontext': wahl.kontext,
+            'denken': wahl.denken, 'ueber_ros': wahl.ueber_ros,
+            # Fassung des Dienstes und Kennung jedes Modells: Der Name allein
+            # sagt nach einem Update nicht mehr, womit geantwortet wurde.
+            'umgebung': umgebungen,
         },
         'runden': [],
     }
@@ -119,7 +152,8 @@ def main(argv=None) -> int:
                     antwort = befrage(vorbereitung, modell, url=wahl.url,
                                       zeitgrenze_s=wahl.zeitgrenze,
                                       wiederholung=nummer, mosaik=wahl.mosaik,
-                                      optionen={'num_ctx': wahl.kontext})
+                                      optionen={'num_ctx': wahl.kontext},
+                                      denken=denken, weg=weg)
                     eintrag['antworten'].append(antwort)
                     if antwort['fehler']:
                         kurz = f'keine Antwort ({antwort["fehler"]})'
@@ -131,6 +165,8 @@ def main(argv=None) -> int:
         ergebnis['runden'].append(eintrag)
         with open(ausgabe / 'ergebnis.json', 'w', encoding='utf-8') as datei:
             json.dump(ergebnis, datei, indent=1, ensure_ascii=False)
+    if verbindung is not None:
+        verbindung.schliessen()
     print(f'Ergebnis: {ausgabe / "ergebnis.json"}')
     return 0
 

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence
+from typing import Callable, Dict, List, Optional, Sequence
 
 import numpy as np
 from PIL import Image
@@ -20,7 +20,7 @@ from .blickrunde import (Blickrunde, bilder_waehlen, gier_schaetzen,
                          rundum_profil)
 from .frage import Frage, baue_frage
 from .kandidaten import Oeffnung, oeffnungen
-from .ki_rechner import STANDARD_URL, frage_stellen
+from .ki_rechner import STANDARD_URL, Rohantwort, frage_stellen
 from .markierung import (als_jpeg, marken_fuer_bild, markiere, sichtbar_in,
                          skizze, uebersicht)
 
@@ -93,7 +93,8 @@ def bereite_vor(runde: Blickrunde, anzahl_bilder: int = 8,
                          [b['gier_rad'] for b in auswahl['bilder']])
     frage = baue_frage(gefunden, len(auswahl['bilder']), sichtbar,
                        drehsinn=auswahl['drehsinn'], verlauf=verlauf,
-                       als_mosaik=mosaik)
+                       als_mosaik=mosaik, schritt_grad=360.0 / anzahl_bilder,
+                       vollstaendig=auswahl['vollstaendig'])
     return Vorbereitung(
         name=runde.name, auswahl=auswahl,
         guete_min=float(np.min(guete)) if len(guete) else 0.0,
@@ -104,11 +105,19 @@ def bereite_vor(runde: Blickrunde, anzahl_bilder: int = 8,
 
 def befrage(vorbereitung: Vorbereitung, modell: str, url: str = STANDARD_URL,
             zeitgrenze_s: float = 60.0, wiederholung: int = 0,
-            mosaik: bool = False, optionen: Optional[dict] = None) -> dict:
-    """Den KI-Rechner fragen, die Antwort prüfen und die Wahl nachmessen."""
-    roh = frage_stellen(vorbereitung.frage, vorbereitung.bilder_fuer_ki(mosaik),
-                        modell, url=url, zeitgrenze_s=zeitgrenze_s,
-                        optionen=optionen)
+            mosaik: bool = False, optionen: Optional[dict] = None,
+            denken: Optional[bool] = None,
+            weg: Optional[Callable[..., Rohantwort]] = None) -> dict:
+    """Den KI-Rechner fragen, die Antwort prüfen und die Wahl nachmessen.
+
+    ``weg``: Übertragungsweg mit derselben Aufrufform wie
+    ``ki_rechner.frage_stellen``. Ohne Angabe wird Ollama unter ``url``
+    direkt gefragt (auf dem KI-Rechner selbst); der Roboter setzt hier den
+    Weg über ROS zum KI-Rechner ein.
+    """
+    roh = (weg or frage_stellen)(
+        vorbereitung.frage, vorbereitung.bilder_fuer_ki(mosaik), modell, url=url,
+        zeitgrenze_s=zeitgrenze_s, optionen=optionen, denken=denken)
     eintrag = {'modell': modell, 'wiederholung': wiederholung}
     eintrag.update(roh.als_dict())
     if roh.fehler is None:

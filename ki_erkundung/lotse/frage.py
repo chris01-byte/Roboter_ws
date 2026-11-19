@@ -79,21 +79,36 @@ def antwortschema(angeboten: Sequence[int]) -> dict:
 def baue_frage(oeffnungen: Sequence[Oeffnung], anzahl_bilder: int,
                sichtbar: Dict[int, List[int]], drehsinn: int = 1,
                verlauf: Optional[Sequence[str]] = None,
-               mit_skizze: bool = True, als_mosaik: bool = False) -> Frage:
+               mit_skizze: bool = True, als_mosaik: bool = False,
+               schritt_grad: Optional[float] = None,
+               vollstaendig: bool = True) -> Frage:
     """Die Frage für eine Blickrunde bauen.
 
     ``sichtbar``: je Nummer die Bilder, in denen sie eingezeichnet ist.
     ``als_mosaik``: Alle Fotos und die Skizze stehen auf einem einzigen Blatt
     (für Modelle, die nur ein Bild je Frage annehmen).
+    ``vollstaendig``: Falsch, wenn sich der Roboter nicht ganz herumgedreht
+    hat (im Stand aufgenommen oder Teilschwenk); die Frage sagt das dann.
     """
-    schritt = round(360 / max(1, anzahl_bilder))
+    schritt = round(schritt_grad if schritt_grad else 360 / max(1, anzahl_bilder))
     herum = 'gegen den Uhrzeigersinn' if drehsinn >= 0 else 'im Uhrzeigersinn'
-    zeilen = [
-        'Der Roboter steht in einem Raum und hat sich einmal um sich selbst '
-        'gedreht.',
-        '',
-    ]
-    if als_mosaik:
+    if anzahl_bilder <= 1:
+        lage = 'Der Roboter steht in einem Raum und schaut in eine Richtung.'
+    elif vollstaendig:
+        lage = ('Der Roboter steht in einem Raum und hat sich einmal um sich '
+                'selbst gedreht.')
+    else:
+        lage = ('Der Roboter steht in einem Raum und hat sich ein Stück '
+                'gedreht, aber nicht ganz herum. Was hinter ihm liegt, zeigen '
+                'die Fotos nicht.')
+    zeilen = [lage, '']
+    if anzahl_bilder <= 1:
+        zeilen.append(
+            'Bild: B1 ist ein Foto seiner Kamera; der Name steht oben links '
+            'im Foto.'
+            + ((' Das zweite Feld auf dem Blatt' if als_mosaik else ' Das zweite Bild')
+               + ' ist eine Skizze von oben.' if mit_skizze else ''))
+    elif als_mosaik:
         zeilen.append(
             f'Bild: ein Blatt mit {anzahl_bilder} Fotos seiner Kamera, oben '
             f'links beschriftet mit B1 bis B{anzahl_bilder}, je {schritt}° '

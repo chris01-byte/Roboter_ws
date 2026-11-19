@@ -16,6 +16,7 @@ class Attrappe:
         self.antworten = []          # je Anfrage: Text, dict mit Sonderfall, oder Funktion
         self.anfragen = []
         self.schema_ablehnen = False
+        self.denkschalter_ablehnen = False
         attrappe = self
 
         class Bearbeiter(BaseHTTPRequestHandler):
@@ -34,8 +35,13 @@ class Attrappe:
 
             def do_GET(self):
                 if self.path == '/api/tags':
-                    self._sende(200, json.dumps(
-                        {'models': [{'name': m} for m in attrappe.modelle]}).encode())
+                    self._sende(200, json.dumps({'models': [
+                        {'name': m, 'digest': 'kennung-' + m, 'size': 6_600_000_000,
+                         'details': {'quantization_level': 'Q4_K_M',
+                                     'parameter_size': '9B'}}
+                        for m in attrappe.modelle]}).encode())
+                elif self.path == '/api/version':
+                    self._sende(200, b'{"version": "0.99.1"}')
                 else:
                     self._sende(404, b'{}')
 
@@ -43,6 +49,9 @@ class Attrappe:
                 laenge = int(self.headers.get('Content-Length', 0))
                 anfrage = json.loads(self.rfile.read(laenge).decode('utf-8'))
                 attrappe.anfragen.append(anfrage)
+                if attrappe.denkschalter_ablehnen and 'think' in anfrage:
+                    self._sende(400, b'{"error": "think wird nicht unterstuetzt"}')
+                    return
                 if attrappe.schema_ablehnen and isinstance(anfrage.get('format'), dict):
                     self._sende(400, b'{"error": "format wird nicht unterstuetzt"}')
                     return

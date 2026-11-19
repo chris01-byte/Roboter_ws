@@ -2,6 +2,7 @@
 
 * Der Lotse ist reines Python: Standardbibliothek, numpy, Pillow.
 * Nichts in diesem Ordner sendet Fahrbefehle oder ruft Dienste und Aktionen.
+  Gesendet wird nur Text auf den drei eigenen Themen ``/ki_erkundung/…``.
 * Nach außen spricht nur ``lotse/ki_rechner.py`` (mit dem KI-Rechner im Haus).
 * Diese Linie hängt von keinem Paket der Hauptlinie ab.
 * Im Ordner liegen keine Bilder, Scans oder Blickrunden.
@@ -40,19 +41,39 @@ def test_der_lotse_braucht_nur_standardbibliothek_numpy_und_pillow():
 
 def test_werkzeuge_haengen_von_keinem_paket_der_hauptlinie_ab():
     erlaubt = STANDARD | {'numpy', 'PIL', 'lotse', 'rclpy', 'sensor_msgs', 'nav_msgs',
-                          'tf2_ros', 'beispielrunde_erzeugen'}
+                          'std_msgs', 'tf2_ros', 'beispielrunde_erzeugen',
+                          'ki_verbindung_ros'}
     for datei in quelldateien('werkzeuge'):
         fremd = einfuhren(datei) - erlaubt
         assert not fremd, f'{datei.name} führt ein: {sorted(fremd)}'
 
 
 def test_nichts_sendet_fahrbefehle_oder_ruft_dienste_und_aktionen():
-    verboten = ('create_publisher', 'ActionClient', 'create_client', 'cmd_vel',
+    verboten = ('ActionClient', 'create_client', 'cmd_vel', 'Twist',
                 'set_parameters', 'ros2 topic pub')
     for datei in quelldateien('lotse', 'werkzeuge'):
         text = datei.read_text(encoding='utf-8')
         for wort in verboten:
             assert wort not in text, f'{datei.name} enthält {wort!r}'
+
+
+def test_gesendet_wird_nur_text_auf_den_eigenen_themen_der_ki_linie():
+    """Frage, Antwort und Status zwischen Roboter und KI-Rechner; sonst nichts."""
+    sender = {}
+    for datei in quelldateien('lotse', 'werkzeuge'):
+        zeilen = [z.strip() for z in datei.read_text(encoding='utf-8').splitlines()
+                  if 'create_publisher(' in z]
+        if zeilen:
+            sender[datei.name] = zeilen
+    assert set(sender) == {'ki_verbindung_ros.py', 'lotse_dienst.py'}
+    for name, zeilen in sender.items():
+        for zeile in zeilen:
+            assert 'create_publisher(String, THEMA_' in zeile, f'{name}: {zeile}'
+    import ki_verbindung_ros
+    themen = [getattr(ki_verbindung_ros, n) for n in dir(ki_verbindung_ros)
+              if n.startswith('THEMA_')]
+    assert len(themen) == 3
+    assert all(thema.startswith('/ki_erkundung/') for thema in themen)
 
 
 def test_nach_aussen_spricht_nur_die_verbindung_zum_ki_rechner():

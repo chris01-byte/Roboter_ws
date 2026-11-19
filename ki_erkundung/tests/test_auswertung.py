@@ -87,6 +87,8 @@ def test_antwortzeit_zaehlt_nur_bei_geladenem_modell_und_modelle_getrennt():
                           antwort('b', 1, dauer=50.0)])]
     ergebnis = werte_aus(runden, {'r': {'ausgaenge': [1]}})
     assert ergebnis['modelle']['a']['K0-4_median_s'] == 10.0
+    assert ergebnis['modelle']['a']['K0-4_p95_s'] == 11.0
+    assert '95 % bis 11.0 s' in bericht(ergebnis)
     assert ergebnis['modelle']['a']['K0-4_max_s'] == 11.0
     assert ergebnis['modelle']['a']['bestanden']['K0-4'] is True
     assert ergebnis['modelle']['b']['bestanden']['K0-4'] is False

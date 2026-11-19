@@ -14,6 +14,7 @@ Angaben je Runde, keine Bilder und keine Kartenkoordinaten.
 """
 from __future__ import annotations
 
+import math
 import statistics
 from typing import Dict, List, Optional, Sequence
 
@@ -33,6 +34,12 @@ SCHWELLEN = {
 
 def _anteil(zaehler: int, nenner: int) -> Optional[float]:
     return None if nenner == 0 else zaehler / nenner
+
+
+def _rang(werte: Sequence[float], anteil: float) -> float:
+    """Wert, den der gegebene Anteil der Messungen nicht überschreitet."""
+    sortiert = sorted(werte)
+    return sortiert[min(len(sortiert) - 1, max(0, math.ceil(anteil * len(sortiert)) - 1))]
 
 
 def werte_aus(runden: Sequence[dict], wahrheiten: Dict[str, dict]) -> dict:
@@ -123,6 +130,7 @@ def werte_aus(runden: Sequence[dict], wahrheiten: Dict[str, dict]) -> dict:
             'K0-2_gefaehrliche_wahlen': gefaehrlich,
             'K0-3_anteil_verworfen': _anteil(len(verworfen), len(erhalten)),
             'K0-4_median_s': round(statistics.median(zeiten), 1) if zeiten else None,
+            'K0-4_p95_s': round(_rang(zeiten, 0.95), 1) if zeiten else None,
             'K0-4_max_s': round(max(zeiten), 1) if zeiten else None,
             'K0-5_runden_mit_wiederholung': mehrfach,
             'K0-5_anteil_gleich': _anteil(gleich, mehrfach),
@@ -195,8 +203,8 @@ def bericht(auswertung: dict) -> str:
             f'| K0-3 Form | verworfen {m["verworfen"]} von '
             f'{m["antworten"] - m["ohne_antwort"]} ({_prozent(m["K0-3_anteil_verworfen"])}); '
             f'ohne Antwort {m["ohne_antwort"]} {m["fehlerarten"] or ""} | {_urteil(b["K0-3"])} |',
-            f'| K0-4 Zeit | Median {m["K0-4_median_s"]} s, längste {m["K0-4_max_s"]} s '
-            f'| {_urteil(b["K0-4"])} |',
+            f'| K0-4 Zeit | Median {m["K0-4_median_s"]} s, 95 % bis {m["K0-4_p95_s"]} s, '
+            f'längste {m["K0-4_max_s"]} s | {_urteil(b["K0-4"])} |',
             f'| K0-5 Wiederholbarkeit | gleiche Wahl in '
             f'{_prozent(m["K0-5_anteil_gleich"])} von {m["K0-5_runden_mit_wiederholung"]} '
             f'Runden | {_urteil(b["K0-5"])} |',

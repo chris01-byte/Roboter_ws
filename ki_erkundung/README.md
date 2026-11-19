@@ -21,7 +21,10 @@ fährt.**
 | `werkzeuge/blickrunde_aufnehmen.py` | Auf dem Jetson: hört während einer Drehung mit und speichert Bilder, Tiefenbilder und Scans als Blickrunde. Nur lesend; legt außerhalb des Repositorys ab |
 | `werkzeuge/trockenlauf.py` | Auf dem KI-Rechner: Blickrunden aufbereiten (Drehwinkel, acht Bilder, Öffnungen, Nummern, Skizze) und die KI befragen |
 | `werkzeuge/trockenlauf_auswerten.py` | Antworten gegen die Angaben des Menschen halten; Bericht zu den Kriterien K0-1 bis K0-6 |
+| `werkzeuge/lotse_dienst.py` | Auf dem KI-Rechner: Lotsen-Dienst. Nimmt Fragen des Roboters über ROS an und fragt Ollama auf demselben Rechner |
+| `werkzeuge/ki_verbindung_ros.py` | Gegenstück auf dem Roboter (`trockenlauf.py --ueber-ros`); drei eigene Themen `/ki_erkundung/…`, nur Text |
 | `werkzeuge/beispielrunde_erzeugen.py` | Künstliche Blickrunde (ausgedachtes Zimmer) zum Ausprobieren und Testen |
+| `quellen/` | Unverändert abgelegte Vorlagen (HomeMy-Konzept des Projektinhabers) |
 | `tests/` | Tests dieser Linie, darunter die Trennregeln als Tests (`test_trennung.py`) |
 
 ## Trennregeln (verbindlich, MASTERPLAN §10)
@@ -41,7 +44,9 @@ fährt.**
    erst aktiv, wenn der Projektinhaber ihn ausdrücklich übergibt.
 5. **Die KI fährt nicht.** Sie sendet nie Fahrbefehle, umgeht weder Fahrtor
    noch Kollisionsmonitor und ist nie die einzige Schutzmaßnahme. Fällt sie
-   aus oder antwortet unbrauchbar, entscheidet die vorhandene Regel.
+   aus oder antwortet unbrauchbar, entscheidet die vorhandene Regel. Über
+   ROS gehen nur Frage, Antwort und Status als Text auf den eigenen Themen
+   `/ki_erkundung/…`.
 6. **Bilder bleiben im Haus.** Kamerabilder, Tiefenbilder und Scans der
    Wohnung liegen nur auf dem Jetson und dem KI-Rechner, nie im Repository
    und nie bei einem Cloud-Dienst (AGENTS §2.5; Entscheidung 19.11.2026).

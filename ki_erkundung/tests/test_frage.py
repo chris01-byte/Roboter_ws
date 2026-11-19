@@ -61,3 +61,17 @@ def test_richtung_in_worten():
     assert richtung_text(90.0) == '90° links'
     assert richtung_text(150.0) == '150° links, schräg hinten'
     assert richtung_text(-178.0) == 'genau hinter dem Roboter'
+
+
+def test_frage_sagt_wenn_nicht_ganz_herumgedreht_wurde():
+    eine = oeffnung(1, 0.8, 2.0, 0.0)
+    teil = baue_frage([eine], 3, {1: [1]}, schritt_grad=45.0, vollstaendig=False)
+    assert 'nicht ganz herum' in teil.text
+    assert 'B1 bis B3' in teil.text and 'je 45° weitergedreht' in teil.text
+    stand = baue_frage([eine], 1, {1: [1]}, schritt_grad=45.0, vollstaendig=False)
+    assert 'schaut in eine Richtung' in stand.text
+    assert 'B1 ist ein Foto seiner Kamera' in stand.text
+    assert 'weitergedreht' not in stand.text
+    assert 'Das zweite Bild ist eine Skizze von oben.' in stand.text
+    ohne_skizze = baue_frage([eine], 1, {1: [1]}, mit_skizze=False, vollstaendig=False)
+    assert 'Skizze' not in ohne_skizze.text

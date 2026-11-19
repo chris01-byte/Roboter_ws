@@ -1,6 +1,6 @@
 # Konzept „KI-Erkundung“ – eine KI übernimmt Ziel- und Suchwahl
 
-**Version 1.0 · 19.11.2026 · Entscheidung des Projektinhabers**
+**Version 1.1 · 19.11.2026 · Entscheidung des Projektinhabers**
 
 Dieses Dokument ist die verbindliche Beschreibung der zweiten
 Entwicklungslinie. Verankert in MASTERPLAN §10. Den aktuellen Stand führt nur
@@ -36,6 +36,17 @@ bisher nur nach festen Regeln arbeitet, und entschieden:
   beeinflusst werden.
 - Ausgewertet wird auf dem **vorhandenen KI-Rechner** des Projektinhabers.
 - Der Realtest SH-9 der Hauptlinie läuft parallel weiter.
+
+Klarstellungen des Projektinhabers vom 19.11.2026 (abends), eingearbeitet in
+Version 1.1:
+
+- **Kein Joystick.** Amadeus dreht sich für die Blickrunde selbst.
+- **Der KI-Rechner wird nur eingeschaltet.** Die Verbindung baut sich von
+  selbst auf, wie bei der Objekterkennung; Aufnahmen werden nicht von Hand
+  kopiert.
+- Als Quelle liegt sein Konzept „HomeMy – lokale semantische
+  Roboternavigation nach dem Mobility-VLA-Prinzip“ unter
+  [quellen/](quellen/). Was daraus übernommen ist, steht in Abschnitt 13.
 
 Ehrliche Einordnung, wie am 18.11. besprochen: Die letzten Fehlschläge der
 Hauptlinie lagen nicht an falschen Zielen. In W-1 lagen 10 von 12 Anläufen an
@@ -114,6 +125,11 @@ Feste Grenzen (MUSS):
    Ergebnis merken ─► neuer Raum: Blickrunde · sonst: nächste Frage
 ```
 
+**Ankunft bestätigen.** Nach einer Durchfahrt prüft Amadeus vor Ort, ob er
+dort ist, wo die KI ihn hinschicken wollte (neuer Raum, anderes Bild). Ein
+Ziel gilt erst nach dieser Prüfung als erreicht; ohne Bestätigung bleibt es
+eine Vermutung.
+
 **Wann gefragt wird** (damit die Bildrunde nicht nach jedem Ziel läuft):
 
 - beim Betreten eines Raums (einmal je Raum eine volle Blickrunde),
@@ -123,7 +139,7 @@ Feste Grenzen (MUSS):
 
 **Zeitbedarf (Rechnung, noch nicht gemessen):** Eine volle Drehung dauert
 beim heutigen Drehtempo des Rundblicks (0,10 rad/s) gut eine Minute. Die
-Antwort der KI soll im Mittel unter 20 Sekunden kommen (Kriterium in KI-0).
+Antwort der KI soll im Mittel unter 20 Sekunden kommen (Kriterium K0-4).
 
 ## 5. Die Blickrunde und die vermessenen Vorschläge
 
@@ -139,12 +155,12 @@ Punkte. Daraus folgt: Der Boden ist ab etwa 1,6 m vor der Kamera im Bild; nach
 oben reicht das Bild nur knapp über die Waagerechte (in 3 m Entfernung bis
 etwa 1,45 m Höhe). Türstürze und Zimmerdecken sind also nicht zu sehen,
 Türpfosten, Schwellen, Türblätter und der Boden dahinter schon. Ob das der
-KI genügt, ist die erste Frage an den Trockenlauf.
+KI genügt, ist die erste Frage an KI-0.
 
 **Vorschläge.** Das LiDAR (0,75 m hoch, 292° Sichtfeld, 0,245 m vor der
 Antriebsmitte) liefert während der Drehung Scans. Aus ihnen wird zuerst der
-Drehwinkel jeder Aufnahme bestimmt (deshalb ist es gleich, ob Amadeus mit dem
-Joystick oder von Hand gedreht wird), dann ein Rundum-Profil des Standpunkts.
+Drehwinkel jeder Aufnahme bestimmt (die Odometrie dient nur als Startwert),
+dann ein Rundum-Profil des Standpunkts.
 Eine **Öffnung** ist eine Lücke von 0,55 bis 2,5 m zwischen zwei Kanten,
 hinter der es frei weitergeht: quer zur Lücke gemessen im Mittel mindestens
 0,6 m, damit das 0,42 m lange Gehäuse hineinpasst. Eine flache Schranknische
@@ -157,7 +173,7 @@ gezeichnet (am Boden der Öffnung) und in eine Kartenskizze von oben. Grund:
 Bild-Sprach-Modelle sind unzuverlässig bei Meterangaben, aber gut darin,
 zwischen markierten Stellen zu wählen.
 
-**Später (ab KI-1)** kommen als Vorschläge die Ziele hinzu, die die
+**Später** kommen als Vorschläge die Ziele hinzu, die die
 vorhandene Erkundung ohnehin bildet (Ränder zum Unbekannten). Dann kann die
 KI auch entscheiden, wo im Raum weitergesucht wird.
 
@@ -206,62 +222,129 @@ Danach misst die Vermessung die gültige Wahl nach: Öffnung breit genug
 (Vorgabe 0,60 m bei 0,46 m Gehäusebreite), erreichbar, im freigegebenen
 Fahrbereich. Erst dann wird gefahren.
 
-## 7. Der KI-Rechner
+## 7. Der KI-Rechner und die Verbindung
 
-Vorhanden und am 25.08.2026 abgenommen: Rechner mit RTX 3090 (24 GB),
-Ubuntu 22.04, ROS 2 Humble. Dort laufen bereits ein lokales Sprachmodell
-über Ollama (`qwen2.5`, für Sprachaufträge im `llm_planner`) und die
-Objekterkennung (`semantic_perception`, YOLO-World). Der Roboter schickt
-dafür einen gedrosselten, komprimierten Kamerastrom (2 Bilder je Sekunde mit
-Tiefenbild); dieser Weg ist erprobt.
+**Vorhanden** (im Repository auf `main`, abgenommen am 25.08.2026): ein
+Rechner mit RTX 3090 (24 GB) im Haus. Auf ihm laufen in einer eigenen
+ROS-Umgebung (RoboStack Humble, Python 3.12) als Dienst `amadeus-ki.service`
+bereits zwei KI-Knoten: der Sprachplaner (`llm_planner`, ein Textmodell
+`qwen2.5` über Ollama) und die Objekterkennung (`semantic_perception`,
+YOLO-World mit einfachem Objektgedächtnis). Der Roboter schickt dafür einen
+gedrosselten, komprimierten Kamerastrom (2 Bilder je Sekunde mit Tiefenbild).
 
-Diese Linie braucht dort zusätzlich ein **Bild-Sprach-Modell** in demselben
-Ollama. Welches, entscheidet der Trockenlauf an denselben Bildern. Nach
-heutigem Kenntnisstand kommen Modelle aus den Familien Qwen-VL und Gemma 3
-in Frage, die auf 24 GB passen; Namen und Größen werden vor KI-0 am
-KI-Rechner geprüft, nicht aus dem Gedächtnis übernommen.
+**So finden sich Roboter und KI-Rechner:** über ROS 2 DDS im WLAN (gleiche
+`ROS_DOMAIN_ID`, CycloneDDS mit festen Gegenstellen), nicht über rosbridge.
+rosbridge verbindet die App mit dem Roboter. Auf dem Roboter meldet der
+`link_monitor`, ob der KI-Rechner erreichbar ist; die Sicherheit hängt
+bewusst nicht davon ab.
 
-Zu beachten: Die vorhandenen Dienste (`amadeus-ki.service`) dürfen nicht
-gestört werden. Lädt Ollama ein großes Bildmodell, kann das Sprachmodell
-aus dem Speicher fallen; die erste Antwort danach dauert länger. Das wird
-in KI-0 mitgemessen.
+**Der Lotse nutzt denselben Weg** (gebaut und in der Entwicklungsumgebung
+getestet, `werkzeuge/lotse_dienst.py` und `werkzeuge/ki_verbindung_ros.py`):
+
+- Auf dem KI-Rechner läuft der **Lotsen-Dienst** neben den vorhandenen
+  Knoten. Er nimmt eine vorbereitete Frage an, fragt Ollama auf demselben
+  Rechner und schickt die Rohantwort zurück. Er beantwortet eine Frage zur
+  Zeit.
+- Der Roboter bereitet die Frage vor (Fotos mit Nummern, Skizze, Text) und
+  prüft die Antwort selbst.
+- Es gibt nur drei eigene Themen mit Text: `/ki_erkundung/frage_json`,
+  `/ki_erkundung/antwort_json`, `/ki_erkundung/lotse_status_json`. Keine
+  Fahrbefehle, keine Dienste, keine Aktionen.
+- Kommt keine Antwort (KI-Rechner aus, WLAN weg, Zeitgrenze), ist das ein
+  gewöhnliches Ergebnis; dann entscheidet die Regel.
+
+**Modell.** Der Lotse braucht ein Modell, das Bilder versteht; das
+vorhandene `qwen2.5` ist ein reines Textmodell. Kandidaten, geprüft am
+19.11.2026 in der Ollama-Bibliothek:
+
+| Modell | Größe | Bemerkung |
+|---|---|---|
+| `qwen3.5:9b` | 6,6–7,6 GB | Text und Bild; erste Wahl (Vorschlag des Projektinhabers) |
+| `qwen3-vl:8b` | 6,2 GB | Text und Bild; Vergleich; braucht Ollama ab 0.12.7 |
+| `qwen3.5:27b` | 17–20 GB | zum Vergleich, falls die kleineren nicht genügen; lässt wenig Platz für anderes |
+
+Die Größe ist das Modell auf der Platte, nicht der ganze Bedarf an
+Grafikspeicher; Bilder und Kontext kommen hinzu. Welches Modell genügt,
+entscheidet die Messung an echten Bildern, nicht die Beschreibung.
+
+**Denkschalter.** Qwen3.5 „denkt“ in der Vorgabe vor der Antwort; das kostet
+Zeit. Die Werkzeuge können es ab- oder anschalten (`--denken aus`); beides
+wird gemessen.
+
+**Nachvollziehbar.** Jede Ergebnisdatei hält fest, womit geantwortet wurde:
+Fassung von Ollama, Kennung (`digest`) und Quantisierung des Modells,
+Kontextlänge, Denkschalter. Der Modellname allein genügt nicht.
+
+**Zu beachten.** Die vorhandenen Dienste dürfen nicht gestört werden. Lädt
+Ollama ein Bildmodell, kann das Sprachmodell aus dem Speicher fallen; die
+erste Antwort danach dauert länger. Große Nachrichten über das WLAN
+(eine Frage hat rund 0,5 MB) sind im Stand unkritisch; während der Fahrt
+wird ihre Wirkung auf die übrige Verbindung gemessen, bevor sie dort
+verwendet werden.
 
 ## 8. Stufen, Kriterien, Rückfall
 
 Jede Stufe hat vorab festgelegte Kriterien. Eine Stufe beginnt erst, wenn
 die vorige bestanden ist. Auf den Roboter kommt je Realtest genau eine
-Verhaltensänderung.
+Verhaltensänderung. KI-0 und KI-1 bilden zusammen den **Trockenlauf**: Die KI
+antwortet, aber nichts fährt nach ihrer Antwort.
 
-### KI-0 – Trockenlauf (keine Fahrentscheidung, kein Eingriff ins Fahren)
+### KI-0 – Erstes Sehen (im Stand, ohne Bewegung)
 
-An mindestens sechs Standpunkten in Laborraum, Flur und Schlafzimmer werden
-Blickrunden aufgenommen, zusammen mindestens zwölf (auch bei anderem Licht
-oder anders stehender Tür). Ausgewertet wird am KI-Rechner. Der
-Projektinhaber gibt je Runde an, welche Nummern echte Ausgänge sind.
+Die erste Frage dieser Linie ist: Erkennt das Modell auf dem KI-Rechner an
+echten Bildern dieser Kamera überhaupt Türen, und wie lange braucht es?
+Dafür muss nichts fahren. Amadeus steht dort, wo er ohnehin steht (zum
+Beispiel am Start oder Ende einer Fahrt der Hauptlinie). Kamera und LiDAR
+laufen, die Aufnahme dauert einige Sekunden, die Frage geht über die
+Verbindung an den Lotsen-Dienst, die Antwort wird geprüft und gespeichert.
+Das wird an einigen Stellen und Blickrichtungen wiederholt.
 
-| Kennung | Kriterium (vorab festgelegt) |
+Gemessen wird (noch ohne Bestehen oder Durchfallen bei K0-1, dafür sind es
+zu wenige Runden): Kommt eine gültige Antwort (K0-3)? Wie lange dauert sie
+mit und ohne Denkschalter (K0-4)? Was sieht die Kamera wirklich (K0-7)?
+Stimmt die vermessene Breite an der bekannten 78-cm-Tür? Passen die
+Zeitstempel von Kamera und LiDAR zusammen? Dazu der erste Eindruck, ob die
+KI die Tür benennt.
+
+### KI-1 – Blickrunden aus eigener Kraft (Mitlauf ohne Wirkung)
+
+Amadeus dreht sich bei einer Erkundungsfahrt der Hauptlinie selbst einmal
+herum; die Blickrunde entsteht dabei von selbst und geht an den KI-Rechner.
+Die KI beantwortet im Hintergrund dieselben Entscheidungen wie die Regel,
+steuert aber nichts. So entstehen die Blickrunden für die Kriterien, ohne
+Joystick und ohne Kopieren.
+
+Dafür sind zwei Dinge nötig, die es heute nicht gibt:
+
+- **Die Kamera läuft bei der Erkundung mit.** Sie ist in der automatischen
+  Kartierung bewusst abgeschaltet. Deshalb zuerst im Stand messen, dass
+  Ortung und Rechenlast des Jetson mit Kamera nicht leiden.
+- **Der Rundblick geht einmal ganz herum.** Heute dreht Amadeus am Start und
+  an Suchpunkten um 90°; der Wert steht fest im Profil der Hauptlinie und
+  lässt sich beim Start nicht von außen setzen. Eine volle Drehung braucht
+  deshalb eine kleine Anschlussstelle in der Hauptlinie (ein Startwert, ohne
+  den alles bleibt, wie es ist). Das ist eine eigene Änderung der Hauptlinie
+  nach README, Regel 2; sie wird erst nach der Auswertung von SH-9
+  vorgeschlagen.
+
+Kriterien dieser Stufe (vorab festgelegt), an zusammen mindestens zwölf
+Blickrunden aus mindestens zwei Fahrten; der Projektinhaber gibt je Runde
+an, welche Nummern echte Ausgänge sind:
+
+| Kennung | Kriterium |
 |---|---|
 | K0-1 Ausgang | In mindestens 90 % der Runden mit angebotenem echtem Ausgang wählt die KI einen echten, offenen Ausgang |
 | K0-2 Keine gefährliche Wahl | Nie wählt die KI eine Nummer, die in Wahrheit Glas oder Spiegel ist |
 | K0-3 Form | Höchstens 10 % der Antworten werden von der Prüfung verworfen |
-| K0-4 Zeit | Antwortzeit im Mittel (Median) höchstens 20 s, längste höchstens 45 s, bei geladenem Modell |
+| K0-4 Zeit | Antwortzeit im Mittel (Median) höchstens 20 s, längste höchstens 45 s, bei geladenem Modell; zusätzlich wird der Wert genannt, den 95 % der Antworten einhalten |
 | K0-5 Wiederholbarkeit | Dreimal dieselbe Frage: in mindestens 90 % der Runden dieselbe Wahl |
 | K0-6 Vorschläge | In mindestens 90 % der Runden, in denen ein Ausgang zu sehen ist, ist er unter den vermessenen Vorschlägen (misst die Vermessung, nicht die KI) |
-| K0-7 Kamera | Sichtfeld aus den Kameradaten bestimmt; Rechenlast der Kamera auf dem Jetson im Stand gemessen (nur Messung) |
+| K0-7 Kamera | Sichtfeld aus den Kameradaten bestimmt; Rechenlast der Kamera auf dem Jetson gemessen (nur Messung) |
 
-Besteht K0-6 nicht, wird zuerst die Vermessung verbessert. Besteht K0-1 mit
-keinem Modell, das auf den KI-Rechner passt, ist das der Blocker dieser
-Linie; dann wird nichts in Richtung Fahren gebaut.
-
-### KI-1 – Mitlauf ohne Wirkung
-
-Die Kamera läuft bei Erkundungsfahrten der Hauptlinie mit; die KI beantwortet
-im Hintergrund dieselben Entscheidungen, steuert aber nichts. Die Kamera ist
-in der automatischen Kartierung heute bewusst abgeschaltet. Deshalb zuerst im
-Stand messen, dass Ortung und Rechenlast des Jetson mit Kamera nicht leiden.
-Kriterien: keine messbare Verschlechterung der Hauptlinie; Antworten in
-mindestens 90 % rechtzeitig; Vergleich „Wahl der KI gegen Wahl der Regel“ an
-den echten Entscheidungspunkten.
+Dazu: keine messbare Verschlechterung der Hauptlinie durch Kamera und
+Verbindung. Besteht K0-6 nicht, wird zuerst die Vermessung verbessert.
+Besteht K0-1 mit keinem Modell, das auf den KI-Rechner passt, ist das der
+Blocker dieser Linie; dann wird nichts in Richtung Fahren gebaut.
 
 ### KI-2 – Kopplung in der Simulation
 
@@ -287,6 +370,17 @@ und Freigabe legt der Projektinhaber vorher fest.
 Raumnamen der KI erscheinen als Vorschlag im Raumeditor der App; der Mensch
 bestätigt. Ein Hilferuf enthält Grund und Bild.
 
+### KI-5 – Gegenstände finden („Fahre zur Tasse“)
+
+Fernziel, erst nach einer verlässlichen Erkundung: Ein Auftrag in Worten
+führt zu einem Gegenstand. Die Bausteine gibt es bei Amadeus schon
+(Sprachplaner, Objekterkennung mit 3D-Lage aus dem Tiefenbild, einfaches
+Objektgedächtnis, Raumziele); diese Stufe verbindet sie und übernimmt aus
+dem HomeMy-Konzept: letzte Sichtung mit Zeit und Zustand (bestätigt,
+veraltet, unbekannt), Prüfung vor Ort vor der Erfolgsmeldung, Tiefe über die
+Fläche des Gegenstands statt nur an der Bildmitte, und „nicht gefunden“
+statt einer erfundenen Lage.
+
 **Rückfall je Stufe:** KI-0 bis KI-2 verändern das Fahrverhalten nicht; es
 gibt nichts zurückzunehmen. Ab KI-3 ist die KI-Wahl ein Schalter, der
 standardmäßig aus ist. Rückfall der ganzen Linie: README.
@@ -301,6 +395,16 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
 - **Die blinde Rückseite** und **die nachhinkende Ortung beim Drehen.**
 - **Irrtümer der KI.** Bild-Sprach-Modelle liegen gelegentlich mit voller
   Überzeugung falsch. Deshalb Prüfung und Nachmessen (Abschnitt 6).
+- **Die Erkundung selbst.** Das Vorbild Mobility VLA erkundet nicht: Dort
+  wird die Umgebung dem Roboter vorher in einer Führung gezeigt (ein
+  aufgenommenes Video), die KI sucht danach nur das Ziel in diesem Video.
+  Selbstständiges Finden in unbekannter Umgebung ist auch in der Forschung
+  noch unsicher: Die im HomeMy-Konzept genannte Arbeit LocalNav berichtet
+  für ein kleines lokales Modell ohne Nachtraining 26 % Erfolg bei der
+  Suche nach Gegenständen in fremden Wohnungen, mit Nachtraining 37 %, für
+  ein großes Cloud-Modell 42 %. Diese Linie stellt der KI deshalb eine
+  engere Frage (eine Nummer aus vermessenen Öffnungen wählen) und misst
+  das Ergebnis, bevor sie ihm folgt.
 
 ## 10. Nicht-Ziele
 
@@ -318,7 +422,9 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
 | Blick der Kamera nach unten (kein Türsturz im Bild) | Rechnung; wird in KI-0 gemessen |
 | Rechenlast der Kamera auf dem Jetson neben der Kartierung | offen; KI-1 misst zuerst im Stand |
 | Eine volle Blickrunde dauert gut eine Minute und belastet die Ortung (viele Drehschritte) | bekannt; nur einmal je Raum und im Zweifel |
-| Auswahl des Bild-Sprach-Modells | offen; KI-0 vergleicht zwei bis drei |
+| Auswahl des Bild-Sprach-Modells | Kandidaten in Abschnitt 7; KI-0 und KI-1 messen sie |
+| Anschlussstelle für die volle Drehung am Start (KI-1) | offen; eigene Änderung der Hauptlinie, Vorschlag nach SH-9 |
+| Große Nachrichten über das WLAN während der Fahrt | im Stand unkritisch; vor KI-1 messen |
 | Personen im Bild und im Scan (Begleitung mit Not-Aus) | können als falsche Öffnung erscheinen; in KI-0 beobachten |
 | Breite der Öffnungen | in der künstlichen Beispielwelt 3–7 cm zu schmal gemessen (vorsichtige Seite); in KI-0 an der bekannten 78-cm-Tür prüfen |
 | Öffnung bei sehr flachem Blick (Standpunkt dicht an der Wand) | wird nicht angeboten, weil die freie Tiefe dahinter nicht zu sehen ist; zählt in K0-6 |
@@ -333,3 +439,36 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
 - 19.11.2026, Nachtrag am selben Tag: Regel für Öffnungen in §5 nach den
   ersten Tests genauer gefasst; drei Punkte in §11 ergänzt. Keine Änderung
   an Rollen, Grenzen, Stufen oder Kriterien.
+- 19.11.2026, v1.1 (Klarstellungen des Projektinhabers und sein
+  HomeMy-Konzept): kein Joystick, Amadeus dreht sich selbst; Verbindung zum
+  KI-Rechner wie bei der Objekterkennung, mit eigenem Lotsen-Dienst (§7);
+  KI-0 ist jetzt „Erstes Sehen im Stand“, KI-1 „Blickrunden aus eigener
+  Kraft“ mit den Kriterien K0-1 bis K0-7; neu KI-5 Gegenstände finden;
+  Modellkandidaten, Denkschalter und nachvollziehbare Modellangaben; Ankunft
+  bestätigen (§4); Einordnung von Mobility VLA und LocalNav (§9); §13.
+  Rollen, Grenzen und Schwellen der Kriterien unverändert.
+
+## 13. Übernommen aus dem HomeMy-Konzept des Projektinhabers
+
+Quelle: [quellen/HomeMy_Mobility_VLA_Projektkonzept_2026-11-19.md](quellen/HomeMy_Mobility_VLA_Projektkonzept_2026-11-19.md)
+(unverändert abgelegt). Das Dokument beschreibt für das Schwesterprojekt
+HomeMy dieselbe Grundordnung wie diese Linie: Ein lokales Modell versteht
+Sprache und Bild und schlägt ein Ziel vor, eine feste Schicht prüft es, die
+Navigation fährt, die Sicherheit bleibt unabhängig.
+
+| Aus dem Dokument | Hier |
+|---|---|
+| Kein direktes Motorinterface für das Modell; nur geprüfte Zielvorschläge | gilt schon (§3, §6) |
+| Startmodell Qwen3.5-9B über Ollama, Vergleich Qwen3-VL-8B | übernommen (§7), an der Quelle geprüft |
+| Erst an echten Wohnungsbildern messen, mit wiederholbarer Modellkonfiguration, Latenz als Median und 95-%-Wert | übernommen (KI-0, KI-1, Ergebnisdatei) |
+| Ziel vor Ort erneut bestätigen | übernommen (§4) |
+| Stationärer KI-Rechner, Roboter bleibt ohne ihn sicher | gilt schon (§3, §7) |
+| Objektgedächtnis mit Zeit und Zustand, Tiefe über die Fläche, „nicht gefunden“ statt Erfindung | vorgemerkt für KI-5 |
+| Selektierte Einzelbilder statt Dauer-Videostrom | gilt schon (Blickrunde) |
+
+Nicht übernommen, weil es bei Amadeus schon entschieden oder vorhanden ist:
+die offenen Punkte zu Kameratyp, ROS-Fassung, Odometrie, SLAM und LiDAR;
+die Meilensteine M1 (3D-Lage aus RGB-D) und M2 (Nav2), die es hier als
+`semantic_perception` und als Navigation der Hauptlinie gibt. Anders als im
+Dokument angenommen ist die Navigation bei Amadeus nicht der erledigte Teil,
+sondern der schwierige: die Türdurchfahrt (§9).

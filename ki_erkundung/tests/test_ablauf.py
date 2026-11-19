@@ -136,6 +136,12 @@ def test_werkzeuge_von_der_aufnahme_bis_zum_bericht(beispielordner, tmp_path, ki
     antworten = ergebnis['runden'][0]['antworten']
     assert [a['pruefung']['wahl'] for a in antworten] == [tuer.nr, tuer.nr]
     assert ki_attrappe.anfragen[0]['options']['num_ctx'] == 4096
+    assert 'think' not in ki_attrappe.anfragen[0]
+    # womit geantwortet wurde, steht nachvollziehbar in der Ergebnisdatei
+    assert ergebnis['einstellungen']['umgebung']['pruefmodell'] == {
+        'modell': 'pruefmodell', 'dienst_fassung': '0.99.1',
+        'modell_kennung': 'kennung-pruefmodell', 'quantisierung': 'Q4_K_M',
+        'parameter': '9B', 'groesse_gb': 6.6}
 
     (beispielordner / 'beispiel_zimmer' / 'wahrheit.json').write_text(json.dumps({
         'ausgaenge': [tuer.nr], 'ausgang_sichtbar': True,
@@ -184,3 +190,19 @@ def test_wahrheit_mit_falscher_form_wird_abgelehnt(beispielordner, tmp_path, cap
             assert 'wahrheit.json' in capsys.readouterr().err
     finally:
         datei.unlink()
+
+
+def test_blickrunde_im_stand_ergibt_ein_bild_und_die_tuer_davor(tmp_path):
+    """Ohne Drehung: Amadeus steht und schaut zur Tür (erstes Sehen, KI-0a)."""
+    import math
+    welt.erzeuge(tmp_path, 'im_stand', schritt_grad=0.01, gesamt_grad=0.12,
+                 standpunkt=(1.8, 1.4, 0.0))
+    vorbereitung = bereite_vor(Blickrunde.lade(tmp_path / 'im_stand'))
+    assert not vorbereitung.auswahl['vollstaendig']
+    assert [b['bild'] for b in vorbereitung.auswahl['bilder']] == [1]
+    vorn = [o for o in vorbereitung.oeffnungen if abs(o.richtung_grad) < 10.0]
+    assert len(vorn) == 1 and vorn[0].breite_m == pytest.approx(0.80, abs=0.08)
+    assert vorbereitung.sichtbar[vorn[0].nr] == [1]
+    assert 'schaut in eine Richtung' in vorbereitung.frage.text
+    assert len(vorbereitung.bilder_fuer_ki()) == 2          # ein Foto und die Skizze
+    assert math.isclose(vorbereitung.auswahl['gedreht_grad'], 0.0, abs_tol=1.0)

@@ -1806,3 +1806,34 @@ Simulation, KI-3 die KI wählt real, KI-4 Raumnamen und Hilferuf. Kriterien
 vorab in `ki_erkundung/KONZEPT.md`; verankert in MASTERPLAN §10.
 
 **Rückfall:** Ordner `ki_erkundung/` und die Verweise darauf entfernen.
+
+**Nachtrag 19.11.2026 (abends) – HomeMy-Konzept ausgewertet, zwei
+Klarstellungen:** Der Projektinhaber hat sein Konzept „HomeMy – lokale
+semantische Roboternavigation nach dem Mobility-VLA-Prinzip“ vorgelegt
+(unverändert unter `ki_erkundung/quellen/`). Es beschreibt dieselbe
+Grundordnung wie die KI-Linie: Modell schlägt vor, feste Schicht prüft,
+Navigation fährt, Sicherheit unabhängig. Übernommen: Startmodell
+`qwen3.5:9b` mit Vergleich `qwen3-vl:8b` (an der Quelle geprüft), Messen an
+echten Bildern mit festgehaltener Modellkennung, Bestätigung vor Ort,
+Objektgedächtnis mit Zeit und Zustand als Fernziel KI-5. Nicht übernommen:
+die dort offenen Punkte zu Kamera, ROS, SLAM und die Meilensteine M1/M2, weil
+es sie bei Amadeus gibt. Zwei Dinge, die das Dokument anders annimmt: (1) Die
+Navigation ist bei Amadeus nicht der erledigte Teil, sondern der schwierige
+(Türdurchfahrt). (2) Mobility VLA erkundet nicht selbst; dort wird die
+Umgebung vorher in einer aufgenommenen Führung gezeigt. Die im Dokument
+genannte Arbeit LocalNav berichtet für selbstständige Gegenstandssuche 26 %
+Erfolg (kleines lokales Modell), 37 % mit Nachtraining, 42 % für ein
+Cloud-Modell. Lehre: der KI eine enge, messbare Frage stellen und erst nach
+der Messung folgen.
+
+**Klarstellungen:** Kein Joystick, Amadeus dreht sich selbst. Der
+KI-Rechner wird nur eingeschaltet, die Verbindung baut sich von selbst auf.
+Festgestellt: Diese Verbindung liegt auf `main` und läuft über ROS 2 DDS
+(`server.launch.py`, `amadeus-ki.service`, Kamera-Relay), nicht über
+rosbridge; rosbridge verbindet die App. Der Lotse bekommt nach demselben
+Muster einen eigenen Dienst (drei Themen `/ki_erkundung/…`, nur Text).
+Folge für die Stufen: KI-0 ist „Erstes Sehen im Stand“ (keine Bewegung
+nötig), KI-1 „Blickrunden aus eigener Kraft“. Für die volle Drehung am Start
+fehlt ein Zugang von außen: `nav_mapping.launch.py` gibt dem Erkunder im
+Selbstheilungsbetrieb fest `self_healing_params.yaml`. Das wird eine eigene,
+freizugebende Änderung der Hauptlinie nach SH-9.

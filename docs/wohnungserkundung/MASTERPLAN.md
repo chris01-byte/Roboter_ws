@@ -226,6 +226,10 @@ ganze Fahrt durch eine Tür).
 19.11.2026, Nachtrag (Nutzerentscheidung): §10 zweite, getrennte
 Entwicklungslinie „KI-Erkundung“ im Ordner `ki_erkundung/`; Hauptlinie und
 §9 unverändert.
+19.11.2026, zweiter Nachtrag (Klarstellungen des Projektinhabers): §10.2 an
+KONZEPT v1.1 angepasst (kein Joystick, Verbindung zum KI-Rechner wie bei der
+Objekterkennung, KI-0 „Erstes Sehen“, KI-1 „Blickrunden aus eigener Kraft“,
+KI-5 Gegenstände finden).
 
 ## 9. Fahrplan der Selbstheilungslinie (Nutzerentscheidung 09.11.2026)
 
@@ -417,13 +421,22 @@ führt dort keine Kopie.
 
 | Stufe | Inhalt | Wirkung auf das Fahren |
 |---|---|---|
-| KI-0 | Trockenlauf: Blickrunden aufnehmen, KI am KI-Rechner befragen, mit der Wahrheit vergleichen | keine |
-| KI-1 | Mitlauf: Die KI beantwortet bei Fahrten der Hauptlinie dieselben Entscheidungen im Hintergrund | keine |
+| KI-0 | Erstes Sehen: Amadeus steht, Kamera und LiDAR laufen, die Frage geht über die vorhandene Verbindung an den KI-Rechner | keine |
+| KI-1 | Blickrunden aus eigener Kraft: Amadeus dreht sich bei Fahrten der Hauptlinie selbst, die KI beantwortet im Hintergrund dieselben Entscheidungen | keine durch die KI; braucht eine freigegebene Anschlussstelle für die volle Drehung |
 | KI-2 | Kopplung in der Simulation mit gespielter KI (richtig, falsch, langsam, stumm) | keine am Roboter |
 | KI-3 | Die KI wählt real; Regel als Rückfall | eine Verhaltensänderung, Freigabe des Projektinhabers |
 | KI-4 | Raumnamen in der App, Hilferuf mit Bild und Grund | keine am Fahrverhalten |
+| KI-5 | Gegenstände finden („Fahre zur Tasse“) mit den vorhandenen Bausteinen | wird vor der Stufe festgelegt |
 
-Kriterien je Stufe stehen vorab im Konzept (KI-0: K0-1 bis K0-7).
+Kriterien je Stufe stehen vorab im Konzept (Trockenlauf KI-0 und KI-1: K0-1
+bis K0-7).
+
+**Klarstellungen des Projektinhabers (19.11.2026, abends):** Kein Joystick;
+Amadeus dreht sich für die Blickrunde selbst. Der KI-Rechner wird nur
+eingeschaltet; die Verbindung baut sich von selbst auf, wie bei der
+Objekterkennung (ROS 2 DDS im WLAN, im Repository auf `main`). Der Lotse
+bekommt dafür einen eigenen Dienst auf dem KI-Rechner mit drei eigenen
+Themen `/ki_erkundung/…`; Fahrbefehle gibt es dort nicht.
 
 ### 10.3 Verhältnis zur Hauptlinie
 
