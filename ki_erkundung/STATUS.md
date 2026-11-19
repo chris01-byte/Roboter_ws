@@ -33,11 +33,30 @@ nur die App mit dem Roboter.
 
 ## Arbeitsliste
 
-**Aktiv:** nichts am Roboter.
+**Aktiv: Auftrag KI-0 „Erstes Sehen“** ([AUFTRAG.md](AUFTRAG.md)), im Stand,
+ohne Bewegung; geschrieben am 19.11.2026, wartet auf die Übergabe durch den
+Projektinhaber. Teil A auf dem KI-Rechner (Modell laden, erste Antwort am
+künstlichen Beispiel, Lotsen-Dienst starten), Teil B auf dem Jetson (Kamera
+und LiDAR, Standbilder, Frage über die Verbindung, Urteil des
+Projektinhabers). Reihenfolge laut Projektinhaber: erst prüfen, ob die KI
+die Tür erkennt, dann die Türdurchfahrt.
 
-**Als Nächstes: Auftrag KI-0 „Erstes Sehen“** (im Stand, ohne Bewegung). Er
-wird geschrieben und übergeben, wenn SH-9 ausgewertet ist und der
-Projektinhaber ihn anfordert. Am Roboter läuft immer nur ein Auftrag.
+**Als Nächstes in der Entwicklung (ohne Roboter): der Fahrteil.** Vorgabe
+des Projektinhabers: nichts Neues erfinden, sondern an den Türdurchfahrten
+orientieren, die funktioniert haben. Im Repository belegt:
+- 11.09.2026 (Stand `1d91229`, Protokoll `WE_PARITY_RESET.md`): Rundblick in
+  8 × 45° mit 0,08 rad/s und 1 s Pause, danach Ziele, eine Tür als
+  „verbunden“ erkannt und über die Navigation durchfahren, mit Aufstellen in
+  begrenzten Etappen davor und Bestätigen des Auslaufs dahinter.
+- 08.11.2026 (Release `selbstheilung-sh7-20261108_1617`): zwei Durchfahrten
+  durch die 80-cm-Tür in drei Fahrten, über gewöhnliche Ziele der Navigation.
+- Dazu ein begrenztes Türprofil (`door_test_params.yaml`): gerade Fahrt mit
+  Mittenführung durch den LiDAR, höchstens 0,08 m/s, Abbruch ab 6 cm
+  seitlicher Abweichung. Dieser Code ist vorhanden, in der geparkten Linie
+  abgeschaltet und seit September nicht mehr real gelaufen.
+Offen ist, wie Amadeus einem gefundenen Weg im Raum folgt (wie am 08.11.
+oder in geraden Stücken mit Drehen auf der Stelle); wird mit dem
+Projektinhaber besprochen.
 
 **Danach: KI-1 „Blickrunden aus eigener Kraft“.** Dafür fehlen zwei Dinge,
 die diese Linie nicht allein herstellen kann:
