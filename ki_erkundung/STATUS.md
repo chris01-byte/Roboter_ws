@@ -37,7 +37,10 @@ nur die App mit dem Roboter.
 ohne Bewegung. **Teil A (KI-Rechner) lief am 19.11.2026 bis A5** und steht
 dort: Der Lotsen-Dienst kann nicht starten, weil die Netzwerkschnittstelle,
 an die das DDS des KI-Dienstes gebunden ist (`enp4s0`), keine Verbindung
-hat. Der Agent hat richtig nichts am Netz geändert. Fortsetzung über den
+hat. Der Agent hat richtig nichts am Netz geändert. Christopher: Auch im
+August lief alles über WLAN; der Lotsen-Dienst bekommt deshalb eine eigene
+Kopie der DDS-Einstellung mit der WLAN-Schnittstelle, der vorhandene Dienst
+bleibt unverändert. Fortsetzung über den
 „A-Nachtrag“ im Auftrag, dann Teil B (Jetson). Reihenfolge laut
 Projektinhaber: erst prüfen, ob die KI die Tür erkennt, dann die
 Türdurchfahrt.
@@ -183,6 +186,6 @@ zum KI-Rechner (Lotsen-Dienst und Gegenstück).
 
 ## Genau ein nächster Schritt
 
-KI-0 fortsetzen: Christopher verbindet den KI-Rechner mit dem Netz wie beim
-Einrichten im August (Kabel), dann A-Nachtrag N1 bis N3 auf dem KI-Rechner,
-dann Teil B auf dem Jetson.
+KI-0 fortsetzen: A-Nachtrag N1 bis N3 auf dem KI-Rechner (der Lotsen-Dienst
+bekommt eine eigene DDS-Einstellung über WLAN; Christopher: auch im August
+lief alles über WLAN), dann Teil B auf dem Jetson.

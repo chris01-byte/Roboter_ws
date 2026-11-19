@@ -174,19 +174,38 @@ Nummer, Raum, Ladezeit und eingelesene Teile, bei einem Fehler den Text des
 Dienstes). Dazu je Lauf aus `ergebnis.json` die `begruendung`. Wechselt das
 Modell, enthält die erste Zeile die Ladezeit; das ist erwartet.
 
-**N3 – Lotsen-Dienst starten, sobald das Netz steht.** Der Dienst benutzt
-dieselbe Umgebung wie `amadeus-ki.service`. Ist deren DDS an eine
-Netzwerkschnittstelle gebunden, die keine Verbindung hat (Befund: `enp4s0`),
-wird **keine neue DDS-Datei angelegt und nichts am Netz geändert**
-(AGENTS §2.7). Christopher stellt die Verbindung her, wie sie beim Einrichten
-im August war (Kabel einstecken). Danach:
+**N3 – Lotsen-Dienst über WLAN starten.** Christopher (19.11.2026): Roboter
+und KI-Rechner liefen auch im August über WLAN, nicht über Kabel. Die
+DDS-Einstellung des vorhandenen Dienstes nennt aber die Kabelbuchse
+(`enp4s0`). Deshalb bekommt **nur der Lotsen-Dienst** eine eigene Kopie
+dieser Einstellung, in der allein die Netzwerkschnittstelle auf die
+WLAN-Schnittstelle zeigt. Nicht ändern: `amadeus-ki.service`, seine
+DDS-Datei, Netzwerkeinstellungen des Rechners, Firewall. Rückfall: die Kopie
+löschen.
 
 ```bash
-ip -br link | grep -v "^lo"
-umg 'nohup env --default-signal=INT python3 ~/ki_erkundung_ws/ki_erkundung/werkzeuge/lotse_dienst.py \
-     --modell qwen3.5:9b > ~/ki_trockenlauf_ki0/lotse_dienst.log 2>&1 < /dev/null & echo $! > ~/ki_trockenlauf_ki0/lotse_dienst.pid'
+ip -br addr | grep -v "^lo"          # Name der WLAN-Schnittstelle (Befund: wlo1)
+systemctl show amadeus-ki.service -p Environment | tr ' ' '\n' | grep CYCLONEDDS_URI
+Q=<Pfad aus CYCLONEDDS_URI ohne file://>; L=~/ki_trockenlauf_ki0/cyclonedds_lotse.xml
+cp "$Q" "$L"
+```
+
+In `$L` mit dem Datei-Werkzeug genau den Eintrag ändern, der `enp4s0` nennt,
+so dass dort die WLAN-Schnittstelle steht; alles andere (Domain, Peers)
+bleibt gleich. `diff "$Q" "$L"` muss genau diese eine Änderung zeigen; im
+Bericht die Diff-Zeilen ohne IP-Adressen nennen. Steht in der Datei keine
+Schnittstelle, sondern eine Adresse, die WLAN-Adresse des Rechners
+einsetzen und das berichten. Dann prüfen, ob der Jetson erreichbar ist (die
+Adresse steht in den Peers der Datei oder im August-Abschnitt des
+ROBOT_TRANSFER; im Bericht ohne Adresse):
+
+```bash
+ping -c 3 -W 2 <Jetson-Adresse>
+umg "export CYCLONEDDS_URI=file://$L; nohup env --default-signal=INT python3 \
+     ~/ki_erkundung_ws/ki_erkundung/werkzeuge/lotse_dienst.py --modell qwen3.5:9b \
+     > ~/ki_trockenlauf_ki0/lotse_dienst.log 2>&1 < /dev/null & echo \$! > ~/ki_trockenlauf_ki0/lotse_dienst.pid"
 sleep 5; cat ~/ki_trockenlauf_ki0/lotse_dienst.pid; tail -3 ~/ki_trockenlauf_ki0/lotse_dienst.log
-umg 'timeout 10 ros2 topic echo --once /ki_erkundung/lotse_status_json'
+umg "export CYCLONEDDS_URI=file://$L; timeout 10 ros2 topic echo --once /ki_erkundung/lotse_status_json"
 ```
 
 Der Dienst bleibt für Teil B laufen; danach A6. Das Modell im Dienst ist
