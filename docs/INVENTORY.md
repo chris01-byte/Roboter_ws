@@ -36,6 +36,14 @@ Apple-Build/Laufzeit unter WE-M7 offen. Kein neuer Hardware-Reifegrad oder
 Jetson-Installwechsel; aktuelle Nachweise/Grenzen ausschließlich im
 [STATUS](wohnungserkundung/STATUS.md).
 
+**Softwaredelta 19.11.2026 / KI-Erkundung:** Neue, getrennte
+Entwicklungslinie im Ordner `ki_erkundung/` (Entscheidung des
+Projektinhabers, MASTERPLAN §10): Eine KI auf dem vorhandenen KI-Rechner soll
+die Ziel- und Suchwahl übernehmen. Eigenes Konzept, eigener Status, eigene
+Software ohne ROS-Paket; kein bestehendes Paket, Profil oder Werkzeug
+geändert, keine Jetson-Wirkung, kein neuer Hardware-Reifegrad. Stand
+ausschließlich in [ki_erkundung/STATUS.md](../ki_erkundung/STATUS.md).
+
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 
@@ -179,4 +187,5 @@ Bereiche enthalten.
 |---|---|---|
 | iOS-App „Amadeus" | `ios/Robotersteuerung/` | Raumeditor und Raumwahl am realen ROS-System abgenommen |
 | Übergabeprotokolle | `integration/` | Dokumentation |
+| KI-Erkundung (getrennte Linie) | `ki_erkundung/` | Entwurf (Konzept v1.0; Werkzeuge nur in der Entwicklungsumgebung geprüft) |
 | Prüfplan | `Roboter_Pruefplan.md`, `pruefplan_jetson.sh` | produktiv genutzt |

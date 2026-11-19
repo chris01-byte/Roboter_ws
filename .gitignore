@@ -52,6 +52,11 @@ xcuserdata/
 recordings/
 private_maps/
 camera_captures/
+# KI-Erkundung: Blickrunden (Kamerabilder, Tiefenbilder, Scans der Wohnung)
+# und Trockenlauf-Ausgaben bleiben auf Jetson und KI-Rechner.
+blickrunden/
+ki_erkundung/daten/
+ki_trockenlauf*/
 
 # --- Karten aus echten Raeumen ---
 # Der Code zur Kartenerzeugung gehoert ins Repo, die erzeugten Karten der

@@ -31,6 +31,14 @@
 > entsteht parallel in der Simulation, und der STATUS führt oben genau eine
 > Arbeitsliste (aktiv, in Simulation, geparkt, erledigt). Jeder Auftrag
 > bezieht sich auf einen Schritt dieses Fahrplans.
+>
+> **Nutzerentscheidung 19.11.2026 – zweite, getrennte Entwicklungslinie
+> „KI-Erkundung“:** Eine KI auf dem vorhandenen KI-Rechner soll die Ziel- und
+> Suchwahl der Erkundung übernehmen. Das geschieht als komplett neue Linie im
+> eigenen Ordner `ki_erkundung/`. Die bisherige Entwicklung bleibt erhalten
+> und unbeeinflusst; die Hauptlinie `self_healing` läuft mit §9 weiter.
+> Verbindlich in **§10** und in
+> [ki_erkundung/KONZEPT.md](../../ki_erkundung/KONZEPT.md).
 
 **Verbindliche Zielrichtung:** Hardwareanbindung und bewährte ROS-Basis erhalten; die metrische Erkundung vereinfachen; geeignete Open-Source-Komponenten gezielt integrieren. Fortschritt wird durch bestandene Abnahmen belegt. Zusätzliche Sonderfälle ohne nachgewiesenen Nutzen sind keine Integrationsstrategie.
 
@@ -58,6 +66,7 @@ Kartierung verlangt geeignete Sicht auf die Umgebung, nicht das Überfahren jede
 | `docs/WOHNUNGSERKUNDUNG_STRATEGIE.md` | Produktumfang und Gesamtstrategie, mit dieser Planfassung synchronisiert |
 | `docs/PROJECT_MEMORY.md` | Entscheidungsjournal; frühere Aufträge bleiben historische Quellen |
 | `docs/ROBOT_TRANSFER.md` | Tatsächliche Installation und Rückfall am Zielsystem; kein Sollzustand |
+| `ki_erkundung/KONZEPT.md`, `ki_erkundung/STATUS.md` | Getrennte Linie KI-Erkundung (§10, seit 19.11.2026): eigenes Konzept und eigener Iststand; für die Hauptlinie nicht maßgeblich |
 
 Bei Übernahme werden die bisherigen vier WE-Dokumente bytegleich mit Herkunfts-SHA unter `docs/wohnungserkundung/archive/20261002-v1.2/` archiviert. Der bisherige STATUS bleibt als Historie erhalten; ein klarer aktueller Abschnitt steht vorn. Alte Aufträge dürfen danach nicht erneut ausgeführt werden. Aktuelle Verweise und Aussagen in AGENTS, MEILENSTEINE und Gesamtstrategie werden synchronisiert; historische Entscheidungen bleiben unverändert erhalten. Es gibt keinen zweiten aktuellen Status und keine zusätzliche Meilenstein-Roadmap.
 
@@ -214,6 +223,9 @@ Messfahrt W-1.
 Suchmechanismus EK-1 als SH-9, Fahrbereich Labor, Flur und Schlafzimmer;
 Produktvorgabe 80–85 % je Raum; Arbeitsregel 8 (nach jeder Änderung eine
 ganze Fahrt durch eine Tür).
+19.11.2026, Nachtrag (Nutzerentscheidung): §10 zweite, getrennte
+Entwicklungslinie „KI-Erkundung“ im Ordner `ki_erkundung/`; Hauptlinie und
+§9 unverändert.
 
 ## 9. Fahrplan der Selbstheilungslinie (Nutzerentscheidung 09.11.2026)
 
@@ -354,3 +366,71 @@ war in W-1 ausgeschaltet.
 Geparkte Ideen und offene Nebenpunkte stehen mit Grund in der Arbeitsliste
 des STATUS (unter anderem E gröberes Raster für die Lückensuche, F Tempo vor
 Unbekanntem).
+
+## 10. Zweite Entwicklungslinie „KI-Erkundung“ (Nutzerentscheidung 19.11.2026)
+
+Der Projektinhaber hat am 19.11.2026 entschieden: Neben der Hauptlinie
+entsteht eine **komplett neue, getrennte Entwicklungslinie**. In ihr
+übernimmt eine KI auf dem vorhandenen KI-Rechner die Ziel- und Suchwahl:
+Amadeus nimmt bei einer Drehung Bilder auf, die KI erkennt Türen und
+Durchgänge und entscheidet, wohin gefahren und wo gesucht wird. Die
+bisherige Entwicklung darf dadurch weder verloren gehen noch beeinflusst
+werden. Der Realtest SH-9 der Hauptlinie läuft parallel.
+
+Maßgeblich für Inhalt und Stufen ist
+[ki_erkundung/KONZEPT.md](../../ki_erkundung/KONZEPT.md); den Stand führt
+nur [ki_erkundung/STATUS.md](../../ki_erkundung/STATUS.md).
+
+### 10.1 Trennung (MUSS)
+
+1. **Eigener Ordner.** Konzept, Stand, Aufträge, Software und Tests der
+   KI-Linie liegen ausschließlich in `ki_erkundung/`.
+2. **Kein Eingriff in Bestehendes.** Die KI-Linie ändert keine Pakete unter
+   `src/`, keine Profile, Startdateien oder Werkzeuge. Braucht sie später
+   eine Anschlussstelle in bestehendem Code, ist das eine eigene, vom
+   Projektinhaber freigegebene Änderung der Hauptlinie: standardmäßig aus,
+   ausgeschaltet verhaltensgleich, getrennt getestet (AGENTS §2.7).
+3. **Die Hauptlinie bleibt, wie sie ist.** §9, die Arbeitsliste im STATUS
+   und der Auftrag in `AGENTENAUFTRAG.md` gelten unverändert und bleiben für
+   den Roboter maßgeblich.
+4. **Ein Auftrag am Roboter.** Zu jeder Zeit läuft am Roboter genau ein
+   Auftrag. Ein Auftrag der KI-Linie wird erst durch ausdrückliche Übergabe
+   des Projektinhabers aktiv.
+5. **Die Grenzen aus §4 gelten auch hier.** Kein zweiter Navigator oder
+   Supervisor, keine direkten Motorbefehle, keine versteckte
+   Pflicht-Raumsemantik. Die KI liefert Wahl und Gründe; fällt sie aus oder
+   antwortet unbrauchbar, entscheidet die vorhandene Regel. Die Schutzkette
+   bleibt unverändert, und die KI ist nie die einzige Schutzmaßnahme.
+6. **KI-Rechner im Haus.** Ausgewertet wird auf dem vorhandenen KI-Rechner
+   des Projektinhabers. Bilder der Wohnung verlassen das Haus nicht und
+   kommen nicht ins Repository.
+7. **Dieselben Arbeitsregeln.** Für Realtests der KI-Linie gilt §9.1: je
+   Realtest eine Verhaltensänderung, Kriterien und Rückfall vorab, zuerst
+   Trockenlauf und Simulation.
+
+**Ausdrückliche Änderung gegenüber §2:** Für die KI-Linie gibt es einen
+eigenen Iststand (`ki_erkundung/STATUS.md`). Für die Wohnungserkundung der
+Hauptlinie bleibt es bei einem STATUS und einer Arbeitsliste; die KI-Linie
+führt dort keine Kopie.
+
+### 10.2 Stufen (Kurzfassung)
+
+| Stufe | Inhalt | Wirkung auf das Fahren |
+|---|---|---|
+| KI-0 | Trockenlauf: Blickrunden aufnehmen, KI am KI-Rechner befragen, mit der Wahrheit vergleichen | keine |
+| KI-1 | Mitlauf: Die KI beantwortet bei Fahrten der Hauptlinie dieselben Entscheidungen im Hintergrund | keine |
+| KI-2 | Kopplung in der Simulation mit gespielter KI (richtig, falsch, langsam, stumm) | keine am Roboter |
+| KI-3 | Die KI wählt real; Regel als Rückfall | eine Verhaltensänderung, Freigabe des Projektinhabers |
+| KI-4 | Raumnamen in der App, Hilferuf mit Bild und Grund | keine am Fahrverhalten |
+
+Kriterien je Stufe stehen vorab im Konzept (KI-0: K0-1 bis K0-7).
+
+### 10.3 Verhältnis zur Hauptlinie
+
+- Türdurchfahrt, blinde Rückseite und Rückstand der Ortung bleiben Arbeit der
+  Hauptlinie (§9.2). Die KI-Linie setzt darauf auf und baut sie nicht
+  doppelt.
+- Die KI-Linie darf bestehende Funktionen lesend wiederverwenden. Umgekehrt
+  hängt die Hauptlinie von nichts in `ki_erkundung/` ab.
+- **Rückfall der ganzen Linie:** `ki_erkundung/` und die Verweise darauf
+  entfernen. Sonst ändert sich nichts.

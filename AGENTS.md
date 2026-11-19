@@ -11,6 +11,10 @@ arbeitet. Vor der ersten Änderung lesen: diese Datei, `docs/PROJECT_MEMORY.md`,
 Der Masterplan legt den Arbeitsrahmen fest; alte Chat-Prompts und archivierte
 Aufträge sind keine zweite aktuelle Roadmap. Details in Abschnitt 7.
 
+**Für die getrennte Linie „KI-Erkundung“ (seit 19.11.2026) zuerst:**
+[ki_erkundung/README.md](ki_erkundung/README.md) mit Konzept und eigenem
+Status. Sie ändert nichts an der Hauptlinie; Details in Abschnitt 7.
+
 **Laborbetrieb: [LAB-1 v1.0](docs/LABORMODUS.md) ist Pflichtlektüre.**
 Die am 28.09.2026 ausdrücklich hinterlegte Laborfreigabe gilt auch für neue
 Agenten innerhalb des beauftragten Umfangs. Keine wiederholten Standardfragen
@@ -147,6 +151,7 @@ gemessene Evidenz mit Zahlen.
 | `src/robot_bringup/launch/` | Startdateien: `robot`, `slam`, `oak`, `teleop_joy`, `server` |
 | `docs/` | Dokumentation, udev-Regeln |
 | `docs/LABORMODUS.md` | Dauerhafte Laborarbeitsregel LAB-1; keine wiederholten Standardfreigaben |
+| `ki_erkundung/` | Getrennte Entwicklungslinie KI-Erkundung (seit 19.11.2026): Konzept, eigener Status, eigene Software; ändert keine bestehenden Pakete |
 | `ios/` | Xcode-Projekt der App |
 | `integration/` | Übergabeprotokolle und Release-Werkzeuge |
 
@@ -189,6 +194,17 @@ Maßgeblich ist der aktuelle [Agentenauftrag](docs/wohnungserkundung/AGENTENAUFT
 **Seit 09.11.2026 (Nutzerentscheidung):** Für die Hauptlinie gilt der Fahrplan in
 MASTERPLAN §9 als roter Faden: je Realtest genau eine Verhaltensänderung, die nächste
 Verbesserung parallel in der Simulation, eine Arbeitsliste oben im STATUS.
+**Seit 19.11.2026 (Nutzerentscheidung):** Neben der Hauptlinie gibt es die
+getrennte Entwicklungslinie „KI-Erkundung“ im Ordner `ki_erkundung/`
+(MASTERPLAN §10): Eine KI auf dem vorhandenen KI-Rechner soll die Ziel- und
+Suchwahl übernehmen. Die Hauptlinie, ihr STATUS und ihr Auftrag bleiben
+unverändert und für den Roboter maßgeblich. Die KI-Linie ändert keine
+bestehenden Pakete, Profile, Startdateien oder Werkzeuge, führt ihren Stand
+nur in `ki_erkundung/STATUS.md` und erhält einen Roboterauftrag erst durch
+ausdrückliche Übergabe des Projektinhabers; am Roboter läuft immer nur ein
+Auftrag. Die Grenzen dieses Abschnitts (ein Navigationsbesitzer, kein
+zusätzlicher Navigator/Supervisor, Schutzkette unverändert) gelten auch für
+sie. Kamerabilder der Wohnung bleiben auf Jetson und KI-Rechner.
 Aktueller Zugang, Grenzen und tatsächliche Nachweise stehen ausschließlich im STATUS;
 fehlender Zugang sperrt nur die davon abhängige Arbeit.
 Der Plan erhält einen schlanken metrischen

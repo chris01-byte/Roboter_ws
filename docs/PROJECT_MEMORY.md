@@ -1753,3 +1753,56 @@ Zielpunkte mit Drehraum, nicht einen Regler, der es „irgendwie“ schafft.
 Erst messen hat hier zweimal Zeit gespart: Der vermutete Kandidat K1 wäre
 ohne Kontaktaufzeichnung übernommen worden.
 
+
+## 19.11.2026 – Zweite, getrennte Entwicklungslinie „KI-Erkundung“ (Projektinhaber)
+
+**Entscheidung:** Neben der Hauptlinie `self_healing` entsteht eine komplett
+neue Entwicklungslinie im eigenen Ordner `ki_erkundung/`. In ihr übernimmt
+eine KI auf dem vorhandenen KI-Rechner (RTX 3090, im Haus) die Ziel- und
+Suchwahl der Erkundung: Amadeus nimmt bei einer Drehung Bilder auf, die KI
+erkennt Türen und Durchgänge und entscheidet, wohin gefahren und wo gesucht
+wird. SH-9 läuft parallel und unverändert.
+
+**Anlass:** Die Zielwahl nach festen Regeln hat über Wochen das meiste
+Nachstellen gebraucht (Lückenfilter, Sättigung, Abbruchzeiten). Der
+Projektinhaber will dafür eine KI einsetzen, die Bilder versteht, statt
+weiterer Regeln.
+
+**Warum eine eigene Linie und ein eigener Ordner:** Die bisherige Entwicklung
+soll weder verloren gehen noch beeinflusst werden. Der Ordner liegt außerhalb
+von `src/` und `tools/`; Build und Testliste der Hauptlinie nennen ihre Pfade
+einzeln und erfassen ihn nicht. Die Linie ändert keinen bestehenden Code.
+Braucht sie später eine Anschlussstelle, ist das eine eigene, freigegebene
+Änderung der Hauptlinie (standardmäßig aus, getrennt getestet).
+
+**Was festgehalten wurde, bevor entschieden wurde (18.11.2026):** Die KI löst
+die beiden letzten Fehlschläge nicht für sich allein. In W-1 lagen 10 von 12
+Anläufen an der Tür (gefunden, nicht durchgekommen); in der zweiten Fahrt
+hinkte die Ortung beim Drehen hinterher. Türdurchfahrt, blinde Rückseite und
+Rückstand der Ortung bleiben Arbeit der Hauptlinie. Deshalb das Prinzip:
+**Die KI wählt, die Vermessung prüft, die Schutzkette fährt.** Die KI wählt
+nur aus vermessenen, nummerierten Vorschlägen, sendet nie Fahrbefehle und ist
+nie die einzige Schutzmaßnahme; fällt sie aus, entscheidet die vorhandene
+Regel.
+
+**Was schon vorhanden ist und wiederverwendet wird:** der KI-Rechner mit
+Ollama (`qwen2.5` im `llm_planner`) und YOLO-World (`semantic_perception`),
+der gedrosselte Kamerastrom dorthin (2 Hz, 640 × 360, mit Tiefenbild) und
+das Muster „geprüftes JSON, Ausführung bleibt am Roboter“.
+
+**Was gegen die Idee im Wortlaut geändert wurde:** acht statt vier Bilder
+(die Kamera sieht nach Datenblatt rund 69° breit); keine Cloud (Entscheidung
+des Projektinhabers: der eigene KI-Rechner); kein direktes Steuern durch die
+KI.
+
+**Festgestellt beim Anlegen:** Die Kamera ist in der automatischen Kartierung
+bewusst abgeschaltet (`nav_mapping.launch.py`). Sie mitlaufen zu lassen ist
+eine eigene Stufe (KI-1) mit Messung im Stand. Die Kamera schaut nach unten;
+Türstürze liegen rechnerisch außerhalb des Bildes. Ob das der KI genügt,
+misst der Trockenlauf (KI-0) als Erstes.
+
+**Stufen:** KI-0 Trockenlauf, KI-1 Mitlauf ohne Wirkung, KI-2 Kopplung in der
+Simulation, KI-3 die KI wählt real, KI-4 Raumnamen und Hilferuf. Kriterien
+vorab in `ki_erkundung/KONZEPT.md`; verankert in MASTERPLAN §10.
+
+**Rückfall:** Ordner `ki_erkundung/` und die Verweise darauf entfernen.

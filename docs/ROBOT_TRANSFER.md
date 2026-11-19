@@ -307,6 +307,14 @@ erteilt (`bab7cc7`, Profil mit EK-1). Er wird einen neuen Release
 `hwt601_accel_ms:=100`, Fahrbereich Laborraum, Flur und Schlafzimmer. Die
 tatsächliche Wirkung wird nach dem Bericht hier nachgetragen.
 
+Stand 19.11.2026, **keine Jetson-Wirkung:** Die getrennte Entwicklungslinie
+„KI-Erkundung“ ist im Repository angelegt (Ordner `ki_erkundung/`,
+MASTERPLAN §10). Auf dem Jetson und auf dem KI-Rechner ist dafür nichts
+installiert, gestartet oder geändert; es gibt in dieser Linie noch keinen
+Auftrag. SH-9 bleibt der einzige erteilte Jetson-Auftrag. Holt der Jetson
+den Branch neu, kommt der Ordner mit; Build und Testliste von SH-9 nennen
+ihre Pfade einzeln und erfassen ihn nicht.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

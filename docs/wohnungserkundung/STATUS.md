@@ -12,6 +12,10 @@ Jetson-Auftrag: SH-9**, der Suchmechanismus EK-1 ist eingeschaltet
 (`bab7cc7`), Fahrt durch Labor, Flur und Schlafzimmer. Die Simulation zeigt
 seit dem 16.11. auch den Türfehler aus W-1 (Rückfahrt mit dem Heck an den
 Pfosten); die Tür ist die nächste Korrektur.
+**Seit 19.11.2026** gibt es daneben die getrennte Entwicklungslinie
+„KI-Erkundung“ (MASTERPLAN §10, Stand nur in
+[ki_erkundung/STATUS.md](../../ki_erkundung/STATUS.md)); an dieser
+Hauptlinie und an SH-9 ändert sie nichts.
 Wo wir stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
@@ -73,6 +77,13 @@ der Wand angehalten, zweimal gerade zurückgesetzt, Heck am Türpfosten, dann
 sieben Planerfehler und „Hilfe benötigt“). Daran wird die Korrektur der
 Türdurchfahrt entwickelt; auf den Roboter kommt sie erst nach SH-9.
 
+**Daneben, nicht Teil dieser Liste (seit 19.11.2026):** die getrennte Linie
+„KI-Erkundung“ im Ordner `ki_erkundung/` (Entscheidung des Projektinhabers,
+MASTERPLAN §10). Sie ändert weder SH-9 noch das Produktprofil noch ein Paket
+dieser Linie; am Roboter läuft weiter nur der Auftrag dieser Liste. Ihr
+Stand steht ausschließlich in
+[ki_erkundung/STATUS.md](../../ki_erkundung/STATUS.md).
+
 **Fahrplan danach (Stand 16.11.2026):** SH-9 (EK-1, zwei Räume) → Tür
 (Planungsstreifen, Verkeilen; Daten aus SH-9) und SLAM-Rückstand bei
 Drehungen → Wohnung erneut (Messfahrt) → Abnahme der Wohnung (Stufe 3, drei
@@ -129,6 +140,30 @@ ausgewertet: Stellprobe bestanden, Wohnungsfahrt bleibt im Laborraum (15.11.)
 · W-1N ausgewertet: Tür in Fahrt 1, veraltete Lokalisierung in Fahrt 2
 (16.11.) · EK-1 auf dem heutigen Stand simuliert, Lückenfilter korrigiert,
 Türfehler in der Simulation nachgestellt (16.11.).
+
+## 19.11.2026 – Entscheidung des Projektinhabers: zweite, getrennte Linie „KI-Erkundung“; SH-9 läuft unverändert
+
+**Entscheidung (19.11.2026):** Der Projektinhaber testet SH-9 wie beauftragt
+und berichtet. Parallel entsteht eine komplett neue Entwicklungslinie, in der
+eine KI auf dem vorhandenen KI-Rechner die Ziel- und Suchwahl übernimmt. Sie
+bekommt einen eigenen Ordner (`ki_erkundung/`), damit die bisherige
+Entwicklung weder verloren geht noch beeinflusst wird.
+
+**Für diese Hauptlinie ändert sich nichts:** Auftrag SH-9, Produktprofil
+(49 Profilwerte mit EK-1), Pakete, Werkzeuge und die 249 gezielten Tests sind
+unverändert. Der neue Ordner liegt außerhalb von `src/` und `tools/`; der
+Build von SH-9 nennt seine Paketpfade einzeln, die Testliste ihre Dateien
+einzeln. Kein Workflow unter `.github/workflows/` reagiert auf den neuen
+Pfad.
+
+**Wo es steht:** MASTERPLAN §10 (Trennregeln, Stufen KI-0 bis KI-4),
+[ki_erkundung/KONZEPT.md](../../ki_erkundung/KONZEPT.md),
+[ki_erkundung/STATUS.md](../../ki_erkundung/STATUS.md). Die Punkte dieser
+Arbeitsliste (Tür, Rückstand der Ortung, blinde Rückseite) bleiben Arbeit
+dieser Linie; die KI-Linie setzt darauf auf.
+
+**Nächster Schritt dieser Linie bleibt:** Bericht zu SH-9 auswerten
+(Kriterien E1–E6 und K).
 
 ## 16.11.2026 (abends) – EK-1 in der Simulation auf dem heutigen Stand: Lückenfilter korrigiert, Türfehler nachgestellt, SH-9 aktiviert
 
