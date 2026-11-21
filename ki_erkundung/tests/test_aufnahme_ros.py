@@ -136,3 +136,54 @@ def test_aufnahme_ueber_ros_ergibt_eine_auswertbare_blickrunde(tmp_path):
     vorbereitung = bereite_vor(runde)
     assert vorbereitung.auswahl['vollstaendig']
     assert len(vorbereitung.oeffnungen) == 2
+
+
+def test_sucher_zeigt_das_laufende_kamerabild_und_endet_von_selbst(tmp_path):
+    """sucher.py als eigenes Programm: liest mit, speichert nichts, endet nach --dauer."""
+    import json
+    import socket
+    import subprocess
+    import sys
+    import urllib.request
+    from pathlib import Path
+    from sensor_msgs.msg import CompressedImage
+    with socket.socket() as probe:
+        probe.bind(('127.0.0.1', 0))
+        port = probe.getsockname()[1]
+    skript = Path(__file__).resolve().parents[1] / 'werkzeuge' / 'sucher.py'
+    programm = subprocess.Popen(
+        [sys.executable, str(skript), '--kein-browser', '--port', str(port), '--dauer', '6',
+         '--bild-topic', '/kitest/sucher'], cwd=tmp_path, stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT, text=True)
+    kamera = Kamera.aus_oeffnungswinkel(320, 180, 64.0)
+    bild = welt.foto(welt.welt(), kamera, *welt.STANDPUNKT)
+    ohne_umweg = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    zustand = {'bilder': 0}
+    rclpy.init()
+    quelle = rclpy.create_node('ki_test_sucher_quelle')
+    try:
+        sender = quelle.create_publisher(CompressedImage, '/kitest/sucher', 5)
+        ende = time.monotonic() + 5.0
+        while zustand['bilder'] < 2 and time.monotonic() < ende:
+            nachricht = CompressedImage()
+            nachricht.format = 'jpeg'
+            nachricht.data = bild
+            sender.publish(nachricht)
+            rclpy.spin_once(quelle, timeout_sec=0.1)
+            try:
+                with ohne_umweg.open(f'http://127.0.0.1:{port}/api/zustand', timeout=2) as a:
+                    zustand = json.loads(a.read())
+            except OSError:
+                pass
+        assert zustand['bilder'] >= 2 and (zustand['breite'], zustand['hoehe']) == (320, 180)
+        with ohne_umweg.open(f'http://127.0.0.1:{port}/bild', timeout=2) as antwort:
+            assert antwort.read() == bytes(bild)
+        ausgabe, _ = programm.communicate(timeout=12)       # endet nach --dauer von selbst
+    finally:
+        if programm.poll() is None:
+            programm.kill()
+        quelle.destroy_node()
+        rclpy.shutdown()
+    assert programm.returncode == 0
+    assert 'keines gespeichert' in ausgabe
+    assert list(tmp_path.iterdir()) == []

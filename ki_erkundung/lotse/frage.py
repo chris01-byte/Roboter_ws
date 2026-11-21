@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Sequence
 from .kandidaten import Oeffnung
 
 ARTEN = ('tuer_offen', 'tuer_geschlossen', 'durchgang', 'glas', 'spiegel',
-         'moebelspalt', 'nische', 'unklar')
+         'moebelspalt', 'nische', 'wand', 'unklar')
 # Nur durch diese Arten darf die KI den Roboter schicken.
 ARTEN_AUSGANG = ('tuer_offen', 'durchgang')
 ROBOTER_BREITE_M = 0.46
@@ -35,6 +35,9 @@ class Frage:
     text: str
     schema: dict
     angeboten: List[int] = field(default_factory=list)
+    # Nur diese Nummern darf die KI wählen: die in einem Foto stehen. ``None``
+    # (Fragen aus älteren Fassungen) lässt alle angebotenen zu.
+    waehlbar: Optional[List[int]] = None
 
 
 def richtung_text(grad: float) -> str:
@@ -49,9 +52,14 @@ def richtung_text(grad: float) -> str:
     return f'{betrag}° {seite}{zusatz}'
 
 
-def antwortschema(angeboten: Sequence[int]) -> dict:
-    """JSON-Schema der Antwort; ``wahl`` lässt nur angebotene Nummern zu."""
-    nummern = [int(n) for n in angeboten]
+def antwortschema(angeboten: Sequence[int],
+                  waehlbar: Optional[Sequence[int]] = None) -> dict:
+    """JSON-Schema der Antwort; ``wahl`` lässt nur wählbare Nummern zu.
+
+    Wählbar sind die angebotenen Nummern, die in einem Foto stehen. Eine
+    Öffnung, die nur der Laser kennt, kann die KI nicht beurteilen.
+    """
+    nummern = [int(n) for n in (angeboten if waehlbar is None else waehlbar)]
     return {
         'type': 'object',
         'properties': {
@@ -81,10 +89,13 @@ def baue_frage(oeffnungen: Sequence[Oeffnung], anzahl_bilder: int,
                verlauf: Optional[Sequence[str]] = None,
                mit_skizze: bool = True, als_mosaik: bool = False,
                schritt_grad: Optional[float] = None,
-               vollstaendig: bool = True) -> Frage:
+               vollstaendig: bool = True,
+               am_rand: Optional[Dict[int, List[int]]] = None) -> Frage:
     """Die Frage für eine Blickrunde bauen.
 
     ``sichtbar``: je Nummer die Bilder, in denen sie eingezeichnet ist.
+    ``am_rand``: je Nummer die Bilder, in denen sie nur am unteren Bildrand
+    steht, weil die Öffnung näher liegt, als das Bild reicht.
     ``als_mosaik``: Alle Fotos und die Skizze stehen auf einem einzigen Blatt
     (für Modelle, die nur ein Bild je Frage annehmen).
     ``vollstaendig``: Falsch, wenn sich der Roboter nicht ganz herumgedreht
@@ -131,6 +142,7 @@ def baue_frage(oeffnungen: Sequence[Oeffnung], anzahl_bilder: int,
             'auf Wänden und Möbeln, die Ringe haben 1 m Abstand.')
     zeilen.append('')
     angeboten = [int(o.nr) for o in oeffnungen]
+    waehlbar = [nr for nr in angeboten if sichtbar.get(nr)]
     if oeffnungen:
         zeilen.append(
             f'Der Laser hat {len(oeffnungen)} Öffnung(en) vermessen. Jede hat '
@@ -139,12 +151,24 @@ def baue_frage(oeffnungen: Sequence[Oeffnung], anzahl_bilder: int,
             + ' Richtungen beziehen sich auf B1.')
         zeilen.append('')
         zeilen.append('Nr. | Breite | Entfernung | Richtung | zu sehen in')
+        unten = am_rand or {}
         for o in oeffnungen:
-            bilder = ', '.join(f'B{b}' for b in sichtbar.get(int(o.nr), [])) or 'keinem Foto'
+            bilder = ', '.join(
+                f'B{b}' + (' (unterer Bildrand)' if b in unten.get(int(o.nr), []) else '')
+                for b in sichtbar.get(int(o.nr), [])) or 'keinem Foto'
             schmal = '' if o.befahrbar else ' (zu schmal für den Roboter)'
             zeilen.append(
                 f'{o.nr} | {o.breite_m:.2f} m{schmal} | {o.entfernung_m:.1f} m | '
                 f'{richtung_text(o.richtung_grad)} | {bilder}'.replace('.', ','))
+        if any(unten.get(int(o.nr)) for o in oeffnungen):
+            zeilen += ['', 'Steht eine Nummer am unteren Bildrand, liegt die Öffnung '
+                       'näher am Roboter, als das Foto reicht: Ihr Boden ist nicht im '
+                       'Bild. Das Foto zeigt über der Nummer, was hinter der Öffnung '
+                       'liegt. Ist dort eine Wand, ist es kein Ausgang.']
+        if len(waehlbar) < len(angeboten):
+            zeilen += ['', 'Nummern, die in keinem Foto stehen, kennt nur der Laser. Du '
+                       'kannst sie nicht beurteilen: Ordne sie als unklar ein und wähle '
+                       'sie nicht.']
     else:
         zeilen.append('Der Laser hat keine Öffnung vermessen.')
     zeilen += [
@@ -154,7 +178,8 @@ def baue_frage(oeffnungen: Sequence[Oeffnung], anzahl_bilder: int,
         'tuer_geschlossen = Tür, aber geschlossen; durchgang = offener '
         'Durchgang ohne Tür; glas = Glastür, Fenster oder Glasscheibe; '
         'spiegel = Spiegel; moebelspalt = Lücke zwischen oder neben Möbeln; '
-        'nische = Nische, Schrank oder Sackgasse; unklar = nicht zu erkennen.',
+        'nische = Nische, Schrank oder Sackgasse; wand = die Nummer steht auf einer '
+        'Wand oder auf Mauerwerk, dort ist keine Öffnung; unklar = nicht zu erkennen.',
         '2. Wähle die Nummer, durch die der Roboter den Raum verlassen soll '
         '(wahl). Erlaubt sind nur Nummern aus der Tabelle mit art tuer_offen '
         f'oder durchgang. Der Roboter ist {int(ROBOTER_BREITE_M * 100)} cm '
@@ -176,4 +201,5 @@ def baue_frage(oeffnungen: Sequence[Oeffnung], anzahl_bilder: int,
         '"raum": "Flur", "gefahren": []}',
     ]
     return Frage(system=SYSTEM, text='\n'.join(zeilen),
-                 schema=antwortschema(angeboten), angeboten=angeboten)
+                 schema=antwortschema(angeboten, waehlbar), angeboten=angeboten,
+                 waehlbar=waehlbar)

@@ -133,3 +133,19 @@ def test_wahl_nachmessen_haelt_die_wahl_gegen_die_vermessung():
     assert wahl_nachmessen(1, liste) is None
     assert wahl_nachmessen(2, liste) == 'zu_schmal'
     assert wahl_nachmessen(5, liste) == 'nicht_vermessen'
+
+
+def test_wahl_einer_nummer_die_in_keinem_foto_steht_wird_verworfen():
+    """Was nur der Laser kennt, kann die KI nicht beurteilen (KI-0N, 21.11.2026)."""
+    p = pruefe(antwort(wahl=2), ANGEBOTEN, waehlbar=[1])
+    assert not p.gueltig and p.fehler == ['wahl_nicht_im_foto'] and p.wahl is None
+    assert pruefe(antwort(wahl=2), ANGEBOTEN, waehlbar=[1, 2]).gueltig
+    assert pruefe(antwort(wahl=None), ANGEBOTEN, waehlbar=[]).gueltig
+    assert pruefe(antwort(wahl=2), ANGEBOTEN).gueltig              # ohne Angabe wie bisher
+
+
+def test_wand_als_einordnung_macht_die_wahl_ungueltig():
+    kandidaten = [{'nr': 1, 'art': 'wand'}, {'nr': 2, 'art': 'tuer_offen'}]
+    p = pruefe(antwort(wahl=1, kandidaten=kandidaten), ANGEBOTEN)
+    assert not p.gueltig and p.fehler == ['wahl_widerspricht_einordnung']
+    assert pruefe(antwort(wahl=2, kandidaten=kandidaten), ANGEBOTEN).arten[1] == 'wand'

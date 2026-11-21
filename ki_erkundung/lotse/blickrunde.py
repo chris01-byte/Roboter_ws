@@ -316,6 +316,72 @@ def rundum_profil(scans: Sequence[dict], gier_rad: Sequence[float],
     return winkel, lecks_schliessen(r)
 
 
+def stand_profil(scans: Sequence[dict], gier_rad: Sequence[float],
+                 boden_lidar: np.ndarray, bins: int = 720,
+                 reichweite_m: float = 8.0) -> Tuple[np.ndarray, np.ndarray]:
+    """Profil für Aufnahmen im Stand: je Richtung der Median aller Messungen.
+
+    Stand der Roboter still, hat das LiDAR jede Richtung vom selben Punkt
+    viele Male gemessen. Dann braucht es kein Raster: Der Median je Richtung
+    ist auf wenige Millimeter genau. Das Raster (4 cm Zellen, 2 cm Schritt)
+    verschiebt jeden Wandpunkt um bis zu einige Zentimeter; an echten
+    Aufnahmen (KI-0N, 21.11.2026) wurde so an den meisten Türpfosten keine
+    gerade Wand mehr erkannt, und die Regeln für schräg gesehene Türen und
+    offene Türblätter griffen nicht.
+
+    Rückgabe wie ``rundum_profil``, gesehen vom Ort des LiDAR
+    (``profil_ursprung``): ``nan`` = nicht beobachtet, ``inf`` = kein Echo.
+    """
+    schritt = 2 * math.pi / bins
+    lidar_gier = math.atan2(boden_lidar[1, 0], boden_lidar[0, 0])
+    gemessen: List[List[float]] = [[] for _ in range(bins)]
+    strahlen = np.zeros(bins, dtype=int)
+    weit = np.zeros(bins, dtype=int)
+    for scan, gier in zip(scans, gier_rad):
+        w, r = scan_felder(scan)
+        # Der kleine Zuschlag hält Strahlen, die genau auf einer Fachgrenze
+        # liegen, trotz Rundung im selben Fach.
+        fach = np.floor(((w + lidar_gier + float(gier) + math.pi) % (2 * math.pi))
+                        / schritt + 1e-6).astype(int) % bins
+        np.add.at(strahlen, fach, 1)
+        np.add.at(weit, fach[np.isinf(r) | (r > reichweite_m)], 1)
+        gut = np.isfinite(r) & (r >= 0.15) & (r <= reichweite_m)
+        for f, wert in zip(fach[gut], r[gut]):
+            gemessen[int(f)].append(float(wert))
+    profil = np.full(bins, np.nan)
+    for i in range(bins):
+        if strahlen[i] == 0:
+            continue
+        if 2 * len(gemessen[i]) >= strahlen[i]:
+            profil[i] = float(np.median(gemessen[i]))
+        elif 2 * weit[i] >= strahlen[i]:
+            profil[i] = np.inf
+    # Ein einzelnes Fach, in das kein Strahl fiel (gröberes LiDAR als das
+    # Fachraster), übernimmt den ferneren seiner Nachbarn.
+    davor, danach = np.roll(profil, 1), np.roll(profil, -1)
+    leer = (strahlen == 0) & ~np.isnan(davor) & ~np.isnan(danach)
+    profil[leer] = np.maximum(davor, danach)[leer]
+    winkel = -math.pi + (np.arange(bins) + 0.5) * schritt
+    return winkel, lecks_schliessen(profil)
+
+
+def profil_der_runde(scans: Sequence[dict], gier_rad: Sequence[float],
+                     boden_lidar: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Das Profil einer Blickrunde auf dem jeweils genaueren Weg.
+
+    Im Stand direkt aus den Messungen (``stand_profil``), nach einer Drehung
+    über das Raster von der Antriebsmitte aus (``rundum_profil``).
+
+    Rückgabe: (Richtungen, Entfernung, Ursprung des Profils im Standpunktrahmen).
+    """
+    ursprung = profil_ursprung(gier_rad, boden_lidar)
+    if np.any(ursprung):
+        winkel, entfernung = stand_profil(scans, gier_rad, boden_lidar)
+    else:
+        winkel, entfernung = rundum_profil(scans, gier_rad, boden_lidar)
+    return winkel, entfernung, ursprung
+
+
 def echo_statistik(scans: Sequence[dict], gier_rad: Sequence[float],
                    boden_lidar: np.ndarray, ursprung: Sequence[float],
                    bins: int = 720, reichweite_m: float = 8.0

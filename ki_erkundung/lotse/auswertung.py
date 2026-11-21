@@ -22,6 +22,13 @@ Nach dem ersten echten Lauf (21.11.2026) geändert:
   unter den Vorschlägen war; vorher stand ohne jede Probe „bestanden“.
 - K0-5 vergleicht getrennte Aufnahmen derselben Ansicht (Namen ``x`` und
   ``x_2``), nicht mehr Wiederholungen derselben Frage.
+
+Seit KI-0N (21.11.2026): Die Angaben des Menschen gelten für die Lage der
+Öffnungen, nicht für ihre Nummern. ``wahrheit.json`` hält unter ``lage`` fest,
+wo jede Nummer lag, als das Blatt entstand. Ändert sich die Vermessung,
+werden die Angaben auf die Öffnungen übertragen, die jetzt an derselben
+Stelle liegen (``uebertrage``). Öffnungen an neuer Stelle sind „nicht
+beurteilt“ und brauchen einen Blick des Menschen.
 """
 from __future__ import annotations
 
@@ -97,12 +104,67 @@ def _gleiche_wahl(runde_a: dict, wahl_a, runde_b: dict, wahl_b,
     return abs((a - b + 180.0) % 360.0 - 180.0) <= toleranz_grad
 
 
+def uebertrage(runde: dict, wahr: dict, naehe_m: float = 0.35) -> dict:
+    """Die Angaben des Menschen auf die jetzt vermessenen Öffnungen übertragen.
+
+    Ohne ``lage`` in den Angaben oder ohne Lage der Öffnungen in der Runde
+    gelten die Nummern unverändert. Sonst bekommt jede jetzige Öffnung die
+    Angabe der früheren, deren Mitte höchstens ``naehe_m`` entfernt lag
+    (jede frühere höchstens einmal, die nächste zuerst).
+
+    Zusätzlich im Ergebnis: ``nicht_beurteilt`` (jetzige Nummern ohne frühere
+    Entsprechung), ``entfallen`` (frühere Nummern, die es nicht mehr gibt) und
+    ``naechste_fruehere``: zu jeder nicht beurteilten Nummer die nächstgelegene
+    frühere mit Abstand, seitlichem Versatz (vom Roboter aus; plus = links
+    davon) und der damaligen Angabe. Daran ist ohne Bild zu sehen, ob eine
+    Öffnung nur ein Stück gewandert ist.
+    """
+    lage = wahr.get('lage')
+    jetzt = {int(o['nr']): o.get('mitte') for o in runde.get('oeffnungen') or []
+             if o.get('mitte') is not None}
+    if not isinstance(lage, dict) or not lage or (runde.get('oeffnungen') and not jetzt):
+        return dict(wahr, nicht_beurteilt=[], entfallen=[], naechste_fruehere={})
+    frueher = {int(nr): eintrag.get('mitte') for nr, eintrag in lage.items()
+               if isinstance(eintrag, dict) and eintrag.get('mitte') is not None}
+    paare = sorted((math.hypot(m[0] - f[0], m[1] - f[1]), neu, alt)
+                   for neu, m in jetzt.items() for alt, f in frueher.items())
+    zuordnung: Dict[int, int] = {}                  # jetzige Nummer -> frühere Nummer
+    for abstand, neu, alt in paare:
+        if abstand <= naehe_m and neu not in zuordnung and alt not in zuordnung.values():
+            zuordnung[neu] = alt
+    rueck = {alt: neu for neu, alt in zuordnung.items()}
+    arten = {int(k): v for k, v in (wahr.get('arten') or {}).items()}
+    naechste = {}
+    for neu, m in sorted(jetzt.items()):
+        if neu in zuordnung or not frueher:
+            continue
+        abstand, alt = min((math.hypot(m[0] - f[0], m[1] - f[1]), nr)
+                           for nr, f in frueher.items())
+        f = frueher[alt]
+        versatz = math.degrees(math.atan2(m[1], m[0]) - math.atan2(f[1], f[0]))
+        naechste[str(neu)] = {
+            'nr': alt, 'abstand_m': round(abstand, 2),
+            'versatz_grad': round((versatz + 180.0) % 360.0 - 180.0, 1),
+            'art': arten.get(alt), 'war_ausgang': alt in (wahr.get('ausgaenge') or [])}
+    return dict(
+        wahr,
+        naechste_fruehere=naechste,
+        ausgaenge=sorted(rueck[nr] for nr in wahr.get('ausgaenge') or [] if nr in rueck),
+        arten={str(neu): arten[alt] for neu, alt in sorted(zuordnung.items()) if alt in arten},
+        nicht_beurteilt=sorted(nr for nr in jetzt if nr not in zuordnung),
+        entfallen=sorted(nr for nr in frueher if nr not in rueck),
+    )
+
+
 def werte_aus(runden: Sequence[dict], wahrheiten: Dict[str, dict]) -> dict:
     """Kennzahlen je Modell und für die Vermessung.
 
     ``runden``: Einträge aus der Ergebnisdatei des Trockenlaufs.
     ``wahrheiten``: Name der Runde -> Inhalt ihrer ``wahrheit.json``.
     """
+    je_name = {r['name']: r for r in runden}
+    wahrheiten = {name: uebertrage(je_name[name], wahr) if name in je_name else wahr
+                  for name, wahr in wahrheiten.items()}
     mit_wahrheit = [r for r in runden if r['name'] in wahrheiten]
     sichtbar = [r for r in mit_wahrheit
                 if wahrheiten[r['name']].get('ausgang_sichtbar', True)]
@@ -128,6 +190,16 @@ def werte_aus(runden: Sequence[dict], wahrheiten: Dict[str, dict]) -> dict:
         'unvollstaendige_runden': sum(1 for r in runden if not r.get('vollstaendig', True)),
         'glas_oder_spiegel_unter_den_vorschlaegen': gefaehrliche_vorschlaege,
         'paare_derselben_ansicht': len(paare),
+        # Öffnungen an neuer Stelle, zu denen es keine Angabe des Menschen gibt
+        'nicht_beurteilte_oeffnungen': {
+            r['name']: wahrheiten[r['name']]['nicht_beurteilt'] for r in mit_wahrheit
+            if wahrheiten[r['name']].get('nicht_beurteilt')},
+        'naechste_fruehere': {
+            r['name']: wahrheiten[r['name']]['naechste_fruehere'] for r in mit_wahrheit
+            if wahrheiten[r['name']].get('naechste_fruehere')},
+        'entfallene_oeffnungen': {
+            r['name']: wahrheiten[r['name']]['entfallen'] for r in mit_wahrheit
+            if wahrheiten[r['name']].get('entfallen')},
     }
 
     namen = sorted({a['modell'] for r in runden for a in r.get('antworten', [])})
@@ -138,13 +210,20 @@ def werte_aus(runden: Sequence[dict], wahrheiten: Dict[str, dict]) -> dict:
         erhalten = [(r, a) for r, a in antworten if a.get('fehler') is None]
         verworfen = [(r, a) for r, a in erhalten if not a['pruefung']['gueltig']]
 
-        richtig = falsch = keine = trotzdem = 0
+        richtig = falsch = keine = trotzdem = offen = 0
         zeilen = []
         for r in mit_wahrheit:              # K0-1: erste Antwort je Runde
             wahr = set(wahrheiten[r['name']].get('ausgaenge') or [])
+            unbeurteilt = set(wahrheiten[r['name']].get('nicht_beurteilt') or [])
             gueltig, wahl = _gueltige_wahl(_erste_antwort(r, modell))
             if not gueltig:
                 urteil = 'keine gültige Antwort'
+            elif wahl is not None and wahl in unbeurteilt:
+                offen += 1                  # weder richtig noch falsch gezählt
+                urteil = 'nicht beurteilt (Öffnung an neuer Stelle)'
+            elif wahl is None and unbeurteilt and not wahr:
+                offen += 1
+                urteil = 'nicht beurteilt (Öffnung an neuer Stelle)'
             elif wahr and wahl in wahr:
                 richtig += 1
                 urteil = 'richtig'
@@ -211,7 +290,8 @@ def werte_aus(runden: Sequence[dict], wahrheiten: Dict[str, dict]) -> dict:
             'K0-1_keine_wahl': keine, 'K0-1_runden': len(mit_wahrheit),
             'K0-1_runden_mit_angebotenem_ausgang': len(angeboten),
             'K0-1_gewaehlt_ohne_angebotenen_ausgang': trotzdem,
-            'K0-1_anteil': _anteil(richtig, len(mit_wahrheit)),
+            'K0-1_nicht_beurteilt': offen,
+            'K0-1_anteil': _anteil(richtig, len(mit_wahrheit) - offen),
             'K0-2_gefaehrliche_wahlen': gefaehrlich,
             'K0-3_anteil_verworfen': _anteil(len(verworfen), len(erhalten)),
             'K0-4_gezaehlt': len(zeiten),
@@ -288,6 +368,23 @@ def bericht(auswertung: dict) -> str:
         f'Aufnahmen derselben Ansicht: {v["paare_derselben_ansicht"]}.',
         '',
     ]
+    if v['nicht_beurteilte_oeffnungen'] or v['entfallene_oeffnungen']:
+        zeilen += ['Die Vermessung hat sich seit den Angaben des Menschen geändert. '
+                   'Übertragen wurde nach der Lage der Öffnungen.']
+        for name, nummern in sorted(v['nicht_beurteilte_oeffnungen'].items()):
+            zeilen.append(f'- {name}: Nr. {", ".join(map(str, nummern))} liegt an neuer '
+                          'Stelle und ist nicht beurteilt.')
+            for nr, n in sorted(v['naechste_fruehere'].get(name, {}).items()):
+                seite = ('links' if n['versatz_grad'] > 0 else 'rechts')
+                zeilen.append(
+                    f'  - Nr. {nr}: {n["abstand_m"]:.2f} m von der früheren Nr. {n["nr"]} '
+                    f'({n["art"] or "ohne Angabe"}'
+                    f'{", damals Ausgang" if n["war_ausgang"] else ""}), '
+                    f'{abs(n["versatz_grad"]):.1f}° {seite} davon.')
+        for name, nummern in sorted(v['entfallene_oeffnungen'].items()):
+            zeilen.append(f'- {name}: frühere Nr. {", ".join(map(str, nummern))} wird '
+                          'nicht mehr angeboten.')
+        zeilen.append('')
     if v['davon_ausgang_angeboten'] < SCHWELLEN['min_runden']:
         zeilen += [f'Hinweis: Für ein Urteil zu K0-1 sind mindestens '
                    f'{SCHWELLEN["min_runden"]} Runden mit angebotenem Ausgang nötig.', '']
@@ -296,11 +393,13 @@ def bericht(auswertung: dict) -> str:
         zeilen += [
             f'## Modell `{modell}`', '',
             '| Kriterium | Ergebnis | Urteil |', '|---|---|---|',
-            f'| K0-1 Ausgang | richtig {m["K0-1_richtig"]} von {m["K0-1_runden"]} '
+            f'| K0-1 Ausgang | richtig {m["K0-1_richtig"]} von '
+            f'{m["K0-1_runden"] - m["K0-1_nicht_beurteilt"]} '
             f'({_prozent(m["K0-1_anteil"])}); falsch {m["K0-1_falsch"]}, davon '
             f'{m["K0-1_gewaehlt_ohne_angebotenen_ausgang"]} gewählt, obwohl kein '
             f'Ausgang angeboten war; keine Wahl trotz Ausgang '
-            f'{m["K0-1_keine_wahl"]} | {_urteil(b["K0-1"])} |',
+            f'{m["K0-1_keine_wahl"]}; nicht beurteilt {m["K0-1_nicht_beurteilt"]} '
+            f'| {_urteil(b["K0-1"])} |',
             f'| K0-2 Keine gefährliche Wahl | {m["K0-2_gefaehrliche_wahlen"]} Wahlen '
             f'auf Glas oder Spiegel bei '
             f'{v["glas_oder_spiegel_unter_den_vorschlaegen"]} solchen Vorschlägen '

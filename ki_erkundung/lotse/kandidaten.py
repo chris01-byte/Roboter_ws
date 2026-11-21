@@ -111,13 +111,17 @@ def _suche(w: np.ndarray, r: np.ndarray, *, min_breite_m: float,
     max_bins = int(round(math.radians(max_spanne_grad) / schritt))
     abgelehnt: List[dict] = []
 
-    def wandlinie(a: int) -> Optional[np.ndarray]:
+    def wandlinie(a: int) -> Tuple[Optional[np.ndarray], Optional[str]]:
         """Richtung der geraden Wand, die am Kantenpunkt ``a`` endet.
 
         Zuerst mit einem langen Stück Wand (bis 0,7 m): Je länger die
         Stütze, desto genauer die Richtung; aus 0,3 m Wand mit 2 cm Rauschen
         folgt die Linie einer 0,8 m entfernten Kante nur auf etwa 7 cm
         genau. Ist das lange Stück nicht gerade (Ecke), zählt das kurze.
+
+        Rückgabe: (Richtung oder ``None``, Grund, warum keine Linie entstand).
+        An echten Aufnahmen fehlte die Linie oft (KI-0N, 21.11.2026); der
+        Grund steht deshalb im Protokoll.
         """
         stuetze = [a]
         for zurueck in range(1, 90):
@@ -131,15 +135,23 @@ def _suche(w: np.ndarray, r: np.ndarray, *, min_breite_m: float,
             if np.hypot(*(roh[i] - roh[a])) >= 0.70:
                 break
         abstand = np.hypot(*(roh[stuetze] - roh[a]).T)
+        grund = None
         for laenge in (0.70, 0.30):
             auswahl = [i for i, d in zip(stuetze, abstand) if d <= laenge + 1e-9]
-            if len(auswahl) < 4 or np.hypot(*(roh[auswahl[-1]] - roh[a])) < 0.12:
+            reichweite = float(np.hypot(*(roh[auswahl[-1]] - roh[a])))
+            if len(auswahl) < 4:
+                grund = grund or f'wand_{len(auswahl)}_punkte'
+                continue
+            if reichweite < 0.12:
+                grund = grund or f'wand_nur_{reichweite:.2f}m'
                 continue
             punkte = roh[auswahl]
             _, werte, achsen = np.linalg.svd(punkte - punkte.mean(axis=0))
-            if werte[1] / math.sqrt(len(auswahl)) <= 0.02:     # gerade Wand
-                return achsen[0]
-        return None
+            krumm = float(werte[1] / math.sqrt(len(auswahl)))
+            if krumm <= 0.02:                              # gerade Wand
+                return achsen[0], None
+            grund = f'wand_krumm_{krumm:.3f}'
+        return None, grund
 
     def messe(pfosten_a: np.ndarray, pfosten_b: np.ndarray, dazwischen: np.ndarray,
               mindestanteil: float, hoechstbreite: float, schluss: str) -> Optional[dict]:
@@ -194,8 +206,9 @@ def _suche(w: np.ndarray, r: np.ndarray, *, min_breite_m: float,
         return float(np.hypot(*(punkt - (p + min(1.0, max(0.0, lage)) * pq))))
 
     def tuer_mit_blatt(a: int, t: int, anzahl_dazwischen: int,
-                       linie: Optional[np.ndarray],
-                       seite: float) -> Tuple[Optional[dict], Optional[str]]:
+                       linie: Optional[np.ndarray], seite: float,
+                       linie_grund: Optional[str] = None
+                       ) -> Tuple[Optional[dict], Optional[str]]:
         """Tür, deren offenes Blatt den zweiten Pfosten verdeckt.
 
         Von der Scharnierseite gesehen endet die sichtbare Lücke nicht am
@@ -211,7 +224,7 @@ def _suche(w: np.ndarray, r: np.ndarray, *, min_breite_m: float,
         Rückgabe: (Lücke oder ``None``, Grund, warum kein Blatt erkannt wurde).
         """
         if linie is None or seite == 0.0:
-            return None, 'keine_wandlinie'
+            return None, linie_grund or 'keine_wandlinie'
         vz = 1.0 if seite > 0 else -1.0
         quer_davor = float(_kreuz(linie, roh[t] - roh[a])) * vz
         if quer_davor < 0.15:
@@ -312,7 +325,7 @@ def _suche(w: np.ndarray, r: np.ndarray, *, min_breite_m: float,
         a = int(a)
         if a <= gesperrt_bis or not echt[a]:
             continue
-        linie = wandlinie(a)
+        linie, linie_grund = wandlinie(a)
         seite_betrachter = 0.0 if linie is None else float(_kreuz(linie, -roh[a]))
         war_dahinter = False
         zulaessig: List[Tuple[dict, int]] = []
@@ -330,7 +343,7 @@ def _suche(w: np.ndarray, r: np.ndarray, *, min_breite_m: float,
                 b = (j + 1) % n
                 if echt[b]:
                     mit_blatt, kein_blatt = tuer_mit_blatt(a, b, versatz, linie,
-                                                           seite_betrachter)
+                                                           seite_betrachter, linie_grund)
                     if mit_blatt is not None:
                         versuche.append(mit_blatt)
                     if mit_blatt is None or mit_blatt['grund'] is not None:

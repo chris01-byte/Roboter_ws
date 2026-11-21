@@ -18,6 +18,9 @@ def test_frage_nennt_jede_nummer_mit_massen_und_bildern():
                        8, {1: [1, 2]})
     assert frage.angeboten == [1, 2]
     assert '1 | 0,78 m | 2,4 m | 35° links | B1, B2' in frage.text
+    # Nummer 2 steht in keinem Foto: nicht wählbar, und die Frage sagt es.
+    assert frage.waehlbar == [1] and frage.schema['properties']['wahl'] == {'enum': [1, None]}
+    assert 'kennt nur der Laser' in frage.text and 'wähle sie nicht' in frage.text
     assert ('2 | 0,57 m (zu schmal für den Roboter) | 1,2 m | 120° rechts, schräg hinten '
             '| keinem Foto') in frage.text
     assert 'B1 bis B8' in frage.text and 'je 45° weitergedreht' in frage.text
@@ -40,7 +43,9 @@ def test_frage_ohne_oeffnung_im_uhrzeigersinn_mit_verlauf_und_mosaik():
 
 
 def test_antwortmuster_in_der_frage_ist_selbst_gueltiges_json():
-    frage = baue_frage([oeffnung(1, 0.8, 2.0, 0.0), oeffnung(2, 0.8, 2.0, 90.0)], 8, {})
+    frage = baue_frage([oeffnung(1, 0.8, 2.0, 0.0), oeffnung(2, 0.8, 2.0, 90.0)], 8,
+                       {1: [1], 2: [3]})
+    assert frage.waehlbar == [1, 2] and 'kennt nur der Laser' not in frage.text
     muster = json.loads(frage.text.strip().splitlines()[-1])
     assert set(muster) == set(frage.schema['required'])
     assert all(k['art'] in ARTEN for k in muster['kandidaten'])
@@ -75,3 +80,22 @@ def test_frage_sagt_wenn_nicht_ganz_herumgedreht_wurde():
     assert 'Das zweite Bild ist eine Skizze von oben.' in stand.text
     ohne_skizze = baue_frage([eine], 1, {1: [1]}, mit_skizze=False, vollstaendig=False)
     assert 'Skizze' not in ohne_skizze.text
+
+
+def test_nahe_oeffnung_am_unteren_bildrand_wird_erklaert():
+    """Befund KI-0N (Flur): Die Nummer stand am Bildrand vor einer Wand; die KI nahm
+    den Durchgang, den sie daneben im Foto sah."""
+    nah = oeffnung(1, 0.98, 0.56, 4.0)
+    frage = baue_frage([nah, oeffnung(2, 0.8, 2.5, -20.0)], 1, {1: [1], 2: [1]},
+                       vollstaendig=False, am_rand={1: [1]})
+    assert '| geradeaus | B1 (unterer Bildrand)\n' in frage.text
+    assert '| 20° rechts | B1\n' in frage.text
+    assert 'näher am Roboter, als das Foto reicht' in frage.text
+    assert 'Ist dort eine Wand, ist es kein Ausgang' in frage.text
+    ohne = baue_frage([nah], 1, {1: [1]}, vollstaendig=False)
+    assert 'unterer Bildrand' not in ohne.text
+
+
+def test_wand_ist_eine_einordnung_aber_kein_ausgang():
+    assert 'wand' in ARTEN and 'wand' not in ARTEN_AUSGANG
+    assert 'wand = die Nummer steht auf einer Wand' in baue_frage([], 1, {}).text

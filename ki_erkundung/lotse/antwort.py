@@ -97,8 +97,13 @@ def _nummer(wert) -> Optional[int]:
     return None
 
 
-def pruefe(antwort_text, angeboten: Sequence[int]) -> Pruefung:
-    """Antworttext gegen die angebotenen Nummern prüfen."""
+def pruefe(antwort_text, angeboten: Sequence[int],
+           waehlbar: Optional[Sequence[int]] = None) -> Pruefung:
+    """Antworttext gegen die angebotenen Nummern prüfen.
+
+    ``waehlbar``: die Nummern, die in einem Foto stehen. Wählt die KI eine
+    Öffnung, die sie nicht sehen konnte, wird die Antwort verworfen.
+    """
     angeboten = [int(n) for n in angeboten]
     objekt, umrahmt = _json_objekt(antwort_text)
     if objekt is None:
@@ -145,6 +150,8 @@ def pruefe(antwort_text, angeboten: Sequence[int]) -> Pruefung:
             return Pruefung(gueltig=False, fehler=['wahl_unlesbar'])
         if nr not in angeboten:
             return Pruefung(gueltig=False, fehler=['wahl_nicht_angeboten'])
+        if waehlbar is not None and nr not in [int(n) for n in waehlbar]:
+            return Pruefung(gueltig=False, fehler=['wahl_nicht_im_foto'])
         if isinstance(roh, str):
             ergebnis.toleriert.append('wahl_als_text')
         elif isinstance(roh, float):

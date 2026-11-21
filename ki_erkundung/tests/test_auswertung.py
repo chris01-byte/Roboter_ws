@@ -1,5 +1,7 @@
 """Auswertung des Trockenlaufs gegen die Wahrheit (Kriterien K0-1 bis K0-6)."""
-from lotse.auswertung import SCHWELLEN, bericht, werte_aus
+import pytest
+
+from lotse.auswertung import SCHWELLEN, bericht, uebertrage, werte_aus
 
 
 def antwort(modell, wahl, gueltig=True, wiederholung=0, dauer=8.0, fehler=None,
@@ -194,3 +196,77 @@ def test_getrennte_aufnahmen_mit_verschiedener_wahl_und_andere_nummerierung():
     einzeln = werte_aus([runde('x', [antwort('m', 1, dauer=4.0, laden=3.0)])],
                         {'x': {'ausgaenge': [1]}})
     assert 'Median – s' in bericht(einzeln)
+
+
+# ----------------------------------------- Angaben des Menschen nach Lage
+
+def runde_mit_lage(name, antworten, lagen):
+    """``lagen``: Nummer -> (x, y) der Mitte, wie in der Ergebnisdatei."""
+    eintrag = runde(name, antworten)
+    eintrag['oeffnungen'] = [{'nr': nr, 'mitte': list(mitte), 'richtung_grad': 0.0}
+                             for nr, mitte in lagen.items()]
+    return eintrag
+
+
+WAHR_MIT_LAGE = {'ausgaenge': [2], 'ausgang_sichtbar': True,
+                 'arten': {'1': 'moebelspalt', '2': 'tuer_offen'},
+                 'lage': {'1': {'mitte': [1.0, 1.5]}, '2': {'mitte': [2.0, -0.5]}}}
+
+
+def test_angaben_bleiben_bei_gleicher_vermessung_und_folgen_neuen_nummern():
+    gleich = uebertrage(runde_mit_lage('r', [], {1: (1.0, 1.5), 2: (2.0, -0.5)}), WAHR_MIT_LAGE)
+    assert gleich['ausgaenge'] == [2] and gleich['arten'] == WAHR_MIT_LAGE['arten']
+    assert gleich['nicht_beurteilt'] == [] and gleich['entfallen'] == []
+    # Die Möbellücke wird nicht mehr angeboten; die Tür heißt jetzt Nummer 1
+    # und liegt 10 cm daneben (genauer vermessen).
+    neu = uebertrage(runde_mit_lage('r', [], {1: (2.05, -0.42)}), WAHR_MIT_LAGE)
+    assert neu['ausgaenge'] == [1] and neu['arten'] == {'1': 'tuer_offen'}
+    assert neu['nicht_beurteilt'] == [] and neu['entfallen'] == [1]
+    # Eine Öffnung an neuer Stelle hat keine Angabe.
+    dazu = uebertrage(runde_mit_lage('r', [], {1: (2.0, -0.5), 2: (3.5, 2.0)}), WAHR_MIT_LAGE)
+    assert dazu['ausgaenge'] == [1] and dazu['nicht_beurteilt'] == [2]
+    assert dazu['entfallen'] == [1]
+    assert dazu['naechste_fruehere'] == {'2': {'nr': 1, 'abstand_m': 2.55, 'art': 'moebelspalt',
+                                               'versatz_grad': -26.6, 'war_ausgang': False}}
+    # Die Tür ist 45 cm nach links gewandert (vorher stand die Nummer neben der Tür):
+    # zu weit für die Übertragung, aber als Nachbarin der früheren Tür erkennbar.
+    gewandert = uebertrage(runde_mit_lage('r', [], {1: (2.0, -0.05)}), WAHR_MIT_LAGE)
+    assert gewandert['ausgaenge'] == [] and gewandert['nicht_beurteilt'] == [1]
+    nah = gewandert['naechste_fruehere']['1']
+    assert (nah['nr'], nah['abstand_m'], nah['war_ausgang']) == (2, 0.45, True)
+    assert nah['versatz_grad'] == pytest.approx(12.6, abs=0.1)            # links davon
+    # Zwei jetzige Öffnungen nahe einer früheren: nur die nähere bekommt die Angabe.
+    doppelt = uebertrage(runde_mit_lage('r', [], {1: (2.3, -0.5), 2: (2.05, -0.5)}),
+                         WAHR_MIT_LAGE)
+    assert doppelt['ausgaenge'] == [2] and doppelt['nicht_beurteilt'] == [1]
+    # Ohne festgehaltene Lage gelten die Nummern, wie sie sind.
+    ohne = uebertrage(runde_mit_lage('r', [], {1: (9.0, 9.0)}), {'ausgaenge': [1]})
+    assert ohne['ausgaenge'] == [1] and ohne['nicht_beurteilt'] == []
+
+
+def test_auswertung_uebertraegt_und_zaehlt_unbeurteilte_wahlen_nicht():
+    runden = [
+        # Tür jetzt Nummer 1: die Wahl 1 ist richtig
+        runde_mit_lage('a', [antwort('m', 1)], {1: (2.05, -0.42)}),
+        # die KI wählt eine Öffnung an neuer Stelle: weder richtig noch falsch
+        runde_mit_lage('b', [antwort('m', 2)], {1: (2.0, -0.5), 2: (3.5, 2.0)}),
+        # unverändert: Möbellücke gewählt, falsch
+        runde_mit_lage('c', [antwort('m', 1)], {1: (1.0, 1.5), 2: (2.0, -0.5)}),
+    ]
+    ergebnis = werte_aus(runden, {name: WAHR_MIT_LAGE for name in 'abc'})
+    m = ergebnis['modelle']['m']
+    assert (m['K0-1_richtig'], m['K0-1_falsch'], m['K0-1_nicht_beurteilt']) == (1, 1, 1)
+    assert m['K0-1_anteil'] == 0.5                     # 1 von 2 beurteilten
+    urteile = {z['runde']: z['urteil'] for z in m['je_runde']}
+    assert urteile == {'a': 'richtig', 'b': 'nicht beurteilt (Öffnung an neuer Stelle)',
+                       'c': 'falsch'}
+    v = ergebnis['vermessung']
+    assert v['nicht_beurteilte_oeffnungen'] == {'b': [2]}
+    assert v['entfallene_oeffnungen'] == {'a': [1], 'b': [1]}
+    assert v['davon_ausgang_angeboten'] == 3
+    text = bericht(ergebnis)
+    assert 'Übertragen wurde nach der Lage der Öffnungen.' in text
+    assert '- b: Nr. 2 liegt an neuer Stelle und ist nicht beurteilt.' in text
+    assert ('  - Nr. 2: 2.55 m von der früheren Nr. 1 (moebelspalt), 26.6° rechts davon.'
+            in text)
+    assert 'richtig 1 von 2 (50 %)' in text and 'nicht beurteilt 1' in text

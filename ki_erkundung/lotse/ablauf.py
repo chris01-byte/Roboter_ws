@@ -17,7 +17,7 @@ from PIL import Image
 
 from .antwort import pruefe, wahl_nachmessen
 from .blickrunde import (Blickrunde, bilder_waehlen, gier_schaetzen,
-                         profil_ursprung, rundum_profil)
+                         profil_der_runde)
 from .frage import Frage, baue_frage
 from .kandidaten import Oeffnung, oeffnungen
 from .ki_rechner import STANDARD_URL, Rohantwort, frage_stellen
@@ -83,10 +83,9 @@ def bereite_vor(runde: Blickrunde, anzahl_bilder: int = 8,
     kamera = runde.kamera()
     gier, guete = gier_schaetzen(scans, boden_lidar, runde.vorgabe_gier())
     auswahl = bilder_waehlen(gier, anzahl_bilder)
-    # Im Stand vom Ort des LiDAR aus vermessen, nach einer Drehung von der
-    # Antriebsmitte aus (siehe profil_ursprung).
-    ursprung = profil_ursprung(gier, boden_lidar)
-    winkel, entfernung = rundum_profil(scans, gier, boden_lidar, ursprung=ursprung)
+    # Im Stand vom Ort des LiDAR aus und direkt aus den Messungen, nach einer
+    # Drehung über das Raster von der Antriebsmitte aus (siehe blickrunde).
+    winkel, entfernung, ursprung = profil_der_runde(scans, gier, boden_lidar)
     protokoll: List[dict] = []
     gefunden = oeffnungen(winkel, entfernung, ursprung=ursprung, protokoll=protokoll)
 
@@ -98,13 +97,15 @@ def bereite_vor(runde: Blickrunde, anzahl_bilder: int = 8,
         fotos.append(markiere(runde.bild_bytes(eintrag['aufnahme']), marken,
                               schild=f'B{eintrag["bild"]}'))
     sichtbar = sichtbar_in(marken_je_bild)
+    am_rand = sichtbar_in({bild: [m for m in marken if m['am_rand']]
+                           for bild, marken in marken_je_bild.items()})
     skizze_bild = skizze(winkel, entfernung, gefunden,
                          [b['gier_rad'] for b in auswahl['bilder']],
                          ursprung=ursprung)
     frage = baue_frage(gefunden, len(auswahl['bilder']), sichtbar,
                        drehsinn=auswahl['drehsinn'], verlauf=verlauf,
                        als_mosaik=mosaik, schritt_grad=360.0 / anzahl_bilder,
-                       vollstaendig=auswahl['vollstaendig'])
+                       vollstaendig=auswahl['vollstaendig'], am_rand=am_rand)
     return Vorbereitung(
         name=runde.name, auswahl=auswahl,
         guete_min=float(np.min(guete)) if len(guete) else 0.0,
@@ -132,7 +133,8 @@ def befrage(vorbereitung: Vorbereitung, modell: str, url: str = STANDARD_URL,
     eintrag = {'modell': modell, 'wiederholung': wiederholung}
     eintrag.update(roh.als_dict())
     if roh.fehler is None:
-        pruefung = pruefe(roh.text, vorbereitung.frage.angeboten)
+        pruefung = pruefe(roh.text, vorbereitung.frage.angeboten,
+                          vorbereitung.frage.waehlbar)
         eintrag['pruefung'] = pruefung.als_dict()
         eintrag['nachmessen'] = (wahl_nachmessen(pruefung.wahl, vorbereitung.oeffnungen)
                                  if pruefung.gueltig else None)

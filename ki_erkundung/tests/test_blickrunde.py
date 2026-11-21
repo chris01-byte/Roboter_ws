@@ -7,8 +7,8 @@ import pytest
 
 import beispielrunde_erzeugen as welt
 from lotse.blickrunde import (Blickrunde, bilder_waehlen, echo_statistik,
-                              gier_schaetzen, profil_ursprung, runden_finden,
-                              rundum_profil,
+                              gier_schaetzen, profil_der_runde, profil_ursprung,
+                              runden_finden, rundum_profil, stand_profil,
                               scan_als_dict, scan_felder, scan_punkte,
                               schreibe_runde)
 from lotse.kandidaten import oeffnungen
@@ -233,3 +233,81 @@ def test_echo_statistik_zeigt_ruhige_waende_und_unruhige_oder_stumme_richtungen(
     assert not (unruhig & stumm).any()
     ruhig = ~unruhig & ~stumm & ~np.isnan(anteil)
     assert ruhig.sum() >= 500 and float(np.nanmax(spanne[ruhig])) < 0.05
+
+
+def scans_im_stand(stand, tuerblatt_grad=None, rauschen_m=0.02, strahlen=2160, anzahl=16,
+                   flur_breite_m=2.2, saat=5):
+    """Aufnahmen wie am echten Gerät: 2160 Strahlen je Umlauf, 2 cm Rauschen."""
+    zufall = np.random.default_rng(saat)
+    flaechen = welt.welt(tuerblatt_grad, flur_breite_m)
+    return [welt.scan(flaechen, *stand, 1000.0 + 0.1 * k, rauschen_m=rauschen_m,
+                      strahlen=strahlen, zufall=zufall) for k in range(anzahl)]
+
+
+def tuer_in(gefunden, stand):
+    """Die Öffnung, deren Mitte an der Flurtür des Beispielzimmers liegt (oder None)."""
+    mitte, _, _ = welt.tuer_im_standpunktrahmen(stand)
+    nah = [o for o in gefunden if np.hypot(*(np.array(o.mitte) - mitte)) < 0.15]
+    return nah[0] if len(nah) == 1 else None
+
+
+def test_im_stand_misst_der_median_genauer_als_das_raster_und_findet_das_tuerblatt():
+    """Befund KI-0N (21.11.2026), nachgestellt mit dem Rauschen des echten LiDAR.
+
+    Mit Raster: An der echten Tür stand „keine Wandlinie“, die Tür blieb
+    1,24 m breit mit der Nummer neben der Tür. Im künstlichen Zimmer ergibt
+    dasselbe Vorgehen bei 2 cm Rauschen 1,22 m. Der Median je Richtung
+    vermisst sie richtig.
+    """
+    lidar = lidar_montage()
+    stand = (1.6, 2.4, math.radians(-20.0))            # Scharnierseite, Blatt bei 90 Grad
+    scans = scans_im_stand(stand, tuerblatt_grad=90.0)
+    gier, _ = gier_schaetzen(scans, lidar)
+    ursprung = profil_ursprung(gier, lidar)
+
+    mit_raster = oeffnungen(*rundum_profil(scans, gier, lidar, ursprung=ursprung),
+                            ursprung=ursprung)
+    assert tuer_in(mit_raster, stand) is None
+    zu_breit = [o for o in mit_raster if abs(o.richtung_grad) < 15 and o.breite_m > 1.1]
+    assert len(zu_breit) == 1 and zu_breit[0].schluss == 'sprung'
+
+    winkel, entfernung, wieder = profil_der_runde(scans, gier, lidar)
+    assert wieder == pytest.approx(ursprung)
+    tuer = tuer_in(oeffnungen(winkel, entfernung, ursprung=ursprung), stand)
+    assert tuer is not None and tuer.schluss == 'blatt'
+    assert tuer.breite_m == pytest.approx(0.80, abs=0.04)
+
+
+@pytest.mark.parametrize('stand', [(2.0, 1.4, 0.0), (1.6, 2.4, math.radians(-20.0)),
+                                   (0.9, 1.4, 0.0)])
+def test_im_stand_stimmt_die_tuerbreite_auf_wenige_zentimeter(stand):
+    """Von vorn wurde die 85-cm-Labortür mit Raster 0,72 bis 0,75 m breit vermessen."""
+    lidar = lidar_montage()
+    scans = scans_im_stand(stand, rauschen_m=0.03)
+    gier, _ = gier_schaetzen(scans, lidar)
+    winkel, entfernung, ursprung = profil_der_runde(scans, gier, lidar)
+    tuer = tuer_in(oeffnungen(winkel, entfernung, ursprung=ursprung), stand)
+    assert tuer is not None
+    assert tuer.breite_m == pytest.approx(0.80, abs=0.04)
+
+
+def test_stand_profil_kennt_unbeobachtet_kein_echo_und_groebere_scans():
+    lidar = lidar_montage()
+    schritt = 2 * math.pi / 360                        # halb so viele Strahlen wie Fächer
+    winkel = -math.pi + schritt * np.arange(360)
+    r = np.full(360, 2.0)
+    r[40:60] = np.nan                                  # nie ein Echo, nie eine Messung
+    r[100:120] = np.inf                                # frei bis zur Reichweite
+    r[200] = 9.5                                       # jenseits der Reichweite: frei
+    scans = [scan_als_dict(float(winkel[0]), schritt, r, 0.03, 25.0, k) for k in range(6)]
+    richtung, profil = stand_profil(scans, np.zeros(6), lidar)
+    assert richtung.shape == profil.shape == (720,)
+    assert np.isnan(profil).sum() == pytest.approx(40, abs=3)
+    # 20 Strahlen ohne Echo und der eine jenseits der Reichweite, je zwei Fächer breit
+    assert np.isinf(profil).sum() == pytest.approx(43, abs=3)
+    gemessen = profil[np.isfinite(profil)]
+    assert gemessen.size >= 630 and np.all(gemessen == 2.0)
+    # nach einer Drehung nimmt profil_der_runde das Raster und die Antriebsmitte
+    gedreht, wahr = scans_der_welt(schritt_grad=15.0)
+    _, _, ursprung = profil_der_runde(gedreht, wahr, lidar)
+    assert ursprung == pytest.approx((0.0, 0.0))

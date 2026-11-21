@@ -26,7 +26,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from lotse.blickrunde import (Blickrunde, echo_statistik, gier_schaetzen,  # noqa: E402
-                              profil_ursprung, runden_finden, rundum_profil)
+                              profil_der_runde, runden_finden)
 from lotse.kandidaten import TUERBREIT_M, oeffnungen  # noqa: E402
 
 GRUENDE = {
@@ -65,9 +65,8 @@ def pruefe_runde(runde: Blickrunde, alle: bool = False) -> List[str]:
         return [f'## {runde.name}', '', 'Ohne LiDAR-Scans; nichts zu prüfen.', '']
     lidar = runde.boden_lidar()
     gier, guete = gier_schaetzen(scans, lidar, runde.vorgabe_gier())
-    ursprung = profil_ursprung(gier, lidar)
+    winkel, entfernung, ursprung = profil_der_runde(scans, gier, lidar)
     im_stand = bool(np.any(ursprung))
-    winkel, entfernung = rundum_profil(scans, gier, lidar, ursprung=ursprung)
     protokoll: List[dict] = []
     gefunden = oeffnungen(winkel, entfernung, ursprung=ursprung, protokoll=protokoll)
     echo = echo_statistik(scans, gier, lidar, ursprung) if im_stand else None

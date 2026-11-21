@@ -85,9 +85,10 @@ def test_nach_aussen_spricht_nur_die_verbindung_zum_ki_rechner():
             text = datei.read_text(encoding='utf-8')
             assert 'ProxyHandler({})' in text         # kein Umweg über einen Proxy
             assert "STANDARD_URL = 'http://localhost:11434'" in text
-        elif datei.name == 'lotse_fenster.py':
-            # Anzeige am Bildschirm des KI-Rechners: eine Seite, die nur der
-            # eigene Rechner abrufen kann. Sie baut selbst keine Verbindung auf.
+        elif datei.name in ('lotse_fenster.py', 'sucher.py'):
+            # Anzeigen am Bildschirm (KI-Rechner: Lotsen-Fenster; Jetson:
+            # Sucher): je eine Seite, die nur der eigene Rechner abrufen
+            # kann. Sie bauen selbst keine Verbindung auf.
             assert netz == {'http'}
             text = datei.read_text(encoding='utf-8')
             assert "ADRESSE = '127.0.0.1'" in text
