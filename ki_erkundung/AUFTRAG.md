@@ -20,9 +20,9 @@ der die KI antwortet?
 
 | | |
 |---|---|
-| Konzept | `ki_erkundung/KONZEPT.md` v1.4, Stufe KI-1 |
+| Konzept | `ki_erkundung/KONZEPT.md` (v1.4 oder neuer), Stufe KI-1 |
 | Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens der Commit, der diesen Auftrag enthält; neuer Release `ki1-<STAMP>`. Der letzte real gelaufene Release ist `selbstheilung-sh9-20261119_1932` |
-| Was neu ist | Genau eine Verhaltensänderung: Startargument `initial_scan_only:=true` (Erkunder dreht einmal abschnittsweise und endet, ohne ein Ziel anzufahren). Dazu als Mitläufer: Kamera und Aufnahmewerkzeug (lesen nur) |
+| Was neu ist | Genau eine Verhaltensänderung: Startargument `initial_scan_only:=true` (Erkunder dreht einmal abschnittsweise und endet, ohne ein Ziel anzufahren). Dazu als Mitläufer: Kamera und Aufnahmewerkzeug (lesen nur). Der Stand enthält seit dem 21.11. (nachts) außerdem die zweite Anschlussstelle `stage_drive_only` („Etappenfahrt“); sie bleibt in diesem Auftrag **aus** und wird nicht gesetzt |
 | Erwartetes Ergebnis | Bericht `~/ki_erkundung_bericht_ki1.md`: Build, Tests, Prüfung im Stand, eine Drehung mit den Kriterien R1 bis R6, die Blickrunde mit Prüftext, die Antwort der KI, Christophers Antworten wörtlich |
 | Nicht-Ziele | Keine Fahrt, kein Ziel, keine Tür; keine eigene Code- oder Parameteränderung; keine Drehung außerhalb des Laborraums; kein zweiter Versuch nach einer Berührung |
 | Rückfall | `~/roboter_worktrees/ki1.env` und den Release-Ordner `ki1-<STAMP>` löschen; die Umgebungsdatei der Hauptlinie und alle bisherigen Releases bleiben unberührt. Ohne das Startargument verhält sich der Stack wie am 19.11. |
@@ -37,6 +37,8 @@ der die KI antwortet?
   `service call`, kein weiteres `topic pub`, keine Nav2-Ziele;
 - **kein Missionsstart, wenn `initial_scan_only` nicht nachweislich `True`
   ist** (B2). Ohne den Schalter würde Amadeus losfahren;
+- `stage_drive_only` wird in diesem Auftrag nie gesetzt und muss `False`
+  melden; `fahrziel_senden.py` wird nicht benutzt;
 - kein Start mit Motorfreigabe (`active_drive:=true`) ohne
   `hwt601_accel_ms:=100`; der Start im Stand (Teil A) hat keine
   Motorfreigabe und braucht das Argument nicht;
@@ -142,7 +144,7 @@ for f in explore/share/explore/config/self_healing_params.yaml explore/share/exp
   diff -q "$I/$f" "$ALT/$f" && echo "gleich: $f"; done
 ```
 
-Erwartet: die Zähler `8`, `3`, `3`, `2`; fünfmal `gleich: …`. Jede
+Erwartet: die Zähler `11`, `3`, `3`, `2`; fünfmal `gleich: …`. Jede
 Abweichung, Build-Fehler oder fehlendes Paket: nichts starten, berichten.
 
 ### Schritt 4 – gezielte Tests
@@ -172,7 +174,7 @@ env -u CYCLONEDDS_URI ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 python3 -m pytest -
 ```
 
 Erwartung: `267 passed` (die 249 vom 19.11. und 18 neue) und für die
-KI-Linie `206 passed`. Bei Fehlschlägen nichts starten, berichten.
+KI-Linie `226 passed`. Bei Fehlschlägen nichts starten, berichten.
 
 ---
 
@@ -205,17 +207,20 @@ Nach etwa 70 s:
 ```bash
 source ~/roboter_worktrees/ki1.env; D="$SH_PR/stand"
 ros2 param get /explore_node initial_scan_only 2>&1 | tee "$D/schalter.txt"
+ros2 param get /explore_node stage_drive_only 2>&1 | tee -a "$D/schalter.txt"
 ros2 param get /explore_node exploration_strategy 2>&1 | tee -a "$D/schalter.txt"
 python3 "$SH_SRC/tools/kartierung/selbstheilung_stillstand_pruefen.py" --odometrie hwt601 \
   --json "$D/pruefung.json" > "$D/pruefung.txt" 2>&1; echo "exit=$?"; tail -40 "$D/pruefung.txt"
 ```
 
-Erwartet: `Boolean value is: True`, `String value is: self_healing`,
+Erwartet: `Boolean value is: True` (Rundblick), `Boolean value is: False`
+(Etappenfahrt), `String value is: self_healing`,
 Prüfskript Exit 0 mit denselben Zeilen wie am 19.11. ohne `--aktiv`
 („kein Motorschreiber (HWT-Weg ohne active_drive)“). Bei `FEHL` mit
 „erreichbar“, „nicht deklariert“ oder „Graph unvollständig“ einmal nach 30 s
-wiederholen. **Ist der Schalter nicht `True` oder bleibt ein `FEHL`: Stack
-geordnet beenden, berichten, Teil B entfällt.**
+wiederholen. **Ist `initial_scan_only` nicht `True`, ist `stage_drive_only`
+nicht `False` oder bleibt ein `FEHL`: Stack geordnet beenden, berichten,
+Teil B entfällt.**
 
 ### A2 – Kamera dazu, Last und Raten messen
 
@@ -321,13 +326,16 @@ Nach etwa 70 s:
 source ~/roboter_worktrees/ki1.env; D="$SH_PR/drehung"
 grep -n "Anfahrverhalten bestaetigt" "$D/launch.log" | tee "$D/anfahrzeit.txt"
 ros2 param get /explore_node initial_scan_only 2>&1 | tee "$D/schalter.txt"
+ros2 param get /explore_node stage_drive_only 2>&1 | tee -a "$D/schalter.txt"
 python3 "$SH_SRC/tools/kartierung/selbstheilung_stillstand_pruefen.py" --odometrie hwt601 --aktiv \
   --eigenecho-s 10 --json "$D/vorpruefung.json" > "$D/vorpruefung.txt" 2>&1; echo "exit=$?"; tail -40 "$D/vorpruefung.txt"
 ```
 
 Erwartet: `Beschleunigen 100 ms, Bremsen 400 ms, Startdrehzahl 5 rpm`;
-`Boolean value is: True`; Prüfskript Exit 0 wie am 19.11. **Ist der
-Schalter nicht `True`, fehlt die Anfahrzeit-Zeile oder bleibt ein `FEHL`
+`Boolean value is: True` (Rundblick) und `Boolean value is: False`
+(Etappenfahrt); Prüfskript Exit 0 wie am 19.11. **Ist `initial_scan_only`
+nicht `True`, ist `stage_drive_only` nicht `False`, fehlt die Anfahrzeit-Zeile
+oder bleibt ein `FEHL`
 (nach einer Wiederholung bei „erreichbar“, „nicht deklariert“, „Graph
 unvollständig“): keine Mission, Stack geordnet beenden, berichten.**
 

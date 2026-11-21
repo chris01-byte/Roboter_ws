@@ -372,6 +372,14 @@ starten und **eine Drehung von 360° auf der Stelle im Laborraum** ausführen.
 Keine Fahrt. Rückfall: `ki1.env` und den Release-Ordner löschen. Die
 tatsächliche Wirkung wird nach dem Bericht nachgetragen.
 
+Stand 21.11.2026 (nachts), **keine Jetson-Wirkung:** Im Repository gibt es
+eine zweite Anschlussstelle im Erkunder (`stage_drive_only`, „Etappenfahrt“,
+Vorgabe aus) und in der KI-Linie das Werkzeug `fahrziel_senden.py`. Beides
+lief nur in Tests und in der Simulation. Der Auftrag KI-1 baut diesen Stand
+mit, setzt den neuen Schalter aber nicht und prüft, dass er `False` meldet.
+Auf den Roboter kommt die Etappenfahrt erst mit einem eigenen Auftrag nach
+KI-1 (zuerst eine einzelne gerade Etappe von 0,5 m im freien Raum).
+
 Stand 21.11.2026, zum früheren Auftrag KI-0N: die sieben Aufnahmen neu
 auswerten, auf Wunsch weitere Standbilder mit Kamera und LiDAR; keine
 Motoren. Dazu auf dem **KI-Rechner**, noch nicht ausgeführt: das

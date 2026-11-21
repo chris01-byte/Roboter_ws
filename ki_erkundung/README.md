@@ -27,7 +27,8 @@ fährt.**
 | `werkzeuge/sucher.py` | Auf dem Jetson: das Kamerabild live in einem gewöhnlichen Browserfenster, um Amadeus für eine Ansicht hinzustellen. Liest nur mit, speichert nichts, nur von diesem Rechner erreichbar |
 | `werkzeuge/lotse_dienst.py` | Auf dem KI-Rechner: Lotsen-Dienst. Nimmt Fragen des Roboters über ROS an und fragt Ollama auf demselben Rechner |
 | `werkzeuge/lotse_fenster.py` | Auf dem KI-Rechner: das Programm für den Bildschirm. Startet den Lotsen-Dienst und zeigt im Browser, ob KI-Programm, Dienst und Roboter da sind, die letzten Fragen mit Bildern und Antwort und das Log. Die Anzeige ist nur von diesem Rechner aus erreichbar |
-| `werkzeuge/ki_verbindung_ros.py` | Gegenstück auf dem Roboter (`trockenlauf.py --ueber-ros`); drei eigene Themen `/ki_erkundung/…`, nur Text |
+| `werkzeuge/ki_verbindung_ros.py` | Gegenstück auf dem Roboter (`trockenlauf.py --ueber-ros`); vier eigene Themen `/ki_erkundung/…`, nur Text |
+| `lotse/fahrziel.py`, `werkzeuge/fahrziel_senden.py` | Auf dem Roboter: aus der gewählten, vermessenen Öffnung einen Punkt vor und einen hinter der Tür berechnen und dem Erkunder als Fahrziel geben (Betrieb „Etappenfahrt“, `stage_drive_only`). Das Werkzeug fährt nicht selbst; gefahren wird vom Erkunder ohne Nav2, mit Fahrtor und Kollisionsmonitor |
 | `werkzeuge/beispielrunde_erzeugen.py` | Künstliche Blickrunde (ausgedachtes Zimmer) zum Ausprobieren und Testen |
 | `quellen/` | Unverändert abgelegte Vorlagen (HomeMy-Konzept des Projektinhabers) |
 | `archiv/` | Ausgeführte Aufträge dieser Linie in der Fassung, in der sie liefen, mit Ergebnis in Zahlen |
@@ -50,9 +51,13 @@ fährt.**
    erst aktiv, wenn der Projektinhaber ihn ausdrücklich übergibt.
 5. **Die KI fährt nicht.** Sie sendet nie Fahrbefehle, umgeht weder Fahrtor
    noch Kollisionsmonitor und ist nie die einzige Schutzmaßnahme. Fällt sie
-   aus oder antwortet unbrauchbar, entscheidet die vorhandene Regel. Über
-   ROS gehen nur Frage, Antwort und Status als Text auf den eigenen Themen
-   `/ki_erkundung/…`.
+   aus oder antwortet unbrauchbar, bleibt Amadeus stehen und meldet es; die
+   vorhandene Regel entscheidet nur, wenn sie ausdrücklich eingeschaltet
+   ist, und das ist dann sichtbar. Zwischen Roboter und KI-Rechner gehen nur
+   Frage, Antwort und Status als Text auf den eigenen Themen
+   `/ki_erkundung/…`. Das Fahrziel für den Erkunder (ein bis drei Punkte)
+   rechnet und sendet nur der Roboter selbst aus der vermessenen, gewählten
+   Öffnung; der KI-Rechner sendet es nie.
 6. **Bilder bleiben im Haus.** Kamerabilder, Tiefenbilder und Scans der
    Wohnung liegen nur auf dem Jetson und dem KI-Rechner, nie im Repository
    und nie bei einem Cloud-Dienst (AGENTS §2.5; Entscheidung 19.11.2026).

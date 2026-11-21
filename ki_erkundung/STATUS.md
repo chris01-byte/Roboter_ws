@@ -1,11 +1,13 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 21.11.2026 (spät):** Die erste Stufe (KI-0, Standbilder) ist
+**Stand 21.11.2026 (nachts):** Die erste Stufe (KI-0, Standbilder) ist
 abgeschlossen: Die KI erkennt die Labortür an echten Bildern und antwortet
 in etwa 1,5 Sekunden. **Als Nächstes dreht sich Amadeus zum ersten Mal
 selbst** (Auftrag KI-1, [AUFTRAG.md](AUFTRAG.md)). Der dafür nötige Schalter
 im Erkunder ist gebaut, getestet und in der Simulation gelaufen; am Roboter
-noch nicht. **Gefahren ist in dieser Linie bisher nichts.**
+noch nicht. **Der Fahrteil ist gebaut** (Etappenfahrt ohne Nav2) und in der
+Simulation zweimal durch die Tür gefahren; am Roboter ist er nicht gelaufen.
+**Gefahren ist in dieser Linie am Roboter bisher nichts.**
 
 Ein Urteil nach den Kriterien K0-1 bis K0-6 gibt es weiter nicht (zu wenige
 Ansichten, kein Glas, kein Spiegel). Die Vermessung der Öffnungen ist in
@@ -26,7 +28,7 @@ fährt mit seiner Schutzkette.
 |---|---|---|---|
 | Erstes Sehen | im Stand Bild und Laser aufnehmen, die KI fragen, die Antwort prüfen | KI-0 | **erledigt** (21.11.) |
 | Blickrunde | sich selbst einmal herumdrehen; aus acht Bildern nennt die KI den Ausgang | KI-1 | **als Nächstes**; Schalter gebaut, Auftrag geschrieben |
-| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | offen; Bestand und Vorschlag unten („Fahrteil“), die Entscheidung des Projektinhabers steht aus |
+| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **Fahrteil gebaut** (Etappenfahrt ohne Nav2); in der Simulation durch die Tür gefahren; am Roboter nach KI-1 zuerst eine einzelne gerade Etappe |
 | Raum für Raum | weiter, bis kein Ausgang mehr offen ist (Laborraum, Flur, Schlafzimmer) | KI-3 | offen |
 | Räume benennen, um Hilfe rufen | Raumnamen als Vorschlag in der App; Hilferuf mit Grund und Bild | KI-4 | offen |
 | Auf Zuruf | „fahr in die Küche“, „such die Tasse“ | KI-5 | offen |
@@ -45,8 +47,13 @@ Frage an die KI mit acht Fotos und der Skizze.
 
 **Danach, je nach Ergebnis:**
 - Blickrunde brauchbar: dieselbe Drehung im Flur (braucht die Freigabe für
-  diesen Raum), dann der Fahrteil (Vorschlag unten, Entscheidung des
-  Projektinhabers steht aus).
+  diesen Raum).
+- **Fahrteil am Roboter, vom Einfachen zum Schwierigen, je Test eine
+  Änderung:** (1) eine einzelne gerade Etappe von 0,5 m im freien Raum
+  (Wiederholung des Tests vom 11.09. auf dem heutigen Stand); (2) ausrichten
+  und eine Etappe; (3) durch die offene Labortür, Ziel von einem Menschen
+  gewählt; (4) dasselbe mit der Wahl der KI. Aufträge dafür werden nach dem
+  Bericht zu KI-1 geschrieben.
 - Vermessung der Öffnungen nach der Drehung unbrauchbar: gezielt
   nachbessern. Die Blickrunde wird über ein Raster ausgewertet, das im Stand
   schon Schwächen zeigte.
@@ -67,7 +74,8 @@ Vermessung weiter Türen verfehlt.
 
 **Vor einem Einsatz ohne Aufsicht:** Der Schalter „nur Rundblick“ prüft
 nicht, ob der Drehkreis in der Karte frei ist (der Rundblick des
-Selbstheilungswegs tut das).
+Selbstheilungswegs tut das); dasselbe gilt für das Ausrichten in der
+Etappenfahrt.
 
 **Geparkt:** Raumnamen in
 der App; Gegenstände finden; größere Kamerabilder für die KI (geliefert
@@ -77,7 +85,8 @@ werden 320 × 180).
 HomeMy-Konzept ausgewertet · Verbindung zum KI-Rechner · KI-0 Teil A
 (19.11.) und Teil B, KI-0N, KI-0R (alle 21.11.) · Lotsen-Fenster gebaut und
 auf dem KI-Rechner in Gebrauch · Sucher · Schalter „nur Rundblick“ im
-Erkunder (21.11., `6956252`).
+Erkunder (21.11., `6956252`) · Bestand der Türdurchfahrten · Etappenfahrt
+gebaut und simuliert (21.11., nachts).
 
 ## Zwei Festlegungen des Projektinhabers (21.11.2026, nachts)
 
@@ -142,8 +151,10 @@ zwischen `1d91229` und heute):
   `self_healing`). Im Stack vom 19.11. kommt der Erkunder dort nicht hin;
   deshalb war schon „nur Rundblick“ ein eigener Schalter.
 
-**Vorschlag (wartet auf die Entscheidung des Projektinhabers):** Der
-Fahrteil entsteht aus den einzeln bestandenen Bausteinen ohne Nav2:
+**Entschieden (Projektinhaber, 21.11.2026 nachts: „bau das so, zuerst die
+Simulation; erst ohne Nav2, und wenn das nicht reicht, binden wir Nav2
+ein“):** Der Fahrteil entsteht aus den einzeln bestandenen Bausteinen ohne
+Nav2:
 ausrichten, gerade Etappe bis vor die Tür, auf die Türachse ausrichten,
 gerade Etappen durch die Tür bis etwa einen halben Meter dahinter, stehen
 bleiben, neue Blickrunde. Zwischen den Etappen wird die Öffnung neu
@@ -154,12 +165,75 @@ geht nur, wenn der Weg zur Tür in geraden Stücken frei ist. Um Möbel herum
 braucht es später wieder Nav2; dafür liegt der Türablauf vom 11.09.
 unverändert bereit.
 
-Nötig wäre eine zweite Anschlussstelle im Erkunder nach dem Muster von
-`initial_scan_only` (eigener kurzer Ablauf, Vorgabe aus): eine Tür-Etappe,
-deren Ziel die KI-Linie liefert. Der Erkunder bleibt der einzige, der
-fährt. Reihenfolge der Tests, je eine Änderung: nach KI-1 zuerst eine
-einzelne gerade Etappe von 0,5 m im freien Raum (Wiederholung des Tests vom
-11.09. auf dem heutigen Stand), dann die Tür.
+Gebaut ist das als zweite Anschlussstelle im Erkunder; siehe den nächsten
+Abschnitt.
+
+## Etappenfahrt: der Fahrteil ohne Nav2 (gebaut 21.11.2026, nachts)
+
+**Was gebaut ist:**
+
+- Im Erkunder das Startargument `stage_drive_only` (Vorgabe aus), durch
+  dieselben drei Startdateien gereicht wie `initial_scan_only`. Eingeschaltet
+  wartet ein Auftrag stehend auf genau ein Fahrziel und fährt es an:
+  ausrichten, gerade, vom Laser gemessene Etappen bis 0,5 m bei 0,05 m/s,
+  nach jeder Etappe bestätigter Halt. Mit beiden Schaltern kommt zuerst der
+  Rundblick. Ohne gültiges Ziel bewegt sich nichts (Wartezeit 420 s, dann
+  Meldung). Am Erkunder kamen nur Zeilen hinzu (506, keine geändert), dazu
+  das Modul `stage_drive.py`.
+- In dieser Linie `lotse/fahrziel.py` (Vorpunkt 0,7 m vor und Auslaufpunkt
+  0,6 m hinter der Türlinie, beide auf der Türachse) und
+  `werkzeuge/fahrziel_senden.py` (misst die Öffnungen im Stand neu, wählt
+  nach Nummer oder Richtung, sendet das Ziel und zeigt die Meldungen des
+  Erkunders). Jedes Ziel nennt, wer gewählt hat (`ki`, `mensch`, `test`);
+  der Erkunder schreibt das in seine Meldungen.
+- Zwei Prüfungen vor und in jeder Etappe: der Streifen in Fahrzeugbreite im
+  Laser (frei und sein Ende gesehen, 15 cm Reserve) und der
+  **Nahbereichs-Halt** an der Kostenkarte mit den Treffern der VL53 (25 cm
+  vor der Vorderkante).
+
+**Simulation** (ganzer Stack wie am 19.11., möbliertes Labor mit 80-cm-Tür
+und Flur, Laser mit 1 cm Rauschen; das Ziel wählt eine gespielte KI, die die
+richtige Tür nennt; keine Kamera):
+
+| Lauf | Start | Ergebnis | Kontrolle an der Welt |
+|---|---|---|---|
+| Gerade Etappe 0,5 m | freier Raum | bestanden: Laser 0,505 m, Radweg 0,496 m, seitlich 0,000 m | gefahren 0,52 m, keine Berührung |
+| Tür aus der Nähe | 1,9 m vor der Tür, 25° daneben | bestanden: Rundblick 361,6°, Tür 0,79 m vermessen, 6 Etappen, 2,47 m | im Flur nach 164 s; keine Berührung; Türlinie 2 cm neben der Mitte gekreuzt; engster Abstand der gepolsterten Kontur 12 cm |
+| Tür schräg | 1,8 m entfernt, Tür 36° links, am Vorpunkt 65° Drehung | bestanden: 6 Etappen, 2,61 m | im Flur nach 235 s; keine Berührung an der Tür |
+| Tür quer durch den Raum | 2,9 m entfernt, zwei niedrige Mülleimer auf der Linie | **angehalten nach 0,49 m**, Meldung „Nahbereich vor dem Roboter nicht frei“ | keine Berührung, 24 cm Abstand; Tür nicht erreicht |
+
+In keinem Lauf gab es ein Nav2-Ziel; das Fahrtor hat nichts verworfen. Die
+Türläufe wurden nach dem Einbau des Nahbereichs-Halts wiederholt und kamen
+wieder durch (dieselben Zahlen bis auf Zentimeter).
+
+**Was die Simulation gezeigt hat (zwei Befunde, beide behoben):**
+
+1. **Berührung im Kriechtempo.** Im ersten Lauf quer durch den Raum fuhr der
+   Roboter mit 1,5 cm/s an einen niedrigen Mülleimer. Der Laser sieht ihn
+   nicht, und der Kollisionsmonitor bremst nach Zeit bis zum Aufprall: bei
+   so kleinem Tempo erst wenige Zentimeter davor. Beim Fahren über Nav2
+   hält vorher der Regler an der Kostenkarte an; der direkten Etappe fehlte
+   das. Daher der Nahbereichs-Halt.
+2. **Abbruch mit „Odometrie veraltet“.** Die gerade Etappe liest die Uhr und
+   fragt danach „anhalten?“. Rechnet diese Frage auch nur Millisekunden,
+   hält die Etappe einen inzwischen eingetroffenen Odometriewert für einen
+   aus der Zukunft und bricht ab. Die Nahbereichsprüfung läuft deshalb in
+   einem eigenen Faden daneben. Die Stelle im vorhandenen Code ist
+   unverändert und bleibt als Empfindlichkeit vermerkt.
+
+**Beobachtung nebenbei:** Am Startplatz des schrägen Laufs kam die
+gepolsterte Kontur beim Rundblick auf 3,6 cm an ein Möbel (das Gehäuse
+selbst blieb über 3 cm entfernt). Das ist die bekannte Lücke des Schalters
+„nur Rundblick“: Er prüft den Drehkreis nicht.
+
+**Grenzen:**
+
+- Die Etappenfahrt weicht nichts aus. Ist der gerade Weg nicht frei, bleibt
+  Amadeus stehen und meldet es. Dort käme später Nav2 dazu.
+- Strecken: je Stück höchstens 2,5 m, zusammen höchstens 4 m.
+- Die Simulation hat keine Kamera, und sie hat am 19.11. das reale
+  Fahrverhalten nicht gezeigt. Sie belegt die Kopplung und die Geometrie,
+  nicht, dass Amadeus real so fährt.
 
 ## KI-0R – Nachrechnen an den elf Aufnahmen (Jetson, 21.11.2026, abends)
 
@@ -343,6 +417,9 @@ KONZEPT §13.
 | 21.11.2026 | Schalter „nur Rundblick“ | Entwicklungsumgebung, Simulation des ganzen Stacks | `6956252`; 2285 Tests des Erkunders, 267 gezielt; in der Simulation 361,7° in 77 s ohne Nav2-Ziel |
 | 21.11.2026 | Tests dieser Linie nach KI-0R | Entwicklungsumgebung | 196 bestanden, 2 übersprungen (ohne ROS); 206 bestanden (ROS 2 Jazzy, abgeschottet) |
 | 21.11.2026 | Bestand Türdurchfahrt | Historie, Branch `codex/hwt601-encoder-shadow`, Dokumente; Funktionsvergleich `1d91229` gegen heute | vier belegte Durchfahrten (18.08., 11.09. zweimal, 08.11.); Türablauf im heutigen Erkunder zeilengleich; gerade Etappe 0,50 m am 11.09. real bestanden |
+| 21.11.2026 | Etappenfahrt, Tests | Entwicklungsumgebung | 2363 Tests des Erkunders (78 neue), 267 in der gezielten Liste von KI-1 unverändert; KI-Linie 216 bestanden, 2 übersprungen (ohne ROS), 226 (mit ROS) |
+| 21.11.2026 | Etappenfahrt, Simulation | ganzer Stack, Labor mit Tür und Flur | gerade Etappe 0,5 m bestanden; zwei Türdurchfahrten bestanden (ohne Berührung, kein Nav2-Ziel); quer durch den Raum vor niedrigen Mülleimern angehalten; zwei Befunde gefunden und behoben |
+| 21.11.2026 | Rundblick nach der Änderung am Erkunder | Simulation | unverändert: 361,7° in 77 s, kein Nav2-Ziel |
 
 **Gemessen an der künstlichen Beispielwelt** (ausgedachtes Zimmer mit
 80-cm-Tür, 90-cm-Glastür zum Balkon, Schränken, Kiste; LiDAR-Rauschen 1 cm):
@@ -386,6 +463,17 @@ Jetson, echte Bilder.
 ## Was nicht geprüft ist
 
 - **Der Schalter „nur Rundblick“ am Roboter.** Nur Tests und Simulation.
+- **Die Etappenfahrt am Roboter.** Nur Tests und Simulation. Offen ist dort
+  vor allem: ob eine gerade Etappe mit dem heutigen Antrieb (100 ms
+  Anfahrzeit) so fährt wie am 11.09.; wie genau sich Amadeus auf wenige
+  Grad ausrichten lässt; ob der Nahbereichs-Halt mit den echten VL53
+  rechtzeitig anspricht und an der Tür nicht fälschlich; wie sich der
+  Kollisionsmonitor an den Türpfosten verhält.
+- **Die gespielte KI in der Simulation wählt bisher nur richtig.** Die Fälle
+  falsch, langsam, stumm und Unsinn (Konzept, KI-2) stehen aus.
+- **Der Weg von der Antwort der KI zum Fahrziel in einem Zug.** Heute nennt
+  ein Mensch dem Werkzeug Nummer oder Richtung; die Übergabe der gewählten
+  Öffnung aus der Blickrunde ist nicht gebaut.
 - **Kamera neben dem Kartier-Stack:** Rechenlast, Bildrate und Ortung des
   Jetson, wenn beides läuft. Das misst Teil A von KI-1.
 - **Die ganze Blickrunde** (acht Bilder nach einer Drehung) an echten

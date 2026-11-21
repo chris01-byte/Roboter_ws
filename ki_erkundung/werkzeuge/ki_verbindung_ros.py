@@ -6,15 +6,22 @@ Derselbe Weg wie bei der Objekterkennung: Roboter und KI-Rechner finden sich
 vorbereitete Frage, der Lotsen-Dienst auf dem KI-Rechner fragt dort Ollama und
 schickt die Rohantwort zurück.
 
-Es gibt nur diese drei eigenen Themen, alle mit JSON-Text:
+Es gibt nur diese vier eigenen Themen, alle mit JSON-Text:
 
     /ki_erkundung/frage_json          Roboter -> KI-Rechner
     /ki_erkundung/antwort_json        KI-Rechner -> Roboter
     /ki_erkundung/lotse_status_json   KI-Rechner: bereit, Modell, Fassung
+    /ki_erkundung/fahrziel_json       auf dem Roboter: KI-Linie -> Erkunder
 
 Fahrbefehle, Dienste oder Aktionen gibt es hier nicht. Kommt keine Antwort,
 ist das ein gewöhnliches Ergebnis (``zeitgrenze`` oder
 ``lotse_nicht_erreichbar``); der Roboter bleibt davon unberührt fahrfähig.
+
+Das **Fahrziel** ist kein Fahrbefehl: Es nennt dem Erkunder ein bis drei
+Punkte in der Karte, die der Roboter selbst aus der vermessenen, gewählten
+Öffnung berechnet hat. Der Erkunder nimmt es nur an, während er im Betrieb
+„Etappenfahrt“ darauf wartet, prüft es, und fährt selbst mit seiner
+Schutzkette. Der KI-Rechner sendet auf diesem Thema nie.
 """
 from __future__ import annotations
 
@@ -34,6 +41,7 @@ from lotse.ki_rechner import Rohantwort  # noqa: E402
 THEMA_FRAGE = '/ki_erkundung/frage_json'
 THEMA_ANTWORT = '/ki_erkundung/antwort_json'
 THEMA_STATUS = '/ki_erkundung/lotse_status_json'
+THEMA_FAHRZIEL = '/ki_erkundung/fahrziel_json'
 
 
 def qos_botschaft():
@@ -50,6 +58,24 @@ def qos_status():
     return QoSProfile(history=QoSHistoryPolicy.KEEP_LAST, depth=1,
                       reliability=QoSReliabilityPolicy.RELIABLE,
                       durability=QoSDurabilityPolicy.TRANSIENT_LOCAL)
+
+
+class Fahrzielsender:
+    """Auf dem Roboter: ein Fahrziel als Text an den Erkunder geben."""
+
+    def __init__(self, knoten):
+        from std_msgs.msg import String
+
+        self._String = String
+        self.knoten = knoten
+        self._sender = knoten.create_publisher(String, THEMA_FAHRZIEL, qos_botschaft())
+
+    def empfaenger(self) -> int:
+        """Wie viele Knoten das Fahrziel abonniert haben (der Erkunder: einer)."""
+        return self.knoten.count_subscribers(THEMA_FAHRZIEL)
+
+    def sende(self, text: str) -> None:
+        self._sender.publish(self._String(data=text))
 
 
 class Verbindung:

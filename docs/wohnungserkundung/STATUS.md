@@ -52,8 +52,11 @@ Fahrzeugbreite. Das gilt vor jeder Erkundungsstrategie; zusammen mit
 `initial_scan_only` kommt zuerst der Rundblick. Ohne gültiges Ziel bewegt
 sich nichts. Verwendet werden die am 10./11.09.2026 real bestandenen
 Bausteine (`_rotate_in_place`, `_drive_forward_lidar`,
-`front_lidar_corridor_check`); am Erkunder kamen nur Zeilen hinzu (397, keine
-geändert), dazu das neue Modul `stage_drive.py`. Standardweg,
+`front_lidar_corridor_check`); am Erkunder kamen nur Zeilen hinzu (506, keine
+geändert), dazu das neue Modul `stage_drive.py`. Dazu gehört ein eigener
+Nahbereichs-Halt an der globalen Kostenkarte (mit den Treffern der VL53),
+weil der Kollisionsmonitor bei 0,05 m/s erst wenige Zentimeter vor einem
+Hindernis bremst (Befund der Simulation). Standardweg,
 Selbstheilungsweg, Profile, Fahrtor und Kollisionsmonitor sind nicht
 geändert; die Hauptlinie bleibt geparkt. Am Roboter nicht gelaufen.
 Rückfall: das Argument weglassen; im Code den Commit zurücknehmen. Nachweise

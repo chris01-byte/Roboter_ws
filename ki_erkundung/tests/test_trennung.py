@@ -2,7 +2,9 @@
 
 * Der Lotse ist reines Python: Standardbibliothek, numpy, Pillow.
 * Nichts in diesem Ordner sendet Fahrbefehle oder ruft Dienste und Aktionen.
-  Gesendet wird nur Text auf den drei eigenen Themen ``/ki_erkundung/…``.
+  Gesendet wird nur Text auf den vier eigenen Themen ``/ki_erkundung/…``.
+  Das Fahrziel (ein bis drei Punkte für den Erkunder) sendet nur der Roboter
+  selbst; der Lotsen-Dienst auf dem KI-Rechner kennt dieses Thema nicht.
 * Nach außen spricht nur ``lotse/ki_rechner.py`` (mit dem KI-Rechner im Haus).
   Das Lotsen-Fenster liefert seine Anzeige nur an den eigenen Rechner aus.
 * Diese Linie hängt von keinem Paket der Hauptlinie ab.
@@ -59,7 +61,7 @@ def test_nichts_sendet_fahrbefehle_oder_ruft_dienste_und_aktionen():
 
 
 def test_gesendet_wird_nur_text_auf_den_eigenen_themen_der_ki_linie():
-    """Frage, Antwort und Status zwischen Roboter und KI-Rechner; sonst nichts."""
+    """Frage, Antwort, Status und das Fahrziel an den Erkunder; sonst nichts."""
     sender = {}
     for datei in quelldateien('lotse', 'werkzeuge'):
         zeilen = [z.strip() for z in datei.read_text(encoding='utf-8').splitlines()
@@ -73,8 +75,21 @@ def test_gesendet_wird_nur_text_auf_den_eigenen_themen_der_ki_linie():
     import ki_verbindung_ros
     themen = [getattr(ki_verbindung_ros, n) for n in dir(ki_verbindung_ros)
               if n.startswith('THEMA_')]
-    assert len(themen) == 3
-    assert all(thema.startswith('/ki_erkundung/') for thema in themen)
+    assert sorted(themen) == ['/ki_erkundung/antwort_json', '/ki_erkundung/fahrziel_json',
+                              '/ki_erkundung/frage_json',
+                              '/ki_erkundung/lotse_status_json']
+
+
+def test_das_fahrziel_sendet_nur_der_roboter_nie_der_ki_rechner():
+    """Die KI nennt eine Nummer; Punkte für den Erkunder rechnet der Roboter."""
+    for name in ('lotse_dienst.py', 'lotse_fenster.py'):
+        text = (WURZEL / 'werkzeuge' / name).read_text(encoding='utf-8')
+        assert 'FAHRZIEL' not in text and 'fahrziel' not in text, name
+    nutzer = sorted(datei.name for datei in quelldateien('lotse', 'werkzeuge')
+                    if 'Fahrzielsender(' in datei.read_text(encoding='utf-8'))
+    assert nutzer == ['fahrziel_senden.py']
+    # Antworten der KI enthalten nie Punkte: geprüft wird nur eine Nummer
+    assert 'punkte' not in (WURZEL / 'lotse' / 'antwort.py').read_text(encoding='utf-8')
 
 
 def test_nach_aussen_spricht_nur_die_verbindung_zum_ki_rechner():

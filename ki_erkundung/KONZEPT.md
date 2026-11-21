@@ -1,9 +1,9 @@
 # Konzept „KI-Erkundung“ – eine KI übernimmt Ziel- und Suchwahl
 
-**Version 1.5 · 21.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
-nachgeführt nach drei Durchgängen an echten Aufnahmen, der Freigabe des
-Schalters „nur Rundblick“ und der Festlegung „die KI bekommt Zeit, kein
-stiller Rückfall“**
+**Version 1.6 · 21.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
+nachgeführt nach drei Durchgängen an echten Aufnahmen, der Freigabe der
+Schalter „nur Rundblick“ und „Etappenfahrt“ und der Festlegung „die KI
+bekommt Zeit, kein stiller Rückfall“**
 
 Dieses Dokument ist die verbindliche Beschreibung der zweiten
 Entwicklungslinie. Verankert in MASTERPLAN §10. Den aktuellen Stand führt nur
@@ -25,7 +25,7 @@ Messungen, fährt selbst und behält seine ganze Schutzkette.
 | Wohin als Nächstes? | feste Regeln über Kartenränder und Lücken | die KI, anhand von Bildern und vermessenen Vorschlägen |
 | Was ist eine Tür? | nur Geometrie (Lücke in der Karte) | die KI sieht es; das LiDAR misst Breite und Lage |
 | Ist der Raum fertig? | Schwellen (Anteil, Zeit, Weggewinn) | die KI beurteilt es, die Karte bestätigt |
-| Fahren, Abstand, Bremsen | Nav2, Fahrtor, Kollisionsmonitor, VL53, Not-Aus | **unverändert dieselben** |
+| Fahren, Abstand, Bremsen | Nav2, Fahrtor, Kollisionsmonitor, VL53, Not-Aus | Fahrtor, Kollisionsmonitor, VL53 und Not-Aus **unverändert dieselben**; gefahren wird zuerst ohne Nav2 in kurzen geraden Etappen (Abschnitt 6a) |
 
 ## 1. Anlass und Entscheidung
 
@@ -273,6 +273,52 @@ kostet nichts und ist ungefährlich. Deshalb gilt:
   (KI, Regel oder niemand): in der Statusmeldung, im Lotsen-Fenster und im
   Bericht. So kann eine Fahrt nie wie eine KI-Fahrt aussehen, die keine war.
 
+## 6a. Der Fahrteil: Etappenfahrt ohne Nav2 (seit v1.6)
+
+Entscheidung des Projektinhabers vom 21.11.2026: Der Fahrteil entsteht aus
+Code, der schon real funktioniert hat, und zwar **zuerst ohne Nav2, vom
+Einfachen zum Schwierigen**. Nav2 kommt nur dazu, wenn das nicht reicht.
+Grund: Alle früher gelungenen Türdurchfahrten fuhren über Nav2, und genau
+dieses Fahren erreichte am 19.11. kein Ziel; die einzelnen Bausteine
+darunter (Drehen auf der Stelle, eine gerade, vom Laser gemessene Etappe)
+haben am 10./11.09.2026 je für sich real bestanden und stehen fast
+unverändert im heutigen Erkunder.
+
+So läuft es:
+
+1. Die KI nennt eine Nummer; die Antwort ist geprüft (Abschnitt 6).
+2. Der Roboter misst die gewählte Öffnung im Stand neu und rechnet daraus
+   zwei Punkte auf der Türachse: einen **Vorpunkt** 0,7 m vor der Türlinie
+   und einen **Auslaufpunkt** 0,6 m dahinter (`lotse/fahrziel.py`).
+3. Diese Punkte gehen als **Fahrziel** an den Erkunder
+   (`/ki_erkundung/fahrziel_json`, nur auf dem Roboter). Darin steht, wer
+   gewählt hat: `ki`, `mensch` oder `test`.
+4. Der Erkunder (Startargument `stage_drive_only`, Vorgabe aus) nimmt genau
+   ein Ziel je Auftrag an, prüft es (Rahmen, Alter, höchstens drei Punkte,
+   je Strecke höchstens 2,5 m, zusammen höchstens 4 m) und fährt selbst:
+   auf den Punkt ausrichten, gerade Etappen von höchstens 0,5 m bei
+   0,05 m/s, nach jeder Etappe bestätigter Halt und neue Lagemessung. Vor
+   jeder Etappe muss der Streifen in Fahrzeugbreite im Laser frei und sein
+   Ende gesehen sein, mit 15 cm Reserve vor der Vorderkante. Fahrtor,
+   Glätter und Kollisionsmonitor bleiben davor.
+5. **Nahbereichs-Halt:** Vor und während jeder Etappe wird die Kostenkarte
+   gelesen, in der auch die Treffer der Nahsensoren (VL53) stehen. Liegt
+   25 cm vor der Vorderkante etwas Belegtes im Streifen, hält die Etappe an.
+   Grund (Simulation, 21.11.2026): Bei 0,05 m/s bremst der Kollisionsmonitor
+   erst wenige Zentimeter vor einem Hindernis; einen niedrigen Mülleimer,
+   den der Laser nicht sieht, berührte der Roboter ohne diesen Halt im
+   Kriechtempo.
+6. Scheitert ein Schritt, bleibt Amadeus stehen und der Auftrag nennt den
+   Grund. Ein zweiter Versuch ist ein neuer Auftrag.
+
+Grenzen, die bekannt sind: Das geht nur, wenn der Weg zum Vorpunkt und
+durch die Tür in geraden Stücken frei ist; die Etappenfahrt weicht nichts
+aus. Niedrige Dinge unter 0,75 m sieht der Laser nicht; vor ihnen schützen
+die VL53 über den Nahbereichs-Halt und der Kollisionsmonitor, beide erst
+aus der Nähe (die VL53 tragen etwa einen halben Meter weit). Um Möbel herum
+braucht es später einen geplanten Weg; dafür liegt der Türablauf vom
+11.09.2026 (Vorpunkt und Auslauf über Nav2) unverändert im Erkunder bereit.
+
 ## 7. Der KI-Rechner und die Verbindung
 
 **Vorhanden** (im Repository auf `main`, abgenommen am 25.08.2026): ein
@@ -298,9 +344,11 @@ getestet, `werkzeuge/lotse_dienst.py` und `werkzeuge/ki_verbindung_ros.py`):
   Zeit.
 - Der Roboter bereitet die Frage vor (Fotos mit Nummern, Skizze, Text) und
   prüft die Antwort selbst.
-- Es gibt nur drei eigene Themen mit Text: `/ki_erkundung/frage_json`,
-  `/ki_erkundung/antwort_json`, `/ki_erkundung/lotse_status_json`. Keine
-  Fahrbefehle, keine Dienste, keine Aktionen.
+- Zwischen Roboter und KI-Rechner gibt es nur drei eigene Themen mit Text:
+  `/ki_erkundung/frage_json`, `/ki_erkundung/antwort_json`,
+  `/ki_erkundung/lotse_status_json`. Keine Fahrbefehle, keine Dienste, keine
+  Aktionen. Ein viertes Thema, `/ki_erkundung/fahrziel_json`, gibt es nur
+  auf dem Roboter (Abschnitt 6a); der KI-Rechner sendet dort nie.
 - Kommt keine Antwort (KI-Rechner aus, WLAN weg, Zeitgrenze), ist das ein
   gewöhnliches Ergebnis: Amadeus fragt erneut, bleibt sonst stehen und
   meldet es (Abschnitt 6). Die Regel entscheidet nur, wenn der Rückfall
@@ -417,6 +465,10 @@ und meldet es, mit eingeschaltetem Rückfall übernimmt die Regel sichtbar;
 dasselbe gescheiterte Ziel wird nicht beliebig oft wiederholt; die Fahrt
 endet ordentlich. Die Simulation hat keine Kamera; sie prüft die Kopplung,
 nicht das Sehen.
+
+**Stand 21.11.2026:** Entschieden ist der Anschluss über die Etappenfahrt
+(Abschnitt 6a). Sie ist gebaut und in der Simulation mit richtig gewähltem
+Ziel gelaufen; die Fälle falsch, langsam, stumm und Unsinn stehen aus.
 
 Vor KI-2 ist zu entscheiden, wie die Wahl an die vorhandene Erkundung
 angeschlossen wird (README, Regel 2). Bis dahin wird kein bestehender Code
@@ -558,6 +610,15 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   entschieden hat. Der Fahrteil soll aus vorhandenem, real bewährtem Code
   entstehen; Bestand und Vorschlag stehen im STATUS, entschieden ist dazu
   noch nichts.
+- 21.11.2026, v1.6 (Entscheidung des Projektinhabers): **Der Fahrteil ist
+  eine Etappenfahrt ohne Nav2** aus den am 10./11.09. real bestandenen
+  Bausteinen (neuer Abschnitt 6a; zweite Anschlussstelle
+  `stage_drive_only`; viertes Thema `/ki_erkundung/fahrziel_json` nur auf
+  dem Roboter). Abweichung von §8, vom Projektinhaber so gewollt: Der
+  Fahrteil wird schon jetzt gebaut und simuliert, obwohl die Kriterien von
+  KI-1 noch kein Urteil haben. Auf den Roboter kommt er trotzdem nur
+  Schritt für Schritt, je Realtest eine Verhaltensänderung, zuerst eine
+  einzelne gerade Etappe.
 - 21.11.2026, Nachtrag (Wunsch des Projektinhabers): Auf dem KI-Rechner
   gibt es ein Programm für den Bildschirm, das Lotsen-Fenster. Es startet
   den Lotsen-Dienst und zeigt seinen Zustand, die letzten Fragen mit Bildern

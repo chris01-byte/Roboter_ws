@@ -1983,6 +1983,42 @@ KI-Linie, und der Bestand der Türdurchfahrten:**
   eingegrenzt ist. Braucht eine zweite Anschlussstelle im Erkunder und die
   Freigabe des Projektinhabers.
 
+**Nachtrag 21.11.2026 (nachts) – Etappenfahrt: der Fahrteil der KI-Linie
+ohne Nav2 (Projektinhaber: „bau das so, zuerst die Simulation; vom Einfachen
+ins Schwierige; erst ohne Nav2, und wenn das nicht reicht, binden wir Nav2
+ein“):**
+- **Zweite Anschlussstelle `stage_drive_only`** im Erkunder, Vorgabe aus: Ein
+  Auftrag wartet stehend auf genau ein Fahrziel der KI-Linie und fährt es
+  mit den am 10./11.09. real bestandenen Bausteinen an (ausrichten, gerade,
+  vom Laser gemessene Etappen bis 0,5 m bei 0,05 m/s). Gründe für diese
+  Form: Der Erkunder bleibt der einzige, der fährt; die KI-Linie liefert nur
+  ein Ziel und nennt, wer gewählt hat; die Bausteine werden unverändert
+  aufgerufen (am Erkunder nur neue Zeilen); ohne Ziel bewegt sich nichts.
+  Verworfen: eine Folge einzelner Fahraufträge aus der KI-Linie (das wäre
+  ein zweiter Navigator) und Zielangaben als Startargument (das Ziel steht
+  erst nach Rundblick und Antwort der KI fest).
+- **Befund der Simulation, der die Bauform geändert hat:** Auf der geraden
+  Linie quer durch den Raum berührte der Roboter einen niedrigen Mülleimer
+  mit 1,5 cm/s. Der Laser sieht ihn nicht (0,75 m Höhe), und der
+  Kollisionsmonitor bremst nach Zeit bis zum Aufprall: Bei 0,05 m/s beginnt
+  das erst wenige Zentimeter vor dem Hindernis. Beim Fahren über Nav2 hält
+  vorher der Regler an der Kostenkarte; diese Prüfung fehlte der direkten
+  Etappe. Deshalb hat die Etappenfahrt einen eigenen **Nahbereichs-Halt**:
+  Liegt in der globalen Kostenkarte (mit den Treffern der VL53) 25 cm vor
+  der Vorderkante etwas Belegtes im Streifen, hält die Etappe an. Lehre: Ein
+  Baustein, der einzeln im freien Raum bestanden hat, bringt die
+  Schutzwirkung der Kette, in der er sonst lief, nicht mit; sie ist für den
+  neuen Weg eigens zu prüfen.
+- **Zweiter Befund:** Die gerade Etappe liest erst die Uhr und fragt dann
+  „anhalten?“. Dauert die Frage auch nur Millisekunden, kann dazwischen ein
+  Odometriewert ankommen, den sie für einen Wert aus der Zukunft hält; sie
+  bricht dann mit `odom_stale` ab. Die Nahbereichsprüfung läuft deshalb in
+  einem eigenen Faden neben der Etappe. Die Stelle im vorhandenen Code ist
+  unverändert; sie ist als Empfindlichkeit festgehalten.
+- **Grenze, bewusst so:** Die Etappenfahrt weicht nichts aus. Ist der gerade
+  Weg nicht frei, bleibt Amadeus stehen und meldet es. Das ist der Punkt, an
+  dem später Nav2 dazukommt (Türablauf vom 11.09. liegt bereit).
+
 **Nachtrag 21.11.2026 – Lotsen-Fenster statt unsichtbarem Dienst
 (Projektinhaber):** Der Lotsen-Dienst lief auf dem KI-Rechner als
 Hintergrundprozess; der Projektinhaber sah dort nichts und wollte ein
