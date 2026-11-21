@@ -158,3 +158,52 @@ def test_trockenlauf_meldet_fehlenden_dienst(ros, beispielordner, tmp_path, caps
     assert trockenlauf.main(['--runden', str(beispielordner), '--ausgabe',
                              str(tmp_path / 'a'), '--ueber-ros']) == 3
     assert 'Lotsen-Dienst' in capsys.readouterr().err
+
+
+def test_dienst_legt_zustand_und_letzte_frage_fuer_das_fenster_ab(ros, ki_attrappe, tmp_path):
+    """Mit ``--zustand``: Das Lotsen-Fenster liest, was der Dienst hier ablegt."""
+    from rclpy.executors import SingleThreadedExecutor
+    ordner = tmp_path / 'lotse'
+    knoten = rclpy.create_node('ki_lotse_dienst_zustand')
+    dienst = Dienst(knoten, 'pruefmodell', ki_attrappe.url, status_alle_s=0.5,
+                    zustand_ordner=ordner, zustand_alle_s=0.2)
+    ausfuehrer = SingleThreadedExecutor()
+    ausfuehrer.add_node(knoten)
+    faden = threading.Thread(target=ausfuehrer.spin, daemon=True)
+    faden.start()
+    datei = ordner / 'zustand.json'
+    try:
+        anfang = json.loads(datei.read_text(encoding='utf-8'))
+        assert anfang['bereit'] and anfang['verlauf'] == [] and anfang['letzte_frage'] is None
+        assert anfang['modell'] == 'pruefmodell' and anfang['pid'] > 0
+        ki_attrappe.antworten.append(json.dumps({
+            'wahl': 1, 'begruendung': 'offene Tür', 'raum': 'Flur', 'gefahren': [],
+            'kandidaten': [{'nr': 1, 'art': 'tuer_offen', 'sicherheit': 0.9}]}))
+        verbindung = Verbindung()
+        try:
+            assert verbindung.frage_stellen(FRAGE, BILDER, zeitgrenze_s=10.0).fehler is None
+        finally:
+            verbindung.schliessen()
+        ende = time.monotonic() + 5.0
+        zustand = anfang
+        while not zustand['verlauf'] and time.monotonic() < ende:
+            time.sleep(0.05)
+            zustand = json.loads(datei.read_text(encoding='utf-8'))
+        assert zustand['fragen_beantwortet'] == 1 and len(zustand['verlauf']) == 1
+        eintrag = zustand['verlauf'][0]
+        assert eintrag['ergebnis'] == 'antwort' and eintrag['gueltig'] and eintrag['wahl'] == 1
+        assert eintrag['raum'] == 'Flur' and eintrag['arten'] == {'1': 'tuer_offen'}
+        assert eintrag['bilder'] == 2 and 'bilder_b64' not in json.dumps(zustand)
+        letzte = zustand['letzte_frage']
+        assert letzte['frage_id'] == eintrag['frage_id'] and letzte['angeboten'] == [1]
+        assert '"wahl": 1' in letzte['antworttext']
+        abgelegt = ordner / 'letzte_frage'
+        assert [(abgelegt / f'bild_{n}.jpg').read_bytes() for n in (1, 2)] == BILDER
+        assert (abgelegt / 'frage.txt').read_text(encoding='utf-8') == FRAGE.text
+        assert zustand['zeit_unix'] >= zustand['gestartet_unix']
+        assert not list(ordner.glob('*.neu'))            # nie eine halb geschriebene Datei
+    finally:
+        ausfuehrer.shutdown()
+        faden.join(timeout=3.0)
+        knoten.destroy_node()
+    assert dienst.zustand()['ros_andere_knoten'] == 0     # nach dem Ende ohne Fehler lesbar

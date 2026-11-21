@@ -334,7 +334,13 @@ Fahr-Stack, kein Build, kein Installwechsel.**
 Stand 21.11.2026, **noch keine weitere Jetson-Wirkung:** Auftrag KI-0N der
 KI-Linie ist erteilt (`ki_erkundung/AUFTRAG.md`): die sieben Aufnahmen neu
 auswerten, auf Wunsch weitere Standbilder mit Kamera und LiDAR; keine
-Motoren. Die tatsächliche Wirkung wird nach dem Bericht nachgetragen.
+Motoren. Dazu auf dem **KI-Rechner**, noch nicht ausgeführt: das
+Lotsen-Fenster einrichten (ein Startskript und zwei `.desktop`-Dateien im
+Benutzerordner, eine Kopie der DDS-Einstellung des Lotsen unter
+`~/.config/amadeus/`, Ablageordner `~/.local/share/amadeus/ki_erkundung/
+lotse`); kein Systemdienst, kein Autostart, `amadeus-ki.service` und das
+Netz des Rechners unverändert. Die tatsächliche Wirkung wird nach den
+Berichten nachgetragen.
 
 Stand 16.11.2026 (abends), **noch keine Jetson-Wirkung:** Auftrag SH-9 ist
 erteilt (`bab7cc7`, Profil mit EK-1). Er wird einen neuen Release

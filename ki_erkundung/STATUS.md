@@ -22,6 +22,12 @@ Ansichten: Tür mit offenem Blatt von der Scharnierseite, geschlossene Tür,
 Glas, Spiegel, Flur, eine Ansicht zweimal an derselben Stelle. Christopher
 beurteilt alle Blätter neu, weil sich die Nummern geändert haben.
 
+**Dazu, auf dem KI-Rechner: das Lotsen-Fenster einrichten** (Wunsch des
+Projektinhabers vom 21.11.: ein Programm mit Symbol auf dem Desktop, das den
+Dienst startet und zeigt, ob alles läuft und verbunden ist). Gebaut und in
+der Entwicklungsumgebung geprüft; auf dem KI-Rechner noch nicht gelaufen.
+Die Einrichtung steht im Auftrag, Abschnitt „KI-Rechner“.
+
 **Danach, je nach Ergebnis:**
 - Stimmt die Vermessung an den echten Aufnahmen: Fahrteil vorbereiten
   (unten).
@@ -59,9 +65,11 @@ die diese Linie nicht allein herstellen kann:
   Last wird zuerst im Stand gemessen.
 
 **Geparkt:** Anschluss der KI-Wahl an die vorhandene Erkundung (Entscheidung
-vor KI-2); Raumnamen in der App (KI-4); Gegenstände finden (KI-5);
-Lotsen-Dienst als Systemdienst, damit Einschalten genügt; größere
-Kamerabilder für die KI (geliefert werden 320 × 180).
+vor KI-2); Raumnamen in der App (KI-4); Gegenstände finden (KI-5); größere
+Kamerabilder für die KI (geliefert werden 320 × 180). Der Lotsen-Dienst als
+Systemdienst ist ersetzt durch das Lotsen-Fenster, das Christopher selbst
+öffnet; ein Start von selbst beim Hochfahren ist damit möglich, aber nicht
+eingerichtet.
 
 **Erledigt:** Konzept und Trennregeln · Werkzeuge für den Trockenlauf ·
 HomeMy-Konzept ausgewertet · Verbindung zum KI-Rechner · KI-0 Teil A
@@ -166,8 +174,9 @@ KONZEPT §13.
 | `lotse/ki_rechner.py` | Verbindung zu Ollama ohne Proxy; Denkschalter; Fassung und Kennung des Modells |
 | `lotse/botschaft.py` | Frage und Antwort für die Übertragung packen und begrenzen |
 | `lotse/auswertung.py`, `lotse/ablauf.py` | Kennzahlen K0-1 bis K0-6 mit Median und 95-%-Wert, Vergleich getrennter Aufnahmen; Ablauf einer Runde |
-| `werkzeuge/lotse_dienst.py` | KI-Rechner: nimmt Fragen über ROS an, fragt Ollama lokal, eine Frage zur Zeit |
+| `werkzeuge/lotse_dienst.py` | KI-Rechner: nimmt Fragen über ROS an, fragt Ollama lokal, eine Frage zur Zeit; legt mit `--zustand` seinen Zustand und die letzte Frage für das Fenster ab |
 | `werkzeuge/ki_verbindung_ros.py` | Roboter: stellt die Frage über ROS; keine Antwort ist ein Ergebnis, kein Fehler |
+| `werkzeuge/lotse_fenster.py`, `lotse_fenster_seite.html` | KI-Rechner: Programm für den Bildschirm. Startet den Lotsen-Dienst und zeigt KI-Programm, Dienst, Roboter im Netz, die letzten Fragen mit Bildern und Antwort und das Log. Nur von diesem Rechner aus erreichbar |
 | `werkzeuge/blickrunde_aufnehmen.py`, `trockenlauf.py`, `trockenlauf_auswerten.py`, `beispielrunde_erzeugen.py` | Aufnahme, Trockenlauf (direkt oder `--ueber-ros`), Auswertung, künstliche Beispielrunde (auf Wunsch mit Türblatt) |
 | `werkzeuge/vermessung_pruefen.py`, `wahrheit_eintragen.py` | Prüftext der Vermessung zu gespeicherten Aufnahmen; Angaben des Menschen mit Lage der Nummern eintragen |
 
@@ -186,6 +195,7 @@ KONZEPT §13.
 | 19.11.2026 | Angaben des HomeMy-Konzepts | Ollama-Bibliothek, arXiv | `qwen3.5:9b` und `qwen3-vl:8b` vorhanden, beide mit Bildeingabe; Mobility VLA setzt eine vorab aufgenommene Führung voraus; LocalNav: 26 % / 37 % / 42 % Erfolg (lokal ohne und mit Nachtraining, Cloud) |
 | 21.11.2026 | KI-0 Teil B | Jetson, Kamera, LiDAR, KI-Rechner über WLAN | 158 Tests bestanden; sieben Standbilder, 14 Fragen beantwortet; Tür von vorn richtig vermessen und gewählt, von der Seite zu breit, aus 4–5 m nicht angeboten; Einzelheiten im Archiv |
 | 21.11.2026 | Vermessung und Auswertung nachgebessert, zwei Werkzeuge neu | Entwicklungsumgebung | `5319b7f`; 170 Tests bestanden, 2 übersprungen (ohne ROS); 178 bestanden (ROS 2 Jazzy, abgeschottet); Syntax für Python 3.10 geprüft |
+| 21.11.2026 | Lotsen-Fenster und Zustandsablage des Dienstes | Entwicklungsumgebung | 178 Tests bestanden, 2 übersprungen (ohne ROS); 187 bestanden (ROS 2 Jazzy, abgeschottet); Strecke Trockenlauf → Dienst → gespieltes Ollama → Anzeige einmal ganz durchlaufen |
 | 21.11.2026 | Befunde nachgestellt | künstliches Zimmer mit Türblatt | 0,80-m-Tür mit Blatt bei 90° von der Scharnierseite: vorher 1,14 m breit und 0,4 m vor der Tür (bei tieferem Flur; sonst gar nicht angeboten), jetzt 0,79 bis 0,84 m an der Tür. Blatt bei 75°, 90°, 100° und 110° von vier Standpunkten (16 Fälle): in 15 Fällen Tür 0,73 bis 0,89 m an der Tür, in einem Fall nicht angeboten (75°, von der Öffnung waren 6 cm zu sehen). Bei 100° und 110° erscheint in vier Fällen zusätzlich die Tasche zwischen Blatt und Schrank als eigene Öffnung. Tür hinter einer breiten Möbellücke: vorher nicht angeboten, jetzt 0,71 und 0,72 m |
 
 **Gemessen an der künstlichen Beispielwelt** (ausgedachtes Zimmer mit
@@ -211,6 +221,21 @@ KONZEPT §13.
   laufen unverändert).
 - Im Stand dicht am Schrank: Von der Antriebsmitte aus gerechnet erscheint
   die 50 cm tiefe Schranknische als Öffnung, vom Ort des LiDAR aus nicht.
+
+## Lotsen-Fenster (21.11.2026)
+
+Geprüft in der Entwicklungsumgebung mit ROS 2 Jazzy, gespieltem Ollama und
+dem künstlichen Zimmer: Programm starten, Dienst startet mit; eine Frage vom
+Trockenlauf über ROS erscheint mit ihren neun Bildern, Wahl, Einordnung,
+Raum und Dauer; Anhalten, Starten und Beenden über die Seite; ein außerhalb
+gestarteter Dienst wird erkannt und kein zweiter gestartet; die Seite
+antwortet nur dem eigenen Rechner, Schalter nur der eigenen Seite. Die
+Anzeige wurde im Browser angesehen (hell, dunkel, schmal), ohne Fehler in
+der Konsole.
+
+Nicht geprüft: der Start über das Desktop-Symbol in der Pixi-Umgebung des
+KI-Rechners, die Anzeige „Roboter im WLAN erreichbar“ gegen den echten
+Jetson, echte Bilder.
 
 ## Was nicht geprüft ist
 

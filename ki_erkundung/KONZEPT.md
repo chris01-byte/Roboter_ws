@@ -481,6 +481,12 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   wenn Glas oder Spiegel unter den Vorschlägen war. Schwellen unverändert.
   Der Denkschalter bleibt aus (langsamer, einmal ohne brauchbare Antwort,
   in der Wahl nicht besser). Rollen, Grenzen und Stufen unverändert.
+- 21.11.2026, Nachtrag (Wunsch des Projektinhabers): Auf dem KI-Rechner
+  gibt es ein Programm für den Bildschirm, das Lotsen-Fenster. Es startet
+  den Lotsen-Dienst und zeigt seinen Zustand, die letzten Fragen mit Bildern
+  und das Log. Es ersetzt den geplanten Systemdienst. An Rollen und Grenzen
+  ändert es nichts: Es zeigt nur an und schaltet den Dienst ein und aus; die
+  Anzeige ist nur vom KI-Rechner selbst erreichbar.
 
 ## 13. Übernommen aus dem HomeMy-Konzept des Projektinhabers
 

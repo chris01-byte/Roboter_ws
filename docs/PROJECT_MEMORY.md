@@ -1897,3 +1897,15 @@ KI-Rechner (`qwen3.5:9b`) antwortete über WLAN zu sieben Standbildern in
   nur dort misst. Beides nach dem Ergebnis von KI-0N.
 Stand und Zahlen: `ki_erkundung/STATUS.md`, Archiv des Auftrags unter
 `ki_erkundung/archiv/20261121-ki0-erstes-sehen/`.
+
+**Nachtrag 21.11.2026 – Lotsen-Fenster statt unsichtbarem Dienst
+(Projektinhaber):** Der Lotsen-Dienst lief auf dem KI-Rechner als
+Hintergrundprozess; der Projektinhaber sah dort nichts und wollte ein
+Programm, das er nach dem Hochfahren öffnet und das zeigt, ob alles läuft
+und verbunden ist, mit Log. Umsetzung: `ki_erkundung/werkzeuge/
+lotse_fenster.py` startet den Dienst und liefert eine Anzeige im Browser.
+Gründe für diese Form: keine zusätzliche Software auf dem KI-Rechner (nur
+Python-Standardbibliothek), hier mit einem Browser prüfbar, und die
+Trennregel bleibt gewahrt, weil die Anzeige nur an 127.0.0.1 gebunden ist
+und Schalter nur von der eigenen Seite annimmt. Der früher geplante
+Systemdienst entfällt vorerst.

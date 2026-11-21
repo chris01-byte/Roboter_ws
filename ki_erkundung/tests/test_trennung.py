@@ -4,6 +4,7 @@
 * Nichts in diesem Ordner sendet Fahrbefehle oder ruft Dienste und Aktionen.
   Gesendet wird nur Text auf den drei eigenen Themen ``/ki_erkundung/…``.
 * Nach außen spricht nur ``lotse/ki_rechner.py`` (mit dem KI-Rechner im Haus).
+  Das Lotsen-Fenster liefert seine Anzeige nur an den eigenen Rechner aus.
 * Diese Linie hängt von keinem Paket der Hauptlinie ab.
 * Im Ordner liegen keine Bilder, Scans oder Blickrunden.
 """
@@ -84,6 +85,15 @@ def test_nach_aussen_spricht_nur_die_verbindung_zum_ki_rechner():
             text = datei.read_text(encoding='utf-8')
             assert 'ProxyHandler({})' in text         # kein Umweg über einen Proxy
             assert "STANDARD_URL = 'http://localhost:11434'" in text
+        elif datei.name == 'lotse_fenster.py':
+            # Anzeige am Bildschirm des KI-Rechners: eine Seite, die nur der
+            # eigene Rechner abrufen kann. Sie baut selbst keine Verbindung auf.
+            assert netz == {'http'}
+            text = datei.read_text(encoding='utf-8')
+            assert "ADRESSE = '127.0.0.1'" in text
+            assert text.count('ThreadingHTTPServer((') == 1
+            assert 'ThreadingHTTPServer((ADRESSE, wahl.port)' in text
+            assert '0.0.0.0' not in text and "''," not in text
         else:
             assert not netz, f'{datei.name} führt ein: {sorted(netz)}'
 

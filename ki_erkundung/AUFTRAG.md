@@ -1,8 +1,10 @@
 # Aktueller Auftrag der KI-Linie: KI-0N – Nachmessen (im Stand, ohne Bewegung)
 
 **Erteilt am 21.11.2026.** Er wird aktiv, sobald der Projektinhaber ihn
-übergibt. Er läuft auf dem **Jetson**; der KI-Rechner muss nur eingeschaltet
-sein und der Lotsen-Dienst dort laufen.
+übergibt. Zwei Teile: zuerst auf dem **KI-Rechner** das Lotsen-Fenster
+einrichten (Abschnitt „KI-Rechner“ weiter unten, etwa 15 Minuten), dann der
+eigentliche Auftrag auf dem **Jetson**. Der Jetson-Teil geht auch ohne das
+Fenster, solange der Lotsen-Dienst vom 21.11. noch läuft.
 
 Der vorige Auftrag KI-0 „Erstes Sehen“ ist ausgeführt und liegt mit seinem
 Ergebnis unter [archiv/20261121-ki0-erstes-sehen/](archiv/20261121-ki0-erstes-sehen/).
@@ -77,8 +79,8 @@ timeout 15 ros2 topic echo --once /ki_erkundung/lotse_status_json
 oder ein fremder Test: Christopher einmal fragen, nichts selbst beenden.
 
 Kommt kein Status des Lotsen-Dienstes: Teil 1 trotzdem bis N2 ausführen.
-Christopher bitten, den KI-Rechner einzuschalten; dort startet der Agent den
-Dienst wie am 21.11. (Befehl im Abschnitt „KI-Rechner“ unten).
+Christopher bitten, den KI-Rechner einzuschalten und dort das Programm
+„Amadeus Lotse“ zu öffnen (Abschnitt „KI-Rechner“ unten).
 
 ### N1 – Stand holen und Tests
 
@@ -89,7 +91,7 @@ cd ~/roboter_worktrees/selbstheilung-v2 && git status --short | head -5 && \
   python3 -m pytest -q -p no:cacheprovider ki_erkundung/tests 2>&1 | tail -5 )
 ```
 
-Erwartung: `178 passed`.
+Erwartung: `187 passed`.
 
 ### N2 – Vermessung der gespeicherten Aufnahmen prüfen (ohne ROS, ohne KI)
 
@@ -211,31 +213,122 @@ python3 ki_erkundung/werkzeuge/trockenlauf_auswerten.py --ergebnis "$KI/alle/erg
 
 ---
 
-## KI-Rechner
+## KI-Rechner – Lotsen-Fenster einrichten (vor dem Teil auf dem Jetson)
 
-Der Lotsen-Dienst vom 21.11. lief nach Teil B weiter. Der KI-Rechner braucht
-den neuen Stand nicht: Am Dienst hat sich nichts geändert.
+Wunsch des Projektinhabers (21.11.2026): Auf dem KI-Rechner soll es ein
+Programm mit Symbol auf dem Desktop geben, das den Lotsen-Dienst startet und
+zeigt, ob alles läuft und verbunden ist, mit Log. Das ist
+`werkzeuge/lotse_fenster.py`: Es startet den Dienst und zeigt seine Anzeige
+im Browser. Die Anzeige ist nur von diesem Rechner aus erreichbar
+(127.0.0.1); die Bilder der letzten Frage liegen nur auf diesem Rechner.
 
-Läuft er nicht mehr (Rechner war aus), dort starten, in der Umgebung `umg`
-aus dem archivierten Auftrag (A0) und mit der Kopie der DDS-Einstellung, die
-für den Lauf am 21.11. angelegt wurde. Liegt sie nicht unter dem genannten
-Pfad, den Pfad aus dem damaligen Verlauf nehmen oder sie nach dem
-archivierten Auftrag, Abschnitt N3, neu anlegen:
+Nicht ändern: `amadeus-ki.service`, seine Einstellungen, Netz und Firewall
+des Rechners, `~/roboter_ws`. Nichts reparieren; Meldungen wörtlich
+berichten. Kein Bild in den Chat laden.
 
-```bash
-L=~/ki_trockenlauf_ki0/cyclonedds_lotse.xml
-umg "export CYCLONEDDS_URI=file://$L; nohup env --default-signal=INT python3 \
-     ~/ki_erkundung_ws/ki_erkundung/werkzeuge/lotse_dienst.py --modell qwen3.5:9b \
-     > ~/ki_trockenlauf_ki0/lotse_dienst.log 2>&1 < /dev/null & echo \$! > ~/ki_trockenlauf_ki0/lotse_dienst.pid"
-sleep 5; tail -3 ~/ki_trockenlauf_ki0/lotse_dienst.log
-```
-
-**Nach diesem Auftrag den Dienst beenden** (das ist der offene Schritt A6):
+**F0 – Bestand:**
 
 ```bash
-kill -INT "$(cat ~/ki_trockenlauf_ki0/lotse_dienst.pid)"; sleep 2
-tail -20 ~/ki_trockenlauf_ki0/lotse_dienst.log; systemctl is-active amadeus-ki.service
+date -Iseconds; ps -ef | grep lotse_dienst.py | grep -v grep
+ls -l ~/ki_trockenlauf_ki0/cyclonedds_lotse.xml ~/.config/amadeus/ 2>&1 | head
 ```
+
+Die Umgebung `umg` ist dieselbe wie im archivierten Auftrag (A0). Notieren,
+mit welcher DDS-Datei der laufende Dienst gestartet wurde (Pfad, keine
+Adressen).
+
+**F1 – neuen Stand holen und Tests:**
+
+```bash
+git -C ~/ki_erkundung_ws fetch origin claude/blissful-pasteur-s1eivj
+git -C ~/ki_erkundung_ws checkout --detach FETCH_HEAD; git -C ~/ki_erkundung_ws rev-parse HEAD
+umg 'cd ~/ki_erkundung_ws && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 env -u CYCLONEDDS_URI \
+     ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 python3 -m pytest -q -p no:cacheprovider ki_erkundung/tests 2>&1 | tail -3'
+```
+
+Erwartung: `187 passed`.
+
+**F2 – DDS-Einstellung des Lotsen an einen dauerhaften Ort kopieren**
+(der Ordner `~/ki_trockenlauf_ki0/` darf später gelöscht werden):
+
+```bash
+mkdir -p ~/.config/amadeus && cp -n ~/ki_trockenlauf_ki0/cyclonedds_lotse.xml ~/.config/amadeus/cyclonedds_lotse.xml
+```
+
+**F3 – Startskript anlegen** (liegt nur auf diesem Rechner, nicht im
+Repository). Es setzt genau die Umgebung von `umg`; Pfad der Pixi-Datei,
+Domain und Middleware an `umg` angleichen:
+
+```bash
+mkdir -p ~/.local/share/amadeus/ki_erkundung
+cat > ~/.local/share/amadeus/ki_erkundung/lotse_fenster_start.sh <<'ENDE'
+#!/bin/bash
+# Startet das Lotsen-Fenster (Lotsen-Dienst mit Anzeige) für Amadeus.
+export ROS_DOMAIN_ID=42 RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI="file://$HOME/.config/amadeus/cyclonedds_lotse.xml"
+exec pixi run --manifest-path "$HOME/roboter_ws/src/robot_bringup/config/offboard_pixi.toml" \
+     python3 "$HOME/ki_erkundung_ws/ki_erkundung/werkzeuge/lotse_fenster.py" --modell qwen3.5:9b
+ENDE
+chmod +x ~/.local/share/amadeus/ki_erkundung/lotse_fenster_start.sh
+```
+
+Findet die Desktop-Umgebung `pixi` nicht (anderer Suchpfad als im Terminal),
+im Skript den vollen Pfad aus `command -v pixi` einsetzen.
+
+**F4 – Symbol auf dem Desktop und im Programmmenü:**
+
+```bash
+D="$(xdg-user-dir DESKTOP)/Amadeus-Lotse.desktop"
+cat > "$D" <<ENDE
+[Desktop Entry]
+Type=Application
+Name=Amadeus Lotse
+Comment=Lotsen-Dienst für Amadeus starten und anzeigen
+Exec=$HOME/.local/share/amadeus/ki_erkundung/lotse_fenster_start.sh
+Icon=applications-science
+Terminal=false
+Categories=Utility;
+ENDE
+chmod +x "$D"; gio set "$D" metadata::trusted true 2>&1 | tail -1
+mkdir -p ~/.local/share/applications && cp "$D" ~/.local/share/applications/amadeus-lotse.desktop
+```
+
+**F5 – den alten Hintergrunddienst beenden und das Programm starten.**
+Den am 21.11. von Hand gestarteten Dienst mit genau einem SIGINT an seine
+PID beenden (die PID aus F0). Dann bittet der Agent Christopher, das Symbol
+„Amadeus Lotse“ doppelt anzuklicken. Es öffnet sich ein Fenster des Browsers.
+Danach prüfen und die Ausgabe berichten (sie enthält keine Adressen):
+
+```bash
+kill -INT <PID aus F0>; sleep 3; ps -ef | grep lotse_dienst.py | grep -v grep
+# nach dem Doppelklick:
+curl -s --noproxy '*' http://127.0.0.1:8765/api/zustand | python3 -c "import json,sys; z=json.load(sys.stdin); print(json.dumps({k: z[k] for k in ('modell','ollama','dienst','roboter','fremde_dienste')}, ensure_ascii=False, indent=1))"
+tail -5 ~/.local/share/amadeus/ki_erkundung/lotse/lotse_dienst.log
+```
+
+Erwartung: `ollama.erreichbar` und `modell_vorhanden` wahr, `dienst.laeuft`
+und `bereit` wahr, `fremde_dienste` leer. `roboter.im_netz` ist wahr, wenn
+der Jetson eingeschaltet ist.
+
+Christopher fragen und wörtlich notieren: Öffnet sich das Fenster? Zeigt es
+oben „Bereit“? Ist etwas unklar oder fehlt etwas?
+
+**Bedienung für Christopher:** Rechner einschalten, Symbol „Amadeus Lotse“
+doppelt anklicken, fertig. Das Fenster zu schließen beendet nichts; ein
+neuer Doppelklick öffnet es wieder. Beendet wird über „Programm beenden“
+unten auf der Seite oder mit dem Herunterfahren des Rechners. **Nach KI-0N
+bleibt das Programm einfach offen oder wird dort beendet;** der frühere
+Schritt A6 entfällt damit.
+
+**Rückfall:** die beiden `.desktop`-Dateien, das Startskript,
+`~/.config/amadeus/cyclonedds_lotse.xml` und den Ordner
+`~/.local/share/amadeus/ki_erkundung/lotse` löschen. Der Dienst lässt sich
+weiter wie am 21.11. von Hand starten (archivierter Auftrag, Abschnitt N3).
+
+**Bericht des KI-Rechners:** Datei `~/ki_erkundung_bericht_fenster.md` mit
+HEAD, Testergebnis, den angelegten Dateien (Inhalt des Startskripts ohne
+Adressen), der Ausgabe aus F5, Christophers Antworten und allem, was nicht
+lief.
 
 ---
 

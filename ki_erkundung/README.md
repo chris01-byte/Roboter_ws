@@ -25,6 +25,7 @@ fährt.**
 | `werkzeuge/vermessung_pruefen.py` | Zu gespeicherten Blickrunden nennen, welche Lücken der Laser angeboten und welche er verworfen hat, mit Grund. Nur Maße, keine Bilder oder Scans; ohne ROS und ohne KI-Rechner |
 | `werkzeuge/wahrheit_eintragen.py` | Die Angaben des Menschen zu einem Blatt eintragen, mit der Lage jeder Nummer; frühere Angaben bleiben erhalten |
 | `werkzeuge/lotse_dienst.py` | Auf dem KI-Rechner: Lotsen-Dienst. Nimmt Fragen des Roboters über ROS an und fragt Ollama auf demselben Rechner |
+| `werkzeuge/lotse_fenster.py` | Auf dem KI-Rechner: das Programm für den Bildschirm. Startet den Lotsen-Dienst und zeigt im Browser, ob KI-Programm, Dienst und Roboter da sind, die letzten Fragen mit Bildern und Antwort und das Log. Die Anzeige ist nur von diesem Rechner aus erreichbar |
 | `werkzeuge/ki_verbindung_ros.py` | Gegenstück auf dem Roboter (`trockenlauf.py --ueber-ros`); drei eigene Themen `/ki_erkundung/…`, nur Text |
 | `werkzeuge/beispielrunde_erzeugen.py` | Künstliche Blickrunde (ausgedachtes Zimmer) zum Ausprobieren und Testen |
 | `quellen/` | Unverändert abgelegte Vorlagen (HomeMy-Konzept des Projektinhabers) |
@@ -54,6 +55,8 @@ fährt.**
 6. **Bilder bleiben im Haus.** Kamerabilder, Tiefenbilder und Scans der
    Wohnung liegen nur auf dem Jetson und dem KI-Rechner, nie im Repository
    und nie bei einem Cloud-Dienst (AGENTS §2.5; Entscheidung 19.11.2026).
+   Das Lotsen-Fenster zeigt die Bilder der letzten Frage nur am Bildschirm
+   des KI-Rechners; seine Anzeige ist von keinem anderen Rechner erreichbar.
 7. **Dieselben Arbeitsregeln wie in der Hauptlinie.** Erst messen; Kriterien
    und Rückfall vorab; je Realtest genau eine Verhaltensänderung
    (MASTERPLAN §9.1).

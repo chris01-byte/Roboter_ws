@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amadeus · Lotse</title>
+<style>
+  :root {
+    --grund: #f4f5f7; --flaeche: #ffffff; --rand: #dfe2e7; --text: #1b1f24;
+    --leise: #5d6672; --gut: #1f8a4c; --gut-grund: #e3f4ea; --warn: #b26a00;
+    --warn-grund: #fdf0d9; --schlecht: #c2332b; --schlecht-grund: #fbe6e4;
+    --aus: #8a929c; --aus-grund: #eceef1; --akzent: #2457c5; --log: #10151b;
+    --log-text: #d6dde6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --grund: #14181d; --flaeche: #1d232a; --rand: #2f3741; --text: #e8ecf1;
+      --leise: #9aa5b1; --gut: #4cc47f; --gut-grund: #173524; --warn: #f0b04a;
+      --warn-grund: #3a2c10; --schlecht: #f0776f; --schlecht-grund: #3d1c1a;
+      --aus: #7d8792; --aus-grund: #262d35; --akzent: #7ba6ff; --log: #0c1014;
+      --log-text: #cfd7e0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--grund); color: var(--text);
+         font: 15px/1.45 system-ui, "Segoe UI", Roboto, "Noto Sans", sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; padding: 20px 20px 40px; }
+  header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+  h1 { font-size: 22px; margin: 0; font-weight: 650; letter-spacing: .2px; }
+  h1 small { color: var(--leise); font-weight: 400; font-size: 15px; margin-left: 8px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--leise);
+       margin: 26px 0 10px; font-weight: 600; }
+  .lage { margin-left: auto; padding: 8px 16px; border-radius: 999px; font-weight: 600;
+          background: var(--aus-grund); color: var(--aus); }
+  .lage.gut { background: var(--gut-grund); color: var(--gut); }
+  .lage.warn { background: var(--warn-grund); color: var(--warn); }
+  .lage.schlecht { background: var(--schlecht-grund); color: var(--schlecht); }
+  .kacheln { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+  .kachel { background: var(--flaeche); border: 1px solid var(--rand); border-radius: 12px;
+            padding: 14px 16px; min-height: 124px; display: flex; flex-direction: column; }
+  .kachel .kopf { display: flex; align-items: center; gap: 9px; font-weight: 600; }
+  .punkt { width: 12px; height: 12px; border-radius: 50%; background: var(--aus); flex: none; }
+  .punkt.gut { background: var(--gut); } .punkt.warn { background: var(--warn); }
+  .punkt.schlecht { background: var(--schlecht); }
+  .kachel .wert { font-size: 18px; margin: 8px 0 2px; font-weight: 600; }
+  .kachel .dazu { color: var(--leise); font-size: 13.5px; }
+  .kachel .knoepfe { margin-top: auto; padding-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: inherit; padding: 6px 13px; border-radius: 8px; border: 1px solid var(--rand);
+           background: var(--flaeche); color: var(--text); cursor: pointer; }
+  button:hover { border-color: var(--akzent); }
+  button.haupt { background: var(--akzent); border-color: var(--akzent); color: #fff; }
+  @media (prefers-color-scheme: dark) { button.haupt { color: #0c1220; } }
+  button:disabled { opacity: .5; cursor: default; }
+  .hinweis { background: var(--warn-grund); color: var(--warn); border-radius: 10px;
+             padding: 10px 14px; margin: 0 0 14px; display: none; }
+  .hinweis button { margin-left: 10px; }
+  .tafel { background: var(--flaeche); border: 1px solid var(--rand); border-radius: 12px;
+           padding: 14px 16px; }
+  .frage { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px; }
+  @media (max-width: 860px) { .frage { grid-template-columns: 1fr; } }
+  .bilder { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .bilder.wenige { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .bilder img { width: 100%; border-radius: 8px; border: 1px solid var(--rand); display: block;
+                cursor: zoom-in; background: #000; }
+  .antwort dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; }
+  .antwort dt { color: var(--leise); } .antwort dd { margin: 0; }
+  .wahl { font-size: 20px; font-weight: 650; }
+  .marke { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 13px;
+           background: var(--aus-grund); color: var(--leise); margin: 0 4px 4px 0; }
+  .marke.gut { background: var(--gut-grund); color: var(--gut); }
+  .marke.schlecht { background: var(--schlecht-grund); color: var(--schlecht); }
+  details { margin-top: 12px; } summary { cursor: pointer; color: var(--leise); }
+  pre { white-space: pre-wrap; word-break: break-word; margin: 8px 0 0; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rand);
+           vertical-align: top; }
+  th { color: var(--leise); font-weight: 600; font-size: 13px; }
+  tr:last-child td { border-bottom: 0; }
+  td.zahl, th.zahl { text-align: right; font-variant-numeric: tabular-nums; }
+  .leer { color: var(--leise); padding: 6px 0; }
+  .log { background: var(--log); color: var(--log-text); border-radius: 12px; padding: 12px 14px;
+         font: 12.5px/1.5 ui-monospace, "DejaVu Sans Mono", Menlo, Consolas, monospace;
+         height: 260px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
+  footer { color: var(--leise); font-size: 13px; margin-top: 22px; display: flex; gap: 14px;
+           flex-wrap: wrap; align-items: center; }
+  footer code { font-size: 12.5px; }
+  footer button { margin-left: auto; }
+  #gross { position: fixed; inset: 0; background: rgba(0, 0, 0, .86); display: none;
+           align-items: center; justify-content: center; cursor: zoom-out; z-index: 5; }
+  #gross img { max-width: 96vw; max-height: 94vh; border-radius: 8px; image-rendering: auto; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Amadeus · Lotse <small id="modell"></small></h1>
+    <div class="lage" id="lage">verbinde …</div>
+  </header>
+
+  <div class="hinweis" id="fremd"></div>
+
+  <div class="kacheln">
+    <section class="kachel">
+      <div class="kopf"><span class="punkt" id="p-ollama"></span>KI-Programm (Ollama)</div>
+      <div class="wert" id="w-ollama">–</div>
+      <div class="dazu" id="d-ollama"></div>
+    </section>
+    <section class="kachel">
+      <div class="kopf"><span class="punkt" id="p-dienst"></span>Lotsen-Dienst</div>
+      <div class="wert" id="w-dienst">–</div>
+      <div class="dazu" id="d-dienst"></div>
+      <div class="knoepfe">
+        <button class="haupt" id="k-start">Starten</button>
+        <button id="k-stopp">Anhalten</button>
+      </div>
+    </section>
+    <section class="kachel">
+      <div class="kopf"><span class="punkt" id="p-roboter"></span>Roboter</div>
+      <div class="wert" id="w-roboter">–</div>
+      <div class="dazu" id="d-roboter"></div>
+    </section>
+    <section class="kachel">
+      <div class="kopf"><span class="punkt" id="p-fragen"></span>Fragen des Roboters</div>
+      <div class="wert" id="w-fragen">–</div>
+      <div class="dazu" id="d-fragen"></div>
+    </section>
+  </div>
+
+  <h2>Letzte Frage</h2>
+  <div class="tafel" id="letzte"><div class="leer">Noch keine Frage, seit der Dienst läuft.</div></div>
+
+  <h2>Verlauf</h2>
+  <div class="tafel" id="verlauf"><div class="leer">Noch keine Frage.</div></div>
+
+  <h2>Log des Dienstes</h2>
+  <div class="log" id="log"></div>
+
+  <footer>
+    <span>Diese Anzeige ist nur von diesem Rechner aus erreichbar. Bilder bleiben hier.</span>
+    <span>Logdatei: <code id="logdatei"></code></span>
+    <button id="k-ende">Programm beenden</button>
+  </footer>
+</main>
+<div id="gross"><img alt=""></div>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const ARTEN = {tuer_offen: 'offene Tür', tuer_geschlossen: 'geschlossene Tür',
+  durchgang: 'Durchgang', glas: 'Glas', spiegel: 'Spiegel', moebelspalt: 'Lücke an Möbeln',
+  nische: 'Nische', unklar: 'unklar'};
+const ERGEBNIS = {antwort: 'Antwort', zeitgrenze: 'zu spät (Zeitgrenze)',
+  beschaeftigt: 'abgewiesen (beschäftigt)', dienstfehler: 'Fehler im Dienst',
+  nicht_erreichbar: 'KI-Programm nicht erreichbar', unbrauchbare_frage: 'unbrauchbare Frage'};
+let letzteId = null, beendet = false;
+
+function text(el, wert) { if (el.textContent !== wert) el.textContent = wert; }
+function punkt(id, art) { $(id).className = 'punkt' + (art ? ' ' + art : ''); }
+function uhr(unix) {
+  return new Date(unix * 1000).toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+}
+function dauer(sekunden) {
+  sekunden = Math.max(0, Math.round(sekunden));
+  if (sekunden < 60) return sekunden + ' s';
+  if (sekunden < 3600) return Math.floor(sekunden / 60) + ' min';
+  const h = Math.floor(sekunden / 3600), m = Math.floor((sekunden % 3600) / 60);
+  return h + ' h ' + m + ' min';
+}
+function element(name, klasse, inhalt) {
+  const e = document.createElement(name);
+  if (klasse) e.className = klasse;
+  if (inhalt !== undefined) e.textContent = inhalt;
+  return e;
+}
+async function sende(pfad) {
+  try {
+    await fetch(pfad, {method: 'POST', headers: {'X-Lotse-Fenster': '1'}});
+  } catch (fehler) { /* die nächste Abfrage zeigt den Zustand */ }
+  hole();
+}
+
+function zeigeKacheln(z) {
+  const o = z.ollama, d = z.dienst, r = z.roboter;
+  text($('modell'), z.modell);
+  text($('logdatei'), z.logdatei);
+
+  if (!o.geprueft) { punkt('p-ollama', ''); text($('w-ollama'), 'wird geprüft …'); text($('d-ollama'), ''); }
+  else if (!o.erreichbar) {
+    punkt('p-ollama', 'schlecht'); text($('w-ollama'), 'nicht erreichbar');
+    text($('d-ollama'), 'Ollama antwortet auf diesem Rechner nicht.');
+  } else if (!o.modell_vorhanden) {
+    punkt('p-ollama', 'schlecht'); text($('w-ollama'), 'Modell fehlt');
+    text($('d-ollama'), 'Ollama ' + o.fassung + ' läuft, aber ' + z.modell + ' ist dort nicht geladen worden.');
+  } else {
+    punkt('p-ollama', 'gut'); text($('w-ollama'), 'läuft');
+    text($('d-ollama'), 'Ollama ' + o.fassung + ', Modell ' + z.modell
+      + (o.groesse_gb ? ' (' + String(o.groesse_gb).replace('.', ',') + ' GB)' : '') + ' vorhanden.');
+  }
+
+  if (d.laeuft && d.meldet_sich) {
+    punkt('p-dienst', d.beschaeftigt ? 'warn' : (d.bereit ? 'gut' : 'schlecht'));
+    text($('w-dienst'), d.beschaeftigt ? 'beantwortet eine Frage' : (d.bereit ? 'bereit' : 'läuft, aber nicht bereit'));
+    text($('d-dienst'), 'läuft seit ' + uhr(d.gestartet_unix) + ' (' + dauer(z.zeit_unix - d.gestartet_unix) + ')');
+  } else if (d.laeuft) {
+    punkt('p-dienst', 'warn'); text($('w-dienst'), 'startet …');
+    text($('d-dienst'), 'Der Dienst läuft, hat sich aber noch nicht gemeldet.');
+  } else {
+    punkt('p-dienst', d.ende_code ? 'schlecht' : '');
+    text($('w-dienst'), d.ende_code ? 'beendet mit Fehler' : 'angehalten');
+    text($('d-dienst'), d.ende_code ? 'Ende mit Code ' + d.ende_code + '. Einzelheiten stehen im Log.'
+      : 'Fragen des Roboters bleiben ohne Antwort.');
+  }
+  $('k-start').disabled = d.laeuft || z.fremde_dienste.length > 0;
+  $('k-stopp').disabled = !d.laeuft;
+
+  const knoten = r.ros_andere_knoten;
+  if (r.im_netz === true) {
+    punkt('p-roboter', 'gut'); text($('w-roboter'), 'im WLAN erreichbar');
+  } else if (r.im_netz === false) {
+    punkt('p-roboter', 'schlecht'); text($('w-roboter'), 'nicht erreichbar');
+  } else {
+    punkt('p-roboter', knoten > 0 ? 'gut' : ''); text($('w-roboter'), knoten > 0 ? 'Programme sichtbar' : 'unbekannt');
+  }
+  let dazu = '';
+  if (r.im_netz === false) dazu = 'Der Jetson antwortet nicht. Ist Amadeus eingeschaltet? ';
+  if (r.im_netz === null && !r.gegenstellen) dazu = 'In der Netzeinstellung steht keine Gegenstelle. ';
+  if (knoten === null) dazu += 'Ob Programme des Roboters laufen, zeigt der Dienst, wenn er läuft.';
+  else if (knoten > 0) dazu += knoten + ' andere ROS-Programme im Netz sichtbar'
+      + (r.ros_fragende > 0 ? ', eines davon kann gerade fragen.' : '.');
+  else dazu += 'Keine Programme des Roboters im Netz sichtbar. Er meldet sich erst, wenn er etwas fragt.';
+  text($('d-roboter'), dazu);
+
+  const neueste = z.verlauf.length ? z.verlauf[0] : null;
+  punkt('p-fragen', d.beschaeftigt ? 'warn' : (neueste ? 'gut' : ''));
+  text($('w-fragen'), d.beantwortet + ' beantwortet' + (d.abgelehnt ? ', ' + d.abgelehnt + ' unbrauchbar' : ''));
+  text($('d-fragen'), neueste ? 'Letzte um ' + uhr(neueste.zeit_unix) + ' (vor ' + dauer(z.zeit_unix - neueste.zeit_unix) + ')'
+    + (neueste.dauer_s !== undefined ? ', Antwort nach ' + String(neueste.dauer_s).replace('.', ',') + ' s.' : '.')
+    : 'Noch keine Frage, seit der Dienst läuft.');
+
+  const lage = $('lage');
+  let art = '', wort = 'Dienst angehalten';
+  if (o.geprueft && (!o.erreichbar || !o.modell_vorhanden)) { art = 'schlecht'; wort = 'KI-Programm nicht bereit'; }
+  else if (d.laeuft && d.meldet_sich && d.beschaeftigt) { art = 'warn'; wort = 'Beantwortet gerade eine Frage'; }
+  else if (d.laeuft && d.meldet_sich && d.bereit) { art = 'gut'; wort = 'Bereit – wartet auf Fragen des Roboters'; }
+  else if (d.laeuft) { art = 'warn'; wort = 'Dienst startet …'; }
+  else if (d.ende_code) { art = 'schlecht'; wort = 'Dienst mit Fehler beendet'; }
+  lage.className = 'lage' + (art ? ' ' + art : '');
+  text(lage, wort);
+
+  const fremd = $('fremd');
+  if (z.fremde_dienste.length) {
+    fremd.style.display = 'block';
+    fremd.textContent = 'Ein Lotsen-Dienst läuft bereits, wurde aber nicht von diesem Programm gestartet (Prozess '
+      + z.fremde_dienste.join(', ') + '). Solange er läuft, startet hier kein zweiter.';
+    const knopf = element('button', '', 'Diesen beenden');
+    knopf.onclick = () => sende('/api/fremd/stopp/' + z.fremde_dienste[0]);
+    fremd.appendChild(knopf);
+  } else fremd.style.display = 'none';
+}
+
+function zeigeLetzte(z) {
+  const f = z.letzte_frage;
+  if (!f) return;
+  const kennung = f.frage_id + '/' + f.zeit_unix;
+  if (kennung === letzteId) return;
+  letzteId = kennung;
+  const tafel = $('letzte');
+  tafel.textContent = '';
+  const raster = element('div', 'frage');
+  const bilder = element('div', 'bilder' + (f.bilder <= 2 ? ' wenige' : ''));
+  for (let n = 1; n <= f.bilder; n++) {
+    const bild = element('img');
+    bild.alt = 'Bild ' + n + ' der letzten Frage';
+    bild.src = '/bild/' + n + '?f=' + encodeURIComponent(kennung);
+    bild.onclick = () => { $('gross').firstElementChild.src = bild.src; $('gross').style.display = 'flex'; };
+    bilder.appendChild(bild);
+  }
+  raster.appendChild(bilder);
+
+  const antwort = element('div', 'antwort');
+  const liste = element('dl');
+  const zeile = (name, inhalt) => {
+    liste.appendChild(element('dt', '', name));
+    const dd = element('dd');
+    if (typeof inhalt === 'string') dd.textContent = inhalt; else dd.appendChild(inhalt);
+    liste.appendChild(dd);
+  };
+  zeile('Gefragt', uhr(f.zeit_unix) + ', ' + f.bilder + (f.bilder === 1 ? ' Bild' : ' Bilder'));
+  if (f.ergebnis !== 'antwort') {
+    zeile('Ergebnis', ERGEBNIS[f.ergebnis] || f.ergebnis);
+  } else {
+    const wahl = element('span', 'wahl', f.wahl === null || f.wahl === undefined ? 'keine Wahl' : 'Nummer ' + f.wahl);
+    zeile('Wahl der KI', wahl);
+    const arten = element('span');
+    for (const nr of Object.keys(f.arten || {})) {
+      const marke = element('span', 'marke' + (String(f.wahl) === nr ? ' gut' : ''), nr + ': ' + (ARTEN[f.arten[nr]] || f.arten[nr]));
+      arten.appendChild(marke);
+    }
+    if (arten.childNodes.length) zeile('Einordnung', arten);
+    if (f.raum) zeile('Raum', f.raum);
+    if (f.begruendung) zeile('Begründung', f.begruendung);
+    zeile('Dauer', String(f.dauer_s).replace('.', ',') + ' s');
+    const form = element('span', 'marke ' + (f.gueltig ? 'gut' : 'schlecht'),
+      f.gueltig ? 'Form in Ordnung' : 'Form fehlerhaft: ' + (f.fehler || []).join(', '));
+    zeile('Prüfung hier', form);
+  }
+  antwort.appendChild(liste);
+  antwort.appendChild(element('div', 'dazu leer',
+    'Ob gefahren wird, entscheidet der Roboter: Er prüft die Antwort und misst die Wahl nach.'));
+  if (f.antworttext) {
+    const mehr = element('details');
+    mehr.appendChild(element('summary', '', 'Antwort im Wortlaut'));
+    mehr.appendChild(element('pre', '', f.antworttext));
+    antwort.appendChild(mehr);
+  }
+  raster.appendChild(antwort);
+  tafel.appendChild(raster);
+}
+
+function zeigeVerlauf(z) {
+  const tafel = $('verlauf');
+  if (!z.verlauf.length) { if (!tafel.querySelector('.leer')) tafel.innerHTML = '<div class="leer">Noch keine Frage.</div>'; return; }
+  const tabelle = element('table');
+  const kopf = element('tr');
+  for (const [name, klasse] of [['Zeit', ''], ['Bilder', 'zahl'], ['Dauer', 'zahl'], ['Ergebnis', ''], ['Wahl', ''], ['Raum', '']])
+    kopf.appendChild(element('th', klasse, name));
+  tabelle.appendChild(kopf);
+  for (const e of z.verlauf) {
+    const reihe = element('tr');
+    reihe.appendChild(element('td', '', uhr(e.zeit_unix)));
+    reihe.appendChild(element('td', 'zahl', e.bilder === undefined ? '–' : String(e.bilder)));
+    reihe.appendChild(element('td', 'zahl', e.dauer_s === undefined ? '–' : String(e.dauer_s).replace('.', ',') + ' s'));
+    let ergebnis = ERGEBNIS[e.ergebnis] || e.ergebnis;
+    if (e.ergebnis === 'antwort' && e.gueltig === false) ergebnis = 'Antwort, Form fehlerhaft';
+    if (e.grund) ergebnis += ' (' + e.grund + ')';
+    reihe.appendChild(element('td', '', ergebnis));
+    reihe.appendChild(element('td', '', e.ergebnis !== 'antwort' ? '–' : (e.wahl === null || e.wahl === undefined ? 'keine' : 'Nr. ' + e.wahl)));
+    reihe.appendChild(element('td', '', e.raum || '–'));
+    tabelle.appendChild(reihe);
+  }
+  tafel.textContent = '';
+  tafel.appendChild(tabelle);
+}
+
+function zeigeLog(z) {
+  const log = $('log');
+  // ROS schreibt die Zeit als Sekundenzahl; lesbar ist die Uhrzeit.
+  const neu = z.log.map((zeile) => zeile.replace(/\[(\d{9,10})\.\d+\]/, (_, s) => '[' + uhr(Number(s)) + ']')).join('\n');
+  if (log.textContent === neu) return;
+  const unten = log.scrollHeight - log.scrollTop - log.clientHeight < 30;
+  log.textContent = neu;
+  if (unten) log.scrollTop = log.scrollHeight;
+}
+
+async function hole() {
+  if (beendet) return;
+  try {
+    const antwort = await fetch('/api/zustand', {cache: 'no-store'});
+    const z = await antwort.json();
+    zeigeKacheln(z); zeigeLetzte(z); zeigeVerlauf(z); zeigeLog(z);
+  } catch (fehler) {
+    const lage = $('lage');
+    lage.className = 'lage schlecht';
+    text(lage, 'Programm antwortet nicht');
+  }
+}
+
+$('k-start').onclick = () => sende('/api/dienst/start');
+$('k-stopp').onclick = () => sende('/api/dienst/stopp');
+$('k-ende').onclick = async () => {
+  if (!confirm('Lotsen-Dienst anhalten und das Programm beenden?')) return;
+  beendet = true;
+  try { await fetch('/api/beenden', {method: 'POST', headers: {'X-Lotse-Fenster': '1'}}); } catch (fehler) { /* schon weg */ }
+  const lage = $('lage');
+  lage.className = 'lage';
+  text(lage, 'Programm beendet – dieses Fenster kann geschlossen werden');
+};
+$('gross').onclick = () => { $('gross').style.display = 'none'; };
+hole();
+setInterval(hole, 1000);
+</script>
+</body>
+</html>
