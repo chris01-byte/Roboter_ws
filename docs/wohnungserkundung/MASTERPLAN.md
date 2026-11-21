@@ -457,5 +457,11 @@ Themen `/ki_erkundung/…`; Fahrbefehle gibt es dort nicht.
   doppelt.
 - Die KI-Linie darf bestehende Funktionen lesend wiederverwenden. Umgekehrt
   hängt die Hauptlinie von nichts in `ki_erkundung/` ab.
+- **Erste Anschlussstelle (21.11.2026, vom Projektinhaber freigegeben):**
+  Startargument `initial_scan_only` des Erkunders, Vorgabe `false`. Mit
+  `true` dreht Amadeus einmal abschnittsweise um 360° und bleibt stehen, ohne
+  ein Ziel anzufahren; ohne das Argument ist alles wie zuvor. Sie dient der
+  Blickrunde von KI-1. Weitere Anschlussstellen brauchen je eine eigene
+  Freigabe.
 - **Rückfall der ganzen Linie:** `ki_erkundung/` und die Verweise darauf
   entfernen. Sonst ändert sich nichts.

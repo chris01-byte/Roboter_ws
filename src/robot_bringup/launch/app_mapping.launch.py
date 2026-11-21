@@ -80,6 +80,10 @@ def generate_launch_description():
             'explore_params_overlay', default_value=default_explore_params,
             description='Optionales begrenzendes Explorer-Profil.'),
         DeclareLaunchArgument(
+            'initial_scan_only', default_value='false',
+            description='true = der Explorer macht nur den Rundblick und '
+                        'bleibt stehen (nav_mapping.launch.py); Vorgabe aus.'),
+        DeclareLaunchArgument(
             'self_healing', default_value='false',
             description='true = selbstheilender Erkundungsbetrieb '
                         '(nav_mapping.launch.py self_healing); false = bisher.'),
@@ -108,6 +112,7 @@ def generate_launch_description():
                 'crop': crop,
                 'explore_params_overlay': explore_params_overlay,
                 'self_healing': self_healing,
+                'initial_scan_only': LaunchConfiguration('initial_scan_only'),
             }.items()),
 
         # Beide Manager sind reine Beobachter/Persistenzschichten. Sie senden

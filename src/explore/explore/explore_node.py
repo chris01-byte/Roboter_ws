@@ -706,6 +706,13 @@ class ExploreNode(MetricFrontierRuntime, SelfHealingRuntime, Node):
             'scan_command_topic', '/cmd_vel_explore_scan_raw').value
         self._initial_scan_enabled = bool(self.declare_parameter(
             'initial_scan_enabled', True).value)
+        # Nur Rundblick: Der Auftrag besteht aus dem kontrollierten Rundblick
+        # und endet danach erfolgreich, ohne ein Ziel anzufahren; unabhängig
+        # von der Erkundungsstrategie (Anschlussstelle für die getrennte
+        # Linie ki_erkundung, Freigabe des Projektinhabers vom 21.11.2026).
+        # Vorgabe aus; ausgeschaltet ändert sich nichts.
+        self._initial_scan_only = bool(self.declare_parameter(
+            'initial_scan_only', False).value)
         self._initial_scan_angle = float(self.declare_parameter(
             'initial_scan_angle_rad', 2.0 * math.pi).value)
         self._initial_scan_speed = float(self.declare_parameter(
@@ -7144,6 +7151,108 @@ class ExploreNode(MetricFrontierRuntime, SelfHealingRuntime, Node):
             return terminate(cause, reason)
         return terminate(TerminationCause.SYSTEM_FAILURE, 'ros_shutdown')
 
+    def _initial_scan_only_conflict(self, return_to_start) -> Optional[str]:
+        """Grund, aus dem „nur Rundblick“ nicht laufen darf; None = zulässig.
+
+        Der Modus tut nichts außer Drehen auf der Stelle. Eine Einstellung,
+        die eine Fahrt verlangt, sperrt ihn, statt still übergangen zu werden.
+        """
+        if not self._initial_scan_enabled:
+            return 'initial_scan_disabled'
+        if return_to_start:
+            return 'unsupported_return_request'
+        if self._door_distance > 0.0:
+            return 'door_traverse_configured'
+        return None
+
+    def _execute_initial_scan_only(self, goal_handle, overall_timeout):
+        """Nur Rundblick: auf Karte und Pose warten, einmal drehen, stehen bleiben.
+
+        Eigener kurzer Ablauf vor jeder Erkundungsstrategie: Er fragt keine
+        Frontiers ab, sendet kein Nav2-Ziel und kehrt nicht zurück. Gedreht
+        wird mit dem vorhandenen, abschnittsweisen Rundblick
+        (``_scan_in_place``); jeder Abschnitt endet mit bestätigtem Stillstand.
+        """
+        result = ExploreArea.Result()
+        t_start = time.monotonic()
+        self._status_phase = 'waiting_for_map'
+        self._status_message = 'Nur Rundblick; warte auf SLAM-Karte und Pose.'
+        self._publish_status('running')
+
+        def overall_expired():
+            return (
+                overall_timeout > 0.0
+                and time.monotonic() - t_start >= overall_timeout)
+
+        while True:
+            if not rclpy.ok():
+                goal_handle.abort()
+                result.message = 'Nur Rundblick: ROS beendet; nichts bewegt'
+                return self._finish_result(result, 0)
+            if goal_handle.is_cancel_requested:
+                goal_handle.canceled()
+                result.message = 'Nur Rundblick abgebrochen; nichts bewegt'
+                return self._finish_result(result, 0)
+            waited_too_long = (
+                overall_expired()
+                or time.monotonic() - t_start > self._map_timeout_s)
+            # Wie beim Rundblick des Standardwegs genügt eine bereits
+            # empfangene Karte: slam_toolbox sendet im Stillstand nicht neu.
+            if self._map is None:
+                if waited_too_long:
+                    goal_handle.abort()
+                    result.message = 'Nur Rundblick: SLAM-Karte fehlt; nichts bewegt'
+                    return self._finish_result(result, 0)
+                time.sleep(0.1)
+                continue
+            if self._map.header.frame_id not in ('', self._global_frame):
+                goal_handle.abort()
+                result.message = (
+                    f'Nur Rundblick: Kartenframe {self._map.header.frame_id!r} '
+                    f'passt nicht zu {self._global_frame!r}; nichts bewegt')
+                return self._finish_result(result, 0)
+            if self._robot_pose() is None:
+                if waited_too_long:
+                    goal_handle.abort()
+                    result.message = (
+                        'Nur Rundblick: Roboterpose im Kartenframe fehlt; '
+                        'nichts bewegt')
+                    return self._finish_result(result, 0)
+                time.sleep(0.1)
+                continue
+            break
+
+        self._status_phase = 'initial_scan'
+        self._status_message = 'Nur Rundblick: kontrollierter 360-Grad-Rundblick läuft.'
+        self._publish_status('running')
+        self.get_logger().info(
+            'Nur Rundblick: kontrollierter 360-Grad-Rundblick, danach Ende '
+            'ohne Ziel.')
+        scan_status, achieved = self._scan_in_place(
+            stop_requested=lambda: (
+                goal_handle.is_cancel_requested
+                or overall_expired()
+                or self._map is None))
+        if scan_status != 'success':
+            if goal_handle.is_cancel_requested:
+                goal_handle.canceled()
+                result.message = (
+                    'Nur Rundblick abgebrochen nach '
+                    f'{math.degrees(achieved):.1f} Grad')
+            else:
+                goal_handle.abort()
+                result.message = (
+                    f'Nur Rundblick fehlgeschlagen: {scan_status}; '
+                    f'erreicht {math.degrees(achieved):.1f} Grad')
+            return self._finish_result(result, 0)
+        result.success = True
+        result.message = (
+            'Nur Rundblick abgeschlossen: '
+            f'{math.degrees(achieved):.1f} Grad gedreht; kein Ziel angefahren')
+        goal_handle.succeed()
+        self.get_logger().info(result.message)
+        return self._finish_result(result, 0)
+
     def _execute_reserved(self, goal_handle):
         req = goal_handle.request
         overall_timeout = (
@@ -7152,6 +7261,18 @@ class ExploreNode(MetricFrontierRuntime, SelfHealingRuntime, Node):
             req.min_frontier_size_m
             if req.min_frontier_size_m > 0 else self._min_frontier_m)
         return_to_start = req.return_to_start or self._return_to_start_p
+
+        if getattr(self, '_initial_scan_only', False):
+            conflict = self._initial_scan_only_conflict(return_to_start)
+            if conflict is not None:
+                result = ExploreArea.Result()
+                result.success = False
+                result.message = f'initial_scan_only:{conflict}'
+                self.get_logger().error(
+                    f'Nur Rundblick abgelehnt: {conflict}; nichts bewegt.')
+                goal_handle.abort()
+                return result
+            return self._execute_initial_scan_only(goal_handle, overall_timeout)
 
         if getattr(self, '_self_healing_enabled', False):
             if return_to_start:

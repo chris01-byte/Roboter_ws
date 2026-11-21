@@ -27,6 +27,20 @@ Verhaltensänderung.**
 „KI-Erkundung“ (MASTERPLAN §10, Stand nur in
 [ki_erkundung/STATUS.md](../../ki_erkundung/STATUS.md)); an dieser
 Hauptlinie und an SH-9 ändert sie nichts.
+**21.11.2026 – Anschlussstelle „nur Rundblick“ (Freigabe des
+Projektinhabers):** Der Erkunder hat ein neues Startargument
+`initial_scan_only` (Vorgabe `false`). Mit `true` besteht ein Erkundungsauftrag
+nur aus dem vorhandenen abschnittsweisen Rundblick (einmal 360° auf der
+Stelle) und endet danach, ohne ein Ziel anzufahren; das gilt vor jeder
+Erkundungsstrategie. Zweck ist die Blickrunde der KI-Linie (KI-1). Ohne das
+Argument ist das Verhalten unverändert: Am Standardweg, am
+Selbstheilungsweg und an den Profilen wurde keine Zeile geändert. Die
+Hauptlinie bleibt geparkt; das ist kein Auftrag der Hauptlinie. Geprüft in
+der Entwicklungsumgebung: 2285 Tests des Erkunders, 267 in der gezielten
+Liste (249 wie am 19.11. und 18 neue), ein Lauf des ganzen Stacks in der
+Simulation (361,7° in 77 s, kein Nav2-Ziel, Mission erfolgreich). Am Roboter
+nicht gelaufen. Rückfall: das Argument weglassen; im Code den Commit
+zurücknehmen.
 Wo wir stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.

@@ -41,6 +41,10 @@ def generate_launch_description():
             'explore_params_overlay', default_value=params,
             description='Optionales zweites Parameterprofil; Standard '
                         'wiederholt die normalen Explorer-Parameter.'),
+        DeclareLaunchArgument(
+            'initial_scan_only', default_value='false',
+            description='true = nur Rundblick: einmal auf der Stelle drehen '
+                        'und stehen bleiben, kein Ziel. Gilt vor jedem Profil.'),
         Node(
             package='explore',
             executable='explore',
@@ -55,6 +59,8 @@ def generate_launch_description():
                         LaunchConfiguration('hwt601_active_drive'), value_type=bool),
                     'hwt_development_contract': ParameterValue(
                         LaunchConfiguration('hwt_development_contract'), value_type=bool),
+                    'initial_scan_only': ParameterValue(
+                        LaunchConfiguration('initial_scan_only'), value_type=bool),
                 }],
         )
     ])

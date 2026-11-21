@@ -44,6 +44,7 @@ def generate_launch_description():
     normalize_scan = LaunchConfiguration('normalize_scan')
     crop = LaunchConfiguration('crop')
     explore_params_overlay = LaunchConfiguration('explore_params_overlay')
+    initial_scan_only = LaunchConfiguration('initial_scan_only')
     self_healing = LaunchConfiguration('self_healing')
     # Selbstheilender Betrieb (KONZEPT_SELBSTHEILUNG.md, 15.10.2026): nur mit
     # self_healing:=true. Overlay nach nav2_params_real.yaml; ohne Profil wird
@@ -219,6 +220,11 @@ def generate_launch_description():
             'explore_params_overlay', default_value=default_explore_params,
             description='Optionales begrenzendes Explorer-Profil.'),
         DeclareLaunchArgument(
+            'initial_scan_only', default_value='false',
+            description='true = der Explorer macht nur den Rundblick (einmal '
+                        'auf der Stelle drehen) und bleibt stehen; kein Ziel. '
+                        'Anschlussstelle fuer ki_erkundung, Vorgabe aus.'),
+        DeclareLaunchArgument(
             'self_healing', default_value='false',
             description='true = selbstheilender Erkundungsbetrieb: Explorer-'
                         'Profil self_healing, Planung durch Unbekanntes, '
@@ -284,6 +290,7 @@ def generate_launch_description():
                 'require_hwt601_fusion': use_hwt601_odometry,
                 'hwt601_active_drive': active_drive,
                 'hwt_development_contract': hwt_development_contract,
+                'initial_scan_only': initial_scan_only,
             }.items()),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(_launch_file(

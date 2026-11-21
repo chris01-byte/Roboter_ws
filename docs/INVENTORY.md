@@ -48,6 +48,13 @@ LiDAR): Aufnahme, Verbindung zum KI-Rechner und Antwortprüfung arbeiten;
 die Vermessung der Öffnungen ist nachgebessert und an echten Aufnahmen noch
 nicht bestätigt.
 
+**Softwaredelta 21.11.2026 / Erkunder:** neues Startargument
+`initial_scan_only` (`app_mapping.launch.py`, `nav_mapping.launch.py`,
+`explore.launch.py`; Vorgabe `false`). Mit `true` macht der Erkunder nur den
+Rundblick (360° auf der Stelle) und endet ohne Ziel. Anschlussstelle für
+die KI-Linie, vom Projektinhaber freigegeben; ohne das Argument unverändert.
+Am Roboter noch nicht gelaufen.
+
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 
