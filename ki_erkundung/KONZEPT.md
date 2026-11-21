@@ -1,8 +1,9 @@
 # Konzept „KI-Erkundung“ – eine KI übernimmt Ziel- und Suchwahl
 
-**Version 1.4 · 21.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
-nachgeführt nach drei Durchgängen an echten Aufnahmen und der Freigabe des
-Schalters „nur Rundblick“**
+**Version 1.5 · 21.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
+nachgeführt nach drei Durchgängen an echten Aufnahmen, der Freigabe des
+Schalters „nur Rundblick“ und der Festlegung „die KI bekommt Zeit, kein
+stiller Rückfall“**
 
 Dieses Dokument ist die verbindliche Beschreibung der zweiten
 Entwicklungslinie. Verankert in MASTERPLAN §10. Den aktuellen Stand führt nur
@@ -86,7 +87,7 @@ erfasst gelten; ohne Fortschritt wird dort nicht weitergesucht.
 | **Lotse** (die KI) | KI-Rechner | sehen, einordnen, wählen, begründen | Fahrbefehle senden; Sicherheitsgrenzen ändern; Daten nach außen geben |
 | **Vermessung** | Roboter | Vorschläge mit echten Maßen liefern (LiDAR, Karte); die Wahl der KI nachmessen | eine Wahl ausführen, die nicht angeboten war oder nicht befahrbar ist |
 | **Navigation und Schutzkette** | Roboter | fahren, Abstand halten, bremsen, stoppen | von der KI umgangen oder abgeschwächt werden |
-| **Regel-Rückfall** | Roboter | entscheiden, wenn die KI fehlt, zu langsam ist oder Unbrauchbares antwortet | – |
+| **Regel-Rückfall** | Roboter | entscheiden, wenn die KI fehlt oder Unbrauchbares antwortet; **nur, wenn er ausdrücklich eingeschaltet ist** (Vorgabe aus) | still übernehmen: Jede Entscheidung nennt sichtbar, wer sie getroffen hat |
 
 Feste Grenzen (MUSS):
 
@@ -103,8 +104,10 @@ Feste Grenzen (MUSS):
   Ersatz.
 - **Kein zweiter Navigator, kein zweiter Supervisor** (MASTERPLAN §4). Es
   fährt weiter genau ein Besitzer der Navigation.
-- **Ohne KI bleibt Amadeus fahrfähig.** Raumsemantik ist Zusatznutzen, keine
-  versteckte Pflicht.
+- **Ohne KI bleibt Amadeus fahrfähig**, aber nie unbemerkt: Die bisherige
+  Erkundung bleibt erhalten und umschaltbar; sie übernimmt nur, wenn sie
+  ausdrücklich eingeschaltet ist, und das ist dann sichtbar (Abschnitt 6).
+  Raumsemantik ist Zusatznutzen, keine versteckte Pflicht.
 - **Bilder bleiben im Haus** (README, Regel 6).
 
 ## 4. Ablauf im Betrieb (Zielzustand ab Stufe KI-3)
@@ -114,8 +117,9 @@ Feste Grenzen (MUSS):
                                                               │
         ┌─────────────────────────────────────────────────────┘
         ▼
-   Antwort prüfen ──unbrauchbar/zu spät──► Regel-Rückfall entscheidet
-        │ gültig
+   Antwort prüfen ──unbrauchbar/keine──► noch einmal fragen; bleibt es
+        │ gültig                         dabei: stehen bleiben und melden
+        │                                (Regel-Rückfall nur, wenn eingeschaltet)
         ▼
    Wahl nachmessen (Breite, Erreichbarkeit, Fahrbereich)
         │ in Ordnung                       │ nicht befahrbar
@@ -251,6 +255,24 @@ Danach misst die Vermessung die gültige Wahl nach: Öffnung breit genug
 (Vorgabe 0,60 m bei 0,46 m Gehäusebreite), erreichbar, im freigegebenen
 Fahrbereich. Erst dann wird gefahren.
 
+**Die KI bekommt Zeit; es gibt keinen stillen Rückfall** (Festlegung des
+Projektinhabers, 21.11.2026). Amadeus steht, während die KI überlegt; Warten
+kostet nichts und ist ungefährlich. Deshalb gilt:
+
+- Die Zeitgrenze je Frage ist großzügig. Sie wird aus der Messung abgeleitet
+  (KI-1 misst die Antwortzeit für neun Bilder) und liegt deutlich darüber;
+  bis dahin gelten 120 s. Das Kriterium K0-4 (Median 20 s, längste 45 s)
+  bewertet die KI und ist nicht die Grenze, nach der Amadeus aufgibt.
+- Kommt keine oder keine brauchbare Antwort, wird dieselbe Frage bis zu
+  zweimal erneut gestellt.
+- Bleibt es dabei, **bleibt Amadeus stehen und meldet das** („die KI hat
+  nicht geantwortet“ mit dem Grund). Er fährt dann nicht nach der alten
+  Regel weiter.
+- Der Regel-Rückfall ist ein eigener Schalter, Vorgabe aus. Ist er
+  eingeschaltet, steht bei jeder Entscheidung dabei, wer sie getroffen hat
+  (KI, Regel oder niemand): in der Statusmeldung, im Lotsen-Fenster und im
+  Bericht. So kann eine Fahrt nie wie eine KI-Fahrt aussehen, die keine war.
+
 ## 7. Der KI-Rechner und die Verbindung
 
 **Vorhanden** (im Repository auf `main`, abgenommen am 25.08.2026): ein
@@ -280,7 +302,9 @@ getestet, `werkzeuge/lotse_dienst.py` und `werkzeuge/ki_verbindung_ros.py`):
   `/ki_erkundung/antwort_json`, `/ki_erkundung/lotse_status_json`. Keine
   Fahrbefehle, keine Dienste, keine Aktionen.
 - Kommt keine Antwort (KI-Rechner aus, WLAN weg, Zeitgrenze), ist das ein
-  gewöhnliches Ergebnis; dann entscheidet die Regel.
+  gewöhnliches Ergebnis: Amadeus fragt erneut, bleibt sonst stehen und
+  meldet es (Abschnitt 6). Die Regel entscheidet nur, wenn der Rückfall
+  eingeschaltet ist.
 
 **Modell.** Der Lotse braucht ein Modell, das Bilder versteht; das
 vorhandene `qwen2.5` ist ein reines Textmodell. Kandidaten, geprüft am
@@ -388,7 +412,8 @@ Blocker dieser Linie; dann wird nichts in Richtung Fahren gebaut.
 
 Im vorhandenen Simulationsaufbau wählt eine gespielte KI: richtig, falsch,
 langsam, stumm, Unsinn. Kriterien: keine zusätzlichen Berührungen gegenüber
-dem Vergleichslauf; der Regel-Rückfall übernimmt innerhalb der Zeitgrenze;
+dem Vergleichslauf; bei stummer oder unbrauchbarer KI bleibt Amadeus stehen
+und meldet es, mit eingeschaltetem Rückfall übernimmt die Regel sichtbar;
 dasselbe gescheiterte Ziel wird nicht beliebig oft wiederholt; die Fahrt
 endet ordentlich. Die Simulation hat keine Kamera; sie prüft die Kopplung,
 nicht das Sehen.
@@ -525,6 +550,14 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   Stufen KI-2 bis KI-5 bleiben, wie sie in §8 stehen; wie der Fahrteil
   (KI-2, KI-3) im Einzelnen geschnitten wird, wird mit dem Projektinhaber
   besprochen, bevor dort etwas gebaut wird.
+- 21.11.2026, v1.5 (Festlegung des Projektinhabers): **Die KI bekommt Zeit,
+  kein stiller Rückfall.** Großzügige Zeitgrenze, erneutes Fragen, sonst
+  stehen bleiben und melden; der Regel-Rückfall ist ein eigener Schalter
+  (Vorgabe aus) und immer sichtbar (§3, §4, §6, §7, KI-2). Grund: Eine Fahrt
+  darf nicht wie eine KI-Fahrt aussehen, wenn in Wahrheit die alte Regel
+  entschieden hat. Der Fahrteil soll aus vorhandenem, real bewährtem Code
+  entstehen; Bestand und Vorschlag stehen im STATUS, entschieden ist dazu
+  noch nichts.
 - 21.11.2026, Nachtrag (Wunsch des Projektinhabers): Auf dem KI-Rechner
   gibt es ein Programm für den Bildschirm, das Lotsen-Fenster. Es startet
   den Lotsen-Dienst und zeigt seinen Zustand, die letzten Fragen mit Bildern

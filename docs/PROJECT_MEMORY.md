@@ -1954,6 +1954,35 @@ Hauptlinie (Projektinhaber: „Ja baue den Schalter“):**
   beaufsichtigten Test im Labor trägt das die Schutzkette und die Aufsicht;
   vor einem Einsatz ohne Aufsicht gehört die Prüfung dazu.
 
+**Nachtrag 21.11.2026 (nachts) – zwei Festlegungen des Projektinhabers zur
+KI-Linie, und der Bestand der Türdurchfahrten:**
+- **Die KI bekommt Zeit; kein stiller Rückfall.** Amadeus steht, während die
+  KI überlegt. Ohne brauchbare Antwort fragt er erneut und bleibt sonst
+  stehen und meldet es. Der Regel-Rückfall ist ein eigener Schalter (Vorgabe
+  aus), und jede Entscheidung nennt, wer sie getroffen hat. Grund des
+  Projektinhabers: Eine Fahrt darf nicht wie eine KI-Fahrt aussehen, wenn in
+  Wahrheit der alte Explorer entschieden hat (`ki_erkundung/KONZEPT.md`
+  v1.5).
+- **Der Fahrteil soll aus Code entstehen, der schon real funktioniert hat.**
+  Bestand (nur gelesen): Durchfahrten gelangen am 18.08., am 11.09. (einzelne
+  Tür und Arbeitszimmer → Flur, Branch `codex/hwt601-encoder-shadow`,
+  `1d91229`) und am 08.11. (SH-7, zwei von drei). Alle fuhren über Nav2. Der
+  Türablauf vom 11.09. steht zeilengleich im heutigen Erkunder; die gerade,
+  vom Laser gemessene Etappe (0,50 m real bestanden am 11.09.) ebenfalls bis
+  auf vier Zeilen. Die fünf begrenzten Testprofile und Startskripte dieses
+  Branches fehlen im heutigen Stand.
+- **Lehre, zum zweiten Mal:** Abnahmen liegen auch auf Feature-Branches. Die
+  Stufenleiter vom 10./11.09. (Rundblick, gerade Etappe, Raum, Tür, zwei
+  Räume, je mit eigenem begrenztem Profil) war bei der Planung der KI-Linie
+  nicht bekannt; „nur Rundblick“ wurde am 21.11. neu gebaut, obwohl es dort
+  als `scan_only` schon real gelaufen war. Vor einem neuen Baustein zuerst
+  die Branches nach einem bestandenen Vorläufer durchsuchen.
+- **Vorschlag, nicht entschieden:** Fahrteil ohne Nav2 aus den einzeln
+  bestandenen Bausteinen (ausrichten, gerade Etappen, neu vermessen), weil
+  das Fahren über Nav2 am 19.11. kein Ziel erreichte und die Ursache nicht
+  eingegrenzt ist. Braucht eine zweite Anschlussstelle im Erkunder und die
+  Freigabe des Projektinhabers.
+
 **Nachtrag 21.11.2026 – Lotsen-Fenster statt unsichtbarem Dienst
 (Projektinhaber):** Der Lotsen-Dienst lief auf dem KI-Rechner als
 Hintergrundprozess; der Projektinhaber sah dort nichts und wollte ein

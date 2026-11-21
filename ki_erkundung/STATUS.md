@@ -26,7 +26,7 @@ fährt mit seiner Schutzkette.
 |---|---|---|---|
 | Erstes Sehen | im Stand Bild und Laser aufnehmen, die KI fragen, die Antwort prüfen | KI-0 | **erledigt** (21.11.) |
 | Blickrunde | sich selbst einmal herumdrehen; aus acht Bildern nennt die KI den Ausgang | KI-1 | **als Nächstes**; Schalter gebaut, Auftrag geschrieben |
-| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | offen; die Fahrweise wird vorher mit dem Projektinhaber besprochen. Vorbild sind die Türdurchfahrten vom 11.09. und 08.11. |
+| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | offen; Bestand und Vorschlag unten („Fahrteil“), die Entscheidung des Projektinhabers steht aus |
 | Raum für Raum | weiter, bis kein Ausgang mehr offen ist (Laborraum, Flur, Schlafzimmer) | KI-3 | offen |
 | Räume benennen, um Hilfe rufen | Raumnamen als Vorschlag in der App; Hilferuf mit Grund und Bild | KI-4 | offen |
 | Auf Zuruf | „fahr in die Küche“, „such die Tasse“ | KI-5 | offen |
@@ -45,7 +45,8 @@ Frage an die KI mit acht Fotos und der Skizze.
 
 **Danach, je nach Ergebnis:**
 - Blickrunde brauchbar: dieselbe Drehung im Flur (braucht die Freigabe für
-  diesen Raum), dann der Fahrteil.
+  diesen Raum), dann der Fahrteil (Vorschlag unten, Entscheidung des
+  Projektinhabers steht aus).
 - Vermessung der Öffnungen nach der Drehung unbrauchbar: gezielt
   nachbessern. Die Blickrunde wird über ein Raster ausgewertet, das im Stand
   schon Schwächen zeigte.
@@ -68,7 +69,7 @@ Vermessung weiter Türen verfehlt.
 nicht, ob der Drehkreis in der Karte frei ist (der Rundblick des
 Selbstheilungswegs tut das).
 
-**Geparkt:** Anschluss der KI-Wahl an die vorhandene Erkundung; Raumnamen in
+**Geparkt:** Raumnamen in
 der App; Gegenstände finden; größere Kamerabilder für die KI (geliefert
 werden 320 × 180).
 
@@ -77,6 +78,88 @@ HomeMy-Konzept ausgewertet · Verbindung zum KI-Rechner · KI-0 Teil A
 (19.11.) und Teil B, KI-0N, KI-0R (alle 21.11.) · Lotsen-Fenster gebaut und
 auf dem KI-Rechner in Gebrauch · Sucher · Schalter „nur Rundblick“ im
 Erkunder (21.11., `6956252`).
+
+## Zwei Festlegungen des Projektinhabers (21.11.2026, nachts)
+
+1. **Die KI bekommt Zeit, und es gibt keinen stillen Rückfall.** Amadeus
+   steht, während die KI überlegt. Antwortet sie nicht, fragt er erneut und
+   bleibt sonst stehen und meldet es; er fährt nicht unbemerkt nach der
+   alten Regel weiter. Steht im [Konzept](KONZEPT.md) v1.5, Abschnitt 6.
+   Für KI-1 heißt das: Der alte Explorer fährt dort gar nicht mit (der
+   Schalter lässt nur die Drehung zu), und die KI hat 120 s für ihre
+   Antwort.
+2. **Der Fahrteil soll aus Code entstehen, der schon real funktioniert
+   hat.** Dazu der Bestand und ein Vorschlag im nächsten Abschnitt.
+
+## Fahrteil: was es schon gibt (Bestand vom 21.11.2026)
+
+Durchsucht: die Historie dieses Branches, der Branch
+`codex/hwt601-encoder-shadow` und die Dokumente. Nichts gefahren, nichts
+geändert.
+
+**Türdurchfahrten, die real gelungen sind:**
+
+| Wann | Was | Wie gefahren | Wo der Stand liegt |
+|---|---|---|---|
+| 18.08.2026 | erster Raumwechsel, vom Beobachter bestätigt (68-cm-Tür mit Schwelle), ein Lauf | Ziel 1,05 m hinter der Tür über Nav2 | `bf25594`, in der Historie dieses Branches |
+| 11.09.2026 | einzelne Türdurchfahrt: im vierten Lauf stand das ganze Chassis im Nachbarraum (vom Nutzer bestätigt; die Software wertete den Wechsel in diesem Lauf noch nicht als Erfolg) | Rundblick, Türhals in der Karte erkennen, Vorpunkt vor der Tür über Nav2, ausrichten, Auslaufpunkt hinter der Tür über Nav2 | Branch `codex/hwt601-encoder-shadow`, `1d91229` |
+| 11.09.2026 | Arbeitszimmer → Flur: im dritten Lauf bestanden (`portal_crossings=1/1`, vom Nutzer bestätigt), danach weiter im Flur | derselbe Ablauf | derselbe Stand |
+| 08.11.2026 | SH-7: zwei von drei Fahrten durch die 80-cm-Labortür, einmal auch zurück | gewöhnliche Erkundungsziele über Nav2 im Selbstheilungsbetrieb | Release `selbstheilung-sh7-20261108_1617`, unverändert auf dem Jetson (HEAD `4c25fb3`) |
+
+Am 26./27.09. scheiterten zwei Wiederholungen des Ablaufs vom 11.09. schon
+vor der Tür (VL53-Treiber, HWT-Status). Am 15.11. und 19.11. kam Amadeus
+nicht mehr durch die Tür; am 19.11. erreichte er kein einziges Ziel
+(Hauptlinie, SH-9). **Alle gelungenen Durchfahrten fuhren über Nav2; genau
+dieses Fahren über Nav2 trägt auf dem heutigen Stand nicht, und die Ursache
+ist nicht eingegrenzt.**
+
+**Einzelne Bausteine, die am 10./11.09. real bestanden haben** (derselbe
+Branch, je eigener begrenzter Test):
+
+| Baustein | Ergebnis real | Fährt über |
+|---|---|---|
+| Rundblick 360° in acht Abschnitten | 10.09. und 11.09. bestanden (360,7° bis 361,7°) | Drehkanal des Erkunders |
+| Auf einen Punkt ausrichten | Teil der Türläufe vom 11.09. | Drehkanal |
+| **Eine gerade Etappe von 0,50 m, vom Laser gemessen**, höchstens 0,05 m/s | 11.09. bestanden: 0,500 m, seitlich −15 mm, Richtung −2,5° | Direktkanal des Erkunders, ohne Nav2 |
+| Prüfung „Streifen in Fahrzeugbreite frei“ vor der Etappe | Teil derselben Läufe | – |
+
+**Was davon im heutigen Explorer steckt** (Vergleich Funktion für Funktion
+zwischen `1d91229` und heute):
+
+- Der Türablauf (`_portal_plans`, `_matching_portal_plan`,
+  `_execute_portal_plan`, `_navigate_connected_portal_exit`): **keine Zeile
+  geändert.** `portal_planning.py` drei Zeilen, `lidar_motion.py` gleich.
+- Die gerade Etappe (`_drive_forward_lidar`, 339 Zeilen): vier Zeilen
+  geändert. Ausrichten (`_prealign_to_goal`): zwei Zeilen. Drehen
+  (`_rotate_in_place`): zwölf Zeilen.
+- Das Fahrtor lässt vom Erkunder weiter genau diese zwei direkten Bewegungen
+  zu: Drehen bis 0,15 rad/s und Geradeaus bis 0,08 m/s mit kleiner
+  Lenkkorrektur.
+- **Nicht mehr im heutigen Stand:** die fünf Testprofile
+  (`hwt601_scan_only`, `_translation_only`, `_room_only`, `_door_only`,
+  `_office_hall`) und ihre Startskripte; sie liegen nur auf dem Branch.
+- Erreichbar ist das alles nur im alten Weg des Erkunders (ohne
+  `self_healing`). Im Stack vom 19.11. kommt der Erkunder dort nicht hin;
+  deshalb war schon „nur Rundblick“ ein eigener Schalter.
+
+**Vorschlag (wartet auf die Entscheidung des Projektinhabers):** Der
+Fahrteil entsteht aus den einzeln bestandenen Bausteinen ohne Nav2:
+ausrichten, gerade Etappe bis vor die Tür, auf die Türachse ausrichten,
+gerade Etappen durch die Tür bis etwa einen halben Meter dahinter, stehen
+bleiben, neue Blickrunde. Zwischen den Etappen wird die Öffnung neu
+vermessen. Gründe: Jeder Baustein hat real bestanden und ist praktisch
+unverändert; er meidet das Fahren über Nav2, das am 19.11. kein Ziel
+erreichte; das Fahrtor erlaubt genau diese Bewegungen schon. Grenze: Das
+geht nur, wenn der Weg zur Tür in geraden Stücken frei ist. Um Möbel herum
+braucht es später wieder Nav2; dafür liegt der Türablauf vom 11.09.
+unverändert bereit.
+
+Nötig wäre eine zweite Anschlussstelle im Erkunder nach dem Muster von
+`initial_scan_only` (eigener kurzer Ablauf, Vorgabe aus): eine Tür-Etappe,
+deren Ziel die KI-Linie liefert. Der Erkunder bleibt der einzige, der
+fährt. Reihenfolge der Tests, je eine Änderung: nach KI-1 zuerst eine
+einzelne gerade Etappe von 0,5 m im freien Raum (Wiederholung des Tests vom
+11.09. auf dem heutigen Stand), dann die Tür.
 
 ## KI-0R – Nachrechnen an den elf Aufnahmen (Jetson, 21.11.2026, abends)
 
@@ -259,6 +342,7 @@ KONZEPT §13.
 | 21.11.2026 | KI-0R | Jetson, elf gespeicherte Aufnahmen, KI-Rechner über WLAN | 205 Tests bestanden; zwei von fünf Erwartungen erfüllt; eine Verschlechterung gefunden und behoben (`b3a1acf`); keine falsche Wahl der KI; Einzelheiten im Archiv |
 | 21.11.2026 | Schalter „nur Rundblick“ | Entwicklungsumgebung, Simulation des ganzen Stacks | `6956252`; 2285 Tests des Erkunders, 267 gezielt; in der Simulation 361,7° in 77 s ohne Nav2-Ziel |
 | 21.11.2026 | Tests dieser Linie nach KI-0R | Entwicklungsumgebung | 196 bestanden, 2 übersprungen (ohne ROS); 206 bestanden (ROS 2 Jazzy, abgeschottet) |
+| 21.11.2026 | Bestand Türdurchfahrt | Historie, Branch `codex/hwt601-encoder-shadow`, Dokumente; Funktionsvergleich `1d91229` gegen heute | vier belegte Durchfahrten (18.08., 11.09. zweimal, 08.11.); Türablauf im heutigen Erkunder zeilengleich; gerade Etappe 0,50 m am 11.09. real bestanden |
 
 **Gemessen an der künstlichen Beispielwelt** (ausgedachtes Zimmer mit
 80-cm-Tür, 90-cm-Glastür zum Balkon, Schränken, Kiste; LiDAR-Rauschen 1 cm):
