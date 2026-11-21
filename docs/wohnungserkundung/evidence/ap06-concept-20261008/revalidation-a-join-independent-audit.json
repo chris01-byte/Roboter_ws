@@ -1,0 +1,218 @@
+{
+  "schema": 1,
+  "diagnostic_only": true,
+  "original_mission_qualified": false,
+  "trace_verified": true,
+  "uncompressed_bytes": 180245639,
+  "uncompressed_sha256": "80afe6e09401ddd4a3300527d6fbbf64bb17f446d0aff8c4cdc09050870dd0ce",
+  "result_sha256": "f1efeceecfc8dcac175d6088e8dc99df25ff509997e9d566c7158601f73da11a",
+  "script_sha256": "7a1d28013af5269bbee79a6f757fbc2ebcd05890a6eb23ae63662cdfc2285b7c",
+  "topics": {
+    "/base_hardware/state_json": 15144,
+    "/tf": 594,
+    "/fusion/hwt601/status_json": 1315,
+    "/mission_manager/status_json": 4021,
+    "/explore/status_json": 294,
+    "/explore_area/_action/status": 2,
+    "/plan": 13,
+    "/navigate_to_pose/_action/status": 6,
+    "/received_global_plan": 2125
+  },
+  "receipts": {
+    "departure_alignment": [
+      {
+        "task": "metric-task-1",
+        "attempt": 1,
+        "checked_at": 173590.335618164,
+        "status": "controller_owned",
+        "result": [
+          "controller_owned",
+          0.0,
+          0.0,
+          0.0
+        ],
+        "achieved_angle_rad": 0.0,
+        "initial_error_rad": 0.0,
+        "residual_error_rad": 0.0
+      },
+      {
+        "task": "metric-task-2",
+        "attempt": 3,
+        "checked_at": 173714.516090068,
+        "status": "controller_owned",
+        "result": [
+          "controller_owned",
+          0.0,
+          0.0,
+          0.0
+        ],
+        "achieved_angle_rad": 0.0,
+        "initial_error_rad": 0.0,
+        "residual_error_rad": 0.0
+      },
+      {
+        "task": "metric-task-2",
+        "attempt": 4,
+        "checked_at": 173796.715423616,
+        "status": "controller_owned",
+        "result": [
+          "controller_owned",
+          0.0,
+          0.0,
+          0.0
+        ],
+        "achieved_angle_rad": 0.0,
+        "initial_error_rad": 0.0,
+        "residual_error_rad": 0.0
+      }
+    ],
+    "map_join_rejection": [
+      {
+        "branch": "no_active_child",
+        "checked_at": 173617.937285044,
+        "pending_age_s": 0.0022023589990567416,
+        "active": true,
+        "active_child": false,
+        "private_permit": false,
+        "raw": {
+          "fingerprint": "0f5846236d1900f452883a20479ae704aa24db3147f36f326ec20d56d3e59757",
+          "source_stamp_ns": 1791443965874107659,
+          "frame_id": "map"
+        },
+        "status": {
+          "fingerprint": "a7e30afc16c8f485347e5190229164dc9d118a78f9ff2a29c6454a3db4990425",
+          "source_stamp_ns": 1791443964874512390,
+          "frame_id": "map"
+        },
+        "joined_raw": {
+          "fingerprint": "a7e30afc16c8f485347e5190229164dc9d118a78f9ff2a29c6454a3db4990425",
+          "source_stamp_ns": 1791443964874512390,
+          "frame_id": "map"
+        },
+        "joined_status": {
+          "fingerprint": "a7e30afc16c8f485347e5190229164dc9d118a78f9ff2a29c6454a3db4990425",
+          "source_stamp_ns": 1791443964874512390,
+          "frame_id": "map"
+        },
+        "context_matches_joined": true,
+        "egress": [
+          {
+            "kind": "ReferencedStartEgress",
+            "valid": true,
+            "projected_cells": 0,
+            "retained_cells": 0,
+            "retained_area_m2": 0.0
+          },
+          {
+            "kind": "ReferencedStartEgress",
+            "valid": true,
+            "projected_cells": 0,
+            "retained_cells": 0,
+            "retained_area_m2": 0.0
+          }
+        ]
+      }
+    ],
+    "map_join_stop": [],
+    "geometry_snapshot_rejection": [],
+    "geometry_snapshot_stop": []
+  },
+  "chain": [
+    {
+      "task": "metric-task-1",
+      "target": [
+        0.44999999999999996,
+        0.0
+      ],
+      "result": "success",
+      "decision": "observed",
+      "stop_reason": null,
+      "terminal_child": true,
+      "arrived": true,
+      "observed_cells": 81
+    },
+    {
+      "task": "metric-task-2",
+      "target": [
+        0.9220196423453524,
+        0.06544901834784919
+      ],
+      "result": "success",
+      "decision": "partially_observed",
+      "stop_reason": null,
+      "terminal_child": true,
+      "arrived": true,
+      "observed_cells": 19
+    },
+    {
+      "task": "metric-task-2",
+      "target": [
+        0.7771309486138513,
+        0.6675563611831433
+      ],
+      "result": "success",
+      "decision": "partially_observed",
+      "stop_reason": null,
+      "terminal_child": true,
+      "arrived": true,
+      "observed_cells": 6
+    },
+    {
+      "task": "metric-task-3",
+      "target": [
+        3.0524087624411465,
+        0.30443057381645905
+      ],
+      "result": "planning_failed",
+      "decision": "proposal_rejected",
+      "stop_reason": "route_invalidated",
+      "terminal_child": true,
+      "arrived": false,
+      "observed_cells": 0
+    }
+  ],
+  "recovery_followups": [],
+  "terminal": {
+    "state": "failed",
+    "reason": "frontier_candidate_processing_budget_exhausted",
+    "arrivals": 3,
+    "observations": 3,
+    "attempts": 5,
+    "failures": 0
+  },
+  "terminal_actions": {
+    "/explore_area/_action/status": [],
+    "/navigate_to_pose/_action/status": []
+  },
+  "terminal_commands": {
+    "/cmd_vel_nav": [
+      0.0,
+      0.0
+    ],
+    "/cmd_vel_smoothed": [
+      0.0,
+      0.0
+    ],
+    "/cmd_vel": [
+      0.0,
+      0.0
+    ],
+    "/cmd_vel_nav_raw": [
+      0.0,
+      0.0
+    ]
+  },
+  "checkpoint": {
+    "state": "saved",
+    "path": "/evidence/ap06-concept-20261008/revalidation-a/door68_start_a/checkpoints/amadeus/20261008T072325540920Z-305405243e93/state-00000001.json",
+    "map_id": "map-305405243e935abaedaabc7e8c245573ed49826e8e1bbdc98cebf56447311c66",
+    "version": "20261008T072325540920Z-305405243e93",
+    "outcome": "error"
+  },
+  "limits": [
+    "No hardware or original masked-sensor mission acceptance.",
+    "A later arrival proves one successful recovery, not whole-mission completion.",
+    "Elapsed processing includes scheduling/waiting; no exact CPU hot function is inferred.",
+    "The failures counter excludes these revalidation cancellations."
+  ]
+}

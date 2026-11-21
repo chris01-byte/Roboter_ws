@@ -1,0 +1,269 @@
+{
+ "zweck": "SL-1 SLAM-Prüfstand: dieselbe aufgezeichnete Simulationsfahrt nur in slam_toolbox, je Lauf ein Parameter geändert",
+ "qualifikation": "nur Software, Cloud, ROS 2 Jazzy, slam_toolbox 2.8.5; nur SLAM, keine Fahrt; keine Jetson-Abnahme",
+ "aufnahme": {
+  "lauf": "referenz_183617 (Manifest v4, Produktstand cc5eddc, bestanden, 375 s, 4,85 m, 72 verworfene Scans)",
+  "dauer_s": 401.8,
+  "scans": 3948,
+  "tf_nachrichten": 36590,
+  "auffaellig": "8 Schübe (<20 ms) und 5 Lücken (>0,25 s) im Scan-Empfang durch die volle Cloud-Last beim Aufzeichnen"
+ },
+ "werkzeug": "tools/simulation/slam_pruefstand.py",
+ "kriterien": "A1-A4 aus STATUS 02.11.2026 (nachts), vor der Messung festgelegt",
+ "hinweise": [
+  "Altersstatistik nur über die Abspielzeit; p0_a, p1, p2 liefen vor der Korrektur ohne Altersreihe (null)",
+  "p9_leerlauf: praktisch keine Knoten; seine 9 verworfenen Scans liegen auf denselben Sekunden wie bei p1/p2/p2b/p6/p7/p8 und sind damit Sockel der Aufnahme",
+  "slam_beendet_code -6: std::runtime_error beim Herunterfahren (Zeitschleife), nach dem Messende"
+ ],
+ "kandidat": {
+  "lauf": "p6_reise025_dreh035",
+  "minimum_travel_distance": 0.25,
+  "minimum_travel_heading": 0.35
+ },
+ "laeufe": [
+  {
+   "lauf": "p0_a_185039",
+   "experiment": null,
+   "cpu_prozent_kern_mittel_letzte_2min": 82.0,
+   "cpu_prozent_kern_max": 140.2,
+   "verworfene_scans": 60,
+   "ringschluss_ceres": 0,
+   "map_odom_alter": null,
+   "kartenfehler_m": 0.071,
+   "abdeckung_erreichbar": 0.97,
+   "slam_beendet_code": 0
+  },
+  {
+   "lauf": "p1_reise_010_185728",
+   "experiment": {
+    "slam_toolbox": {
+     "ros__parameters": {
+      "minimum_travel_distance": 0.1
+     }
+    }
+   },
+   "cpu_prozent_kern_mittel_letzte_2min": 23.1,
+   "cpu_prozent_kern_max": 29.0,
+   "verworfene_scans": 9,
+   "ringschluss_ceres": 0,
+   "map_odom_alter": null,
+   "kartenfehler_m": 0.064,
+   "abdeckung_erreichbar": 0.969,
+   "slam_beendet_code": 0
+  },
+  {
+   "lauf": "p2_reise_025_190416",
+   "experiment": {
+    "slam_toolbox": {
+     "ros__parameters": {
+      "minimum_travel_distance": 0.25
+     }
+    }
+   },
+   "cpu_prozent_kern_mittel_letzte_2min": 18.0,
+   "cpu_prozent_kern_max": 23.2,
+   "verworfene_scans": 10,
+   "ringschluss_ceres": 0,
+   "map_odom_alter": null,
+   "kartenfehler_m": 0.051,
+   "abdeckung_erreichbar": 0.971,
+   "slam_beendet_code": 0
+  },
+  {
+   "lauf": "p3_karte_5s_191104",
+   "experiment": {
+    "slam_toolbox": {
+     "ros__parameters": {
+      "map_update_interval": 5.0
+     }
+    }
+   },
+   "cpu_prozent_kern_mittel_letzte_2min": 36.7,
+   "cpu_prozent_kern_max": 87.0,
+   "verworfene_scans": 35,
+   "ringschluss_ceres": 0,
+   "map_odom_alter": {
+    "anteil_ueber_0_25_s": 0.0039,
+    "p99_s": 0.074,
+    "max_s": 0.872
+   },
+   "kartenfehler_m": 0.071,
+   "abdeckung_erreichbar": 0.97,
+   "slam_beendet_code": 0
+  },
+  {
+   "lauf": "p4_takt_05_191753",
+   "experiment": {
+    "slam_toolbox": {
+     "ros__parameters": {
+      "minimum_time_interval": 0.5
+     }
+    }
+   },
+   "cpu_prozent_kern_mittel_letzte_2min": 69.6,
+   "cpu_prozent_kern_max": 106.0,
+   "verworfene_scans": 54,
+   "ringschluss_ceres": 0,
+   "map_odom_alter": {
+    "anteil_ueber_0_25_s": 0.006,
+    "p99_s": 0.2,
+    "max_s": 0.853
+   },
+   "kartenfehler_m": 0.081,
+   "abdeckung_erreichbar": 0.971,
+   "slam_beendet_code": 0
+  },
+  {
+   "lauf": "p5_ohne_ringschluss_192441",
+   "experiment": {
+    "slam_toolbox": {
+     "ros__parameters": {
+      "do_loop_closing": false
+     }
+    }
+   },
+   "cpu_prozent_kern_mittel_letzte_2min": 62.9,
+   "cpu_prozent_kern_max": 67.1,
+   "verworfene_scans": 52,
+   "ringschluss_ceres": 0,
+   "map_odom_alter": {
+    "anteil_ueber_0_25_s": 0.0072,
+    "p99_s": 0.204,
+    "max_s": 0.855
+   },
+   "kartenfehler_m": 0.071,
+   "abdeckung_erreichbar": 0.971,
+   "slam_beendet_code": 0
+  },
+  {
+   "lauf": "p0_b_193129",
+   "experiment": null,
+   "cpu_prozent_kern_mittel_letzte_2min": 82.3,
+   "cpu_prozent_kern_max": 135.4,
+   "verworfene_scans": 65,
+   "ringschluss_ceres": 0,
+   "map_odom_alter": {
+    "anteil_ueber_0_25_s": 0.0168,
+    "p99_s": 0.31,
+    "max_s": 0.862
+   },
+   "kartenfehler_m": 0.071,
+   "abdeckung_erreichbar": 0.97,
+   "slam_beendet_code": 0
+  },
+  {
+   "lauf": "p2b_reise_025_193858",
+   "experiment": {
+    "slam_toolbox": {
+     "ros__parameters": {
+      "minimum_travel_distance": 0.25
+     }
+    }
+   },
+   "cpu_prozent_kern_mittel_letzte_2min": 18.8,
+   "cpu_prozent_kern_max": 21.5,
+   "verworfene_scans": 9,
+   "ringschluss_ceres": 0,
+   "map_odom_alter": {
+    "anteil_ueber_0_25_s": 0.0016,
+    "p99_s": -0.001,
+    "max_s": 0.855
+   },
+   "kartenfehler_m": 0.051,
+   "abdeckung_erreichbar": 0.971,
+   "slam_beendet_code": 0
+  },
+  {
+   "lauf": "p6_reise025_dreh035_194546",
+   "experiment": {
+    "slam_toolbox": {
+     "ros__parameters": {
+      "minimum_travel_distance": 0.25,
+      "minimum_travel_heading": 0.35
+     }
+    }
+   },
+   "cpu_prozent_kern_mittel_letzte_2min": 11.4,
+   "cpu_prozent_kern_max": 12.7,
+   "verworfene_scans": 10,
+   "ringschluss_ceres": 0,
+   "map_odom_alter": {
+    "anteil_ueber_0_25_s": 0.0015,
+    "p99_s": -0.0,
+    "max_s": 0.841
+   },
+   "kartenfehler_m": 0.028,
+   "abdeckung_erreichbar": 0.979,
+   "slam_beendet_code": 0
+  },
+  {
+   "lauf": "p7_reise025_karte25_195234",
+   "experiment": {
+    "slam_toolbox": {
+     "ros__parameters": {
+      "minimum_travel_distance": 0.25,
+      "map_update_interval": 2.5
+     }
+    }
+   },
+   "cpu_prozent_kern_mittel_letzte_2min": 10.2,
+   "cpu_prozent_kern_max": 13.0,
+   "verworfene_scans": 9,
+   "ringschluss_ceres": 0,
+   "map_odom_alter": {
+    "anteil_ueber_0_25_s": 0.0016,
+    "p99_s": 0.001,
+    "max_s": 0.871
+   },
+   "kartenfehler_m": 0.051,
+   "abdeckung_erreichbar": 0.971,
+   "slam_beendet_code": 0
+  },
+  {
+   "lauf": "p8_reise025_ohne_rs_195923",
+   "experiment": {
+    "slam_toolbox": {
+     "ros__parameters": {
+      "minimum_travel_distance": 0.25,
+      "do_loop_closing": false
+     }
+    }
+   },
+   "cpu_prozent_kern_mittel_letzte_2min": 18.2,
+   "cpu_prozent_kern_max": 23.4,
+   "verworfene_scans": 9,
+   "ringschluss_ceres": 0,
+   "map_odom_alter": {
+    "anteil_ueber_0_25_s": 0.0015,
+    "p99_s": 0.002,
+    "max_s": 0.839
+   },
+   "kartenfehler_m": 0.051,
+   "abdeckung_erreichbar": 0.971,
+   "slam_beendet_code": 0
+  },
+  {
+   "lauf": "p9_leerlauf_200624",
+   "experiment": {
+    "slam_toolbox": {
+     "ros__parameters": {
+      "minimum_travel_distance": 100.0,
+      "minimum_travel_heading": 100.0
+     }
+    }
+   },
+   "cpu_prozent_kern_mittel_letzte_2min": 3.8,
+   "cpu_prozent_kern_max": 4.1,
+   "verworfene_scans": 9,
+   "ringschluss_ceres": 0,
+   "map_odom_alter": {
+    "anteil_ueber_0_25_s": 0.0016,
+    "p99_s": 0.005,
+    "max_s": 0.873
+   },
+   "kartenfehler_m": 0.007,
+   "abdeckung_erreichbar": 0.257,
+   "slam_beendet_code": 0
+  }
+ ]
+}

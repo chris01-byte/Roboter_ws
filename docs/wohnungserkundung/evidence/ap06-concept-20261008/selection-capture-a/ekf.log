@@ -1,0 +1,2 @@
+Failed to meet update rate! Took 0.034010825000000001472seconds. Try decreasing the rate, limiting sensor output frequency, or limiting the number of sensors.
+[INFO] [1791474348.499036920] [rclcpp]: signal_handler(signum=2)

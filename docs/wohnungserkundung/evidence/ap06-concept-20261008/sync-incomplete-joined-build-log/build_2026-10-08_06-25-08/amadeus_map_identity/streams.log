@@ -1,0 +1,19 @@
+[0.377s] Invoking command in '/evidence/ap06-repo/src/amadeus_map_identity': PYTHONPATH=/evidence/ap06-old-product-build/amadeus_map_identity/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap06-old-product-build/amadeus_map_identity build --build-base /evidence/ap06-old-product-build/amadeus_map_identity/build install --record /evidence/ap06-old-product-build/amadeus_map_identity/install.log --single-version-externally-managed install_data
+[0.518s] running egg_info
+[0.518s] writing ../../../ap06-old-product-build/amadeus_map_identity/amadeus_map_identity.egg-info/PKG-INFO
+[0.519s] writing dependency_links to ../../../ap06-old-product-build/amadeus_map_identity/amadeus_map_identity.egg-info/dependency_links.txt
+[0.519s] writing requirements to ../../../ap06-old-product-build/amadeus_map_identity/amadeus_map_identity.egg-info/requires.txt
+[0.519s] writing top-level names to ../../../ap06-old-product-build/amadeus_map_identity/amadeus_map_identity.egg-info/top_level.txt
+[0.520s] reading manifest file '../../../ap06-old-product-build/amadeus_map_identity/amadeus_map_identity.egg-info/SOURCES.txt'
+[0.520s] writing manifest file '../../../ap06-old-product-build/amadeus_map_identity/amadeus_map_identity.egg-info/SOURCES.txt'
+[0.520s] running build
+[0.520s] running build_py
+[0.520s] running install
+[0.521s] running install_lib
+[0.522s] running install_data
+[0.522s] running install_egg_info
+[0.523s] removing '/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity-0.1.0-py3.10.egg-info' (and everything under it)
+[0.523s] Copying ../../../ap06-old-product-build/amadeus_map_identity/amadeus_map_identity.egg-info to /evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity-0.1.0-py3.10.egg-info
+[0.524s] running install_scripts
+[0.542s] writing list of installed files to '/evidence/ap06-old-product-build/amadeus_map_identity/install.log'
+[0.566s] Invoked command in '/evidence/ap06-repo/src/amadeus_map_identity' returned '0': PYTHONPATH=/evidence/ap06-old-product-build/amadeus_map_identity/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap06-old-product-build/amadeus_map_identity build --build-base /evidence/ap06-old-product-build/amadeus_map_identity/build install --record /evidence/ap06-old-product-build/amadeus_map_identity/install.log --single-version-externally-managed install_data

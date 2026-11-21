@@ -1,0 +1,222 @@
+..........FF.FF......................................................... [ 38%]
+........................................................................ [ 76%]
+.............................................                            [100%]
+=================================== FAILURES ===================================
+_ test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal[ap06_dead_end-0-False] _
+
+name = 'ap06_dead_end', index = 0, expected = False
+
+    @pytest.mark.parametrize('name,index,expected', (
+        ('ap06_dead_end', 0, False),
+        ('ap06_c33_native_detour', 0, True),
+        ('ap06_dead_end', 4, True),
+        ('ap06_c38_departure', 0, False),
+        ('ap06_c40_native_detour', 0, True),
+        ('ap06_corridor_departure', 0, True)))
+    def test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal(name,index,expected):
+        node, inputs, meta = fixture(name)
+        records = meta['plans']; first = records[index]
+        target = MetricCandidate('actual-component', *first['goal'], tuple(first['goal'][:2]),
+            (), 1., 0., inputs[1].fingerprint, 1)
+        route = node._metric_validate_nav_plan(inputs, path(first), target, public_only=True)
+        assert route is not None
+        if name == 'ap06_corridor_departure':
+            node._metric_status['ranking'] = dict(bounded_start_observation=True)
+        before = [bytes(np.asarray(inputs[i].data, dtype=np.int8)) for i in (0, 5)]
+        active = node._metric_active; original_path = node._metric_nav_path; calls = []
+        def planner(candidate, stopped, *, start_pose):
+            assert node._metric_active is None
+            assert not stopped()
+            calls.append((candidate, start_pose))
+            record = records[index+len(calls)]
+            assert np.allclose(start_pose, record['start_pose'], atol=1e-8)
+            assert np.allclose((candidate.x,candidate.y,candidate.yaw),record['goal'],atol=1e-8)
+            return path(record), record['error']
+        node._metric_request_nav_plan = planner
+>       assert node._metric_departure_plan_ready(inputs, route, target, lambda: False) is expected
+
+src/explore/test/test_metric_departure.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1429: in _metric_departure_plan_ready
+    path, error = self._metric_request_nav_plan(back, stopped,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+candidate = MetricCandidate(task_id='actual-component', x=2.581195915126225, y=0.06290652133797126, yaw=0.2646519502452547, fronti...69c24b6ab30ffe93036a67d9bae4c95accf72c9a', revision=1, requires_nav2_plan=True, observation_points=(), evidence_key='')
+stopped = <function MetricFrontierRuntime._metric_departure_plan_ready.<locals>.stopped at 0x7f2d6375d990>
+
+    def planner(candidate, stopped, *, start_pose):
+        assert node._metric_active is None
+        assert not stopped()
+        calls.append((candidate, start_pose))
+        record = records[index+len(calls)]
+>       assert np.allclose(start_pose, record['start_pose'], atol=1e-8)
+E       assert False
+E        +  where False = <function allclose at 0x7f2d695c5870>((2.73218137010609, 0.7635103937637246, 1.3974692457783653), [2.7504654305780716, 0.762864018512669, 1.5064427057914738], atol=1e-08)
+E        +    where <function allclose at 0x7f2d695c5870> = np.allclose
+
+src/explore/test/test_metric_departure.py:94: AssertionError
+_ test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal[ap06_c33_native_detour-0-True] _
+
+name = 'ap06_c33_native_detour', index = 0, expected = True
+
+    @pytest.mark.parametrize('name,index,expected', (
+        ('ap06_dead_end', 0, False),
+        ('ap06_c33_native_detour', 0, True),
+        ('ap06_dead_end', 4, True),
+        ('ap06_c38_departure', 0, False),
+        ('ap06_c40_native_detour', 0, True),
+        ('ap06_corridor_departure', 0, True)))
+    def test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal(name,index,expected):
+        node, inputs, meta = fixture(name)
+        records = meta['plans']; first = records[index]
+        target = MetricCandidate('actual-component', *first['goal'], tuple(first['goal'][:2]),
+            (), 1., 0., inputs[1].fingerprint, 1)
+        route = node._metric_validate_nav_plan(inputs, path(first), target, public_only=True)
+        assert route is not None
+        if name == 'ap06_corridor_departure':
+            node._metric_status['ranking'] = dict(bounded_start_observation=True)
+        before = [bytes(np.asarray(inputs[i].data, dtype=np.int8)) for i in (0, 5)]
+        active = node._metric_active; original_path = node._metric_nav_path; calls = []
+        def planner(candidate, stopped, *, start_pose):
+            assert node._metric_active is None
+            assert not stopped()
+            calls.append((candidate, start_pose))
+            record = records[index+len(calls)]
+            assert np.allclose(start_pose, record['start_pose'], atol=1e-8)
+            assert np.allclose((candidate.x,candidate.y,candidate.yaw),record['goal'],atol=1e-8)
+            return path(record), record['error']
+        node._metric_request_nav_plan = planner
+>       assert node._metric_departure_plan_ready(inputs, route, target, lambda: False) is expected
+
+src/explore/test/test_metric_departure.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1429: in _metric_departure_plan_ready
+    path, error = self._metric_request_nav_plan(back, stopped,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+candidate = MetricCandidate(task_id='actual-component', x=2.581195915126225, y=0.06290652133797126, yaw=0.2646519502452547, fronti...69c24b6ab30ffe93036a67d9bae4c95accf72c9a', revision=1, requires_nav2_plan=True, observation_points=(), evidence_key='')
+stopped = <function MetricFrontierRuntime._metric_departure_plan_ready.<locals>.stopped at 0x7f2d637823b0>
+
+    def planner(candidate, stopped, *, start_pose):
+        assert node._metric_active is None
+        assert not stopped()
+        calls.append((candidate, start_pose))
+        record = records[index+len(calls)]
+>       assert np.allclose(start_pose, record['start_pose'], atol=1e-8)
+E       assert False
+E        +  where False = <function allclose at 0x7f2d695c5870>((3.046795164081248, -0.748902970777506, -0.3853981633974482), [3.048070328800737, -0.7394162500051294, -0.38539816339744826], atol=1e-08)
+E        +    where <function allclose at 0x7f2d695c5870> = np.allclose
+
+src/explore/test/test_metric_departure.py:94: AssertionError
+_ test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal[ap06_c38_departure-0-False] _
+
+name = 'ap06_c38_departure', index = 0, expected = False
+
+    @pytest.mark.parametrize('name,index,expected', (
+        ('ap06_dead_end', 0, False),
+        ('ap06_c33_native_detour', 0, True),
+        ('ap06_dead_end', 4, True),
+        ('ap06_c38_departure', 0, False),
+        ('ap06_c40_native_detour', 0, True),
+        ('ap06_corridor_departure', 0, True)))
+    def test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal(name,index,expected):
+        node, inputs, meta = fixture(name)
+        records = meta['plans']; first = records[index]
+        target = MetricCandidate('actual-component', *first['goal'], tuple(first['goal'][:2]),
+            (), 1., 0., inputs[1].fingerprint, 1)
+        route = node._metric_validate_nav_plan(inputs, path(first), target, public_only=True)
+        assert route is not None
+        if name == 'ap06_corridor_departure':
+            node._metric_status['ranking'] = dict(bounded_start_observation=True)
+        before = [bytes(np.asarray(inputs[i].data, dtype=np.int8)) for i in (0, 5)]
+        active = node._metric_active; original_path = node._metric_nav_path; calls = []
+        def planner(candidate, stopped, *, start_pose):
+            assert node._metric_active is None
+            assert not stopped()
+            calls.append((candidate, start_pose))
+            record = records[index+len(calls)]
+            assert np.allclose(start_pose, record['start_pose'], atol=1e-8)
+            assert np.allclose((candidate.x,candidate.y,candidate.yaw),record['goal'],atol=1e-8)
+            return path(record), record['error']
+        node._metric_request_nav_plan = planner
+>       assert node._metric_departure_plan_ready(inputs, route, target, lambda: False) is expected
+
+src/explore/test/test_metric_departure.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1429: in _metric_departure_plan_ready
+    path, error = self._metric_request_nav_plan(back, stopped,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+candidate = MetricCandidate(task_id='actual-component', x=2.597122385728973, y=0.0684865606010862, yaw=0.2746759034161427, frontie...7bb1ffe82acf1614ec6407f96a5e32cfa7f523e0', revision=1, requires_nav2_plan=True, observation_points=(), evidence_key='')
+stopped = <function MetricFrontierRuntime._metric_departure_plan_ready.<locals>.stopped at 0x7f2d6375feb0>
+
+    def planner(candidate, stopped, *, start_pose):
+        assert node._metric_active is None
+        assert not stopped()
+        calls.append((candidate, start_pose))
+        record = records[index+len(calls)]
+>       assert np.allclose(start_pose, record['start_pose'], atol=1e-8)
+E       assert False
+E        +  where False = <function allclose at 0x7f2d695c5870>((2.7391567856021264, 0.7429798932650806, 1.3365762005729247), [2.7583569088253808, 0.7376166686093606, 1.4520523654789999], atol=1e-08)
+E        +    where <function allclose at 0x7f2d695c5870> = np.allclose
+
+src/explore/test/test_metric_departure.py:94: AssertionError
+_ test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal[ap06_c40_native_detour-0-True] _
+
+name = 'ap06_c40_native_detour', index = 0, expected = True
+
+    @pytest.mark.parametrize('name,index,expected', (
+        ('ap06_dead_end', 0, False),
+        ('ap06_c33_native_detour', 0, True),
+        ('ap06_dead_end', 4, True),
+        ('ap06_c38_departure', 0, False),
+        ('ap06_c40_native_detour', 0, True),
+        ('ap06_corridor_departure', 0, True)))
+    def test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal(name,index,expected):
+        node, inputs, meta = fixture(name)
+        records = meta['plans']; first = records[index]
+        target = MetricCandidate('actual-component', *first['goal'], tuple(first['goal'][:2]),
+            (), 1., 0., inputs[1].fingerprint, 1)
+        route = node._metric_validate_nav_plan(inputs, path(first), target, public_only=True)
+        assert route is not None
+        if name == 'ap06_corridor_departure':
+            node._metric_status['ranking'] = dict(bounded_start_observation=True)
+        before = [bytes(np.asarray(inputs[i].data, dtype=np.int8)) for i in (0, 5)]
+        active = node._metric_active; original_path = node._metric_nav_path; calls = []
+        def planner(candidate, stopped, *, start_pose):
+            assert node._metric_active is None
+            assert not stopped()
+            calls.append((candidate, start_pose))
+            record = records[index+len(calls)]
+            assert np.allclose(start_pose, record['start_pose'], atol=1e-8)
+            assert np.allclose((candidate.x,candidate.y,candidate.yaw),record['goal'],atol=1e-8)
+            return path(record), record['error']
+        node._metric_request_nav_plan = planner
+>       assert node._metric_departure_plan_ready(inputs, route, target, lambda: False) is expected
+
+src/explore/test/test_metric_departure.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1429: in _metric_departure_plan_ready
+    path, error = self._metric_request_nav_plan(back, stopped,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+candidate = MetricCandidate(task_id='actual-component', x=2.5580400236174152, y=0.0662765231381252, yaw=0.27378451438177875, front...3f85382ff6bb7b567c4cbbb75bf07fd06d71b993', revision=1, requires_nav2_plan=True, observation_points=(), evidence_key='')
+stopped = <function MetricFrontierRuntime._metric_departure_plan_ready.<locals>.stopped at 0x7f2d638b88b0>
+
+    def planner(candidate, stopped, *, start_pose):
+        assert node._metric_active is None
+        assert not stopped()
+        calls.append((candidate, start_pose))
+        record = records[index+len(calls)]
+>       assert np.allclose(start_pose, record['start_pose'], atol=1e-8)
+E       assert False
+E        +  where False = <function allclose at 0x7f2d695c5870>((3.0468356152162417, -0.7479054630730154, -0.38539816339744826), [3.049185584619958, -0.7394314172805709, -0.38539816339744826], atol=1e-08)
+E        +    where <function allclose at 0x7f2d695c5870> = np.allclose
+
+src/explore/test/test_metric_departure.py:94: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_departure.py::test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal[ap06_dead_end-0-False]
+FAILED src/explore/test/test_metric_departure.py::test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal[ap06_c33_native_detour-0-True]
+FAILED src/explore/test/test_metric_departure.py::test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal[ap06_c38_departure-0-False]
+FAILED src/explore/test/test_metric_departure.py::test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal[ap06_c40_native_detour-0-True]
+4 failed, 185 passed in 37.57s

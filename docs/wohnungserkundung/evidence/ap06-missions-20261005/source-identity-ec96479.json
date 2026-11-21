@@ -1,0 +1,38 @@
+{
+  "candidate": "ec964794f4cb1f566dbb5e81e0f5b649d600f0a1",
+  "status": "candidate for fresh complete mission; not final qualification",
+  "files": {
+    "src/explore/explore/metric_frontier.py": {
+      "source_sha256": "433d45f0e89d2665831b6d6de161bdf8ffe99f73f3d127c49ba12719139a4a84",
+      "execution_copy_sha256": "433d45f0e89d2665831b6d6de161bdf8ffe99f73f3d127c49ba12719139a4a84"
+    },
+    "src/explore/explore/metric_frontier_runtime.py": {
+      "source_sha256": "a2978a53d2fe659f9b61df94ceeaea90ac71e2f479aaeb77df6bb1d9fa92f93b",
+      "execution_copy_sha256": "a2978a53d2fe659f9b61df94ceeaea90ac71e2f479aaeb77df6bb1d9fa92f93b"
+    },
+    "src/explore/explore/metric_egress_reference.py": {
+      "source_sha256": "88231dbc6e02dd5a1b62de0d818e850299855db577e5dde57fd3520246976258",
+      "execution_copy_sha256": "88231dbc6e02dd5a1b62de0d818e850299855db577e5dde57fd3520246976258"
+    },
+    "tools/simulation/ap06_closed_product.py": {
+      "source_sha256": "8ef1eb7330602b28148625b55f86a197612fa593cb96b56cac883d624dd6e881",
+      "execution_copy_sha256": "8ef1eb7330602b28148625b55f86a197612fa593cb96b56cac883d624dd6e881"
+    },
+    "tools/simulation/ap06_product_scenarios.json": {
+      "source_sha256": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da",
+      "execution_copy_sha256": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da"
+    },
+    "docs/wohnungserkundung/MASTERPLAN.md": {
+      "source_sha256": "030782dc0cce24d23ef730783703f91cac6957ceb4b7305a224342fba74a8a10",
+      "execution_copy_sha256": "030782dc0cce24d23ef730783703f91cac6957ceb4b7305a224342fba74a8a10"
+    },
+    "src/robot_navigation/robot_navigation/cmd_vel_mission_gate.py": {
+      "source_sha256": "9367c46bbd2569964dd6a3068723188de0832bb076315a80101079d942a8310c",
+      "execution_copy_sha256": "9367c46bbd2569964dd6a3068723188de0832bb076315a80101079d942a8310c"
+    },
+    "src/robot_navigation/test/test_hwt601_gate_source_callbacks.py": {
+      "source_sha256": "6af81ead2624d00c248aee9da0a2c99c7ef99e6be7107fdc740ac588a3f67ac1",
+      "execution_copy_sha256": "6af81ead2624d00c248aee9da0a2c99c7ef99e6be7107fdc740ac588a3f67ac1"
+    }
+  }
+}

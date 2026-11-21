@@ -11,6 +11,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
 MANIFEST="${REPO_ROOT}/vendor_slam_toolbox_humble.repos"
 PATCH_FILE="${REPO_ROOT}/patches/slam_toolbox_humble_pure_rotation.patch"
+GRID_PATCH_FILE="${REPO_ROOT}/patches/slam_toolbox_humble_stable_grid.patch"
 DEFAULT_OVERLAY="${HOME}/amadeus_slam_toolbox_ws"
 
 usage() {
@@ -28,6 +29,7 @@ verify_patched_tree() {
   local expected_paths actual_paths
   expected_paths="$(printf '%s\n' \
     'include/slam_toolbox/slam_toolbox_common.hpp' \
+    'lib/karto_sdk/include/karto_sdk/Karto.h' \
     'lib/karto_sdk/include/karto_sdk/Mapper.h' \
     'lib/karto_sdk/src/Mapper.cpp' \
     'src/slam_toolbox_common.cpp')"
@@ -40,6 +42,7 @@ verify_patched_tree() {
     [[ "${actual_hash}" == "${expected_hash}" ]] ||
       die "Unerwarteter Inhalt nach Backport: ${path}"
   done <<'PATCHED_BLOB_HASHES'
+f12c26a5f03057cdd576e538f4f99e96969d1106 lib/karto_sdk/include/karto_sdk/Karto.h
 a416bea22de4ae2d41a159e157673a03c85668a0 include/slam_toolbox/slam_toolbox_common.hpp
 9f09d6392acfba5793d2d582c13261e074312e64 lib/karto_sdk/include/karto_sdk/Mapper.h
 6ef0688b4f19bcea4b3eaab9fa930e4d9a8fe572 lib/karto_sdk/src/Mapper.cpp
@@ -65,6 +68,7 @@ esac
 [[ ${EUID} -ne 0 ]] || die "Nicht als root ausfuehren. Das Overlay gehoert in das Benutzerkonto."
 [[ -r "${MANIFEST}" ]] || die "Manifest fehlt: ${MANIFEST}"
 [[ -r "${PATCH_FILE}" ]] || die "Patch fehlt: ${PATCH_FILE}"
+[[ -r "${GRID_PATCH_FILE}" ]] || die "Patch fehlt: ${GRID_PATCH_FILE}"
 [[ -r /opt/ros/humble/setup.bash ]] || die "ROS 2 Humble wurde unter /opt/ros/humble nicht gefunden."
 
 for command_name in git vcs colcon ros2; do
@@ -98,7 +102,7 @@ actual_commit="$(git -C "${SOURCE_DIR}" rev-parse HEAD)"
   die "Checkout steht auf ${actual_commit}, erwartet ist ${PINNED_COMMIT}. Nichts wurde zurueckgesetzt."
 
 if git -C "${SOURCE_DIR}" apply --unidiff-zero --reverse --check \
-  "${PATCH_FILE}" >/dev/null 2>&1; then
+  "${PATCH_FILE}" "${GRID_PATCH_FILE}" >/dev/null 2>&1; then
   git -C "${SOURCE_DIR}" diff --cached --quiet ||
     die "Der Checkout enthaelt vorgemerkte Aenderungen."
   [[ -z "$(git -C "${SOURCE_DIR}" ls-files --others --exclude-standard)" ]] ||
@@ -108,8 +112,8 @@ if git -C "${SOURCE_DIR}" apply --unidiff-zero --reverse --check \
 elif git -C "${SOURCE_DIR}" diff --quiet &&
      git -C "${SOURCE_DIR}" diff --cached --quiet &&
      [[ -z "$(git -C "${SOURCE_DIR}" ls-files --others --exclude-standard)" ]]; then
-  git -C "${SOURCE_DIR}" apply --unidiff-zero --check "${PATCH_FILE}"
-  git -C "${SOURCE_DIR}" apply --unidiff-zero "${PATCH_FILE}"
+  git -C "${SOURCE_DIR}" apply --unidiff-zero --check "${PATCH_FILE}" "${GRID_PATCH_FILE}"
+  git -C "${SOURCE_DIR}" apply --unidiff-zero "${PATCH_FILE}" "${GRID_PATCH_FILE}"
   printf 'Amadeus-Backport wurde angewendet.\n'
 else
   die "Checkout enthaelt unbekannte Aenderungen. Diese werden nicht ueberschrieben."

@@ -1,0 +1,26 @@
+[INFO] [1791280553.843629152] [bt_navigator]: 
+	bt_navigator lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791280553.844345441] [bt_navigator]: Creating
+[INFO] [1791280555.997601595] [bt_navigator]: Configuring
+[INFO] [1791280556.141364712] [bt_navigator]: Activating
+[INFO] [1791280556.170590033] [bt_navigator]: Creating bond (bt_navigator) to lifecycle manager.
+[INFO] [1791280584.390051929] [bt_navigator]: Begin navigating from current location (0.00, 0.00) to (1.05, 0.00)
+[WARN] [1791280604.001538804] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[INFO] [1791280606.001495208] [bt_navigator]: Goal succeeded
+[INFO] [1791280611.401239213] [bt_navigator]: Begin navigating from current location (0.90, 0.00) to (0.10, -0.49)
+[INFO] [1791280648.712621221] [bt_navigator]: Goal succeeded
+[INFO] [1791280743.929655250] [bt_navigator]: Begin navigating from current location (0.22, -0.43) to (0.81, -0.51)
+[INFO] [1791280766.282004610] [bt_navigator]: Goal succeeded
+[INFO] [1791280805.519249276] [bt_navigator]: Begin navigating from current location (0.67, -0.52) to (1.11, -0.42)
+[WARN] [1791280818.813011499] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[INFO] [1791280845.143259093] [bt_navigator]: Goal succeeded
+[INFO] [1791280950.335868320] [rclcpp]: signal_handler(signum=2)
+[INFO] [1791280950.335988111] [bt_navigator]: Running Nav2 LifecycleNode rcl preshutdown (bt_navigator)
+[INFO] [1791280950.336069774] [bt_navigator]: Deactivating
+[INFO] [1791280950.336093399] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[INFO] [1791280950.346289727] [bt_navigator]: Cleaning up
+[INFO] [1791280950.442718492] [bt_navigator]: Completed Cleaning up
+[INFO] [1791280950.442803079] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[INFO] [1791280950.454815594] [bt_navigator]: Destroying

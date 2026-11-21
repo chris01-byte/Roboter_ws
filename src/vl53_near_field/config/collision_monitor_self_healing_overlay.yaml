@@ -1,0 +1,28 @@
+# =====================================================================
+#  Overlay fuer den collision_monitor im selbstheilenden Betrieb
+#  Nur mit nav_mapping.launch.py self_healing:=true; wird NACH
+#  collision_monitor_mapping_params.yaml geladen und aendert nur diese Werte.
+#
+#  Entscheidung Projektinhaber 16.10.2026: jeder gueltige VL53-Treffer
+#  zaehlt. Die Wolke liegt geometrisch nie unter 0,084 m ueber Boden
+#  (0,50 m Reichweite, unterste Zeile -26,25 Grad, Sensor 0,305 m ueber
+#  Boden); -0,02 m ueber base_link = 0,07 m ueber Boden. Gemessen SH-1 v3:
+#  leerer Boden 0 Treffer. Konzept: docs/wohnungserkundung/
+#  KONZEPT_SELBSTHEILUNG.md Abschnitt 6.
+#  Rueckfall: self_healing:=false (Mappingprofil mit 0,05 unveraendert).
+# =====================================================================
+collision_monitor:
+  ros__parameters:
+    # KM-2 (15.11.2026, nach SH-8c s3a): "approach" prueft gegen die Kontur des
+    # Knotens robot_navigation/monitor_kontur statt direkt gegen
+    # /local_costmap/published_footprint. Sie ist dieselbe volle gepolsterte
+    # Kontur, ausser bei reiner gerader Rueckwaertsfahrt (dann die
+    # Rueckfahrkontur aus AW-1). Anlass: Mit VL53-Punkten im 2-cm-Polsterband
+    # hielt der Kollisionsmonitor auch die Rueckfahrt vom Hindernis weg an.
+    # Rueckfall: diese drei Zeilen entfernen (oder self_healing:=false).
+    FootprintApproach:
+      footprint_topic: "kollisionsmonitor_kontur"
+    vl53_left:
+      min_height: -0.02
+    vl53_right:
+      min_height: -0.02

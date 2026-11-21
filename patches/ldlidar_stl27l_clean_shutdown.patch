@@ -1,0 +1,46 @@
+diff --git a/ldlidar_driver/src/serialcom/serial_interface_linux.cpp b/ldlidar_driver/src/serialcom/serial_interface_linux.cpp
+index c110c77..4cfcb8e 100644
+--- a/ldlidar_driver/src/serialcom/serial_interface_linux.cpp
++++ b/ldlidar_driver/src/serialcom/serial_interface_linux.cpp
+@@ -28,7 +28,6 @@ namespace ldlidar {
+ SerialInterfaceLinux::SerialInterfaceLinux()
+-    : rx_thread_(nullptr), rx_count_(0), read_callback_(nullptr) {
+-  com_handle_ = -1;
+-  com_baudrate_ = 0;
+-}
++    : rx_thread_(nullptr), rx_count_(0), com_handle_(-1), com_baudrate_(0),
++      is_cmd_opened_(false), rx_thread_exit_flag_(true),
++      read_callback_(nullptr) {}
+-
++
+ SerialInterfaceLinux::~SerialInterfaceLinux() { Close(); }
+@@ -106,17 +105,20 @@ bool SerialInterfaceLinux::Close() {
+   rx_thread_exit_flag_ = true;
+-
+-  if (com_handle_ != -1) {
+-    close(com_handle_);
+-    com_handle_ = -1;
+-  }
+-
++  is_cmd_opened_ = false;
++
++  // ReadFromIO() may already have passed IsOpened() and may still use
++  // com_handle_. Keep the descriptor stable until the receive thread has
++  // observed the exit flag. Closing and setting it to -1 before join() races
++  // with FD_SET(com_handle_) and can corrupt the thread's stack.
+   if ((rx_thread_ != nullptr) && rx_thread_->joinable()) {
+     rx_thread_->join();
+     delete rx_thread_;
+     rx_thread_ = nullptr;
+   }
+-
+-  is_cmd_opened_ = false;
+-
++
++  if (com_handle_ != -1) {
++    close(com_handle_);
++    com_handle_ = -1;
++  }
++
+   return true;
+ }

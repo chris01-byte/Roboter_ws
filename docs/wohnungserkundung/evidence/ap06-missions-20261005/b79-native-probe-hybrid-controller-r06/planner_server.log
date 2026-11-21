@@ -1,0 +1,48 @@
+[INFO] [1791287097.177089409] [planner_server]: 
+	planner_server lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791287097.178035955] [planner_server]: Creating
+[INFO] [1791287097.188038461] [global_costmap.global_costmap]: 
+	global_costmap lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791287097.189291098] [global_costmap.global_costmap]: Creating Costmap
+[INFO] [1791287097.373597915] [planner_server]: Configuring
+[INFO] [1791287097.373662713] [global_costmap.global_costmap]: Configuring
+[INFO] [1791287097.378740016] [global_costmap.global_costmap]: Using plugin "static_layer"
+[INFO] [1791287097.383191424] [global_costmap.global_costmap]: Subscribing to the map topic (/map) with transient local durability
+[INFO] [1791287097.384502430] [global_costmap.global_costmap]: Initialized plugin "static_layer"
+[INFO] [1791287097.384599216] [global_costmap.global_costmap]: Using plugin "obstacle_layer"
+[INFO] [1791287097.385053851] [global_costmap.global_costmap]: Subscribed to Topics: vl53_left vl53_right vl53_left_mark vl53_right_mark oak
+[INFO] [1791287097.394337563] [global_costmap.global_costmap]: Initialized plugin "obstacle_layer"
+[INFO] [1791287097.395116707] [global_costmap.global_costmap]: Using plugin "inflation_layer"
+[INFO] [1791287097.395658824] [global_costmap.global_costmap]: Initialized plugin "inflation_layer"
+[INFO] [1791287097.406653846] [global_costmap.global_costmap]: StaticLayer: Resizing costmap to 189 X 96 at 0.030000 m/pix
+[INFO] [1791287097.409292642] [planner_server]: Created global planner plugin GridBased of type nav2_smac_planner/SmacPlannerHybrid
+[INFO] [1791287097.409324090] [planner_server]: Configuring GridBased of type SmacPlannerHybrid
+[INFO] [1791287097.411234920] [planner_server]: Even sized heuristic lookup table size set 666.000000, increasing size by 1 to make odd
+[INFO] [1791287101.895806486] [planner_server]: Configured plugin GridBased of type SmacPlannerHybrid with maximum iterations 1000000, max on approach iterations 1000, and not allowing unknown traversal. Tolerance 0.30.Using motion model: Dubin.
+[INFO] [1791287101.895898655] [planner_server]: Planner Server has GridBased  planners available.
+[INFO] [1791287101.912054665] [planner_server]: Activating
+[INFO] [1791287101.912106483] [global_costmap.global_costmap]: Activating
+[INFO] [1791287101.912118541] [global_costmap.global_costmap]: Checking transform
+[INFO] [1791287101.912192102] [global_costmap.global_costmap]: start
+[INFO] [1791287102.915867388] [planner_server]: Activating plugin GridBased of type SmacPlannerHybrid
+[INFO] [1791287102.916973846] [planner_server]: Creating bond (planner_server) to lifecycle manager.
+[WARN] [1791287104.300634231] [planner_server]: GridBased: failed to create plan, no valid path found.
+[WARN] [1791287104.300745068] [planner_server]: Planning algorithm GridBased failed to generate a valid path to (1.90, -0.49)
+[WARN] [1791287104.300768533] [planner_server]: [compute_path_to_pose] [ActionServer] Aborting handle.
+[INFO] [1791287104.772488045] [rclcpp]: signal_handler(signum=2)
+[INFO] [1791287104.772563398] [planner_server]: Running Nav2 LifecycleNode rcl preshutdown (planner_server)
+[INFO] [1791287104.772625993] [planner_server]: Deactivating
+[INFO] [1791287104.772655457] [global_costmap.global_costmap]: Deactivating
+[INFO] [1791287104.913073415] [planner_server]: Deactivating plugin GridBased of type SmacPlannerHybrid
+[INFO] [1791287104.913134046] [planner_server]: Destroying bond (planner_server) to lifecycle manager.
+[INFO] [1791287104.923349953] [planner_server]: Cleaning up
+[INFO] [1791287104.926488974] [global_costmap.global_costmap]: Cleaning up
+[INFO] [1791287104.928812316] [planner_server]: Cleaning up plugin GridBased of type SmacPlannerHybrid
+[INFO] [1791287104.929110325] [planner_server]: Destroying plugin GridBased of type SmacPlannerHybrid
+[INFO] [1791287104.930463284] [planner_server]: Destroying bond (planner_server) to lifecycle manager.
+[INFO] [1791287104.932176866] [global_costmap.global_costmap]: Destroying
+[INFO] [1791287104.936148202] [planner_server]: Destroying

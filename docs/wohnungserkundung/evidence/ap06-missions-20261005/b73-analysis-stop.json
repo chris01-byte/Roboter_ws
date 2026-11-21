@@ -1,0 +1,6 @@
+{
+  "kind": "Explicit analysis-only cancellation via original Mission Manager; not a whole qualification",
+  "utc": "2026-10-06T10:02:28.488798+00:00",
+  "reason": "Four arrivals/two observations, two original zero-gain inputs saved, offline causal comparison next",
+  "candidate": "17fba88"
+}

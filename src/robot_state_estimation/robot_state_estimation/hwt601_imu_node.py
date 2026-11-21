@@ -1,0 +1,483 @@
+"""Publish an HWT601-AGV-485 as a passive, fail-closed ROS 2 IMU source."""
+
+from collections import deque
+import json
+import math
+import os
+import time
+from typing import Optional
+
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
+from rcl_interfaces.msg import ParameterDescriptor
+import rclpy
+from rclpy.clock import ClockType, JumpThreshold
+from rclpy.executors import ExternalShutdownException
+from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
+from sensor_msgs.msg import Imu
+from std_msgs.msg import String
+
+from .hwt601_protocol import (
+    DEFAULT_DEVICE_ADDRESS,
+    Hwt601ProtocolError,
+    decode_motion_registers,
+)
+from .hwt601_transport import Hwt601SerialTransport, Hwt601TransportError
+from ._hwt601_clock import (
+    ClockPairUncertain, MAX_PAIR_ATTEMPTS, ReceiptClockCorrelation,
+)
+
+
+class Hwt601ImuNode(Node):
+    """Poll motion registers; never configure the sensor or command a robot."""
+
+    def __init__(self):
+        super().__init__('hwt601_imu')
+        self.declare_parameter('port', '/dev/ttyUSB_HWT601')
+        self.declare_parameter('baud', 115200)
+        self.declare_parameter('device_address', DEFAULT_DEVICE_ADDRESS)
+        self.declare_parameter('poll_rate_hz', 100.0)
+        self.declare_parameter('response_timeout_s', 0.03)
+        self.declare_parameter('reconnect_interval_s', 1.0)
+        self.declare_parameter('errors_before_reconnect', 3)
+        self.declare_parameter('sensor_timeout_s', 0.20)
+        self.declare_parameter('development_contract', False)
+        self.declare_parameter('isolate_sensor_output', False,
+            ParameterDescriptor(read_only=True,
+                description='Separate DDS output from passive sensor acquisition.'))
+        self.declare_parameter('frame_id', 'hwt601_link')
+        self.declare_parameter('imu_topic', '/hwt601/imu/data_raw')
+        self.declare_parameter('status_topic', '/hwt601/status_json')
+        self.declare_parameter('diagnostics_topic', '/diagnostics')
+        self.declare_parameter('acceleration_full_scale_g', 4.0)
+        self.declare_parameter('angular_velocity_full_scale_dps', 400.0)
+        self.declare_parameter('angular_velocity_variance', 0.02)
+        self.declare_parameter('linear_acceleration_variance', 0.25)
+        self.declare_parameter('saturation_margin_counts', 8)
+
+        gp = self.get_parameter
+        self.port = str(gp('port').value)
+        self.baud = int(gp('baud').value)
+        self.device_address = int(gp('device_address').value)
+        self.poll_rate_hz = float(gp('poll_rate_hz').value)
+        self.response_timeout_s = float(gp('response_timeout_s').value)
+        self.reconnect_interval_s = float(gp('reconnect_interval_s').value)
+        self.errors_before_reconnect = int(gp('errors_before_reconnect').value)
+        self.sensor_timeout_s = float(gp('sensor_timeout_s').value)
+        self.development_contract = gp('development_contract').value is True
+        self.frame_id = str(gp('frame_id').value)
+        self.imu_topic = str(gp('imu_topic').value)
+        self.status_topic = str(gp('status_topic').value)
+        self.diagnostics_topic = str(gp('diagnostics_topic').value)
+        self.acceleration_full_scale_g = float(
+            gp('acceleration_full_scale_g').value)
+        self.angular_velocity_full_scale_dps = float(
+            gp('angular_velocity_full_scale_dps').value)
+        self.angular_velocity_variance = float(
+            gp('angular_velocity_variance').value)
+        self.linear_acceleration_variance = float(
+            gp('linear_acceleration_variance').value)
+        self.saturation_margin_counts = int(
+            gp('saturation_margin_counts').value)
+        self._validate_parameters()
+
+        self._sensor_output = None
+        if gp('isolate_sensor_output').value is True:
+            from base_hardware.encoder_publication import EncoderPublication
+            # Warm serializers and spawn before the first poll/timer, never
+            # during acquisition. The child has no transport or actuator.
+            self._sensor_output = EncoderPublication([
+                (self.imu_topic, 'sensor_msgs/msg/Imu'),
+                (self.status_topic, 'std_msgs/msg/String'),
+                (self.diagnostics_topic, 'diagnostic_msgs/msg/DiagnosticArray')],
+                self.sensor_timeout_s, node_name=self.get_name()+'_output',
+                sensor_data_topics=(self.imu_topic,))
+            self.imu_pub = self._sensor_output.publisher(self.imu_topic)
+            self.status_pub = self._sensor_output.publisher(self.status_topic)
+            self.diagnostics_pub = self._sensor_output.publisher(self.diagnostics_topic)
+        else:
+            self.imu_pub = self.create_publisher(
+                Imu, self.imu_topic, qos_profile_sensor_data)
+            self.status_pub = self.create_publisher(String, self.status_topic, 10)
+            self.diagnostics_pub = self.create_publisher(
+                DiagnosticArray, self.diagnostics_topic, 10)
+
+        self._transport: Optional[Hwt601SerialTransport] = None
+        self._last_connect_attempt = -math.inf
+        self._last_received_at: Optional[float] = None
+        self._accepted = 0
+        self._rejected = 0
+        self._successful_connections = 0
+        self._consecutive_errors = 0
+        self._last_error = 'noch_keine_daten'
+        self._terminal_fault = None
+        self._last_measurement_stamp_ns = None
+        self._last_transport_diagnostic = {}
+        self._sample_times = deque(
+            maxlen=max(20, int(self.poll_rate_hz * 2.0)))
+        self._init_clock_correlation()
+
+        self.create_timer(1.0 / self.poll_rate_hz, self._poll)
+        self.create_timer(0.5, self._publish_status)
+        self.get_logger().info(
+            f'HWT601 passiv vorbereitet: {self.port} bei {self.baud} Baud, '
+            f'Adresse {self.device_address}; nur Modbus-Lesefunktion 0x03')
+
+    def _validate_parameters(self) -> None:
+        if (self.development_contract and
+                (self.response_timeout_s != .05 or self.sensor_timeout_s != .30)):
+            raise ValueError('Entwicklungsvertrag braucht 0.05 s Antwort/0.30 s Daten')
+        motor_port = '/dev/ttyUSB_BASE'
+        same_as_motor_port = (
+            os.path.exists(motor_port)
+            and os.path.realpath(self.port) == os.path.realpath(motor_port))
+        if not self.port or self.port == motor_port or same_as_motor_port:
+            raise ValueError(
+                'HWT601 braucht einen eigenen, expliziten USB-RS485-Port')
+        supported_baud = (
+            4800, 9600, 19200, 38400, 57600, 115200, 230400)
+        if self.baud not in supported_baud:
+            raise ValueError('nicht unterstuetzte HWT601-Baudrate')
+        if not 1 <= self.device_address <= 247:
+            raise ValueError('device_address muss zwischen 1 und 247 liegen')
+        positive = {
+            'poll_rate_hz': self.poll_rate_hz,
+            'response_timeout_s': self.response_timeout_s,
+            'reconnect_interval_s': self.reconnect_interval_s,
+            'sensor_timeout_s': self.sensor_timeout_s,
+            'acceleration_full_scale_g': self.acceleration_full_scale_g,
+            'angular_velocity_full_scale_dps': (
+                self.angular_velocity_full_scale_dps),
+            'angular_velocity_variance': self.angular_velocity_variance,
+            'linear_acceleration_variance': self.linear_acceleration_variance,
+        }
+        for name, value in positive.items():
+            if not math.isfinite(value) or value <= 0.0:
+                raise ValueError(f'{name} muss endlich und positiv sein')
+        if self.poll_rate_hz > 200.0:
+            raise ValueError(
+                'poll_rate_hz darf die interne 200-Hz-Rate nicht uebersteigen')
+        if self.errors_before_reconnect < 1:
+            raise ValueError('errors_before_reconnect muss mindestens 1 sein')
+        if not 1 <= self.saturation_margin_counts <= 1024:
+            raise ValueError('saturation_margin_counts ist unplausibel')
+        if not self.frame_id or self.frame_id.startswith('/'):
+            raise ValueError(
+                'frame_id muss ein physischer TF-Frame ohne / sein')
+
+    def _connect(self, now: float) -> bool:
+        if now - self._last_connect_attempt < self.reconnect_interval_s:
+            return False
+        self._last_connect_attempt = now
+        transport = Hwt601SerialTransport(
+            port=self.port,
+            baud=self.baud,
+            timeout_s=self.response_timeout_s,
+            device_address=self.device_address,
+        )
+        try:
+            transport.open()
+        except Hwt601TransportError as error:
+            self._last_error = str(error)
+            return False
+        self._transport = transport
+        self._successful_connections += 1
+        self._consecutive_errors = 0
+        self._last_error = ''
+        self.get_logger().info(f'HWT601 verbunden: {self.port}')
+        return True
+
+    def _disconnect(self) -> None:
+        if self._transport is not None:
+            self._transport.close()
+        self._transport = None
+        self._sample_times.clear()
+        self._last_received_at = None
+
+    def _record_error(self, error: Exception) -> None:
+        self._rejected += 1
+        self._consecutive_errors += 1
+        self._last_error = str(error)
+        if isinstance(error, ClockPairUncertain):
+            # No reconnect/epoch reset for scheduling uncertainty, in either
+            # profile. Last real data still ages under the existing contract.
+            self._publish_status()
+            return
+        if self.development_contract:
+            self._last_transport_diagnostic = dict(getattr(error, 'diagnostic', {}))
+            if not isinstance(error, Hwt601TransportError) or error.hard_fault:
+                self._terminal_fault = str(error)
+                self._disconnect()
+            # A deadline alone does not invalidate the last real sample or
+            # change device generation. Continue reading the intact link;
+            # freshness/Health bounds, not poll count, decide HOLD.
+            self._publish_status()
+            return
+        if self._consecutive_errors >= self.errors_before_reconnect:
+            self._disconnect()
+
+    def _init_clock_correlation(self) -> None:
+        self._receipt_clock = ReceiptClockCorrelation()
+        self._correlation_clock = self.get_clock()
+        self._clock_source_fault = None
+        self._clock_jump_handle = self._correlation_clock.create_jump_callback(
+            JumpThreshold(min_forward=None, min_backward=None, on_clock_change=True),
+            pre_callback=self._clock_source_changed)
+
+    def _clock_source_changed(self) -> None:
+        # Latch even activation/deactivation between polls. Do no ROS I/O from
+        # the clock callback. Poll handles it under the existing error contract.
+        self._clock_source_fault = 'HWT-Clockquelle hat sich geaendert'
+
+    def _check_clock_source(self):
+        clock = self.get_clock()
+        if self._clock_source_fault is not None:
+            raise Hwt601ProtocolError(self._clock_source_fault)
+        if (clock is not self._correlation_clock
+                or clock.clock_type not in (ClockType.SYSTEM_TIME, ClockType.ROS_TIME)
+                or getattr(clock, 'ros_time_is_active', False)):
+            self._clock_source_fault = 'HWT braucht unveraenderte Hostzeit ohne ROS-Time-Override'
+            raise Hwt601ProtocolError(self._clock_source_fault)
+        return clock
+
+    def _receipt_stamp(self, received_at, diagnostic):
+        for attempt in range(1, MAX_PAIR_ATTEMPTS + 1):
+            clock = self._check_clock_source()
+            before = time.monotonic()
+            if (not isinstance(received_at, (int, float))
+                    or not math.isfinite(received_at) or received_at > before
+                    or (self._last_received_at is not None
+                        and received_at <= self._last_received_at)):
+                raise Hwt601ProtocolError('HWT-Empfangszeit fehlt/ungueltig/nicht monoton')
+            clock_ns = clock.now().nanoseconds
+            after = time.monotonic()
+            self._check_clock_source()
+            try:
+                stamp_ns = self._receipt_clock.project(received_at, before, clock_ns, after)
+            except ClockPairUncertain:
+                self._receipt_clock.diagnostic['attempts'] = attempt
+                self._check_processing_deadline(diagnostic, after)
+                if attempt == MAX_PAIR_ATTEMPTS:
+                    raise
+            else:
+                self._receipt_clock.diagnostic['attempts'] = attempt
+                self._check_processing_deadline(diagnostic, after)
+                return stamp_ns
+
+    def _check_processing_deadline(self, diagnostic, finished):
+        if finished > diagnostic['deadline_monotonic_s']:
+            raise Hwt601TransportError('Messwertverarbeitung nach Gesamtfrist',
+                kind='response_deadline', diagnostic=dict(diagnostic,
+                    classification='processing_after_deadline', finished_monotonic_s=finished))
+
+    def _poll(self) -> None:
+        if not self._check_sensor_output():
+            return
+        if self._terminal_fault is not None:
+            return
+        try:
+            self._check_clock_source()
+        except Hwt601ProtocolError as error:
+            self._record_error(error)
+            return
+        now = time.monotonic()
+        if self._transport is None and not self._connect(now):
+            return
+        try:
+            registers = self._transport.read_motion_registers()
+            received_at = getattr(self._transport, 'last_reply_received_monotonic_s', None)
+            diagnostic = getattr(self._transport, 'last_transaction', {})
+            started = diagnostic.get('started_monotonic_s')
+            deadline = diagnostic.get('deadline_monotonic_s')
+            if (not all(isinstance(v, (int, float)) and math.isfinite(v)
+                        for v in (received_at, started, deadline))
+                    or not started <= received_at <= deadline):
+                raise Hwt601ProtocolError('HWT-Empfangs-/Transaktionsbeleg ungueltig')
+            stamp_ns = self._receipt_stamp(received_at, diagnostic)
+            if (stamp_ns <= 0
+                    or (self._last_measurement_stamp_ns is not None
+                        and stamp_ns <= self._last_measurement_stamp_ns)):
+                raise Hwt601ProtocolError('HWT-Messzeit nicht monoton')
+            sample = decode_motion_registers(
+                registers,
+                acceleration_full_scale_g=self.acceleration_full_scale_g,
+                angular_velocity_full_scale_dps=(
+                    self.angular_velocity_full_scale_dps),
+            )
+            if sample.saturated(self.saturation_margin_counts):
+                raise Hwt601ProtocolError(
+                    'Messwert ist am Rohdatenlimit gesaettigt')
+            finished = time.monotonic()
+            self._check_processing_deadline(diagnostic, finished)
+        except (Hwt601TransportError, Hwt601ProtocolError, OSError) as error:
+            self._record_error(error)
+            return
+
+        message = Imu()
+        message.header.stamp.sec = stamp_ns // 10**9
+        message.header.stamp.nanosec = stamp_ns % 10**9
+        message.header.frame_id = self.frame_id
+        message.orientation.w = 1.0
+        message.orientation_covariance[0] = -1.0
+        message.angular_velocity.x = sample.angular_velocity_radps[0]
+        message.angular_velocity.y = sample.angular_velocity_radps[1]
+        message.angular_velocity.z = sample.angular_velocity_radps[2]
+        message.linear_acceleration.x = sample.linear_acceleration_mps2[0]
+        message.linear_acceleration.y = sample.linear_acceleration_mps2[1]
+        message.linear_acceleration.z = sample.linear_acceleration_mps2[2]
+        for index in (0, 4, 8):
+            message.angular_velocity_covariance[index] = (
+                self.angular_velocity_variance)
+            message.linear_acceleration_covariance[index] = (
+                self.linear_acceleration_variance)
+        try:
+            self._check_clock_source()
+            self._check_processing_deadline(diagnostic, time.monotonic())
+        except (Hwt601ProtocolError, Hwt601TransportError) as error:
+            self._record_error(error)
+            return
+        self.imu_pub.publish(message)
+
+        self._last_received_at = received_at
+        self._last_measurement_stamp_ns = stamp_ns
+        was_degraded = self._consecutive_errors > 0
+        self._sample_times.append(received_at)
+        self._accepted += 1
+        self._consecutive_errors = 0
+        self._last_error = ''
+        self._last_transport_diagnostic = dict(getattr(self._transport, 'last_transaction', {}))
+        if self.development_contract and was_degraded:
+            self._publish_status()
+
+    def _observed_rate_hz(self) -> Optional[float]:
+        if len(self._sample_times) < 2:
+            return None
+        duration = self._sample_times[-1] - self._sample_times[0]
+        if duration <= 0.0:
+            return None
+        return (len(self._sample_times) - 1) / duration
+
+    def _check_sensor_output(self):
+        output = getattr(self, '_sensor_output', None)
+        if output is not None and not output.alive:
+            self._terminal_fault = 'hwt_sensor_output_process_lost'
+            self._last_error = self._terminal_fault
+            self._disconnect()
+            return False
+        return True
+
+    def _publish_status(self) -> None:
+        self._check_sensor_output()
+        now = time.monotonic()
+        age_s = (
+            None if self._last_received_at is None
+            else max(0.0, now - self._last_received_at))
+        connected = bool(
+            self._transport is not None and self._transport.is_open)
+        fresh = age_s is not None and age_s <= self.sensor_timeout_s
+        data_valid = self._last_received_at is not None and self._terminal_fault is None
+        data_ready = connected and fresh and data_valid
+        transport_ok = connected and self._consecutive_errors == 0 and self._terminal_fault is None
+        ready = data_ready and (self.development_contract or transport_ok)
+        if ready:
+            state = 'transport_degraded' if not transport_ok else 'bereit'
+            reason = self._last_error if not transport_ok else 'gueltige_rohdaten'
+        elif not connected:
+            state = 'getrennt'
+            reason = self._last_error or 'serielle_verbindung_fehlt'
+        else:
+            state = 'degradiert'
+            reason = self._last_error or 'daten_fehlend_oder_alt'
+        rate_hz = self._observed_rate_hz()
+        payload = {
+            'ready': ready,
+            'raw_data_ready': ready,
+            'fusion_ready': False,
+            'state': state,
+            'reason': reason,
+            'actuator_output': False,
+            'sensor_write_commands': False,
+            'sensor_output_isolated': getattr(self, '_sensor_output', None) is not None,
+            'port': self.port,
+            'baud': self.baud,
+            'device_address': self.device_address,
+            'frame_id': self.frame_id,
+            'topic': self.imu_topic,
+            'age_s': age_s,
+            'observed_rate_hz': rate_hz,
+            'accepted': self._accepted,
+            'rejected': self._rejected,
+            'successful_connections': self._successful_connections,
+            'reconnects': max(0, self._successful_connections - 1),
+            'consecutive_errors': self._consecutive_errors,
+            'last_error': self._last_error,
+            'host_receive_timestamp': True,
+            'scale_validation_pending': True,
+            'contract': 'metric_development_v1' if self.development_contract else 'legacy',
+            'transport_ok': transport_ok,
+            'transport_degraded': connected and not transport_ok,
+            'identity_intact': connected and self._terminal_fault is None,
+            'data_fresh': fresh,
+            'data_valid': data_valid,
+            'hold_required': not data_ready,
+            'recovery_pending': False,
+            'terminal_fault': self._terminal_fault,
+            'response_timeout_s': self.response_timeout_s,
+            'sensor_timeout_s': self.sensor_timeout_s,
+            'last_measurement_stamp_ns': self._last_measurement_stamp_ns,
+            'last_reply_received_monotonic_s': self._last_received_at,
+            'last_transport_diagnostic': self._last_transport_diagnostic,
+            'clock_correlation': self._receipt_clock.diagnostic,
+            'clock_source_fault': self._clock_source_fault,
+        }
+        self.status_pub.publish(String(
+            data=json.dumps(payload, allow_nan=False)))
+
+        diagnostic = DiagnosticStatus()
+        diagnostic.name = 'robot_state_estimation/hwt601_imu'
+        diagnostic.hardware_id = f'hwt601_modbus_{self.device_address}'
+        diagnostic.level = (
+            DiagnosticStatus.ERROR if self._terminal_fault is not None else
+            DiagnosticStatus.OK if ready and transport_ok else DiagnosticStatus.WARN)
+        diagnostic.message = reason
+        diagnostic.values = [
+            KeyValue(key='connected', value=str(connected).lower()),
+            KeyValue(key='fresh', value=str(fresh).lower()),
+            KeyValue(key='accepted', value=str(self._accepted)),
+            KeyValue(key='rejected', value=str(self._rejected)),
+            KeyValue(key='observed_rate_hz', value=str(rate_hz)),
+            KeyValue(key='actuator_output', value='false'),
+            KeyValue(key='sensor_write_commands', value='false'),
+            KeyValue(key='scale_validation_pending', value='true'),
+        ]
+        array = DiagnosticArray()
+        array.header.stamp = self.get_clock().now().to_msg()
+        array.status = [diagnostic]
+        self.diagnostics_pub.publish(array)
+
+    def destroy_node(self):
+        self._clock_jump_handle.unregister()
+        self._disconnect()
+        if self._sensor_output is not None:
+            self._sensor_output.close()
+        return super().destroy_node()
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = Hwt601ImuNode()
+    try:
+        rclpy.spin(node)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    except RuntimeError:
+        if rclpy.ok():
+            raise
+    finally:
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()

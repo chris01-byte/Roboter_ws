@@ -1,0 +1,208 @@
+FFFFFFFFFFFFFFFFFFFFFFF.FFFFFFF                                          [100%]
+=================================== FAILURES ===================================
+_ test_raster_transition_expires_inventory_before_array_operation[height-raw] __
+src/explore/test/test_metric_map_lifecycle.py:99: in test_raster_transition_expires_inventory_before_array_operation
+    inputs = n._metric_inputs()
+src/explore/explore/metric_frontier_runtime.py:328: in _metric_inputs
+    self._metric_prepare_egress(inputs)
+src/explore/explore/metric_frontier_runtime.py:357: in _metric_prepare_egress
+    evidence.unknown &= occupancy < 0
+E   ValueError: operands could not be broadcast together with shapes (100,100) (101,100) (100,100)
+_ test_raster_transition_expires_inventory_before_array_operation[height-costmap] _
+src/explore/test/test_metric_map_lifecycle.py:99: in test_raster_transition_expires_inventory_before_array_operation
+    inputs = n._metric_inputs()
+src/explore/explore/metric_frontier_runtime.py:328: in _metric_inputs
+    self._metric_prepare_egress(inputs)
+src/explore/explore/metric_frontier_runtime.py:357: in _metric_prepare_egress
+    evidence.unknown &= occupancy < 0
+E   ValueError: operands could not be broadcast together with shapes (100,100) (101,100) (100,100)
+_ test_raster_transition_expires_inventory_before_array_operation[height-both] _
+src/explore/test/test_metric_map_lifecycle.py:99: in test_raster_transition_expires_inventory_before_array_operation
+    inputs = n._metric_inputs()
+src/explore/explore/metric_frontier_runtime.py:328: in _metric_inputs
+    self._metric_prepare_egress(inputs)
+src/explore/explore/metric_frontier_runtime.py:357: in _metric_prepare_egress
+    evidence.unknown &= occupancy < 0
+E   ValueError: operands could not be broadcast together with shapes (100,100) (101,100) (100,100)
+__ test_raster_transition_expires_inventory_before_array_operation[width-raw] __
+src/explore/test/test_metric_map_lifecycle.py:99: in test_raster_transition_expires_inventory_before_array_operation
+    inputs = n._metric_inputs()
+src/explore/explore/metric_frontier_runtime.py:328: in _metric_inputs
+    self._metric_prepare_egress(inputs)
+src/explore/explore/metric_frontier_runtime.py:357: in _metric_prepare_egress
+    evidence.unknown &= occupancy < 0
+E   ValueError: operands could not be broadcast together with shapes (100,100) (100,101) (100,100)
+_ test_raster_transition_expires_inventory_before_array_operation[width-costmap] _
+src/explore/test/test_metric_map_lifecycle.py:99: in test_raster_transition_expires_inventory_before_array_operation
+    inputs = n._metric_inputs()
+src/explore/explore/metric_frontier_runtime.py:328: in _metric_inputs
+    self._metric_prepare_egress(inputs)
+src/explore/explore/metric_frontier_runtime.py:357: in _metric_prepare_egress
+    evidence.unknown &= occupancy < 0
+E   ValueError: operands could not be broadcast together with shapes (100,100) (100,101) (100,100)
+_ test_raster_transition_expires_inventory_before_array_operation[width-both] __
+src/explore/test/test_metric_map_lifecycle.py:99: in test_raster_transition_expires_inventory_before_array_operation
+    inputs = n._metric_inputs()
+src/explore/explore/metric_frontier_runtime.py:328: in _metric_inputs
+    self._metric_prepare_egress(inputs)
+src/explore/explore/metric_frontier_runtime.py:357: in _metric_prepare_egress
+    evidence.unknown &= occupancy < 0
+E   ValueError: operands could not be broadcast together with shapes (100,100) (100,101) (100,100)
+_ test_raster_transition_expires_inventory_before_array_operation[origin-raw] __
+src/explore/test/test_metric_map_lifecycle.py:102: in test_raster_transition_expires_inventory_before_array_operation
+    assert all(not e.valid for e in previous)
+E   assert False
+E    +  where False = all(<generator object test_raster_transition_expires_inventory_before_array_operation.<locals>.<genexpr> at 0x7f66b907b7d0>)
+_ test_raster_transition_expires_inventory_before_array_operation[origin-costmap] _
+src/explore/test/test_metric_map_lifecycle.py:102: in test_raster_transition_expires_inventory_before_array_operation
+    assert all(not e.valid for e in previous)
+E   assert False
+E    +  where False = all(<generator object test_raster_transition_expires_inventory_before_array_operation.<locals>.<genexpr> at 0x7f66b9078740>)
+_ test_raster_transition_expires_inventory_before_array_operation[origin-both] _
+src/explore/test/test_metric_map_lifecycle.py:102: in test_raster_transition_expires_inventory_before_array_operation
+    assert all(not e.valid for e in previous)
+E   assert False
+E    +  where False = all(<generator object test_raster_transition_expires_inventory_before_array_operation.<locals>.<genexpr> at 0x7f66b9078ac0>)
+_ test_raster_transition_expires_inventory_before_array_operation[growth_origin-raw] _
+src/explore/test/test_metric_map_lifecycle.py:99: in test_raster_transition_expires_inventory_before_array_operation
+    inputs = n._metric_inputs()
+src/explore/explore/metric_frontier_runtime.py:328: in _metric_inputs
+    self._metric_prepare_egress(inputs)
+src/explore/explore/metric_frontier_runtime.py:357: in _metric_prepare_egress
+    evidence.unknown &= occupancy < 0
+E   ValueError: operands could not be broadcast together with shapes (100,100) (101,100) (100,100)
+_ test_raster_transition_expires_inventory_before_array_operation[growth_origin-costmap] _
+src/explore/test/test_metric_map_lifecycle.py:99: in test_raster_transition_expires_inventory_before_array_operation
+    inputs = n._metric_inputs()
+src/explore/explore/metric_frontier_runtime.py:328: in _metric_inputs
+    self._metric_prepare_egress(inputs)
+src/explore/explore/metric_frontier_runtime.py:357: in _metric_prepare_egress
+    evidence.unknown &= occupancy < 0
+E   ValueError: operands could not be broadcast together with shapes (100,100) (101,100) (100,100)
+_ test_raster_transition_expires_inventory_before_array_operation[growth_origin-both] _
+src/explore/test/test_metric_map_lifecycle.py:99: in test_raster_transition_expires_inventory_before_array_operation
+    inputs = n._metric_inputs()
+src/explore/explore/metric_frontier_runtime.py:328: in _metric_inputs
+    self._metric_prepare_egress(inputs)
+src/explore/explore/metric_frontier_runtime.py:357: in _metric_prepare_egress
+    evidence.unknown &= occupancy < 0
+E   ValueError: operands could not be broadcast together with shapes (100,100) (101,100) (100,100)
+_ test_raster_transition_expires_inventory_before_array_operation[resolution-raw] _
+src/explore/test/test_metric_map_lifecycle.py:102: in test_raster_transition_expires_inventory_before_array_operation
+    assert all(not e.valid for e in previous)
+E   assert False
+E    +  where False = all(<generator object test_raster_transition_expires_inventory_before_array_operation.<locals>.<genexpr> at 0x7f66b907bd80>)
+_ test_raster_transition_expires_inventory_before_array_operation[resolution-costmap] _
+src/explore/test/test_metric_map_lifecycle.py:102: in test_raster_transition_expires_inventory_before_array_operation
+    assert all(not e.valid for e in previous)
+E   assert False
+E    +  where False = all(<generator object test_raster_transition_expires_inventory_before_array_operation.<locals>.<genexpr> at 0x7f66b9079770>)
+_ test_raster_transition_expires_inventory_before_array_operation[resolution-both] _
+src/explore/test/test_metric_map_lifecycle.py:102: in test_raster_transition_expires_inventory_before_array_operation
+    assert all(not e.valid for e in previous)
+E   assert False
+E    +  where False = all(<generator object test_raster_transition_expires_inventory_before_array_operation.<locals>.<genexpr> at 0x7f66b907a500>)
+___ test_raster_transition_expires_inventory_before_array_operation[yaw-raw] ___
+src/explore/test/test_metric_map_lifecycle.py:102: in test_raster_transition_expires_inventory_before_array_operation
+    assert all(not e.valid for e in previous)
+E   assert False
+E    +  where False = all(<generator object test_raster_transition_expires_inventory_before_array_operation.<locals>.<genexpr> at 0x7f66b907a810>)
+_ test_raster_transition_expires_inventory_before_array_operation[yaw-costmap] _
+src/explore/test/test_metric_map_lifecycle.py:102: in test_raster_transition_expires_inventory_before_array_operation
+    assert all(not e.valid for e in previous)
+E   assert False
+E    +  where False = all(<generator object test_raster_transition_expires_inventory_before_array_operation.<locals>.<genexpr> at 0x7f66b9079700>)
+__ test_raster_transition_expires_inventory_before_array_operation[yaw-both] ___
+src/explore/test/test_metric_map_lifecycle.py:102: in test_raster_transition_expires_inventory_before_array_operation
+    assert all(not e.valid for e in previous)
+E   assert False
+E    +  where False = all(<generator object test_raster_transition_expires_inventory_before_array_operation.<locals>.<genexpr> at 0x7f66b9079fc0>)
+_____________ test_direct_egress_check_rejects_incompatible_arrays _____________
+src/explore/test/test_metric_map_lifecycle.py:130: in test_direct_egress_check_rejects_incompatible_arrays
+    valid, reason = n._metric_egress[0].check_trajectory(
+src/explore/explore/metric_frontier.py:368: in check_trajectory
+    cells=np.column_stack(np.nonzero(self.unknown & (occupancy<0)))
+E   ValueError: operands could not be broadcast together with shapes (40,80) (41,80)
+_______ test_delayed_callback_cannot_replace_generic_map_or_refresh_age ________
+src/explore/test/test_metric_map_lifecycle.py:143: in test_delayed_callback_cannot_replace_generic_map_or_refresh_age
+    assert n._map is later and n._metric_raw[0] is later
+E   assert (nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id=..., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) is nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=10000000), fr...0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100]))
+E    +  where nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id=..., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) = <explore.explore_node.ExploreNode object at 0x7f66b90afac0>._map
+_______________ test_same_stamp_different_content_latches_fault ________________
+src/explore/test/test_metric_map_lifecycle.py:152: in test_same_stamp_different_content_latches_fault
+    assert n._map is g
+E   assert nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id=...0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100]) is nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id=..., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+E    +  where nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id=...0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100]) = <explore.explore_node.ExploreNode object at 0x7f66b8f8d450>._map
+__________ test_costmap_conflicting_same_stamp_cannot_reopen_obstacle __________
+src/explore/test/test_metric_map_lifecycle.py:183: in test_costmap_conflicting_same_stamp_cannot_reopen_obstacle
+    assert n._global_costmap is old
+E   assert nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id=...0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100]) is nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id=..., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+E    +  where nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id=...0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100]) = <explore.explore_node.ExploreNode object at 0x7f66b8f04cd0>._global_costmap
+_ test_new_content_requires_exact_status_join_then_valid_update_is_processed[raw_first] _
+src/explore/test/test_metric_map_lifecycle.py:200: in test_new_content_requires_exact_status_join_then_valid_update_is_processed
+    with pytest.raises(ValueError, match='map_status_join_pending'):
+E   Failed: DID NOT RAISE <class 'ValueError'>
+____ test_identical_content_pending_keeps_original_exact_join_and_deadline _____
+src/explore/test/test_metric_map_lifecycle.py:215: in test_identical_content_pending_keeps_original_exact_join_and_deadline
+    assert inputs[0] is g and inputs[1].source_stamp_ns == 100_000_000_000
+E   assert (nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=10000000), fr..., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) is nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id=..., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]))
+______________ test_map_processing_time_consumes_freshness_window ______________
+src/explore/test/test_metric_map_lifecycle.py:301: in test_map_processing_time_consumes_freshness_window
+    with pytest.raises(ValueError, match='stale_after_processing'):
+E   Failed: DID NOT RAISE <class 'ValueError'>
+_______ test_final_mask_work_cannot_extend_pose_or_scan_freshness[pose] ________
+src/explore/test/test_metric_map_lifecycle.py:320: in test_final_mask_work_cannot_extend_pose_or_scan_freshness
+    with pytest.raises(ValueError, match=lost + '_stale_after_processing'):
+E   Failed: DID NOT RAISE <class 'ValueError'>
+_______ test_final_mask_work_cannot_extend_pose_or_scan_freshness[scan] ________
+src/explore/test/test_metric_map_lifecycle.py:320: in test_final_mask_work_cannot_extend_pose_or_scan_freshness
+    with pytest.raises(ValueError, match=lost + '_stale_after_processing'):
+E   Failed: DID NOT RAISE <class 'ValueError'>
+_____ test_stamp_age_expires_during_processing_despite_recent_dds_receipt ______
+src/explore/test/test_metric_map_lifecycle.py:328: in test_stamp_age_expires_during_processing_despite_recent_dds_receipt
+    with pytest.raises(ValueError, match='map_stamp_stale_after_processing'):
+E   Failed: DID NOT RAISE <class 'ValueError'>
+_ test_actual_map_producer_duplicate_growth_and_delayed_input_share_revision_contract[raw_first] _
+src/explore/test/test_metric_map_lifecycle.py:539: in test_actual_map_producer_duplicate_growth_and_delayed_input_share_revision_contract
+    assert manager._observed_maps == manager._accepted_maps == 1
+E   assert 2 == 1
+E    +  where 2 = <robot_map_manager.robot_map_manager_node.RobotMapManager object at 0x7f66b8fd6860>._observed_maps
+E    +  and   1 = <robot_map_manager.robot_map_manager_node.RobotMapManager object at 0x7f66b8fd6860>._accepted_maps
+_ test_actual_map_producer_duplicate_growth_and_delayed_input_share_revision_contract[status_first] _
+src/explore/test/test_metric_map_lifecycle.py:539: in test_actual_map_producer_duplicate_growth_and_delayed_input_share_revision_contract
+    assert manager._observed_maps == manager._accepted_maps == 1
+E   assert 2 == 1
+E    +  where 2 = <robot_map_manager.robot_map_manager_node.RobotMapManager object at 0x7f66b9051e70>._observed_maps
+E    +  and   1 = <robot_map_manager.robot_map_manager_node.RobotMapManager object at 0x7f66b9051e70>._accepted_maps
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[height-raw]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[height-costmap]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[height-both]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[width-raw]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[width-costmap]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[width-both]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[origin-raw]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[origin-costmap]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[origin-both]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[growth_origin-raw]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[growth_origin-costmap]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[growth_origin-both]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[resolution-raw]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[resolution-costmap]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[resolution-both]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[yaw-raw]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[yaw-costmap]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_raster_transition_expires_inventory_before_array_operation[yaw-both]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_direct_egress_check_rejects_incompatible_arrays
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_delayed_callback_cannot_replace_generic_map_or_refresh_age
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_same_stamp_different_content_latches_fault
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_costmap_conflicting_same_stamp_cannot_reopen_obstacle
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_new_content_requires_exact_status_join_then_valid_update_is_processed[raw_first]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_identical_content_pending_keeps_original_exact_join_and_deadline
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_map_processing_time_consumes_freshness_window
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_final_mask_work_cannot_extend_pose_or_scan_freshness[pose]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_final_mask_work_cannot_extend_pose_or_scan_freshness[scan]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_stamp_age_expires_during_processing_despite_recent_dds_receipt
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_actual_map_producer_duplicate_growth_and_delayed_input_share_revision_contract[raw_first]
+FAILED src/explore/test/test_metric_map_lifecycle.py::test_actual_map_producer_duplicate_growth_and_delayed_input_share_revision_contract[status_first]
+30 failed, 1 passed, 24 deselected in 1.30s

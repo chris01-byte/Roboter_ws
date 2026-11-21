@@ -1,0 +1,9 @@
+[INFO] [1791284638.454631959] [slam_toolbox]: Node using stack size 40000000
+[INFO] [1791284638.540191126] [slam_toolbox]: Using solver plugin solver_plugins::CeresSolver
+[INFO] [1791284638.542588079] [slam_toolbox]: CeresSolver: Using SCHUR_JACOBI preconditioner.
+[WARN] [1791284638.688371598] [slam_toolbox]: minimum laser range setting (0.0 m) exceeds the capabilities of the used Lidar (0.1 m)
+Info: clipped range threshold to be within minimum and maximum range!
+Registering sensor: [Custom Described Lidar]
+[INFO] [1791284658.557761571] [slam_toolbox]: Message Filter dropping message: frame 'laser_frame' at time 1791284658.446 for reason 'discarding message because the queue is full'
+[INFO] [1791284814.658794697] [slam_toolbox]: Message Filter dropping message: frame 'laser_frame' at time 1791284814.546 for reason 'discarding message because the queue is full'
+[INFO] [1791285002.337351037] [rclcpp]: signal_handler(signum=2)

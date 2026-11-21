@@ -4,6 +4,43 @@ import Testing
 
 struct RosbridgeProtocolTests {
     @Test
+    func metricResultsKeepCompletionPartialBlockErrorAndCancelDistinct() throws {
+        for (outcome, state) in [
+            ("metric_complete", "success"), ("usable_partial", "partial"),
+            ("blocked_help_required", "partial"), ("error", "failed"),
+            ("user_canceled", "canceled")
+        ] {
+            let metric: [String: Any] = [
+                "schema_version": 1, "outcome": outcome, "arrivals": 2,
+                "observations": 1, "observed_area_m2": 0.12,
+                "partial_map_ready_to_save": true, "semantic_complete": false,
+                "floor_coverage_verified": false
+            ]
+            var snapshot: [String: Any] = [
+                "schema_version": 1, "backend_ready": true, "state": state,
+                "phase": state, "message": "metric_frontier:\(state):reason",
+                "strategy": "metric_frontier", "coverage_ratio": 0.0,
+                "coverage_percent": 0.0, "target_coverage_percent": 85.0,
+                "reachable_area_m2": 0.0, "covered_area_m2": 0.0,
+                "frontiers_visited": 2, "coverage_goals_visited": 0,
+                "frontiers_remaining": 0, "map_ready_to_save": state == "success",
+                "time": 123.0, "metric_exploration": metric
+            ]
+            let data = try JSONSerialization.data(withJSONObject: snapshot)
+            let decoded = try JSONDecoder().decode(ExploreStatus.self, from: data)
+            #expect(decoded.isCompleteSnapshot)
+            #expect(decoded.metricExploration?.outcome == outcome)
+            #expect(decoded.metricExploration?.resultLabel.isEmpty == false)
+            #expect(decoded.normalizedCoverage == 0) // No invented floor coverage.
+            snapshot["map_ready_to_save"] = state != "success"
+            let contradictory = try JSONDecoder().decode(
+                ExploreStatus.self, from: JSONSerialization.data(withJSONObject: snapshot)
+            )
+            #expect(!contradictory.isCompleteSnapshot)
+        }
+    }
+
+    @Test
     func setupFramesMatchExistingBrowserProtocol() throws {
         let frames = try RosbridgeProtocol.setupFrames()
         #expect(frames.count == 5)

@@ -1,0 +1,32 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+___ test_known_endpoint_and_checked_escape_do_not_require_start_unknown_free ___
+
+    def test_known_endpoint_and_checked_escape_do_not_require_start_unknown_free():
+        node, inputs = fixture()
+        target = (.75, .05)
+        # The start remains genuinely unknown in part of its reserved rear contour.
+        assert not footprint_clear(*inputs[2], inputs[0], inputs[3], node._world_to_grid,
+            node._grid_to_world, node._metric_bounds, heading_half_angle=.05, center_deviation_m=.02)
+        # A one-point route checks only this actual endpoint; it commands no motion.
+>       assert node._metric_standard_waypoints_clear(inputs, (target,), 0.) is not None
+E       assert None is not None
+E        +  where None = <bound method MetricFrontierRuntime._metric_standard_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7f3fba474a60>>([nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...], ((0.75, 0.05),), 0.0)
+E        +    where <bound method MetricFrontierRuntime._metric_standard_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7f3fba474a60>> = <explore.explore_node.ExploreNode object at 0x7f3fba474a60>._metric_standard_waypoints_clear
+
+evidence/ap06-repo/src/explore/test/test_metric_rpp_egress_goal.py:20: AssertionError
+_______ test_endpoint_obstacle_and_rotation_into_unknown_remain_rejected _______
+
+    def test_endpoint_obstacle_and_rotation_into_unknown_remain_rejected():
+        node, inputs = fixture()
+        target = (.75, .05)
+>       assert node._metric_waypoints_clear(inputs, (inputs[2][:2], target), 0.) is not None
+E       assert None is not None
+E        +  where None = <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7f3fba475540>>([nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...], ((0.05, 0.05), (0.75, 0.05)), 0.0)
+E        +    where <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7f3fba475540>> = <explore.explore_node.ExploreNode object at 0x7f3fba475540>._metric_waypoints_clear
+
+evidence/ap06-repo/src/explore/test/test_metric_rpp_egress_goal.py:29: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_rpp_egress_goal.py::test_known_endpoint_and_checked_escape_do_not_require_start_unknown_free
+FAILED evidence/ap06-repo/src/explore/test/test_metric_rpp_egress_goal.py::test_endpoint_obstacle_and_rotation_into_unknown_remain_rejected
+2 failed in 0.32s

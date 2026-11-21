@@ -1,0 +1,22 @@
+[WARN] [1791062095.270784497] [base_hardware]: RS485 verbunden auf /dev/ttyUSB_BASE @ 115200; Fahrfreigabe erst nach bestaetigtem Stop, Rampen und Feedback.
+[INFO] [1791062095.271160302] [base_hardware]: Anfahrverhalten bestaetigt: Beschleunigen 2000 ms, Bremsen 400 ms, Startdrehzahl 5 rpm.
+[WARN] [1791062095.271676705] [base_hardware]: RS485 Initialisierung vollstaendig bestaetigt. Raeder muessen frei drehen, Not-Aus bereithalten.
+[INFO] [1791062095.271883150] [base_hardware]: base_hardware bereit: dry_run=False, cmd_vel=/cmd_vel, wheel_radius=0.062 m, separation=0.385 m
+[INFO] [1791062095.290410140] [hwt601_imu]: HWT601 passiv vorbereitet: /dev/ttyUSB_HWT601 bei 115200 Baud, Adresse 80; nur Modbus-Lesefunktion 0x03
+[INFO] [1791062095.290687530] [base_hardware]: CMD: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791062095.298110001] [hwt601_imu]: HWT601 verbunden: /dev/ttyUSB_HWT601
+[INFO] [1791062096.292182680] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791062097.312171661] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791062098.312145890] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791062099.351736934] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791062100.332580171] [base_hardware]: CMD: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=-0.0 rpm | Motor L=+0 R=-0 rpm
+Traceback (most recent call last):
+  File "/evidence/ap06-repo/tools/simulation/ap06_closed_product.py", line 393, in run
+    wait(lambda: observer.metric().get('scope_bound') is True and observer.fusion and
+  File "/evidence/ap06-repo/tools/simulation/ap06_closed_product.py", line 289, in wait
+    raise RuntimeError(f'{label}: process/executor failure {failed}')
+RuntimeError: real scope and HWT readiness: process/executor failure [('explorer', 1)]
+[INFO] [1791062101.360451744] [base_hardware]: CMD: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=-0.0 rpm | Motor L=+0 R=-0 rpm
+[INFO] [1791062102.416756473] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791062103.392528273] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+{"case": {"id": "door68_start_a", "door_m": 0.68, "start": [-1.9, -0.45, 0.0]}, "passed": false, "hardware_qualified": false, "sensor_profile": "native_mast_mask", "reference_geometry_provided_to_product": false, "truth_map_publisher": false, "truth_tf_publisher": false, "manual_navigation_goals": 0, "prefixes": {"explore": "/evidence/ap06-product-install/explore", "mission_manager": "/evidence/ap06-product-install/mission_manager", "bt_orchestrator": "/evidence/ap06-product-install/bt_orchestrator", "robot_navigation": "/evidence/ap06-product-install/robot_navigation", "robot_state_estimation": "/evidence/ap06-product-install/robot_state_estimation", "base_hardware": "/evidence/ap06-product-install/base_hardware", "robot_map_manager": "/evidence/ap06-product-install/robot_map_manager", "robot_localization": "/evidence/ap06-support-install/robot_localization", "slam_toolbox": "/evidence/ap06-support-install/slam_toolbox", "nav2_bt_navigator": "/evidence/ap06-support-install/nav2_bt_navigator", "nav2_controller": "/evidence/ap03-nav2-install/nav2_controller", "nav2_planner": "/evidence/ap03-nav2-install/nav2_planner", "nav2_velocity_smoother": "/evidence/ap06-support-install/nav2_velocity_smoother", "nav2_collision_monitor": "/evidence/ap06-support-install/nav2_collision_monitor"}, "initial_map": {"fingerprint": "0bcde0f27ac0631205869832db75e9e8483ed4c3c059b803ce21d7665cbf5948", "width": 187, "height": 93}, "error": "real scope and HWT readiness: process/executor failure [('explorer', 1)]"}

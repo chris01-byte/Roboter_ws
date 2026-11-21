@@ -1,0 +1,39 @@
+{
+  "baseline_source": "1d03a1fe60e2df1ace990b6b34749bb5fb2447f3",
+  "actual_adaptive_selection": true,
+  "actual_native_path_validation": true,
+  "translation_clear": true,
+  "actual_rejection": "goal_stop_rotation_invalid",
+  "before": {
+    "failed": 1,
+    "terminal_reason": "nav2_plan_goal_stop_rotation_invalid"
+  },
+  "after": {
+    "passed": 1,
+    "terminal_reason": "budget_exhausted",
+    "proposal_rejected": true,
+    "child_dispatched": false,
+    "failures": 0,
+    "attempts": 1
+  },
+  "targeted": {
+    "passed": 281,
+    "failed": 0
+  },
+  "hard_contract_negatives": [
+    "foreign_frame",
+    "nonfinite_orientation",
+    "nonfinite_goal"
+  ],
+  "limits_unchanged": true,
+  "geometry_guard_unchanged": true,
+  "hardware_qualified": false,
+  "rollback": "revert only own stop-rotation classification commit; disable private overlay",
+  "file_hashes": {
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/explore/metric_frontier_runtime.py": "610705c13a6c4e8a78afd79836ce4e685d4586a4c09e7a54ffb5d0b874412b69",
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/test/test_metric_native_stop_recovery.py": "759e87fbb82ba7c80195101ddc039d04957feaf2572590a589961bd384b7325e",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/stop-rotation-before/results.xml": "2c4b69e29aa00ee8a3bf6766e17c40296e9a604a567cb0d130dd0a4842542662",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/stop-rotation-after/results.xml": "9a6174ecc66934512dbdbe6e2021ade59309f6031f8f93ee16fb8158271550b8",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/stop-rotation-protection/results.xml": "8f5c665d7091898af56642487cc4c52b1258bbdc1b6513eab70f553ac9957f01"
+  }
+}

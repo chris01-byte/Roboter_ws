@@ -1,0 +1,6 @@
+Invoking command in '/evidence/ap05-final-build/nav2_common': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /evidence/ap03-navigation2/nav2_common -DCMAKE_INSTALL_PREFIX=/evidence/ap05-final-install/nav2_common
+Invoked command in '/evidence/ap05-final-build/nav2_common' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /evidence/ap03-navigation2/nav2_common -DCMAKE_INSTALL_PREFIX=/evidence/ap05-final-install/nav2_common
+Invoking command in '/evidence/ap05-final-build/nav2_common': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /evidence/ap05-final-build/nav2_common -- -j5 -l5
+Invoked command in '/evidence/ap05-final-build/nav2_common' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /evidence/ap05-final-build/nav2_common -- -j5 -l5
+Invoking command in '/evidence/ap05-final-build/nav2_common': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /evidence/ap05-final-build/nav2_common
+Invoked command in '/evidence/ap05-final-build/nav2_common' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /evidence/ap05-final-build/nav2_common

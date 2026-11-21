@@ -1,0 +1,33 @@
+         481325 function calls (479387 primitive calls) in 0.609 seconds
+
+   Ordered by: cumulative time
+   List reduced from 300 to 25 due to restriction <25>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        4    0.000    0.000    0.609    0.152 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:779(_metric_prepare_egress)
+        8    0.025    0.003    0.481    0.060 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py:161(refresh)
+    26434    0.046    0.000    0.356    0.000 /usr/local/lib/python3.10/dist-packages/shapely/decorators.py:62(wrapped)
+     6636    0.007    0.000    0.162    0.000 /usr/local/lib/python3.10/dist-packages/shapely/geometry/polygon.py:221(__new__)
+     3291    0.002    0.000    0.113    0.000 /usr/local/lib/python3.10/dist-packages/shapely/geometry/base.py:593(intersection)
+     3285    0.002    0.000    0.102    0.000 /usr/local/lib/python3.10/dist-packages/shapely/geometry/base.py:585(difference)
+     3291    0.101    0.000    0.101    0.000 /usr/local/lib/python3.10/dist-packages/shapely/set_operations.py:79(intersection)
+     3345    0.003    0.000    0.097    0.000 /usr/local/lib/python3.10/dist-packages/shapely/geometry/geo.py:48(box)
+     3285    0.091    0.000    0.091    0.000 /usr/local/lib/python3.10/dist-packages/shapely/set_operations.py:21(difference)
+     6636    0.015    0.000    0.087    0.000 /usr/local/lib/python3.10/dist-packages/shapely/geometry/polygon.py:62(__new__)
+        8    0.001    0.000    0.075    0.009 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py:288(check_trajectory)
+       16    0.006    0.000    0.072    0.005 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:594(check_trajectory)
+       22    0.031    0.001    0.055    0.002 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:491(_cell_intersections)
+     6636    0.022    0.000    0.047    0.000 /usr/local/lib/python3.10/dist-packages/shapely/creation.py:176(polygons)
+     6584    0.004    0.000    0.046    0.000 /usr/local/lib/python3.10/dist-packages/shapely/geometry/base.py:327(area)
+1764/1218    0.014    0.000    0.042    0.000 {built-in method numpy.core._multiarray_umath.implement_array_function}
+       10    0.002    0.000    0.042    0.004 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:813(current_inside)
+        4    0.037    0.009    0.039    0.010 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_scope.py:133(rasterize_scope)
+     6584    0.025    0.000    0.025    0.000 /usr/local/lib/python3.10/dist-packages/shapely/measurement.py:21(area)
+    13274    0.010    0.000    0.023    0.000 /usr/lib/python3/dist-packages/numpy/core/numerictypes.py:358(issubdtype)
+     6636    0.017    0.000    0.018    0.000 /usr/local/lib/python3.10/dist-packages/shapely/creation.py:124(linearrings)
+        6    0.001    0.000    0.018    0.003 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py:59(batch_intersections)
+      256    0.000    0.000    0.016    0.000 /usr/lib/python3/dist-packages/numpy/core/fromnumeric.py:51(_wrapfunc)
+    26434    0.010    0.000    0.013    0.000 /usr/local/lib/python3.10/dist-packages/shapely/decorators.py:64(<listcomp>)
+    26548    0.009    0.000    0.013    0.000 /usr/lib/python3/dist-packages/numpy/core/numerictypes.py:284(issubclass_)
+
+

@@ -1,0 +1,11 @@
+{
+  "compressed_bytes": 19264015,
+  "compressed_sha256": "d282e4980ddbd05fa64ebc637f0e8f8700530de0a19a196d6c8ebcd15ccad622",
+  "container_path": "/evidence/ap06-concept-20261008/phase-a/door68_start_a/events.jsonl.gz",
+  "independently_verified": true,
+  "metadata_path": "/workspace/scratch/ap06-concept-20261008/phase-a/door68_start_a/events.jsonl.gz.meta.json",
+  "path": "/workspace/scratch/ap06-concept-20261008/phase-a/door68_start_a/events.jsonl.gz",
+  "stored_in_git": false,
+  "uncompressed_bytes": 148814652,
+  "uncompressed_sha256": "60e9fb0db12f0042f204acdbbb551b6e35f3665660ce535680e26e71b7d9211e"
+}

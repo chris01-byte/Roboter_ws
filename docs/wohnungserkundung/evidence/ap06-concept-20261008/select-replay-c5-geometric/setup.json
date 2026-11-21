@@ -1,0 +1,181 @@
+{
+  "schema": 1,
+  "diagnostic_only": true,
+  "mission_qualified": false,
+  "hardware_qualified": false,
+  "original_deadline_s": 5.0,
+  "source_commit": "c5d2a9c00d146851799a907ba725ef0d0f30c815",
+  "installed_modules": {
+    "explore.explore_node": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py",
+      "sha256": "07e27f603cb857a77b6e6ff0da9c6f1f715735a1f428594c510f6c20f94676cb"
+    },
+    "explore.metric_frontier_runtime": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+      "sha256": "723b7a03ba3cb6e0fce830db9e6476f929c94225f7f296cde23d0ab4366f7cea"
+    },
+    "explore.metric_frontier": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+      "sha256": "47d770a122116390415a598642d016830d0cb0b3947edd6f4d4ac9471537592b"
+    },
+    "explore.metric_frontier_candidates": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_candidates.py",
+      "sha256": "f852901d67655d4fa8f9dda372ae51b40f5b34e658af2a82c0f1a0b96e9ee951"
+    },
+    "explore.metric_egress_reference": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py",
+      "sha256": "4786b1623247bff4d2c3896c87dfe7bd6939beed4c0c79f987ba11e14feae605"
+    },
+    "explore.metric_checkpoint": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_checkpoint.py",
+      "sha256": "e750cd7a6b1faf49d95395d3289e2c43902db3212ac03984a8b72d50a2ef852b"
+    },
+    "explore.frontier_task_evidence": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/frontier_task_evidence.py",
+      "sha256": "0861d7035ad6ce247353c99488a7ca66de8490b33eb909b672254ea296a033a6"
+    },
+    "explore.exploration_scope": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_scope.py",
+      "sha256": "74d1031a5b5a0145bfceea80c34a556ce21f9b6543782cc09891783f7b8d143e"
+    },
+    "amadeus_map_identity.fingerprint": {
+      "path": "/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py",
+      "sha256": "61c2ee882e3e25dbc8d6b1b25573152d3c271b817b4d81f074333c99a1ed0759"
+    }
+  },
+  "configs": {
+    "explore_params.yaml": {
+      "source": "/evidence/ap06-repo/src/explore/config/explore_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/explore_params.yaml",
+      "sha256": "83ba002c74421513ee849a1a5728b13f79acdbb1cba298650a5d277ee409109c"
+    },
+    "metric_frontier_params.yaml": {
+      "source": "/evidence/ap06-repo/src/explore/config/metric_frontier_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/metric_frontier_params.yaml",
+      "sha256": "8a88ca2117983b09b1234f9e8c2a38159223fafc997d4bc28b89dd338d7ffe51"
+    },
+    "metric_frontier_simulation_params.yaml": {
+      "source": "/evidence/ap06-repo/src/explore/config/metric_frontier_simulation_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/metric_frontier_simulation_params.yaml",
+      "sha256": "0ec8c361f7d2e3b721d3eb53c2ef40464315c02f5c208bb0958140d4dca28d41"
+    }
+  },
+  "checkpoint": {
+    "path": "/evidence/ap06-concept-20261008/revalidation-a/door68_start_a/checkpoints/amadeus/20261008T072325540920Z-305405243e93/state-00000001.json",
+    "sha256": "d509c295ba808003e791f3b294668d07e93532bd41347c8194a8ad1988615470"
+  },
+  "script": {
+    "path": "/evidence/ap06-concept-20261008/replay_metric_select_c5.py",
+    "sha256": "03a9ba25739a9f9551197506886f0efeba8773d7eb730ace166942f270816af2"
+  },
+  "original_inputs": {
+    "result.json": {
+      "path": "/evidence/ap06-concept-20261008/revalidation-a/door68_start_a/result.json",
+      "sha256": "f1efeceecfc8dcac175d6088e8dc99df25ff509997e9d566c7158601f73da11a"
+    },
+    "final_raw_map.cdr": {
+      "path": "/evidence/ap06-concept-20261008/revalidation-a/door68_start_a/final_raw_map.cdr",
+      "sha256": "300272a6188259ab2fd8d65ac69ee0210c4a9ff21a951bec6985d586698bfc12"
+    },
+    "final_costmap.cdr": {
+      "path": "/evidence/ap06-concept-20261008/revalidation-a/door68_start_a/final_costmap.cdr",
+      "sha256": "3fd42e2d1e375733c9b502d9ffb58a1be1672efdf0690dfd08d2a1d48fde0508"
+    },
+    "final_scan.cdr": {
+      "path": "/evidence/ap06-concept-20261008/revalidation-a/door68_start_a/final_scan.cdr",
+      "sha256": "4edd702072a2d8aad11e0062f073d642527347abee86fdb64d2c884d90c79a47"
+    },
+    "events.jsonl.gz": {
+      "path": "/evidence/ap06-concept-20261008/revalidation-a/door68_start_a/events.jsonl.gz",
+      "sha256": "c969b5bab1c1c9bf9d32a68329b304c51df5849d0a87c6be5f9cbe0a7c44d099"
+    }
+  },
+  "limitations": [
+    "Component reconstruction, not exact failed selector entry or a mission.",
+    "Saved final policy is after failed pass; newly identified task IDs may already exist.",
+    "Saved cooldown remaining retained independently in each call; entry-pass cooldowns unavailable.",
+    "Saved final common-time TF pose and final CDR may differ from discarded failing input object.",
+    "Empty private inventory is reconstructed and asserted from final status; original ledger was not saved.",
+    "Frozen recorded finite lidar view is geometric component data, never a new sensor freshness receipt.",
+    "The final LaserScan predates final TF and fails the original observation stamp guard; only the finite geometry adapter is used offline.",
+    "Monotonic selection clock is real, original 5 s budget unchanged. Source receipt refreshed for offline component only.",
+    "No competing mission/DDS load; cProfile adds overhead and can change which budget check throws.",
+    "Map revision label reconstructed as 1; fingerprint/context/source stamp exactly bound to checkpoint."
+  ],
+  "affinity": [
+    0,
+    1
+  ],
+  "ros_time_ns": 1791444209874899026,
+  "stamps_ns": {
+    "raw": 1791444205173833434,
+    "cost": 1791444205823035428,
+    "scan": 1791444205974051293,
+    "tf": 1791444209873899026
+  },
+  "shape": {
+    "raw": [
+      284,
+      564
+    ],
+    "cost": [
+      284,
+      564
+    ]
+  },
+  "runs": [],
+  "pose": [
+    0.7943517271273505,
+    0.537096473340192,
+    -0.4405029269231248
+  ],
+  "reference": [
+    0.008898518855184164,
+    -0.005162834094393961,
+    0.006979999999999125
+  ],
+  "scope_vertices": [
+    [
+      -0.8999999999999999,
+      -0.95
+    ],
+    [
+      4.699999999999999,
+      -0.95
+    ],
+    [
+      4.699999999999999,
+      1.8499999999999999
+    ],
+    [
+      -0.8999999999999999,
+      1.8499999999999999
+    ]
+  ],
+  "fingerprint": "305405243e935abaedaabc7e8c245573ed49826e8e1bbdc98cebf56447311c66",
+  "mask_cells": {
+    "known": 94722,
+    "safe": 39771,
+    "cost_known": 113983
+  },
+  "attributes": {
+    "_metric_start_strategy": "adaptive",
+    "_metric_candidate_source": "boundary_samples",
+    "_metric_path_validation": "rpp_rollout",
+    "_metric_start_egress_enabled": true,
+    "_goal_clearance_m": 0.28,
+    "_frontier_goal_max_cost": 90,
+    "_goal_search_m": 0.3,
+    "_approach_dist_m": 0.45,
+    "_min_goal_dist_m": 0.3,
+    "_frontier_forward_cone_half_angle": 0.0,
+    "_potential_scale": 3.0,
+    "_gain_scale": 1.0,
+    "_heading_scale": 0.75,
+    "_map_timeout_s": 5.0,
+    "_wohnungserkundung_evidence_max_cells": 262144,
+    "_door_lidar_max_range": 4.0,
+    "_prealign_handoff_tolerance": 0.02
+  },
+  "finite_lidar_angles": 2160
+}

@@ -1,0 +1,22 @@
+[0.425s] Invoking command in '/evidence/ap06-repo/src/base_hardware': PYTHONPATH=/evidence/ap06-old-product-build/base_hardware/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap06-old-product-build/base_hardware build --build-base /evidence/ap06-old-product-build/base_hardware/build install --record /evidence/ap06-old-product-build/base_hardware/install.log --single-version-externally-managed install_data
+[0.563s] running egg_info
+[0.563s] writing ../../../ap06-old-product-build/base_hardware/base_hardware.egg-info/PKG-INFO
+[0.564s] writing dependency_links to ../../../ap06-old-product-build/base_hardware/base_hardware.egg-info/dependency_links.txt
+[0.564s] writing entry points to ../../../ap06-old-product-build/base_hardware/base_hardware.egg-info/entry_points.txt
+[0.564s] writing requirements to ../../../ap06-old-product-build/base_hardware/base_hardware.egg-info/requires.txt
+[0.564s] writing top-level names to ../../../ap06-old-product-build/base_hardware/base_hardware.egg-info/top_level.txt
+[0.565s] reading manifest file '../../../ap06-old-product-build/base_hardware/base_hardware.egg-info/SOURCES.txt'
+[0.566s] writing manifest file '../../../ap06-old-product-build/base_hardware/base_hardware.egg-info/SOURCES.txt'
+[0.566s] running build
+[0.566s] running build_py
+[0.566s] running install
+[0.567s] running install_lib
+[0.568s] running install_data
+[0.568s] running install_egg_info
+[0.569s] removing '/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages/base_hardware-0.1.0-py3.10.egg-info' (and everything under it)
+[0.570s] Copying ../../../ap06-old-product-build/base_hardware/base_hardware.egg-info to /evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages/base_hardware-0.1.0-py3.10.egg-info
+[0.570s] running install_scripts
+[0.587s] Installing base_hardware script to /evidence/ap06-old-product-install/base_hardware/lib/base_hardware
+[0.587s] Installing encoder_shadow_reader script to /evidence/ap06-old-product-install/base_hardware/lib/base_hardware
+[0.587s] writing list of installed files to '/evidence/ap06-old-product-build/base_hardware/install.log'
+[0.609s] Invoked command in '/evidence/ap06-repo/src/base_hardware' returned '0': PYTHONPATH=/evidence/ap06-old-product-build/base_hardware/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap06-old-product-build/base_hardware build --build-base /evidence/ap06-old-product-build/base_hardware/build install --record /evidence/ap06-old-product-build/base_hardware/install.log --single-version-externally-managed install_data

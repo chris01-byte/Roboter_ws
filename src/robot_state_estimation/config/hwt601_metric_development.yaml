@@ -1,0 +1,11 @@
+# Explicit LAB-1 / metric development contract, 01.10.2026.
+# Layer over hwt601_shadow.yaml only with hwt_development_contract:=true.
+# These measured-development bounds are not a production safety certificate.
+hwt601_shadow_reader:
+  ros__parameters:
+    development_contract: true
+    response_timeout_s: 0.05
+    sensor_timeout_s: 0.30
+# Consumers select the same immutable contract via the launch argument:
+# raw measurement age <= .30 s; <=2 actual HWT HOLDs in a sliding 60 s;
+# each recovery <=5 s including validation/cancel. Wheel .12/.18 untouched.

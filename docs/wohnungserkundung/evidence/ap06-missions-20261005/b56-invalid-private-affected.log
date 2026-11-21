@@ -1,0 +1,1276 @@
+..................................................................F..... [ 26%]
+...........F..............F........FFFFFFFF.........FF.....F.F.F.....F.. [ 53%]
+......................F..F.............................................. [ 79%]
+............................F..........................                  [100%]
+=================================== FAILURES ===================================
+_____ test_rotated_approach_refinement_stays_bounded_and_checks_full_route _____
+
+    def test_rotated_approach_refinement_stays_bounded_and_checks_full_route():
+        """A real input frontier's rotated front touches unknown at the old point."""
+        import time
+        from explore.metric_frontier_runtime import MetricFrontierRuntime
+        from explore.portal_source_adapter import raw_map_portal_source_from_values
+        n=ExploreNode.__new__(ExploreNode)
+        n._global_frame='map';n._map_timeout_s=5.;n._global_costmap_received_at=time.monotonic()
+        n._frontier_goal_max_cost=90;n._goal_clearance_m=.28;n._goal_search_m=.30;n._approach_dist_m=.45
+        n._min_goal_dist_m=.30;n._frontier_forward_cone_half_angle=0.
+        n._potential_scale=3.;n._gain_scale=1.;n._heading_scale=.75
+        n._metric_bounds=(-.13,.33,-.25,.25);n._visualize=False
+        g=grid();a=np.zeros((40,80),int);a[:,25:]=-1
+        a[(0,39),:]=100;a[:,(0,79)]=100;a[19:21,18:]=100
+        g.data=a.ravel().tolist()
+        cm=grid();cm.data=np.maximum(a,0).ravel().tolist();n._global_costmap=cm
+        source=raw_map_portal_source_from_values(**MetricFrontierRuntime._metric_grid_values(g))
+        context=PortalMapContext('metric','test-map','map')
+        correlation=PortalSourceCorrelation(context,1,source.fingerprint,source.source_stamp_ns)
+        scope=AuthorizedExplorationScope('scope',context,tuple(Point2D(x,y) for x,y in
+            ((-.8,-1.8),(6.8,-1.8),(6.8,1.8),(-.8,1.8))))
+        known,safe=known_safe_mask(a,scope,correlation,(-1.,-2.),0.,g.info.resolution,.28)
+        inputs=(g,correlation,(.05,.05,0.),known,safe,cm,np.asarray(cm.data).reshape(40,80)<100)
+        frontiers=n._detect_frontiers(g,.3)
+        initial=[n._frontier_approach_goal(f,(.05,.05),g) for f in frontiers]
+        assert len(initial)==2 and all(n._metric_route(inputs,goal) is None for goal in initial)
+>       candidates=n._metric_select(inputs,MetricTaskPolicy(.6,30.,2),.3)
+
+src/explore/test/test_metric_frontier.py:250: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1950: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda676ecca0>
+inputs = (nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...)
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+____ test_adaptive_shadow_keeps_scan_fallback_and_prefers_observation_tasks ____
+
+    def test_adaptive_shadow_keeps_scan_fallback_and_prefers_observation_tasks():
+        n,inputs=adaptive_fixture()
+        # Rear exterior within rotated front swing, outside forward correction envelope.
+        inputs[3][20,6]=False;inputs[6][20,6]=False
+>       d,c=n._metric_start_decision(inputs,MetricTaskPolicy(.6,30.,2),.3,True)
+
+src/explore/test/test_metric_frontier.py:444: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1435: in _metric_start_decision
+    candidates = self._metric_select(inputs, policy, min_frontier) if (
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1950: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda67869780>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+_ test_float32_raster_keeps_last_bounded_refinement_when_controller_goal_needs_it _
+
+    def test_float32_raster_keeps_last_bounded_refinement_when_controller_goal_needs_it():
+        n,inputs=adaptive_fixture();g=inputs[0];g.info.resolution=float(np.float32(.1))
+        occupancy=np.zeros((40,80),int);occupancy[:,40:]=-1
+        occupancy[(0,39),:]=100;occupancy[:,(0,79)]=100
+        for col in (30,31):occupancy[:12,col]=100;occupancy[28:,col]=100
+        g.data=occupancy.ravel().tolist();inputs[5].info.resolution=g.info.resolution
+        inputs[5].data=np.maximum(occupancy,0).ravel().tolist()
+        known,safe=known_safe_mask(occupancy,n._metric_scope,inputs[1],(-1.,-2.),0.,g.info.resolution,.28)
+        inputs=(g,inputs[1],(.8515444522474284,.07480697783487446,0.),known,safe,inputs[5],np.asarray(inputs[5].data).reshape(40,80)<100)
+        frontier=n._detect_frontiers(g,.3)[0]
+        original=n._frontier_approach_goal(frontier,inputs[2][:2],g)
+>       candidates=n._metric_select(inputs,MetricTaskPolicy(.6,30.,2),.3)
+
+src/explore/test/test_metric_frontier.py:650: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1950: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda66ad6aa0>
+inputs = (nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...)
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+_____________________ test_mandatory_candidate_cases[ring] _____________________
+
+case = 'ring'
+
+    @pytest.mark.parametrize('case',['ring','concave','long','blocked','growth','revisit','no_semantics'])
+    def test_mandatory_candidate_cases(case):
+        n,inputs,scan=fixture(case)
+>       found=candidates(n,inputs,scan)
+
+src/explore/test/test_metric_frontier_candidates.py:81: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/explore/test/test_metric_frontier_candidates.py:75: in candidates
+    return n._metric_candidates(inputs,.3)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda677b2980>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id... -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+___________________ test_mandatory_candidate_cases[concave] ____________________
+
+case = 'concave'
+
+    @pytest.mark.parametrize('case',['ring','concave','long','blocked','growth','revisit','no_semantics'])
+    def test_mandatory_candidate_cases(case):
+        n,inputs,scan=fixture(case)
+>       found=candidates(n,inputs,scan)
+
+src/explore/test/test_metric_frontier_candidates.py:81: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/explore/test/test_metric_frontier_candidates.py:75: in candidates
+    return n._metric_candidates(inputs,.3)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda66bb7e50>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id... -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+_____________________ test_mandatory_candidate_cases[long] _____________________
+
+case = 'long'
+
+    @pytest.mark.parametrize('case',['ring','concave','long','blocked','growth','revisit','no_semantics'])
+    def test_mandatory_candidate_cases(case):
+        n,inputs,scan=fixture(case)
+>       found=candidates(n,inputs,scan)
+
+src/explore/test/test_metric_frontier_candidates.py:81: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/explore/test/test_metric_frontier_candidates.py:75: in candidates
+    return n._metric_candidates(inputs,.3)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda677d6950>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+___________________ test_mandatory_candidate_cases[blocked] ____________________
+
+case = 'blocked'
+
+    @pytest.mark.parametrize('case',['ring','concave','long','blocked','growth','revisit','no_semantics'])
+    def test_mandatory_candidate_cases(case):
+        n,inputs,scan=fixture(case)
+>       found=candidates(n,inputs,scan)
+
+src/explore/test/test_metric_frontier_candidates.py:81: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/explore/test/test_metric_frontier_candidates.py:75: in candidates
+    return n._metric_candidates(inputs,.3)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda6158a0e0>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+____________________ test_mandatory_candidate_cases[growth] ____________________
+
+case = 'growth'
+
+    @pytest.mark.parametrize('case',['ring','concave','long','blocked','growth','revisit','no_semantics'])
+    def test_mandatory_candidate_cases(case):
+        n,inputs,scan=fixture(case)
+>       found=candidates(n,inputs,scan)
+
+src/explore/test/test_metric_frontier_candidates.py:81: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/explore/test/test_metric_frontier_candidates.py:75: in candidates
+    return n._metric_candidates(inputs,.3)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda677d6440>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+___________________ test_mandatory_candidate_cases[revisit] ____________________
+
+case = 'revisit'
+
+    @pytest.mark.parametrize('case',['ring','concave','long','blocked','growth','revisit','no_semantics'])
+    def test_mandatory_candidate_cases(case):
+        n,inputs,scan=fixture(case)
+>       found=candidates(n,inputs,scan)
+
+src/explore/test/test_metric_frontier_candidates.py:81: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/explore/test/test_metric_frontier_candidates.py:75: in candidates
+    return n._metric_candidates(inputs,.3)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda6156d660>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+_________________ test_mandatory_candidate_cases[no_semantics] _________________
+
+case = 'no_semantics'
+
+    @pytest.mark.parametrize('case',['ring','concave','long','blocked','growth','revisit','no_semantics'])
+    def test_mandatory_candidate_cases(case):
+        n,inputs,scan=fixture(case)
+>       found=candidates(n,inputs,scan)
+
+src/explore/test/test_metric_frontier_candidates.py:81: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/explore/test/test_metric_frontier_candidates.py:75: in candidates
+    return n._metric_candidates(inputs,.3)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda66ce24a0>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+___________ test_rotated_origin_produces_equivalent_world_candidates ___________
+
+    def test_rotated_origin_produces_equivalent_world_candidates():
+        a,ia,sa=fixture('long');b,ib,sb=fixture('long',rotation=math.pi/2)
+>       ca=candidates(a,ia,sa);cb=candidates(b,ib,sb)
+
+src/explore/test/test_metric_frontier_candidates.py:127: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/explore/test/test_metric_frontier_candidates.py:75: in candidates
+    return n._metric_candidates(inputs,.3)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda615d8970>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+____________ test_candidate_generation_does_not_own_visited_policy _____________
+
+    def test_candidate_generation_does_not_own_visited_policy():
+>       n,i,s=fixture('long');first=candidates(n,i,s)
+
+src/explore/test/test_metric_frontier_candidates.py:172: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/explore/test/test_metric_frontier_candidates.py:75: in candidates
+    return n._metric_candidates(inputs,.3)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda6149e2f0>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+_ test_changed_local_evidence_returns_opportunity_near_previous_observation_pose _
+
+    def test_changed_local_evidence_returns_opportunity_near_previous_observation_pose():
+>       n,i,s=fixture('long');first=n._metric_select(i,MetricTaskPolicy(.6,30.,2),.3)[0]
+
+src/explore/test/test_metric_frontier_candidates.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1950: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda66d3f400>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+_______ test_unknown_raw_contour_and_costmap_obstacles_remain_exclusions _______
+
+    def test_unknown_raw_contour_and_costmap_obstacles_remain_exclusions():
+>       n,i,s=fixture('long');original=n._metric_candidates(i,.3)
+
+src/explore/test/test_metric_frontier_candidates.py:239: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda66ad5120>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+_______ test_candidate_processing_consumes_budget_even_for_empty_result ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fda615eaec0>
+
+    def test_candidate_processing_consumes_budget_even_for_empty_result(monkeypatch):
+        import explore.metric_frontier_runtime as runtime
+        n,i,s=fixture('long');ticks=iter((0.,6.))
+        monkeypatch.setattr(runtime,'time',SimpleNamespace(monotonic=lambda:next(ticks)))
+        with pytest.raises(ValueError,match='processing_budget_exhausted'):
+>           n._metric_candidates(i,.3,frontiers=[])
+
+src/explore/test/test_metric_frontier_candidates.py:262: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda615ea8f0>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+_ test_remaining_real_boundary_yields_safe_pose_and_still_requires_native_path _
+
+    def test_remaining_real_boundary_yields_safe_pose_and_still_requires_native_path():
+        node,inputs,policy=fixture()
+        before=[bytes(np.asarray(inputs[i].data,dtype=np.int8)) for i in (0,5)]
+>       candidates=node._metric_select(inputs,policy,.3)
+
+src/explore/test/test_metric_alternative_pose.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1950: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda677d5fc0>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id... 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+____ test_live_task_selection_proves_one_goal_and_looks_past_served_history ____
+
+    def test_live_task_selection_proves_one_goal_and_looks_past_served_history():
+        from explore.metric_frontier import MetricTaskPolicy
+        node, inputs, _ = ordinary_departure_fixture()
+        policy = MetricTaskPolicy(.6, 30., 2)
+        first = node._metric_select(inputs, policy, .3)
+        assert first and not first[0].requires_nav2_plan
+>       assert (node._frontier_rank_stats.get('proof_search_stopped_on_eligible_task')
+                or node._frontier_rank_stats.get('bounded_start_observation'))
+E       AssertionError: assert (None or None)
+E        +  where None = <built-in method get of dict object at 0x7fda678a04c0>('proof_search_stopped_on_eligible_task')
+E        +    where <built-in method get of dict object at 0x7fda678a04c0> = {'accepted': 1, 'bounded_public_observation': True, 'deferred_or_served': 0, 'raw': 20, ...}.get
+E        +      where {'accepted': 1, 'bounded_public_observation': True, 'deferred_or_served': 0, 'raw': 20, ...} = <explore.explore_node.ExploreNode object at 0x7fda6157a6e0>._frontier_rank_stats
+E        +  and   None = <built-in method get of dict object at 0x7fda678a04c0>('bounded_start_observation')
+E        +    where <built-in method get of dict object at 0x7fda678a04c0> = {'accepted': 1, 'bounded_public_observation': True, 'deferred_or_served': 0, 'raw': 20, ...}.get
+E        +      where {'accepted': 1, 'bounded_public_observation': True, 'deferred_or_served': 0, 'raw': 20, ...} = <explore.explore_node.ExploreNode object at 0x7fda6157a6e0>._frontier_rank_stats
+
+src/explore/test/test_metric_start_observation.py:164: AssertionError
+_ test_selection_retains_reachable_target_for_real_nav2_instead_of_banning_shortest _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fda615d91b0>
+
+    def test_selection_retains_reachable_target_for_real_nav2_instead_of_banning_shortest(monkeypatch):
+        n,inputs=adaptive_fixture();n._metric_path_validation='rpp_rollout'
+        # The only double is the rejected own prefilter; real frontier/approach,
+        # goal-contour proof and policy still run against the actual input map.
+        monkeypatch.setattr(n,'_metric_route',lambda *args:None)
+        n._metric_last_route_rejection='footprint_sweep_invalid'
+        policy=MetricTaskPolicy(.6,30.,2)
+>       candidates=n._metric_select(inputs,policy,.3)
+
+src/explore/test/test_metric_motion_geometry.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1950: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda615dbb80>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+______ test_adaptive_start_reports_missing_exterior_without_repeated_scan ______
+
+    def test_adaptive_start_reports_missing_exterior_without_repeated_scan():
+        n,inputs=door_inputs();inputs[2]=(0.,0.,0.)
+>       decision,candidates=n._metric_start_decision(inputs,MetricTaskPolicy(.6,30.,2),.3,True)
+
+src/explore/test/test_metric_motion_geometry.py:125: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1435: in _metric_start_decision
+    candidates = self._metric_select(inputs, policy, min_frontier) if (
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1950: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda66d3d570>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id='...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+_ test_actual_candidate_source_reopens_served_place_only_after_useful_local_change _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fda61587490>
+
+    def test_actual_candidate_source_reopens_served_place_only_after_useful_local_change(monkeypatch):
+        from test_metric_frontier_candidates import fixture
+        import explore.metric_frontier_runtime as module
+        clock=[10.]
+        monkeypatch.setattr(module.time,'monotonic',lambda:clock[0])
+        n,inputs,_=fixture('revisit',revision=1)
+>       p=MetricTaskPolicy(.6,30.,2);first=n._metric_select(inputs,p,.3)[0]
+
+src/explore/test/test_metric_progress.py:437: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1950: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fda61587bb0>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+>       private_start_available = (not self._metric_egress_expired
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_egress_expired'
+
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1630: AttributeError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_frontier.py::test_rotated_approach_refinement_stays_bounded_and_checks_full_route
+FAILED src/explore/test/test_metric_frontier.py::test_adaptive_shadow_keeps_scan_fallback_and_prefers_observation_tasks
+FAILED src/explore/test/test_metric_frontier.py::test_float32_raster_keeps_last_bounded_refinement_when_controller_goal_needs_it
+FAILED src/explore/test/test_metric_frontier_candidates.py::test_mandatory_candidate_cases[ring]
+FAILED src/explore/test/test_metric_frontier_candidates.py::test_mandatory_candidate_cases[concave]
+FAILED src/explore/test/test_metric_frontier_candidates.py::test_mandatory_candidate_cases[long]
+FAILED src/explore/test/test_metric_frontier_candidates.py::test_mandatory_candidate_cases[blocked]
+FAILED src/explore/test/test_metric_frontier_candidates.py::test_mandatory_candidate_cases[growth]
+FAILED src/explore/test/test_metric_frontier_candidates.py::test_mandatory_candidate_cases[revisit]
+FAILED src/explore/test/test_metric_frontier_candidates.py::test_mandatory_candidate_cases[no_semantics]
+FAILED src/explore/test/test_metric_frontier_candidates.py::test_rotated_origin_produces_equivalent_world_candidates
+FAILED src/explore/test/test_metric_frontier_candidates.py::test_candidate_generation_does_not_own_visited_policy
+FAILED src/explore/test/test_metric_frontier_candidates.py::test_changed_local_evidence_returns_opportunity_near_previous_observation_pose
+FAILED src/explore/test/test_metric_frontier_candidates.py::test_unknown_raw_contour_and_costmap_obstacles_remain_exclusions
+FAILED src/explore/test/test_metric_frontier_candidates.py::test_candidate_processing_consumes_budget_even_for_empty_result
+FAILED src/explore/test/test_metric_alternative_pose.py::test_remaining_real_boundary_yields_safe_pose_and_still_requires_native_path
+FAILED src/explore/test/test_metric_start_observation.py::test_live_task_selection_proves_one_goal_and_looks_past_served_history
+FAILED src/explore/test/test_metric_motion_geometry.py::test_selection_retains_reachable_target_for_real_nav2_instead_of_banning_shortest
+FAILED src/explore/test/test_metric_motion_geometry.py::test_adaptive_start_reports_missing_exterior_without_repeated_scan
+FAILED src/explore/test/test_metric_progress.py::test_actual_candidate_source_reopens_served_place_only_after_useful_local_change
+20 failed, 251 passed in 69.75s (0:01:09)

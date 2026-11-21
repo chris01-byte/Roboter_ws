@@ -1,0 +1,33 @@
+         41645 function calls (39701 primitive calls) in 0.190 seconds
+
+   Ordered by: cumulative time
+   List reduced from 304 to 25 due to restriction <25>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        4    0.000    0.000    0.190    0.048 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:779(_metric_prepare_egress)
+        8    0.002    0.000    0.074    0.009 /evidence/ap06-repo/src/explore/explore/metric_egress_reference.py:206(refresh)
+        8    0.001    0.000    0.066    0.008 /evidence/ap06-repo/src/explore/explore/metric_egress_reference.py:333(check_trajectory)
+       16    0.005    0.000    0.064    0.004 /evidence/ap06-repo/src/explore/explore/metric_frontier.py:594(check_trajectory)
+       22    0.027    0.001    0.048    0.002 /evidence/ap06-repo/src/explore/explore/metric_frontier.py:491(_cell_intersections)
+  208/202    0.001    0.000    0.046    0.000 /usr/local/lib/python3.10/dist-packages/shapely/decorators.py:62(wrapped)
+       10    0.002    0.000    0.040    0.004 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:813(current_inside)
+1764/1218    0.013    0.000    0.039    0.000 {built-in method numpy.core._multiarray_umath.implement_array_function}
+       12    0.039    0.003    0.039    0.003 /usr/local/lib/python3.10/dist-packages/shapely/predicates.py:626(covers)
+        4    0.036    0.009    0.037    0.009 /evidence/ap06-repo/src/explore/explore/exploration_scope.py:133(rasterize_scope)
+        6    0.000    0.000    0.022    0.004 /evidence/ap06-repo/src/explore/explore/metric_egress_reference.py:136(fully_covered_polygons)
+        6    0.000    0.000    0.021    0.004 /evidence/ap06-repo/src/explore/explore/metric_egress_reference.py:112(positive_cell_intersections)
+      256    0.000    0.000    0.017    0.000 /usr/lib/python3/dist-packages/numpy/core/fromnumeric.py:51(_wrapfunc)
+        6    0.001    0.000    0.016    0.003 /evidence/ap06-repo/src/explore/explore/metric_egress_reference.py:63(batch_intersections)
+      142    0.000    0.000    0.013    0.000 <__array_function__ internals>:2(nonzero)
+      142    0.000    0.000    0.013    0.000 /usr/lib/python3/dist-packages/numpy/core/fromnumeric.py:1829(nonzero)
+      142    0.013    0.000    0.013    0.000 {method 'nonzero' of 'numpy.ndarray' objects}
+      590    0.011    0.000    0.011    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+      216    0.000    0.000    0.011    0.000 <__array_function__ internals>:2(stack)
+      216    0.001    0.000    0.010    0.000 /usr/lib/python3/dist-packages/numpy/core/shape_base.py:357(stack)
+        8    0.000    0.000    0.010    0.001 /evidence/ap06-repo/src/explore/explore/metric_frontier.py:518(_cell_distances)
+      410    0.000    0.000    0.009    0.000 <__array_function__ internals>:2(concatenate)
+       16    0.004    0.000    0.009    0.001 /evidence/ap06-repo/src/explore/explore/metric_frontier.py:524(distance)
+        2    0.000    0.000    0.006    0.003 /evidence/ap06-repo/src/explore/explore/metric_egress_reference.py:155(__init__)
+      284    0.000    0.000    0.005    0.000 /usr/lib/python3/dist-packages/numpy/core/fromnumeric.py:69(_wrapreduction)
+
+

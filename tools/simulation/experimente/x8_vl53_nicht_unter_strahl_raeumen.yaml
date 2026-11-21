@@ -1,0 +1,20 @@
+# Experiment X8: VL53-Raeumstrahlen wirken erst ab 0,45 m vom Sensor.
+# Eine 10-cm-Box liegt naeher als ~0,41 m unter allen VL53-Zeilen; 2D-Raeumen
+# ueber sie hinweg loeschte ihre Markierung (gemessen: 0 toedliche Zellen ueber
+# der Box an der engsten Stelle). Keine Abnahme, nur Messung.
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      obstacle_layer:
+        vl53_left:
+          raytrace_min_range: 0.45
+        vl53_right:
+          raytrace_min_range: 0.45
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      obstacle_layer:
+        vl53_left:
+          raytrace_min_range: 0.45
+        vl53_right:
+          raytrace_min_range: 0.45

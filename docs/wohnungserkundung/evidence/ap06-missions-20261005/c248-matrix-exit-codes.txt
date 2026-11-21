@@ -1,0 +1,3 @@
+door80_start_c 1
+cancel 0
+gyro_hold 0

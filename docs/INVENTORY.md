@@ -1,9 +1,69 @@
 # Inventar
 
 **Hardwarestand:** 17.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
-**Softwaredelta:** 17.08.2026 · Branch
-`feature/hybrid-erkundung-app`; dreistufige App-Erkundung real bis 88,30 %
-abgenommen, erfolgreich bediente Frontier-Umfelder gegen Wiederholung gesperrt
+**Softwaredelta:** 27.09.2026 · `feature/parity-reset` enthält den real
+bewährten Mehrraum-Scan-/Portalpfad und kanalgetrennte VL53-Recovery; ein
+Realversuch erreichte den Rundblick, stoppte danach am gelatchten HWT-Rohstatus
+(Details: `docs/WE_PARITY_RESET.md`, aktueller WE-Stand: `docs/wohnungserkundung/STATUS.md`)
+
+**Softwaredelta 01.10.2026 / PR #105:** HWT-Entwicklungsopt-in ergänzt
+kompatible Transport-/Daten-/HOLD-Diagnose an bestehenden Status-Topics;
+50/300 ms und zwei echte HOLDs je 60 s ausdrücklich profilgebunden.
+Metrisches Start-Egress benötigt festen Körperanker und tatsächlichen
+reservierten RPP-Sweep. Software geprüft, reale Stufe 3 weiter offen.
+[Nachweise und Rückfall](wohnungserkundung/STATUS.md#aktueller-abschluss-hwt-entwicklungsvertrag-und-start-egress-01102026).
+
+**Softwaredelta 03.10.2026 / AP-03:** Gerätefreier echter Nav2-Prüfstand
+`tools/simulation/ap03_nav2_closed_loop.py` und getrenntes metrisches
+Simulationsprofil ergänzen vorhandene Bewegung/Startprüfung. 68-/80-cm-
+Komponentenfälle und autonome erste Beobachtung synthetisch geprüft;
+kein neuer Hardware-Reifegrad, keine Jetson-Aktivierung. Einzige aktuelle
+WE-Abnahme/Grenzen: [STATUS](wohnungserkundung/STATUS.md).
+
+**Softwaredelta 03.10.2026 / AP-04:** Im vorhandenen Explorer echte metrische
+Randproben und endliche aktuelle LiDAR-Sicht; gepinnter Fremdkern geprüft und
+nach belegten Gegenfällen die ausdrücklich erlaubte Eigenkorrektur gewählt.
+Kandidaten-/Adaptersoftware und echte Nav2-Planbarkeit geprüft, keine neue
+Hardware-/Wohnungsreife oder Jetson-Aktivierung. Missionserledigung bleibt
+AP-05; aktuelle Nachweise/Grenzen ausschließlich im [STATUS](wohnungserkundung/STATUS.md).
+
+**Softwaredelta 03.10.2026 / AP-05:** Vorhandener Explorer ergänzt belegten
+metrischen Beobachtungsfortschritt, begrenzte Wiederbeobachtung und ehrlichen
+Abschluss/Teilstand. Bestehende Map-/Sidecar-Persistenz hält Aufgaben und Budgets;
+Resume nur mit explizitem Auftrag und aktueller verifizierter Lokalisierung.
+ROS-Verbraucherverträge software_geprüft; native App-Quellen angepasst,
+Apple-Build/Laufzeit unter WE-M7 offen. Kein neuer Hardware-Reifegrad oder
+Jetson-Installwechsel; aktuelle Nachweise/Grenzen ausschließlich im
+[STATUS](wohnungserkundung/STATUS.md).
+
+**Softwaredelta 19.11.2026 / KI-Erkundung:** Neue, getrennte
+Entwicklungslinie im Ordner `ki_erkundung/` (Entscheidung des
+Projektinhabers, MASTERPLAN §10): Eine KI auf dem vorhandenen KI-Rechner soll
+die Ziel- und Suchwahl übernehmen. Eigenes Konzept, eigener Status, eigene
+Software ohne ROS-Paket; kein bestehendes Paket, Profil oder Werkzeug
+geändert, keine Jetson-Wirkung, kein neuer Hardware-Reifegrad. Stand
+ausschließlich in [ki_erkundung/STATUS.md](../ki_erkundung/STATUS.md).
+Seit 21.11.2026 am Roboter erstmals gelaufen (im Stand, nur Kamera und
+LiDAR): Aufnahme, Verbindung zum KI-Rechner und Antwortprüfung arbeiten;
+die Vermessung der Öffnungen ist nachgebessert und an echten Aufnahmen noch
+nicht bestätigt.
+
+**Softwaredelta 21.11.2026 / Erkunder:** neues Startargument
+`initial_scan_only` (`app_mapping.launch.py`, `nav_mapping.launch.py`,
+`explore.launch.py`; Vorgabe `false`). Mit `true` macht der Erkunder nur den
+Rundblick (360° auf der Stelle) und endet ohne Ziel. Anschlussstelle für
+die KI-Linie, vom Projektinhaber freigegeben; ohne das Argument unverändert.
+Am Roboter noch nicht gelaufen.
+
+**Softwaredelta 21.11.2026 (nachts) / Erkunder:** zweites Startargument
+`stage_drive_only` (dieselben drei Startdateien; Vorgabe `false`),
+„Etappenfahrt“. Mit `true` wartet der Erkunder auf genau ein Fahrziel auf
+`/ki_erkundung/fahrziel_json` und fährt es ohne Nav2 in kurzen geraden,
+vom Laser gemessenen Etappen an (neues Modul
+`src/explore/explore/stage_drive.py`, sonst vorhandene Bausteine). Ohne
+Ziel bewegt sich nichts. Zweite Anschlussstelle für die KI-Linie, vom
+Projektinhaber freigegeben; ohne das Argument unverändert. Nur in Tests und
+Simulation gelaufen, am Roboter nicht.
 
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
@@ -30,6 +90,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | `base_hardware` | Antrieb über RS485/Modbus; Encoderpositions-Odometrie H0–H4 real bestanden, H5 offen | **erprobt (Encoder)** |
 | `vl53_near_field` | 2× VL53L7CX über CH341A (Treiber gepinnt in `vendor_ch34x_mphsi.repos`, per DKMS kernelupdate-fest), Nahbereichsschutz, `collision_monitor` | **produktiv** (15.08.2026 in realer Nav2-Kette mit frischen Daten überwacht) |
 | `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung und einzelner App-Kartierungsstack; OAK-Entzerrer ohne Exact-Sync | **produktiv** (App-Erkundungsstack real; OAK-Entzerrer motorlos dauergetestet) |
+| `amadeus_map_identity` | gemeinsame ROS-unabhängige Zellnormalisierung und Inhaltsidentität validierter Kartenmomentaufnahmen | **Entwurf** (bytegleiche Schnell-/Fallbackpfade, bekannte Digestvektoren und Kartenmanager-/Explorer-Cross-Contracts softwaregeprüft; kein Deployment) |
 | `robot_map_manager` | versionierte Kartenablage, Schnittstelle zur App | **produktiv** |
 | `semantic_map_manager` | manuelle Raum-Overlays, fest an gespeicherte Kartenfingerprints gebunden | **produktiv** (App-/Jetson-Persistenz und reales Raumziel abgenommen) |
 | `robot_description` | URDF/Xacro, Sensor-Frames | erprobt |
@@ -42,7 +103,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | `llm_planner` | Sprachgestützte Auftragsplanung | **erprobt** (Qwen/Ollama→validiertes Missions-JSON live; Ausführung bleibt onboard gegated) |
 | `smartphone_gui` | Weboberfläche | erprobt |
 | `robot_face` | Gesichtsanzeige | erprobt |
-| `explore` | Dreistufige Erkundung: Rundblick, sichere Frontier-Ziele und adaptive Abdeckung aus realer Fahrspur | **produktiv** (88,30 % im beaufsichtigten Akku-Realtest) |
+| `explore` | Dreistufige Erkundung: Rundblick, sichere Frontier-Ziele und adaptive Abdeckung aus realer Fahrspur | **produktiv** (88,30 % im historischen Test); Parity-Realversuch am 27.09. erreichte 361,7° Rundblick, danach HWT-Sperre vor Frontierziel; kein neuer Mehrraumnachweis |
 | `handeye_calibration` | Kamera-Arm-Kalibrierung | Entwurf |
 | `mock_servers` | Testgegenstellen ohne Hardware | erprobt |
 | `behaviortree_ros2` | **Submodul** → github.com/BehaviorTree/BehaviorTree.ROS2 (humble) | extern |
@@ -147,4 +208,5 @@ Bereiche enthalten.
 |---|---|---|
 | iOS-App „Amadeus" | `ios/Robotersteuerung/` | Raumeditor und Raumwahl am realen ROS-System abgenommen |
 | Übergabeprotokolle | `integration/` | Dokumentation |
+| KI-Erkundung (getrennte Linie) | `ki_erkundung/` | Entwurf (Konzept v1.3; am 21.11.2026 zweimal im Stand mit Kamera, LiDAR und KI-Rechner gelaufen, noch kein Urteil nach den Kriterien; nichts fährt) |
 | Prüfplan | `Roboter_Pruefplan.md`, `pruefplan_jetson.sh` | produktiv genutzt |

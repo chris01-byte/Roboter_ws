@@ -38,12 +38,18 @@ from dataclasses import dataclass
 from typing import Any
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rcl_interfaces.msg import SetParametersResult
+from rcl_interfaces.msg import ParameterDescriptor
 from geometry_msgs.msg import Twist, TransformStamped
 from nav_msgs.msg import Odometry
 from std_msgs.msg import String
 from tf2_ros import TransformBroadcaster
+
+from .encoder_shadow_reader import (EncoderShadowCore, EncoderPair, shadow_status_payload,
+    CheckedBaseAliases, CheckedUsbIdentity, EncoderShadowError, BASE_ALIAS, HWT601_ALIAS)
+from rclpy.time import Time
 
 from .encoder_odometry import (
     EncoderOdometry,
@@ -53,6 +59,7 @@ from .encoder_odometry import (
     decode_position_words,
     u32_to_i32,
 )
+from .encoder_publication import EncoderPublication
 
 ModbusSerialClient: Any
 try:
@@ -81,6 +88,10 @@ class BaseHardware(Node):
         self.declare_parameter('cmd_vel_topic', '/cmd_vel')
         self.declare_parameter('odom_topic', '/odom')
         self.declare_parameter('state_topic', '/base_hardware/state_json')
+        self.declare_parameter('isolate_feedback_output', False,
+                               ParameterDescriptor(read_only=True))
+        self.declare_parameter('feedback_output_cpu_affinity', [-1],
+                               ParameterDescriptor(read_only=True))
 
         # -------------------------------------------------------------------
         # Geometrie / Limits [ANPASSEN]
@@ -176,6 +187,7 @@ class BaseHardware(Node):
         self.declare_parameter('encoder_feedback_period_s', 0.05)
         self.declare_parameter('encoder_stale_timeout_s', 0.30)
         self.declare_parameter('encoder_max_recovery_gap_s', 2.0)
+        self.declare_parameter('encoder_timing_recovery_enabled', False)
         self.declare_parameter('encoder_max_delta_factor', 1.5)
         self.declare_parameter('encoder_failure_stop_count', 5)
 
@@ -195,6 +207,8 @@ class BaseHardware(Node):
         self.cmd_vel_topic = str(gp('cmd_vel_topic').value)
         self.odom_topic = str(gp('odom_topic').value)
         self.state_topic = str(gp('state_topic').value)
+        self.isolate_feedback_output = bool(gp('isolate_feedback_output').value)
+        self.feedback_output_cpu_affinity = list(gp('feedback_output_cpu_affinity').value)
         self.wheel_radius = float(gp('wheel_radius_m').value)
         self.wheel_separation = float(gp('wheel_separation_m').value)
         self.gear_ratio = float(gp('gear_ratio').value)
@@ -243,6 +257,10 @@ class BaseHardware(Node):
         self.encoder_feedback_period_s = float(gp('encoder_feedback_period_s').value)
         self.encoder_stale_timeout_s = float(gp('encoder_stale_timeout_s').value)
         self.encoder_max_recovery_gap_s = float(gp('encoder_max_recovery_gap_s').value)
+        self.encoder_timing_recovery_enabled = bool(gp('encoder_timing_recovery_enabled').value)
+        if self.encoder_timing_recovery_enabled:
+            self.encoder_max_recovery_gap_s = min(self.encoder_max_recovery_gap_s, .18)
+            self.encoder_stale_timeout_s = min(self.encoder_stale_timeout_s, .18)
         self.encoder_max_delta_factor = float(gp('encoder_max_delta_factor').value)
         self.encoder_failure_stop_count = int(gp('encoder_failure_stop_count').value)
         self.odom_frame_id = str(gp('odom_frame_id').value)
@@ -300,6 +318,13 @@ class BaseHardware(Node):
                 max_delta_factor=self.encoder_max_delta_factor,
                 max_recovery_gap_s=self.encoder_max_recovery_gap_s,
             )
+        self.encoder_timing_core = (EncoderShadowCore(self.encoder_tracker,
+            max_pair_read_duration_s=.12) if self.encoder_timing_recovery_enabled
+            and self.encoder_tracker else None)
+        self.encoder_owner_aliases = CheckedBaseAliases(BASE_ALIAS,HWT601_ALIAS)
+        self.encoder_owner_usb = CheckedUsbIdentity()
+        self.encoder_measurement_stamp = None
+        self.encoder_last_ros_measurement_ns = None
         self.encoder_last_poll = 0.0
         self.encoder_last_success = None
         self.encoder_feedback_ok = False
@@ -315,17 +340,34 @@ class BaseHardware(Node):
         self.encoder_resolution_left = None
         self.encoder_resolution_right = None
         self.encoder_poll_left_first = True
+        self.encoder_last_pair_duration_s = None
+        self.encoder_maximum_pair_duration_s = None
+        self.encoder_last_pair_left_first = None
         self.encoder_connection_initialized = False
         self.encoder_new_measurement = False
         self.encoder_config_fault_latched = False
+        self.feedback_output = None
+        self.feedback_output_fault_latched = False
 
         # -------------------------------------------------------------------
         # Publisher / Subscriber
         # -------------------------------------------------------------------
         self.cmd_sub = self.create_subscription(
             Twist, self.cmd_vel_topic, self._on_cmd_vel, 1)
-        self.odom_pub = self.create_publisher(Odometry, self.odom_topic, 10)
-        self.state_pub = self.create_publisher(String, self.state_topic, 10)
+        if self.isolate_feedback_output:
+            output_odom_topic = self.resolve_topic_name(self.odom_topic)
+            output_state_topic = self.resolve_topic_name(self.state_topic)
+            self.feedback_output = EncoderPublication([
+                (output_odom_topic, 'nav_msgs/msg/Odometry'),
+                (output_state_topic, 'std_msgs/msg/String')], .18,
+                node_name='base_hardware_feedback_output',
+                cpu_affinity=(() if self.feedback_output_cpu_affinity == [-1]
+                              else self.feedback_output_cpu_affinity))
+            self.odom_pub = self.feedback_output.publisher(output_odom_topic)
+            self.state_pub = self.feedback_output.publisher(output_state_topic)
+        else:
+            self.odom_pub = self.create_publisher(Odometry, self.odom_topic, 10)
+            self.state_pub = self.create_publisher(String, self.state_topic, 10)
         self.tf_broadcaster = TransformBroadcaster(self) if self.publish_tf else None
 
         self._parameter_callback = self.add_on_set_parameters_callback(
@@ -345,6 +387,16 @@ class BaseHardware(Node):
 
     # ======================= Parameter / Sicherheit =====================
     def _validate_parameters(self):
+        if self.isolate_feedback_output:
+            if self.publish_tf or self.odometry_source != 'encoder_position':
+                raise ValueError('Isolated feedback requires encoder_position and no Base TF')
+            affinity = self.feedback_output_cpu_affinity
+            if affinity != [-1]:
+                import os
+                # Online CPUs, not the parent's possibly deliberately restricted mask.
+                if not affinity or any(c < 0 or not os.path.isdir(
+                        f'/sys/devices/system/cpu/cpu{c}') for c in affinity):
+                    raise ValueError('Invalid feedback output CPU affinity')
         positive_finite = {
             'wheel_radius_m': self.wheel_radius,
             'wheel_separation_m': self.wheel_separation,
@@ -462,6 +514,7 @@ class BaseHardware(Node):
 
     # ======================= Hauptupdate ===============================
     def _update(self):
+        self._check_feedback_output()
         # Watchdog zuerst und ausschliesslich gegen monotone Echtzeit. Ein
         # stehender/rueckwaerts springender ROS-Clock darf den Motor-Stopp
         # niemals ueberspringen.
@@ -534,7 +587,12 @@ class BaseHardware(Node):
             odom_v, odom_w = 0.0, 0.0
 
         if publish_odom:
-            self._publish_odom(now, odom_v, odom_w)
+            core = getattr(self, 'encoder_timing_core', None)
+            if core is not None and not self.dry_run:
+                self._publish_odom(self.encoder_measurement_stamp,
+                    core.last_update.linear_velocity_mps, core.last_update.angular_velocity_radps)
+            else:
+                self._publish_odom(now, odom_v, odom_w)
         self._publish_state(now, timed_out)
         self._throttled_log(timed_out)
 
@@ -581,6 +639,10 @@ class BaseHardware(Node):
 
     def _publish_state(self, stamp, timed_out: bool):
         payload = {
+            'feedback_output_isolated': getattr(self, 'isolate_feedback_output', False),
+            'feedback_output_pid': (self.feedback_output.pid
+                                    if getattr(self, 'feedback_output', None) else None),
+            'feedback_output_fault_latched': getattr(self, 'feedback_output_fault_latched', False),
             'dry_run': self.dry_run,
             'allow_rs485': self.allow_rs485,
             'timed_out': timed_out,
@@ -618,6 +680,9 @@ class BaseHardware(Node):
             'encoder_delta_left': self.encoder_last_update.left_delta_counts,
             'encoder_delta_right': self.encoder_last_update.right_delta_counts,
             'encoder_sample_dt_s': self.encoder_last_update.sample_dt_s,
+            'encoder_pair_read_duration_s': self.encoder_last_pair_duration_s,
+            'encoder_maximum_pair_read_duration_s': self.encoder_maximum_pair_duration_s,
+            'encoder_pair_left_first': self.encoder_last_pair_left_first,
             'encoder_last_reason': self.encoder_last_failure_reason,
             'encoder_consecutive_failures': self.encoder_consecutive_failures,
             'modbus_read_failures': self.modbus_read_failures,
@@ -643,6 +708,16 @@ class BaseHardware(Node):
             'right_motor_id': self.right_motor_id,
             'stamp_sec': stamp.nanoseconds * 1e-9,
         }
+        core = getattr(self, 'encoder_timing_core', None)
+        if core is not None:
+            payload['encoder_timing_recovery'] = shadow_status_payload(core,
+                connected=self.rs485_ready, configuration_valid=not self.encoder_config_fault_latched,
+                port=self.rs485_port, resolved_port=self.rs485_port,
+                left_motor_id=self.left_motor_id, right_motor_id=self.right_motor_id,
+                last_feedback_age_s=self._encoder_feedback_age(), max_feedback_age_s=.18)
+            # This is the shared state contract, not a passive source claim.
+            payload['encoder_timing_recovery']['read_only'] = False
+            payload['encoder_timing_recovery']['actuator_output'] = True
         self.state_pub.publish(String(data=json.dumps(payload)))
 
     # ======================= RS485 / Modbus ============================
@@ -741,6 +816,9 @@ class BaseHardware(Node):
             self._handle_bus_read_failure(reason)
 
     def _mark_bus_fault(self, reason):
+        core = getattr(self, 'encoder_timing_core', None)
+        if core is not None:
+            core.latch_fault('basisport_nicht_sicher:' + reason)
         self.rs485_ready = False
         self.encoder_connection_initialized = False
         self.encoder_new_measurement = False
@@ -784,6 +862,10 @@ class BaseHardware(Node):
         return True
 
     def _ensure_rs485(self):
+        core = getattr(self, 'encoder_timing_core', None)
+        if core is not None and core.fault_reason is not None:
+            self._send_stop_if_needed()
+            return
         """Verbindung selbstheilend halten.
 
         Eine einzelne Modbus-Ausnahme setzt rs485_ready auf False. Ohne diese
@@ -981,8 +1063,22 @@ class BaseHardware(Node):
             return False
 
         read_started = time.monotonic()
+        left_first = self.encoder_poll_left_first
+        ros_started = self.get_clock().now() if getattr(self, 'encoder_timing_core', None) else None
         pair = self._read_encoder_pair()
-        sample_time = (read_started + time.monotonic()) / 2.0
+        read_finished = time.monotonic()
+        if ros_started is not None:
+            ros_finished = self.get_clock().now()
+            midpoint = (ros_started.nanoseconds+ros_finished.nanoseconds)//2
+            if (ros_finished.nanoseconds <= ros_started.nanoseconds
+                    or (self.encoder_last_ros_measurement_ns is not None
+                        and midpoint <= self.encoder_last_ros_measurement_ns)):
+                self.encoder_timing_core.latch_fault('ros_zeit_nicht_monoton')
+            self.encoder_last_ros_measurement_ns = midpoint
+            self.encoder_measurement_stamp = Time(nanoseconds=midpoint,
+                clock_type=ros_finished.clock_type)
+        self._record_encoder_pair_timing(read_finished - read_started, left_first)
+        sample_time = (read_started + read_finished) / 2.0
         if pair is None:
             self._encoder_failure("baseline_nicht_lesbar")
             return False
@@ -1001,17 +1097,65 @@ class BaseHardware(Node):
         if read_started - self.encoder_last_poll < self.encoder_feedback_period_s:
             return
         self.encoder_last_poll = read_started
+        left_first = self.encoder_poll_left_first
+        ros_started = self.get_clock().now() if getattr(self, 'encoder_timing_core', None) else None
         pair = self._read_encoder_pair()
-        sample_time = (read_started + time.monotonic()) / 2.0
+        read_finished = time.monotonic()
+        if ros_started is not None:
+            ros_finished = self.get_clock().now()
+            midpoint = (ros_started.nanoseconds+ros_finished.nanoseconds)//2
+            if (ros_finished.nanoseconds <= ros_started.nanoseconds
+                    or (self.encoder_last_ros_measurement_ns is not None
+                        and midpoint <= self.encoder_last_ros_measurement_ns)):
+                self.encoder_timing_core.latch_fault('ros_zeit_nicht_monoton')
+            self.encoder_last_ros_measurement_ns = midpoint
+            self.encoder_measurement_stamp = Time(nanoseconds=midpoint,
+                clock_type=ros_finished.clock_type)
+        self._record_encoder_pair_timing(read_finished - read_started, left_first)
+        sample_time = (read_started + read_finished) / 2.0
         if pair is None:
+            core = getattr(self, 'encoder_timing_core', None)
+            if core is not None:
+                core.accept_pair(None,sample_time_s=sample_time,
+                                 pair_read_duration_s=read_finished-read_started)
+                self._send_stop_if_needed()
             self._encoder_failure("encoderpaar_nicht_lesbar")
             return
         self._accept_encoder_pair(pair, sample_time)
         if self.encoder_feedback_ok:
             self.modbus_read_failures = 0
 
+    def _record_encoder_pair_timing(self, duration_s, left_first):
+        """Historical HWT diagnostic; no change to counts, polling or motion."""
+        self.encoder_last_pair_duration_s = float(duration_s)
+        self.encoder_last_pair_left_first = bool(left_first)
+        if (self.encoder_maximum_pair_duration_s is None
+                or duration_s > self.encoder_maximum_pair_duration_s):
+            self.encoder_maximum_pair_duration_s = float(duration_s)
+
     def _accept_encoder_pair(self, pair, timestamp):
         left, right = pair
+        core = getattr(self, 'encoder_timing_core', None)
+        if core is not None:
+            outcome = core.accept_pair(EncoderPair(left, right), sample_time_s=timestamp,
+                pair_read_duration_s=self.encoder_last_pair_duration_s)
+            self.encoder_last_failure_reason = outcome.reason
+            self.encoder_last_update = outcome.update
+            self.encoder_new_measurement = outcome.publish
+            self.encoder_feedback_ok = core.ready
+            self.feedback_ok = core.ready
+            # Never trigger configuration/baseline reinitialization during HOLD.
+            self.encoder_connection_initialized = core.tracker.initialized
+            self.encoder_consecutive_failures = 0 if core.ready else self.encoder_failure_stop_count
+            if outcome.publish or outcome.reason == 'baseline_initialisiert':
+                self.encoder_left_feedback, self.encoder_right_feedback = left, right
+                self.encoder_last_success = timestamp
+                self.meas_motor_rpm_left, self.meas_motor_rpm_right = left.speed_rpm, right.speed_rpm
+                self.x, self.y, self.yaw = core.tracker.x_m, core.tracker.y_m, core.tracker.yaw_rad
+                self.meas_v, self.meas_w = outcome.update.linear_velocity_mps, outcome.update.angular_velocity_radps
+            if not core.ready:
+                self._send_stop_if_needed()
+            return
         update = self.encoder_tracker.update(
             left.position_u32, right.position_u32, timestamp)
         self.encoder_left_feedback = left
@@ -1053,7 +1197,17 @@ class BaseHardware(Node):
         self.encoder_poll_left_first = not self.encoder_poll_left_first
         result = {}
         for motor_id, high_word_first in ids:
-            feedback = self._read_motor_feedback(motor_id, high_word_first)
+            core = getattr(self, 'encoder_timing_core', None)
+            try:
+                if core is not None:
+                    self.encoder_owner_usb(self.encoder_owner_aliases(self.rs485_port))
+                feedback = self._read_motor_feedback(motor_id, high_word_first)
+                if core is not None:
+                    self.encoder_owner_usb(self.encoder_owner_aliases(self.rs485_port))
+            except EncoderShadowError as error:
+                core.latch_fault('basisport_nicht_sicher:' + str(error))
+                self._send_stop_if_needed()
+                return None
             if feedback is None:
                 return None
             result[motor_id] = feedback
@@ -1093,10 +1247,30 @@ class BaseHardware(Node):
         return age is None or age > self.encoder_stale_timeout_s
 
     def _encoder_motion_allowed(self):
+        if getattr(self, 'feedback_output_fault_latched', False):
+            return False
+        core = getattr(self, 'encoder_timing_core', None)
+        if core is not None and not core.ready:
+            return False
         return bool(self.encoder_tracker and self.encoder_tracker.initialized and
                     self.encoder_connection_initialized and
                     not self._encoder_is_stale() and
                     self.encoder_consecutive_failures < self.encoder_failure_stop_count)
+
+    def _check_feedback_output(self):
+        output = getattr(self, 'feedback_output', None)
+        if output is None or output.alive:
+            return
+        first = not self.feedback_output_fault_latched
+        self.feedback_output_fault_latched = True
+        self.active_wheel_cmd = WheelCommand()
+        core = getattr(self, 'encoder_timing_core', None)
+        if core is not None:
+            core.latch_fault('encoder_output_process_lost')
+        if not self.dry_run and self.allow_rs485:
+            self._send_stop_if_needed()
+        if first:
+            self.get_logger().error('Encoder output process lost; motor motion permanently inhibited')
 
     def _encoder_twist(self):
         if self._encoder_is_stale() or not self.encoder_connection_initialized:
@@ -1250,6 +1424,8 @@ class BaseHardware(Node):
                 self.modbus_client.close()
         except Exception:
             pass
+        if getattr(self, 'feedback_output', None) is not None:
+            self.feedback_output.close()
         super().destroy_node()
 
 
@@ -1258,11 +1434,18 @@ def main(args=None):
     node = BaseHardware()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except RuntimeError:
+        # Humble kann einen bereits global beendeten Kontext noch in einem
+        # laufenden Timer-/Publisher-Callback beobachten. Nur dieser
+        # Shutdownfall ist erwartbar; echte Laufzeitfehler bleiben sichtbar.
+        if rclpy.ok():
+            raise
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':

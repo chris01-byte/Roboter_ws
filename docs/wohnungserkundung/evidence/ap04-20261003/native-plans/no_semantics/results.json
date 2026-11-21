@@ -1,0 +1,94 @@
+[
+  {
+    "case": "no_semantics",
+    "revision": 1,
+    "core": "legacy_centroid",
+    "attempts": [],
+    "planable": 0,
+    "native_valid_boundary_union_m": 0.0,
+    "best_single_sight_m": 0.0
+  },
+  {
+    "case": "no_semantics",
+    "revision": 1,
+    "core": "upstream_418e971",
+    "attempts": [
+      {
+        "index": 0,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.39140950799992424
+      }
+    ],
+    "planable": 1,
+    "native_valid_boundary_union_m": 1.9000000000000001,
+    "best_single_sight_m": 1.9000000000000001
+  },
+  {
+    "case": "no_semantics",
+    "revision": 1,
+    "core": "boundary_samples",
+    "attempts": [
+      {
+        "index": 0,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.2619821759999468
+      },
+      {
+        "index": 1,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.07436522099851572
+      },
+      {
+        "index": 2,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.2890384639995318
+      },
+      {
+        "index": 3,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.4127214540003479
+      },
+      {
+        "index": 4,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.4910039839996898
+      },
+      {
+        "index": 5,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.5561266010008694
+      },
+      {
+        "index": 6,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.644190847999198
+      },
+      {
+        "index": 7,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.8084186209998734
+      }
+    ],
+    "planable": 6,
+    "native_valid_boundary_union_m": 5.9,
+    "best_single_sight_m": 1.9000000000000001
+  }
+]

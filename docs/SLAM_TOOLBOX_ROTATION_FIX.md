@@ -707,3 +707,18 @@ einzigen LiDAR-Wandmessung. Vor jeder Änderung muss die Strecke mit dem
 Lasermessgerät gegengemessen werden; danach werden Radradius und Spurweite
 gemeinsam gesetzt und gemeinsam geprüft — Kalibrierung ist laut `AGENTS.md`
 ein eigener, getrennt getesteter Vorgang.
+
+
+## Aktuelle Paketauflösung im Mast-/Encoder-Vorlauf (01.10.2026)
+
+Die historischen Install-/Kalibrierschritte dieses Dokuments wurden im aktuellen
+Auftrag nicht erneut ausgeführt. Temporäre Runtime aus ROBOT_TRANSFER:
+`slam_toolbox` löst auf `~/amadeus_slam_toolbox_ws/install/slam_toolbox` auf;
+die installierte `libtoolbox_common.so` enthält
+`check_min_dist_and_heading_precisely`, der Parameter ist live true.
+Scanquelle live `/scan_normiert`, Mindestbewegung 0,01 m / 0,15 rad.
+Aktuelle Scans und aufgezeichneter TF bestätigen ROS-CCW plus x 0,245 / y 0 /
+z 0,660 m / yaw +1,5708; vorhandene native Mastmaske bleibt NaN.
+Dies belegt Paket-/Parameterauflösung, keine neue reale Drehabnahme:
+Der gemeinsame Startvertrag blieb gesperrt und es fand keine Fahrt statt.
+Messzahlen und vollständige Grenzen ausschließlich im WE-STATUS.

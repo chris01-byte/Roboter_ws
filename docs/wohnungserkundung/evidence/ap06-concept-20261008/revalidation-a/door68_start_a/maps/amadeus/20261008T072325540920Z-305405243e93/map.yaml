@@ -1,0 +1,7 @@
+image: map.pgm
+resolution: 0.0099999997764825821
+origin: [-0.90999997965991497, -0.96999997831881046, 0]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.196
+mode: trinary

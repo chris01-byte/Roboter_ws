@@ -1,0 +1,107 @@
+{
+  "cases": [
+    {
+      "case": "door68_start_a",
+      "criteria_score": {
+        "applicable_to_case": true,
+        "failed": 6,
+        "met": 2,
+        "total": 8,
+        "unavailable": 0
+      },
+      "diagnostic_status": "criteria_not_met",
+      "hardware_qualified": false,
+      "harness_returncode": 1,
+      "identity_errors": [],
+      "measurements": {
+        "action_active_at_terminal": {
+          "/explore_area/_action/status": [],
+          "/navigate_to_pose/_action/status": []
+        },
+        "checkpoint_after_save": {
+          "motion_authorized": false,
+          "reason": "metric_checkpoint_exact_saved_snapshot_unavailable",
+          "state": "unavailable"
+        },
+        "command_values_at_terminal": {
+          "/cmd_vel": [
+            0.0,
+            0.0
+          ],
+          "/cmd_vel_nav": [
+            0.0,
+            0.0
+          ],
+          "/cmd_vel_nav_raw": [
+            0.0,
+            0.0
+          ],
+          "/cmd_vel_smoothed": [
+            0.0,
+            0.0
+          ]
+        },
+        "manager_state": "failed",
+        "map_growth": true,
+        "map_oracle": {
+          "maximum_occupied_wall_error_m": 0.025000019557773978,
+          "reference_free_cells": 128256,
+          "reference_observed_cells": 94112,
+          "reference_observed_fraction": 0.7337824351297405
+        },
+        "map_save": {
+          "message": "Karte 'amadeus' als Version 20261008T060910518617Z-3c958f13de1f gespeichert.",
+          "success": true
+        },
+        "metric": {
+          "arrivals": 2,
+          "attempt": 5,
+          "attempts": 5,
+          "completion_blocker": "accessible_or_unresolved_work",
+          "failures": 0,
+          "observations": 2,
+          "reachable_boundary_cells": 757,
+          "state": "blocked",
+          "unknown_cells_in_scope": 68164
+        },
+        "minimum_padded_clearance_m": 0.07264989139486944,
+        "rear_cleared": false,
+        "travel_m": 1.244533302333127
+      },
+      "original_qualification": false,
+      "passed": false,
+      "positive_mission_criteria": {
+        "explorer_success": false,
+        "manager_success": false,
+        "map_growth": true,
+        "maximum_map_error": true,
+        "rear_cleared_both_doors": false,
+        "reference_observed_fraction": false,
+        "three_arrivals": false,
+        "three_observations": false
+      },
+      "profile": "finite-unmasked",
+      "raw_harness_passed": false,
+      "raw_manifest_compatible": false,
+      "raw_result_path": "/evidence/ap06-concept-20261008/phase-a/door68_start_a/result.json",
+      "raw_result_sha256": "fc305ad4661056250e73e0953791e380ea4b7e44e3b5e57eda3061851c278724",
+      "reasons": {
+        "completion_blocker": "accessible_or_unresolved_work",
+        "first_rejecting_predicate": "map_status_join_pending",
+        "harness": "AP06 acceptance not met: map_status_join_retry_budget_exhausted",
+        "terminal": "map_status_join_retry_budget_exhausted"
+      }
+    }
+  ],
+  "completed_cases": 1,
+  "diagnostic_criteria_met": 0,
+  "experiment_sha256": "ccc07aac3f443c5c34f01c01f6a4d561e5fa16c45e38825a239e6a9d00e17974",
+  "hardware_qualified": false,
+  "original_qualification": false,
+  "original_qualified_missions": 0,
+  "passed": false,
+  "profile": "finite-unmasked",
+  "recorded_cases": 1,
+  "requested_cases": 1,
+  "schema": 1
+}

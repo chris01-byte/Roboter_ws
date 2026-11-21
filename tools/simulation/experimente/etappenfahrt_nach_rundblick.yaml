@@ -1,0 +1,10 @@
+# Rundblick, dann Etappenfahrt (beide Anschlussstellen für ki_erkundung,
+# Freigaben des Projektinhabers vom 21.11.2026): Der Explorer dreht einmal
+# abschnittsweise um 360 Grad, wartet dann stehend auf genau ein Fahrziel und
+# fährt es ohne Nav2 in kurzen geraden Etappen an. Ohne Ziel bleibt er stehen.
+# Das Ziel sendet während des Laufs ki_erkundung/werkzeuge/fahrziel_senden.py.
+# Nur Simulation, keine Abnahme.
+sh_treiber:
+  explorer_parameter:
+    initial_scan_only: true
+    stage_drive_only: true

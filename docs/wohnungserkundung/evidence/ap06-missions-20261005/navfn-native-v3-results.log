@@ -1,0 +1,10 @@
+/evidence/ap06-missions-20261005/navfn-build/nav2_navfn_planner/Testing/20261006-0156/Test.xml: 7 tests, 0 errors, 0 failures, 0 skipped
+/evidence/ap06-missions-20261005/navfn-build/nav2_navfn_planner/test_results/nav2_navfn_planner/copyright.xunit.xml: 5 tests, 0 errors, 0 failures, 0 skipped
+/evidence/ap06-missions-20261005/navfn-build/nav2_navfn_planner/test_results/nav2_navfn_planner/cppcheck.xunit.xml: 5 tests, 0 errors, 0 failures, 5 skipped
+/evidence/ap06-missions-20261005/navfn-build/nav2_navfn_planner/test_results/nav2_navfn_planner/cpplint.xunit.xml: 5 tests, 0 errors, 0 failures, 0 skipped
+/evidence/ap06-missions-20261005/navfn-build/nav2_navfn_planner/test_results/nav2_navfn_planner/lint_cmake.xunit.xml: 2 tests, 0 errors, 0 failures, 0 skipped
+/evidence/ap06-missions-20261005/navfn-build/nav2_navfn_planner/test_results/nav2_navfn_planner/test_dynamic_parameters.gtest.xml: 1 test, 0 errors, 0 failures, 0 skipped
+/evidence/ap06-missions-20261005/navfn-build/nav2_navfn_planner/test_results/nav2_navfn_planner/uncrustify.xunit.xml: 5 tests, 0 errors, 0 failures, 0 skipped
+/evidence/ap06-missions-20261005/navfn-build/nav2_navfn_planner/test_results/nav2_navfn_planner/xmllint.xunit.xml: 2 tests, 0 errors, 0 failures, 0 skipped
+
+Summary: 32 tests, 0 errors, 0 failures, 5 skipped

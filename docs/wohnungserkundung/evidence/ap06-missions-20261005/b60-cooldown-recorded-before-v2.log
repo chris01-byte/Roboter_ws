@@ -1,0 +1,39 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_______ test_actual_b60_current_view_waits_before_unproved_distant_work ________
+
+    def test_actual_b60_current_view_waits_before_unproved_distant_work():
+        from explore.metric_progress import reachable_remainder
+        n,inputs,p=frozen()
+        # Isolate the original .3-m option from the larger .45/.6-m options.
+        # This stricter component search makes cooldown the sole remaining bar;
+        # full missions keep the original .3-m search extension unchanged.
+        n._goal_search_m=0.
+        assert not n._metric_egress_expired and all(not e.valid for e in n._metric_egress)
+        before={k:(a.tries,a.failures,a.completed,a.retry_after) for k,a in p.attempts.items()}
+        def distant(*_,**__):pytest.fail('Proved public view with only cooldown remaining must wait before distant work')
+        n._frontier_approach_goal=distant
+>       assert n._metric_select(inputs,p,.3)==[]
+
+evidence/ap06-repo/src/explore/test/test_metric_public_cooldown.py:111: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+c9bea6a-runtime:1990: in _metric_select
+    ???
+evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1642: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+c9bea6a-runtime:1731: in _metric_candidates_in_pass
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_ = (<explore.explore_node.Frontier object at 0x7f4b8e986680>, (0.9046433565248011, -0.005286332645817432), nav_msgs.msg.O..., -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]))
+__ = {'approach_direction': (0.7071067811865475, 0.7071067811865475), 'search_mask': array([[False, False, False, ..., Fals...lse],
+       [False, False, False, ..., False, False, False],
+       [False, False, False, ..., False, False, False]])}
+
+>   def distant(*_,**__):pytest.fail('Proved public view with only cooldown remaining must wait before distant work')
+E   Failed: Proved public view with only cooldown remaining must wait before distant work
+
+evidence/ap06-repo/src/explore/test/test_metric_public_cooldown.py:109: Failed
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_public_cooldown.py::test_actual_b60_current_view_waits_before_unproved_distant_work
+1 failed, 9 deselected in 0.69s

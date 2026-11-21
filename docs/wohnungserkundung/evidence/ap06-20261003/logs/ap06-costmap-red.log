@@ -1,0 +1,1 @@
+{"passed": false, "kind": "native_costmap_component_only", "hardware_qualified": false, "actions_sent": 0, "motor_nodes": 0, "synthetic_map_and_tf": true, "far_return_lethal_cells": 452, "near_obstacle_lethal_cells": 728}

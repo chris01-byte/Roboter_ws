@@ -1,0 +1,32 @@
+[
+  {
+    "start_pose": null,
+    "goal": [
+      1.9049999574199319,
+      -0.4949999889358878,
+      0.0
+    ],
+    "error": "nav2_plan_aborted",
+    "points": []
+  },
+  {
+    "start_pose": null,
+    "goal": [
+      1.9049999574199319,
+      -0.4349999902769923,
+      0.0
+    ],
+    "error": "nav2_plan_aborted",
+    "points": []
+  },
+  {
+    "start_pose": null,
+    "goal": [
+      2.59499994199723,
+      -0.4349999902769923,
+      0.0
+    ],
+    "error": "nav2_plan_aborted",
+    "points": []
+  }
+]

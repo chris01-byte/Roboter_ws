@@ -1,0 +1,164 @@
+..................................FF.................................... [ 39%]
+........................................................................ [ 79%]
+......................................                                   [100%]
+=================================== FAILURES ===================================
+_ test_actual_parent_keeps_one_child_or_stops_on_withdrawn_authority[none-False] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fa1b4b9bd60>
+fault = 'none', referenced = False
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['none', 'obstacle', 'deadline', 'deadline_exhausted', 'source', 'epoch'])
+    def test_actual_parent_keeps_one_child_or_stops_on_withdrawn_authority(monkeypatch, fault, referenced):
+        import math
+        from geometry_msgs.msg import PoseStamped
+        from nav_msgs.msg import Path
+        from test_metric_progress import parent_fixture
+        node, grid, clock, parent, terminal = parent_fixture(monkeypatch, 'open')
+        node._metric_path_validation = 'rpp_rollout'
+        node._max_frontier_goals = 1
+        if fault == 'deadline_exhausted':
+            node._metric_retry_limit = 1
+            node._max_frontier_goals = 2
+        node._metric_egress = None  # this leg uses public free space only
+        if referenced:
+            node._metric_start_egress_enabled = True
+            node._metric_body_reference = lambda: (0., 0., 0.)
+            node._metric_inputs()
+            assert all(isinstance(e, ReferencedStartEgress) and e.valid
+                       and not e.fixed.unknown.any() and e.retained_region.is_empty
+                       and not e.unknown.any() for e in node._metric_egress)
+        chosen = []; children = []; stops = []
+        def planner(target, *_, **kwargs):
+            chosen.append(target)
+            path = Path(); path.header.frame_id = 'map'
+            start = kwargs.get('start_pose', node._robot_pose_sample()[0])
+            for x,y in (start[:2], (target.x,target.y)):
+                p = PoseStamped(); p.pose.position.x=x; p.pose.position.y=y
+                p.pose.orientation.z=math.sin(target.yaw/2)
+                p.pose.orientation.w=math.cos(target.yaw/2); path.poses.append(p)
+            return path, None
+        node._metric_request_nav_plan = planner
+        node._prealign_to_goal = lambda *_, **__: ('skipped',)
+        def navigate(*_, stop_requested, **__):
+            target=chosen[-1]; children.append(target)
+            assert node._wohnungserkundung_active_child is target
+            latest = copy.deepcopy(grid)
+            for index in range(3):
+                clock[0]+=.1; latest=copy.deepcopy(latest)
+                latest.header.stamp.nanosec=int((clock[0]-10)*1e9)
+                latest.data[80*latest.info.width+80] = (index+len(children))*10
+                if fault == 'obstacle': latest.data[20*latest.info.width+10] = 100
+                node._on_map(latest)
+                if fault in ('deadline', 'deadline_exhausted'): node._metric_pending_since=clock[0]-2
+                if fault == 'source':
+                    raw,cor,at=node._metric_joined
+                    node._metric_joined=((*raw[:2],4.),cor,at)
+                if fault == 'epoch': node._metric_fault='map_epoch_changed'
+                stops.append(stop_requested())
+                node._on_metric_map_status(status(latest,accepted=2+len(children)*3+index,observed=2+len(children)*3+index,
+                                                 when=100+clock[0]-10))
+                if stops[-1]: return 'canceled'
+            node._robot_pose_sample=lambda:((target.x,target.y,target.yaw),0.)
+            clock[0]+=.1; latest=copy.deepcopy(latest)
+            for xy in target.observation_points:
+                col,row=node._world_to_grid(*xy,latest.info)
+                latest.data[row*latest.info.width+col]=0
+            latest.header.stamp.nanosec=int((clock[0]-10)*1e9)
+            node._on_map(latest)
+            node._on_metric_map_status(status(latest,accepted=6,observed=6,when=100+clock[0]-10))
+            return 'success'
+        node._navigate_to=navigate
+        result=node._execute_metric_frontier(parent,10.,.3)
+        assert terminal and not result.success  # original total limit, no whole claim
+        expected_children = 2 if fault == 'deadline_exhausted' else 1
+        assert len(children)==expected_children and node._wohnungserkundung_active_child is None
+        assert node._metric_status['attempts']==expected_children
+        if fault == 'none':
+            assert stops==[False,False,False]
+>           assert node._metric_status['arrivals']==node._metric_status['observations']==1
+E           assert 0 == 1
+
+src/explore/test/test_metric_pending_withdrawal.py:207: AssertionError
+_ test_actual_parent_keeps_one_child_or_stops_on_withdrawn_authority[none-True] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fa1b477fca0>
+fault = 'none', referenced = True
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['none', 'obstacle', 'deadline', 'deadline_exhausted', 'source', 'epoch'])
+    def test_actual_parent_keeps_one_child_or_stops_on_withdrawn_authority(monkeypatch, fault, referenced):
+        import math
+        from geometry_msgs.msg import PoseStamped
+        from nav_msgs.msg import Path
+        from test_metric_progress import parent_fixture
+        node, grid, clock, parent, terminal = parent_fixture(monkeypatch, 'open')
+        node._metric_path_validation = 'rpp_rollout'
+        node._max_frontier_goals = 1
+        if fault == 'deadline_exhausted':
+            node._metric_retry_limit = 1
+            node._max_frontier_goals = 2
+        node._metric_egress = None  # this leg uses public free space only
+        if referenced:
+            node._metric_start_egress_enabled = True
+            node._metric_body_reference = lambda: (0., 0., 0.)
+            node._metric_inputs()
+            assert all(isinstance(e, ReferencedStartEgress) and e.valid
+                       and not e.fixed.unknown.any() and e.retained_region.is_empty
+                       and not e.unknown.any() for e in node._metric_egress)
+        chosen = []; children = []; stops = []
+        def planner(target, *_, **kwargs):
+            chosen.append(target)
+            path = Path(); path.header.frame_id = 'map'
+            start = kwargs.get('start_pose', node._robot_pose_sample()[0])
+            for x,y in (start[:2], (target.x,target.y)):
+                p = PoseStamped(); p.pose.position.x=x; p.pose.position.y=y
+                p.pose.orientation.z=math.sin(target.yaw/2)
+                p.pose.orientation.w=math.cos(target.yaw/2); path.poses.append(p)
+            return path, None
+        node._metric_request_nav_plan = planner
+        node._prealign_to_goal = lambda *_, **__: ('skipped',)
+        def navigate(*_, stop_requested, **__):
+            target=chosen[-1]; children.append(target)
+            assert node._wohnungserkundung_active_child is target
+            latest = copy.deepcopy(grid)
+            for index in range(3):
+                clock[0]+=.1; latest=copy.deepcopy(latest)
+                latest.header.stamp.nanosec=int((clock[0]-10)*1e9)
+                latest.data[80*latest.info.width+80] = (index+len(children))*10
+                if fault == 'obstacle': latest.data[20*latest.info.width+10] = 100
+                node._on_map(latest)
+                if fault in ('deadline', 'deadline_exhausted'): node._metric_pending_since=clock[0]-2
+                if fault == 'source':
+                    raw,cor,at=node._metric_joined
+                    node._metric_joined=((*raw[:2],4.),cor,at)
+                if fault == 'epoch': node._metric_fault='map_epoch_changed'
+                stops.append(stop_requested())
+                node._on_metric_map_status(status(latest,accepted=2+len(children)*3+index,observed=2+len(children)*3+index,
+                                                 when=100+clock[0]-10))
+                if stops[-1]: return 'canceled'
+            node._robot_pose_sample=lambda:((target.x,target.y,target.yaw),0.)
+            clock[0]+=.1; latest=copy.deepcopy(latest)
+            for xy in target.observation_points:
+                col,row=node._world_to_grid(*xy,latest.info)
+                latest.data[row*latest.info.width+col]=0
+            latest.header.stamp.nanosec=int((clock[0]-10)*1e9)
+            node._on_map(latest)
+            node._on_metric_map_status(status(latest,accepted=6,observed=6,when=100+clock[0]-10))
+            return 'success'
+        node._navigate_to=navigate
+        result=node._execute_metric_frontier(parent,10.,.3)
+        assert terminal and not result.success  # original total limit, no whole claim
+        expected_children = 2 if fault == 'deadline_exhausted' else 1
+        assert len(children)==expected_children and node._wohnungserkundung_active_child is None
+        assert node._metric_status['attempts']==expected_children
+        if fault == 'none':
+            assert stops==[False,False,False]
+>           assert node._metric_status['arrivals']==node._metric_status['observations']==1
+E           assert 0 == 1
+
+src/explore/test/test_metric_pending_withdrawal.py:207: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_pending_withdrawal.py::test_actual_parent_keeps_one_child_or_stops_on_withdrawn_authority[none-False]
+FAILED src/explore/test/test_metric_pending_withdrawal.py::test_actual_parent_keeps_one_child_or_stops_on_withdrawn_authority[none-True]
+2 failed, 180 passed in 6.22s

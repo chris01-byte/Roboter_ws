@@ -1,0 +1,2 @@
+[INFO] [1791474094.754692814] [robot_map_manager]: robot_map_manager bereit: /map -> /evidence/ap06-concept-20261008/selection-capture-a/maps; Pose <aktueller Kartenframe>->base_link auf /robot_map_manager/robot_pose.
+[WARN] [1791474095.551100826] [robot_map_manager]: Pose map->base_link nicht verfügbar: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.

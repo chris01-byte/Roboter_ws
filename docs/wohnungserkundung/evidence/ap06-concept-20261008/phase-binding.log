@@ -1,0 +1,14 @@
+{
+  "candidate": "b0fa5eb2b5bef5d1066dcf92892a0830811f575e",
+  "source_files": 498,
+  "installed_files": 137,
+  "native_binaries": 9,
+  "native_plugins": 1,
+  "changed_source_files": 8,
+  "source_identity": "/workspace/scratch/ap06-concept-20261008/phase-source-identity.json",
+  "source_identity_sha256": "d06e4b874be9a4fd3036f32428f88c5e80f37b1aebab10d2d487eff89b0e4ec6",
+  "native_identity": "/workspace/scratch/ap06-concept-20261008/phase-native-identity.json",
+  "native_identity_sha256": "dc471c1b455ae02ab784557c280e6cd75c54fbc0cd1112e65f79d20d19c0c039",
+  "manifest_sha256": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da",
+  "masterplan_sha256": "030782dc0cce24d23ef730783703f91cac6957ceb4b7305a224342fba74a8a10"
+}

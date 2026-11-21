@@ -1,0 +1,16 @@
+.F.................................                                      [100%]
+=================================== FAILURES ===================================
+___ test_public_selection_keeps_a_real_stop_view_and_original_served_history ___
+
+    def test_public_selection_keeps_a_real_stop_view_and_original_served_history():
+        node,inputs,_,policy,bad=recorded()
+        before={k:(a.tries,a.failures,a.completed) for k,a in policy.attempts.items()}
+        selected=node._metric_select(inputs,policy,.3)
+>       assert selected,node._frontier_rank_stats
+E       AssertionError: {'accepted': 0, 'bounded_public_observation_wait_s': 29.219534703996032, 'deferred_or_served': 1, 'raw': 14, ...}
+E       assert []
+
+evidence/ap06-repo/src/explore/test/test_metric_stop_observation.py:51: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_stop_observation.py::test_public_selection_keeps_a_real_stop_view_and_original_served_history
+1 failed, 34 passed in 34.22s

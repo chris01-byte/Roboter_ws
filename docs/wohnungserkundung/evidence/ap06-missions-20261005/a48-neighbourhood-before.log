@@ -1,0 +1,17 @@
+F..........                                                              [100%]
+=================================== FAILURES ===================================
+__ test_new_finite_frontier_area_can_reuse_nearby_position_without_serving_it __
+
+    def test_new_finite_frontier_area_can_reuse_nearby_position_without_serving_it():
+        policy, old, new = fixture()
+        kwargs = dict(task_id=new, target_xy=(.855, -.105), now=41.,
+                      fingerprint='b'*64, evidence_key='actual different boundary evidence')
+        assert not policy.eligible(**kwargs)  # IDs/digests alone retain old protection
+>       assert eligible(policy, **kwargs, observation_points=((1.275, .135),))
+E       AssertionError: assert False
+E        +  where False = eligible(MetricTaskPolicy(radius=0.6, cooldown_s=30.0, retry_limit=2, attempts={'metric-task-1': MetricAttempt(frontier_xy=(-0....51486), failures=0, retry_after=0.0, fingerprint='', completed=False, reason='', tries=0, evidence_key='')}, next_id=2), **{'evidence_key': 'actual different boundary evidence', 'fingerprint': 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'now': 41.0, 'target_xy': (0.855, -0.105), ...}, observation_points=((1.275, 0.135),))
+
+evidence/ap06-repo/src/explore/test/test_metric_observation_neighbourhood.py:36: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_observation_neighbourhood.py::test_new_finite_frontier_area_can_reuse_nearby_position_without_serving_it
+1 failed, 10 passed in 0.27s

@@ -1,0 +1,4 @@
+[INFO] [1791043923.368774028] [explore_node]: explore_node bereit. Map='/map', Nav='navigate_to_pose'. Erkundung starten via Action /explore_area.
+actual ExploreNode constructor: opt-in model with 0.02-rad enabled prealignment
+runtime switch rejected: Trying to set a read-only parameter: metric_path_validation.
+private body/egress enabled; default remains conservative; no mission or motion submitted

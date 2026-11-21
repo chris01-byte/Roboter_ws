@@ -1,0 +1,68 @@
+FFFFF                                                                    [100%]
+=================================== FAILURES ===================================
+_ test_corrected_native_cell_center_path_requires_public_alignment_before_motion _
+
+    def test_corrected_native_cell_center_path_requires_public_alignment_before_motion():
+        n,inputs,record,target=recorded()
+        before=[list(inputs[i].data) for i in (0,5)]
+        route=n._metric_validate_nav_plan(inputs,path(record),target,public_only=True)
+>       assert route is not None,n._metric_last_route_rejection
+E       AssertionError: footprint_sweep_invalid
+E       assert None is not None
+
+src/explore/test/test_metric_public_alignment.py:21: AssertionError
+___ test_checked_public_alignment_uses_actual_carrot_and_existing_turn_owner ___
+
+    def test_checked_public_alignment_uses_actual_carrot_and_existing_turn_owner():
+        n,inputs,record,target=recorded()
+        route=n._metric_validate_nav_plan(inputs,path(record),target,public_only=True)
+>       assert route is not None
+E       assert None is not None
+
+src/explore/test/test_metric_public_alignment.py:34: AssertionError
+________ test_current_raw_unknown_never_authorizes_public_alignment[0] _________
+
+which = 0
+
+    @pytest.mark.parametrize('which',(0,5))
+    def test_current_raw_unknown_never_authorizes_public_alignment(which):
+        n,inputs,record,target=recorded()
+        route=(inputs[2][:2],tuple(record['goal'][:2]))
+        c,r=n._world_to_grid(*inputs[2][:2],inputs[which].info)
+        inputs[which].data[r*inputs[which].info.width+c]=-1
+        n._prealign_to_goal=lambda *a,**k:pytest.fail('unknown body cannot authorize a public turn')
+>       assert n._metric_align_nav_departure(route,inputs[2],lambda:False,inputs=inputs)[0]=='controller_owned'
+E       TypeError: MetricFrontierRuntime._metric_align_nav_departure() got an unexpected keyword argument 'inputs'
+
+src/explore/test/test_metric_public_alignment.py:51: TypeError
+________ test_current_raw_unknown_never_authorizes_public_alignment[5] _________
+
+which = 5
+
+    @pytest.mark.parametrize('which',(0,5))
+    def test_current_raw_unknown_never_authorizes_public_alignment(which):
+        n,inputs,record,target=recorded()
+        route=(inputs[2][:2],tuple(record['goal'][:2]))
+        c,r=n._world_to_grid(*inputs[2][:2],inputs[which].info)
+        inputs[which].data[r*inputs[which].info.width+c]=-1
+        n._prealign_to_goal=lambda *a,**k:pytest.fail('unknown body cannot authorize a public turn')
+>       assert n._metric_align_nav_departure(route,inputs[2],lambda:False,inputs=inputs)[0]=='controller_owned'
+E       TypeError: MetricFrontierRuntime._metric_align_nav_departure() got an unexpected keyword argument 'inputs'
+
+src/explore/test/test_metric_public_alignment.py:51: TypeError
+________________ test_cancel_prevents_public_alignment_dispatch ________________
+
+    def test_cancel_prevents_public_alignment_dispatch():
+        n,inputs,record,_=recorded();route=(inputs[2][:2],tuple(record['goal'][:2]))
+        n._prealign_to_goal=lambda *a,**k:pytest.fail('cancelled public turn was dispatched')
+>       assert n._metric_align_nav_departure(route,inputs[2],lambda:True,inputs=inputs)[0]=='interrupted'
+E       TypeError: MetricFrontierRuntime._metric_align_nav_departure() got an unexpected keyword argument 'inputs'
+
+src/explore/test/test_metric_public_alignment.py:57: TypeError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_public_alignment.py::test_corrected_native_cell_center_path_requires_public_alignment_before_motion
+FAILED src/explore/test/test_metric_public_alignment.py::test_checked_public_alignment_uses_actual_carrot_and_existing_turn_owner
+FAILED src/explore/test/test_metric_public_alignment.py::test_current_raw_unknown_never_authorizes_public_alignment[0]
+FAILED src/explore/test/test_metric_public_alignment.py::test_current_raw_unknown_never_authorizes_public_alignment[5]
+FAILED src/explore/test/test_metric_public_alignment.py::test_cancel_prevents_public_alignment_dispatch
+5 failed in 4.04s

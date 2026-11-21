@@ -1,0 +1,40 @@
+[
+  {
+    "name": "ap03-nav2",
+    "image": "ap03-nav2-humble-flat",
+    "image_id": "sha256:c41a1e97cbe1f9532871b12f7ffac8d62b43a9ad6b4e85cc027da18e693e2378",
+    "network": "none",
+    "devices": [],
+    "mounts": [
+      {
+        "source": "/workspace/scratch",
+        "destination": "/evidence",
+        "rw": true
+      },
+      {
+        "source": "/workspace/Roboter_ws-ap03",
+        "destination": "/repo",
+        "rw": true
+      }
+    ]
+  },
+  {
+    "name": "ap03-current",
+    "image": "ap02-humble-validation-base:latest",
+    "image_id": "sha256:2d63ffdf9d13ee52f45749a255f213a45addee8c367f8063a9993830467c17ff",
+    "network": "none",
+    "devices": [],
+    "mounts": [
+      {
+        "source": "/workspace/Roboter_ws-ap03",
+        "destination": "/repo",
+        "rw": true
+      },
+      {
+        "source": "/workspace/scratch",
+        "destination": "/evidence",
+        "rw": true
+      }
+    ]
+  }
+]

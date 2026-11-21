@@ -1,0 +1,26 @@
+[INFO] [1791256874.472400365] [bt_navigator]: 
+	bt_navigator lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791256874.472581592] [bt_navigator]: Creating
+[INFO] [1791256876.478162381] [bt_navigator]: Configuring
+[INFO] [1791256876.582076459] [bt_navigator]: Activating
+[INFO] [1791256876.624328077] [bt_navigator]: Creating bond (bt_navigator) to lifecycle manager.
+[INFO] [1791256903.977443317] [bt_navigator]: Begin navigating from current location (0.00, 0.00) to (1.05, 0.00)
+[WARN] [1791256906.035347822] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[INFO] [1791256907.149416791] [bt_navigator]: [navigate_to_pose] [ActionServer] Client requested to cancel the goal. Cancelling.
+[INFO] [1791256907.150096365] [bt_navigator]: Goal canceled
+[INFO] [1791256911.568426179] [bt_navigator]: Begin navigating from current location (0.29, 0.00) to (1.05, 0.00)
+[INFO] [1791256913.390899861] [bt_navigator]: [navigate_to_pose] [ActionServer] Client requested to cancel the goal. Cancelling.
+[INFO] [1791256913.391043032] [bt_navigator]: Goal canceled
+[INFO] [1791256945.759572845] [bt_navigator]: Begin navigating from current location (0.45, 0.01) to (0.90, 0.02)
+[INFO] [1791256959.930964623] [bt_navigator]: [navigate_to_pose] [ActionServer] Client requested to cancel the goal. Cancelling.
+[INFO] [1791256959.932051118] [bt_navigator]: Goal canceled
+[INFO] [1791256962.317433132] [rclcpp]: signal_handler(signum=2)
+[INFO] [1791256962.317522064] [bt_navigator]: Running Nav2 LifecycleNode rcl preshutdown (bt_navigator)
+[INFO] [1791256962.317589934] [bt_navigator]: Deactivating
+[INFO] [1791256962.317615852] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[INFO] [1791256962.327809309] [bt_navigator]: Cleaning up
+[INFO] [1791256962.410639725] [bt_navigator]: Completed Cleaning up
+[INFO] [1791256962.410710570] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[INFO] [1791256962.424830692] [bt_navigator]: Destroying

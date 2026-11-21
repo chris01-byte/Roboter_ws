@@ -1,0 +1,29 @@
+[INFO] [1791280015.569590684] [bt_navigator]: 
+	bt_navigator lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791280015.570045139] [bt_navigator]: Creating
+[INFO] [1791280017.649201349] [bt_navigator]: Configuring
+[INFO] [1791280017.810938873] [bt_navigator]: Activating
+[INFO] [1791280017.845065742] [bt_navigator]: Creating bond (bt_navigator) to lifecycle manager.
+[INFO] [1791280045.969048369] [bt_navigator]: Begin navigating from current location (0.00, 0.00) to (1.05, 0.00)
+[WARN] [1791280050.029479860] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791280051.599936538] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791280057.791419138] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791280067.900680033] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[INFO] [1791280068.080332036] [bt_navigator]: Goal succeeded
+[INFO] [1791280220.598243784] [bt_navigator]: Begin navigating from current location (0.90, 0.00) to (1.06, -0.25)
+[WARN] [1791280232.929659102] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[INFO] [1791280239.360017098] [bt_navigator]: Goal succeeded
+[INFO] [1791280271.532902083] [bt_navigator]: Begin navigating from current location (1.01, -0.13) to (0.49, -0.43)
+[WARN] [1791280290.471148174] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791280296.237147730] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[INFO] [1791280298.433183579] [bt_navigator]: Goal succeeded
+[INFO] [1791280339.512576984] [rclcpp]: signal_handler(signum=2)
+[INFO] [1791280339.512699629] [bt_navigator]: Running Nav2 LifecycleNode rcl preshutdown (bt_navigator)
+[INFO] [1791280339.513796452] [bt_navigator]: Deactivating
+[INFO] [1791280339.513839848] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[INFO] [1791280339.524331520] [bt_navigator]: Cleaning up
+[INFO] [1791280339.579389308] [bt_navigator]: Completed Cleaning up
+[INFO] [1791280339.579449048] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[INFO] [1791280339.585389642] [bt_navigator]: Destroying

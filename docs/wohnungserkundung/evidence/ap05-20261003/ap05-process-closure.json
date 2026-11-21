@@ -1,0 +1,14 @@
+{
+  "active_test_or_robot_process_names": [],
+  "process_names": [
+    {
+      "pid": 1,
+      "comm": "docker-init"
+    },
+    {
+      "pid": 7,
+      "comm": "sleep"
+    }
+  ],
+  "scope": "isolated network-none test container only"
+}

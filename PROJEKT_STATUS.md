@@ -1,10 +1,28 @@
 # Projektstatus: Roboter_ws
 
-**Stand:** 2026-08-19
+**Stand Gesamtübersicht:** 2026-08-19 · **Fachlicher Nachtrag Wohnungserkundung:** 2026-09-14
 
 **Geltung:** `main` ist die aktuelle Entwicklungsbasis. Detaillierte Entscheidungen und Messnachweise stehen in [`docs/PROJECT_MEMORY.md`](docs/PROJECT_MEMORY.md); die Dokumentationsnavigation steht in [`docs/README.md`](docs/README.md).
 
 ---
+
+## Nachtrag 14.09.2026: Wohnungserkundung WE-1
+
+Für den aktuellen Auftrag zur Wohnungserkundung gelten der
+[Gesamtplan](docs/WOHNUNGSERKUNDUNG_STRATEGIE.md), der
+[Agentenauftrag](docs/wohnungserkundung/AGENTENAUFTRAG.md), die
+[Meilensteine](docs/wohnungserkundung/MEILENSTEINE.md) und der
+[laufende fachliche Status](docs/wohnungserkundung/STATUS.md).
+
+Nächster Schritt ist WE-M0/A: Bestands- und Integrationsprüfung ohne Geräteaktivierung.
+Die HWT-/Arbeitszimmer-Flur-Referenz `1d91229` liegt auf
+`codex/hwt601-encoder-shadow`, nicht auf dem hier zugrunde gelegten Main-Stand
+`05439c7`. Der Dokumentationsnachtrag übernimmt diese funktionalen Änderungen
+nicht und bestätigt keine neue Hardwareabnahme.
+
+Die folgende Gesamtübersicht und ihre Test-/Prioritätsangaben bleiben als Stand
+vom 19.08.2026 erhalten. Für WE-1 sind sie keine aktuelle Vollwohnungsfreigabe und
+keine Aufforderung, nebenbei Arm- oder Diagnostikarbeit zu beginnen.
 
 ## Kurzfassung
 

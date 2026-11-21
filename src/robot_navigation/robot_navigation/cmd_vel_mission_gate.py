@@ -3,21 +3,67 @@
 
 import json
 import math
+import struct
 import time
 
 import rclpy
+from rclpy.time import Time
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import OccupancyGrid, Odometry
 from rclpy._rclpy_pybind11 import RCLError
-from rclpy.executors import ExternalShutdownException
+from rclpy.executors import (
+    ExternalShutdownException, MultiThreadedExecutor, SingleThreadedExecutor)
 from rclpy.node import Node
 from std_msgs.msg import Bool, String
+from std_srvs.srv import Trigger
 from sensor_msgs.msg import LaserScan, PointCloud2
-from rclpy.qos import qos_profile_sensor_data
+from robot_interfaces.msg import NearFieldStatus
+from rclpy.qos import (
+    QoSDurabilityPolicy, QoSProfile, QoSReliabilityPolicy,
+    qos_profile_sensor_data,
+)
+from tf2_ros import Buffer, TransformException, TransformListener
+from robot_navigation.tf_reception import receive_current_tf
 
 
 AUTHORIZED_PHASES = {'nav2_ziel_senden', 'fahre_zum_raum'}
 AUTHORIZED_EXPLORE_PHASES = {'Explore'}
+
+
+def idle_without_active_command(status):
+    if not isinstance(status, dict) or status.get('state') != 'idle':
+        return False
+    command = status.get('active_command')
+    return command is None or (isinstance(command, dict) and not command)
+
+
+def diagnostic_startup_at_rest(gate):
+    """Never resume a used diagnostic; validate actual stationary feedback."""
+    if not getattr(gate, '_allow_stage3_diagnostic', False):
+        return True
+    command = getattr(gate, '_stage3_command', None)
+    if getattr(gate, '_stage3_active', True) or command is None:
+        return False
+    if any(v != 0. for v in (command.linear.x, command.linear.y, command.linear.z,
+                            command.angular.x, command.angular.y, command.angular.z)):
+        return False
+    health = gate._hwt_guard.health
+    with health.lock:
+        feedback = health.statuses.get('wheel', ({},))[0]
+        twist = health.sample_details.get('wheel', {}).get('twist')
+        try:
+            values = tuple(float(feedback[k]) for k in (
+                'meas_motor_rpm_left', 'meas_motor_rpm_right',
+                'meas_v_mps', 'meas_w_radps', 'encoder_feedback_age_s'))
+        except (KeyError, TypeError, ValueError):
+            return False
+        return (all(math.isfinite(v) for v in values)
+                and values[0] == values[1] == 0.
+                and abs(values[2]) < .01 and abs(values[3]) < .03
+                and 0 <= values[4] <= .18
+                and isinstance(twist, list) and len(twist) == 6
+                and all(type(v) in (int, float) and math.isfinite(v) and v == 0. for v in twist))
 
 
 def room_motion_authorized(status):
@@ -124,6 +170,51 @@ def localization_motion_authorized(
     )
 
 
+def stage3_diagnostic_authorized(
+        enabled, active, active_at, command_at, mission_status,
+        mission_status_at, now, timeout_s, health_ready, estop_clear,
+        hwt_ready, tf_ready):
+    """Require the explicit one-shot mode and every normal motion interlock."""
+    times = (active_at, command_at, mission_status_at, now, timeout_s)
+    if not all(value is not None and math.isfinite(value) for value in times):
+        return False
+    return (
+        enabled is True and active is True
+        and timeout_s > 0.0
+        and all(0.0 <= now - value <= timeout_s
+                for value in (active_at, command_at, mission_status_at))
+        and isinstance(mission_status, dict)
+        and mission_status.get('state') != 'running'
+        and not mission_status.get('active_command')
+        and health_ready is True and estop_clear is True
+        and hwt_ready is True and tf_ready is True
+    )
+
+
+def estop_motion_authorized(clear, received_at, now, timeout_s):
+    """Require a fresh explicit clear signal for every gate output."""
+    return (
+        clear is True
+        and received_at is not None
+        and all(math.isfinite(value) for value in (
+            received_at, now, timeout_s))
+        and timeout_s > 0.0
+        and 0.0 <= now - received_at <= timeout_s
+    )
+
+
+def transform_motion_authorized(stamp_ns, now_ns, timeout_s):
+    """A connected map-to-base transform must describe a recent pose."""
+    return (
+        isinstance(stamp_ns, int)
+        and stamp_ns > 0
+        and isinstance(now_ns, int)
+        and math.isfinite(timeout_s)
+        and timeout_s > 0.0
+        and 0 <= now_ns - stamp_ns <= int(timeout_s * 1_000_000_000)
+    )
+
+
 def localization_search_authorized(
         enabled, ready, ever_ready, localization_received_at,
         command_received_at, search_started_at, odom_received_at,
@@ -178,6 +269,33 @@ def localization_search_values_valid(
 class CmdVelMissionGate(Node):
     def __init__(self):
         super().__init__('cmd_vel_mission_gate')
+        require_hwt = self.declare_parameter('require_hwt601_fusion', False).value
+        hwt_drive = self.declare_parameter('hwt601_active_drive', False).value
+        mapping = self.declare_parameter('allow_explore_mission', False).value
+        diagnostic = self.declare_parameter('allow_stage3_motion_diagnostic', False).value
+        self._hwt_guard = None
+        self._hwt_source_cb = None
+        self._hwt_wheel_cb = None
+        self._hwt_status_pub = None
+        self._hwt_status_worker = None
+        self._hwt_diagnostic_next = 0.0
+        self._hwt_diagnostic_event = -1
+        if require_hwt:
+            from robot_state_estimation.hwt601_fusion_guard import Hwt601FusionGuard, DeferredJsonPublisher
+            # In the passive fullstack newer wheel messages reached the
+            # recorder while IMU/status callbacks shared the wheel group and
+            # the gate still selected an older wheel sample. Give wheel data
+            # its own group; command/estop/timers stay serialized. Health owns
+            # its existing lock. Active-drive scheduling remains unchanged.
+            if not hwt_drive:
+                self._hwt_source_cb = MutuallyExclusiveCallbackGroup()
+                self._hwt_wheel_cb = MutuallyExclusiveCallbackGroup()
+            self._hwt_guard = Hwt601FusionGuard(
+                self, hwt_drive, self._hwt_source_cb, self._hwt_wheel_cb,
+                prefer_latest_wheel=bool(mapping or diagnostic))
+            self._hwt_status_pub = self.create_publisher(
+                String, '/fusion/hwt601/status_json', 10)
+            self._hwt_status_worker = DeferredJsonPublisher(self._hwt_status_pub)
         self.declare_parameter('input_topic', '/cmd_vel_nav_raw')
         self.declare_parameter('output_topic', '/cmd_vel_nav')
         self.declare_parameter(
@@ -185,7 +303,6 @@ class CmdVelMissionGate(Node):
         self.declare_parameter('status_timeout_s', 1.0)
         self.declare_parameter('command_timeout_s', 0.25)
         self.declare_parameter('require_localization', True)
-        self.declare_parameter('allow_explore_mission', False)
         self.declare_parameter(
             'explore_scan_command_topic', '/cmd_vel_explore_scan_raw')
         self.declare_parameter('explore_scan_max_angular', 0.15)
@@ -201,6 +318,8 @@ class CmdVelMissionGate(Node):
             'explore_vl53_left_topic', '/near_field/left/points')
         self.declare_parameter(
             'explore_vl53_right_topic', '/near_field/right/points')
+        self.declare_parameter(
+            'near_field_status_topic', '/near_field/status')
         self.declare_parameter('explore_map_timeout_s', 5.0)
         self.declare_parameter('explore_sensor_timeout_s', 0.8)
         self.declare_parameter('explore_odom_timeout_s', 0.8)
@@ -217,6 +336,19 @@ class CmdVelMissionGate(Node):
         self.declare_parameter('localization_search_odom_topic', '/odom')
         self.declare_parameter('localization_search_odom_timeout_s', 0.5)
         self.declare_parameter('publish_rate_hz', 20.0)
+        self.declare_parameter(
+            'stage3_diagnostic_command_topic',
+            '/cmd_vel_stage3_diagnostic_raw')
+        self.declare_parameter(
+            'stage3_diagnostic_active_topic',
+            '/stage3_motion_test/active')
+        self.declare_parameter('estop_topic', '/safety/estop')
+        self.declare_parameter('estop_timeout_s', 1.0)
+        self.declare_parameter('global_frame', 'map')
+        self.declare_parameter('odom_frame', 'odom')
+        self.declare_parameter('base_frame', 'base_link')
+        self.declare_parameter('motion_map_tf_timeout_s', 0.8)
+        self.declare_parameter('motion_base_tf_timeout_s', 0.2)
 
         input_topic = self.get_parameter('input_topic').value
         output_topic = self.get_parameter('output_topic').value
@@ -239,6 +371,8 @@ class CmdVelMissionGate(Node):
             self.get_parameter('explore_direct_max_angular').value)
         self._allow_localization_search = bool(
             self.get_parameter('allow_localization_search').value)
+        self._allow_stage3_diagnostic = bool(
+            self.get_parameter('allow_stage3_motion_diagnostic').value)
         rate_hz = float(self.get_parameter('publish_rate_hz').value)
         if not math.isfinite(rate_hz) or rate_hz <= 0.0:
             raise ValueError('publish_rate_hz muss endlich und > 0 sein')
@@ -265,6 +399,15 @@ class CmdVelMissionGate(Node):
             self.get_parameter('localization_search_max_distance_m').value)
         self._search_odom_timeout = float(
             self.get_parameter('localization_search_odom_timeout_s').value)
+        self._estop_timeout = float(
+            self.get_parameter('estop_timeout_s').value)
+        self._motion_map_tf_timeout = float(
+            self.get_parameter('motion_map_tf_timeout_s').value)
+        self._motion_base_tf_timeout = float(
+            self.get_parameter('motion_base_tf_timeout_s').value)
+        self._global_frame = str(self.get_parameter('global_frame').value)
+        self._odom_frame = str(self.get_parameter('odom_frame').value)
+        self._base_frame = str(self.get_parameter('base_frame').value)
         if (
                 self._status_timeout <= 0.0
                 or self._command_timeout <= 0.0
@@ -281,6 +424,15 @@ class CmdVelMissionGate(Node):
                 or self._explore_direct_max_linear <= 0.0
                 or self._explore_direct_max_angular <= 0.0):
             raise ValueError('Gate-Timeouts muessen > 0 sein')
+        if not math.isfinite(self._estop_timeout) or self._estop_timeout <= 0.0:
+            raise ValueError('estop_timeout_s muss endlich und > 0 sein')
+        if (not math.isfinite(self._motion_map_tf_timeout)
+                or self._motion_map_tf_timeout <= 0.0
+                or not math.isfinite(self._motion_base_tf_timeout)
+                or self._motion_base_tf_timeout <= 0.0
+                or not self._global_frame or not self._odom_frame
+                or not self._base_frame):
+            raise ValueError('Missions-TF braucht Frames und positives Zeitlimit')
 
         self._status = None
         self._status_time = 0.0
@@ -301,9 +453,24 @@ class CmdVelMissionGate(Node):
         self._explore_scan_time = None
         self._explore_left_time = None
         self._explore_right_time = None
+        self._near_clouds = {'left': {}, 'right': {}}
+        self._near_statuses = {}
+        self._estop_clear = None
+        self._estop_time = None
         self._mode = 'blocked'
+        self._stage3_command = Twist()
+        self._stage3_command_time = None
+        self._stage3_active = False
+        self._stage3_active_time = None
+        self._hwt_resume_pending = False
+        self._hwt_hold_sequence = None
+        self._hwt_seen_sequence = 0
+        self._hwt_resume_at = None
+        self._hwt_mission_seen = False
 
         self._publisher = self.create_publisher(Twist, output_topic, 10)
+        self._tf_buffer = Buffer()
+        self._tf_listener = TransformListener(self._tf_buffer, self)
         self.create_subscription(Twist, input_topic, self._on_command, 10)
         self.create_subscription(
             Twist,
@@ -316,10 +483,27 @@ class CmdVelMissionGate(Node):
             self._on_explore_direct_command,
             10)
         self.create_subscription(String, status_topic, self._on_status, 10)
+        if self._hwt_guard is not None:
+            self.create_subscription(
+                String, '/explore/status_json', self._on_explore_status, 10)
         self.create_subscription(
             Bool, localization_topic, self._on_localization, 10)
         self.create_subscription(
             Twist, search_topic, self._on_search_command, 10)
+        self.create_subscription(
+            Twist,
+            self.get_parameter('stage3_diagnostic_command_topic').value,
+            self._on_stage3_diagnostic_command,
+            10)
+        self.create_subscription(
+            Bool,
+            self.get_parameter('stage3_diagnostic_active_topic').value,
+            self._on_stage3_diagnostic_active,
+            10)
+        if self._allow_stage3_diagnostic:
+            self.create_service(Trigger,
+                '/stage3_motion_test/acknowledge_recovered_hold',
+                self._acknowledge_diagnostic_hold)
         self.create_subscription(
             Odometry, search_odom_topic, self._on_odom, 20)
         self.create_subscription(
@@ -334,6 +518,15 @@ class CmdVelMissionGate(Node):
         self.create_subscription(
             PointCloud2, self.get_parameter('explore_vl53_right_topic').value,
             self._on_explore_right, qos_profile_sensor_data)
+        self.create_subscription(
+            NearFieldStatus, self.get_parameter('near_field_status_topic').value,
+            self._on_near_status, 10)
+        latched = QoSProfile(depth=1)
+        latched.reliability = QoSReliabilityPolicy.RELIABLE
+        latched.durability = QoSDurabilityPolicy.TRANSIENT_LOCAL
+        self.create_subscription(
+            Bool, self.get_parameter('estop_topic').value,
+            self._on_estop, latched)
         self.create_timer(1.0 / rate_hz, self._publish)
         self.get_logger().warn(
             'Nav2-Fahrtor aktiv: Befehle nur bei explizit freigegebener Mission'
@@ -409,10 +602,76 @@ class CmdVelMissionGate(Node):
             return
         self._status = status
         self._status_time = time.monotonic()
+        if isinstance(status, dict) and not idle_without_active_command(status):
+            self._hwt_mission_seen = True
         if not self._mission_authorized(status, time.monotonic()):
             # Nicht erst auf den naechsten Timer-Tick warten.
             if not self._search_authorized(time.monotonic()):
-                self._publisher.publish(Twist())
+                guard = getattr(self, '_hwt_guard', None)
+                hwt_ready = ((guard is None or guard.failure() is None)
+                             and not getattr(self, '_hwt_resume_pending', False))
+                if not CmdVelMissionGate._diagnostic_input_authorized(
+                        self, time.monotonic(), hwt_ready):
+                    self._publisher.publish(Twist())
+
+    def _on_explore_status(self, message):
+        """Only a new HOLD then RESUME from the existing Explorer opens a hold."""
+        try:
+            status = json.loads(message.data)
+        except (ValueError, TypeError):
+            return
+        if not isinstance(status, dict):
+            return
+        sequence = status.get('hwt_recovery_sequence')
+        if type(sequence) is not int or sequence < 0:
+            return
+        phase = status.get('phase')
+        if (self._hwt_guard is not None
+                and self._hwt_guard.health.recovery_state in
+                ('HOLD', 'RECOVERY_VALIDATION', 'TERMINAL_FAULT')):
+            self._hwt_resume_pending = True
+        if (phase in ('we_hwt_hold', 'we_hwt_recovery_validation')
+                and sequence >= self._hwt_seen_sequence):
+            # Validation can become false again after an earlier resume
+            # signal. Close immediately; the next release needs a new cmd.
+            self._hwt_resume_pending = True
+            self._hwt_hold_sequence = sequence
+            self._hwt_seen_sequence = sequence
+            return
+        if not self._hwt_resume_pending:
+            self._hwt_seen_sequence = max(self._hwt_seen_sequence, sequence)
+            return
+        # A recovered source gap before the first mission has no interrupted
+        # Explorer task that could send RESUME. Accept fresh idle observers
+        # only; after any mission, the existing HOLD/RESUME handshake applies.
+        now = time.monotonic()
+        if (not getattr(self, '_hwt_mission_seen', True)
+                and status.get('state') == 'idle' and phase == 'idle'
+                and sequence == 0 and self._hwt_hold_sequence is None
+                and idle_without_active_command(self._status)
+                and 0.0 <= now - self._status_time <= self._status_timeout
+                and not getattr(self, '_allow_localization_search', True)
+                and diagnostic_startup_at_rest(self)
+                and self._hwt_guard.health.recovery_state == 'HEALTHY'
+                and self._hwt_guard.health.source_failure() is None
+                and all(value == 0.0 for value in (
+                    self._command.linear.x, self._command.linear.y,
+                    self._command.linear.z, self._command.angular.x,
+                    self._command.angular.y, self._command.angular.z))):
+            self._hwt_resume_pending = False
+            self._hwt_resume_at = now
+            return
+        if (phase != 'we_hwt_resumed'
+                or self._hwt_hold_sequence != sequence
+                or self._hwt_guard.health.recovery_state != 'HEALTHY'
+                or not self._allow_explore
+                or not isinstance(self._status, dict)
+                or self._status.get('state') != 'running'
+                or not isinstance(self._status.get('active_command'), dict)
+                or self._status['active_command'].get('type') != 'explore'):
+            return
+        self._hwt_resume_pending = False
+        self._hwt_resume_at = time.monotonic()
 
     def _on_search_command(self, message):
         values = (message.linear.x, message.linear.y, message.linear.z,
@@ -453,20 +712,180 @@ class CmdVelMissionGate(Node):
             if self._search_distance > self._search_max_distance:
                 self._publisher.publish(Twist())
 
+    def _on_stage3_diagnostic_command(self, message):
+        values = (message.linear.x, message.linear.y, message.linear.z,
+                  message.angular.x, message.angular.y, message.angular.z)
+        if not explore_direct_values_valid(
+                values, self._explore_direct_max_linear,
+                self._explore_direct_max_angular):
+            self._stage3_command = Twist()
+            self._stage3_command_time = None
+            self._publisher.publish(Twist())
+            self.get_logger().error(
+                'Stage-3-Diagnosebefehl verworfen: nur vorwaerts oder '
+                'Drehung auf der Stelle innerhalb der bestehenden '
+                'Explore-Bewegungsgrenzen ist erlaubt.')
+            return
+        self._stage3_command = message
+        self._stage3_command_time = time.monotonic()
+
+    def _on_stage3_diagnostic_active(self, message):
+        self._stage3_active = bool(message.data)
+        self._stage3_active_time = time.monotonic()
+        if self._stage3_active:
+            # A used diagnostic has real motion history even without a
+            # MissionManager mission. It must never receive startup recovery.
+            self._hwt_mission_seen = True
+        if not self._stage3_active:
+            self._stage3_command = Twist()
+            self._stage3_command_time = None
+            self._publisher.publish(Twist())
+
+    def _acknowledge_diagnostic_hold(self, _request, response):
+        """Explicit LAB acknowledgement after recovery and measured stop.
+
+        Never resume a command, clear a source fault, reset a budget or start
+        a test. A separate, new diagnostic Trigger must still pass its checks.
+        """
+        now = time.monotonic()
+        guard = self._hwt_guard
+        okay = (self._allow_stage3_diagnostic and guard is not None
+                and not self._stage3_active
+                and self._stage3_active_time is not None
+                and 0 <= now-self._stage3_active_time <= .25
+                and idle_without_active_command(self._status)
+                and 0 <= now-self._status_time <= self._status_timeout
+                and estop_motion_authorized(self._estop_clear, self._estop_time,
+                                           now, self._estop_timeout)
+                and not self._allow_localization_search
+                and self._motion_tf_authorized()
+                and self._stage3_diagnostic_health_authorized(now)
+                and all(v == 0. for v in (self._command.linear.x,
+                    self._command.linear.y, self._command.linear.z,
+                    self._command.angular.x, self._command.angular.y,
+                    self._command.angular.z)))
+        if okay:
+            guard.refresh_current_wheel()
+            guard.refresh_current_imu()
+            with guard.health.lock:
+                okay = (guard.health.motion_failure() is None
+                        and guard.health.recovery_state == 'HEALTHY'
+                        and guard.health.latched_fault is None
+                        and diagnostic_startup_at_rest(self))
+        response.success = bool(okay)
+        if okay:
+            self._stage3_command = Twist()
+            self._stage3_command_time = None
+            self._hwt_resume_pending = False
+            self._hwt_resume_at = now
+            response.message = 'Recovered LAB hold acknowledged at measured stop; new test required.'
+        else:
+            response.message = 'LAB acknowledgement rejected: current source/stop/idle/safety checks failed.'
+        return response
+
     def _on_explore_map(self, _message):
         self._explore_map_time = time.monotonic()
 
     def _on_explore_scan(self, _message):
         self._explore_scan_time = time.monotonic()
 
-    def _on_explore_left(self, _message):
-        self._explore_left_time = time.monotonic()
+    def _near_cloud(self, side, message):
+        now = time.monotonic()
+        stamp = (int(message.header.stamp.sec) * 1_000_000_000
+                 + int(message.header.stamp.nanosec))
+        age_ns = self.get_clock().now().nanoseconds - stamp
+        fields = {field.name: field for field in message.fields}
+        valid = (
+            bool(message.header.frame_id)
+            and message.height > 0 and message.point_step >= 12
+            and message.row_step >= message.width * message.point_step
+            and len(message.data) == message.height * message.row_step
+            and all(name in fields and fields[name].datatype == 7
+                    and fields[name].count == 1
+                    and 0 <= fields[name].offset <= message.point_step - 4
+                    for name in ('x', 'y', 'z'))
+            and age_ns >= 0)
+        if valid and message.width:
+            endian = '>' if message.is_bigendian else '<'
+            for row in range(message.height):
+                for col in range(message.width):
+                    offset = row * message.row_step + col * message.point_step
+                    point = tuple(struct.unpack_from(
+                        endian + 'f', message.data,
+                        offset + fields[name].offset)[0]
+                        for name in ('x', 'y', 'z'))
+                    if (not all(math.isfinite(value) for value in point)
+                            or sum(value * value for value in point) == 0.0):
+                        valid = False
+                        break
+                if not valid:
+                    break
+        if valid:
+            clouds = self._near_clouds[side]
+            clouds[stamp] = (now, now - age_ns / 1_000_000_000)
+            for older in sorted(clouds)[:-3]:
+                del clouds[older]
+        else:
+            self._near_clouds[side].clear()
+        if side == 'left':
+            self._explore_left_time = now if valid else None
+        else:
+            self._explore_right_time = now if valid else None
 
-    def _on_explore_right(self, _message):
-        self._explore_right_time = time.monotonic()
+    def _on_explore_left(self, message):
+        self._near_cloud('left', message)
+
+    def _on_explore_right(self, message):
+        self._near_cloud('right', message)
+
+    def _on_near_status(self, message):
+        now = time.monotonic()
+        stamp = (int(message.header.stamp.sec) * 1_000_000_000
+                 + int(message.header.stamp.nanosec))
+        age_ns = self.get_clock().now().nanoseconds - stamp
+        observed = (
+            now - age_ns / 1_000_000_000
+            if message.header.frame_id == 'base_link' and age_ns >= 0
+            else None)
+        self._near_statuses[stamp] = (message, now, observed)
+        for older in sorted(self._near_statuses)[:-3]:
+            del self._near_statuses[older]
+
+    def _near_quality_authorized(self, now):
+        if not self._near_statuses:
+            return False
+        latest, latest_received, latest_observed = self._near_statuses[
+            max(self._near_statuses)]
+        # A newly reported failure stops immediately, even while a previous
+        # complete triplet is still inside its normal freshness window.
+        if (any(value is None or not 0 <= now - value <=
+                self._explore_sensor_timeout
+                for value in (latest_received, latest_observed))
+                or not all(getattr(latest, f'{side}_frame_healthy')
+                           for side in ('left', 'right'))):
+            return False
+        for stamp in sorted(self._near_statuses, reverse=True):
+            status, received, observed = self._near_statuses[stamp]
+            if (any(value is None or not 0 <= now - value <=
+                    self._explore_sensor_timeout
+                    for value in (received, observed))
+                    or not all(getattr(status, f'{side}_frame_healthy')
+                               for side in ('left', 'right'))):
+                continue
+            paired = True
+            for side in ('left', 'right'):
+                cloud = self._near_clouds[side].get(stamp)
+                if (cloud is None or any(
+                        not 0 <= now - value <= self._explore_sensor_timeout
+                        for value in cloud)):
+                    paired = False
+                    break
+            if paired:
+                return True
+        return False
 
     def _explore_health_authorized(self, now):
-        return explore_health_authorized(
+        return self._near_quality_authorized(now) and explore_health_authorized(
             self._allow_explore,
             self._explore_map_time,
             self._explore_scan_time,
@@ -480,9 +899,23 @@ class CmdVelMissionGate(Node):
             allow_stale_map_for_scan=(
                 self._command_source == 'explore_scan'))
 
+    def _stage3_diagnostic_health_authorized(self, now):
+        return self._near_quality_authorized(now) and explore_health_authorized(
+            True,
+            self._explore_map_time,
+            self._explore_scan_time,
+            self._explore_left_time,
+            self._explore_right_time,
+            self._odom_time,
+            now,
+            self._explore_map_timeout,
+            self._explore_sensor_timeout,
+            self._explore_odom_timeout)
+
     def _mission_authorized(self, status, now):
         return (
-            room_motion_authorized(status)
+            (room_motion_authorized(status)
+             and self._near_quality_authorized(now))
             or (
                 explore_motion_authorized(status, self._allow_explore)
                 and self._explore_health_authorized(now)
@@ -499,6 +932,12 @@ class CmdVelMissionGate(Node):
         elif self._require_localization and (
                 was_ready or not self._allow_localization_search):
             # Lokalisierungsverlust ist ein unmittelbarer, harter Gate-Stopp.
+            self._publisher.publish(Twist())
+
+    def _on_estop(self, message):
+        self._estop_clear = message.data is False
+        self._estop_time = time.monotonic()
+        if not self._estop_clear:
             self._publisher.publish(Twist())
 
     def _search_authorized(self, now):
@@ -518,10 +957,111 @@ class CmdVelMissionGate(Node):
             self._search_max_duration,
             self._search_max_distance)
 
+    def _motion_tf_authorized(self):
+        if not receive_current_tf(getattr(self, '_tf_listener', None)):
+            return False
+        try:
+            map_transform = self._tf_buffer.lookup_transform(
+                self._global_frame, self._base_frame, Time())
+            base_transform = self._tf_buffer.lookup_transform(
+                self._odom_frame, self._base_frame, Time())
+        except TransformException:
+            return False
+        now_ns = self.get_clock().now().nanoseconds
+        def stamp_ns(transform):
+            stamp = transform.header.stamp
+            return int(stamp.sec) * 1_000_000_000 + int(stamp.nanosec)
+        return (
+            transform_motion_authorized(
+                stamp_ns(map_transform), now_ns,
+                self._motion_map_tf_timeout)
+            and transform_motion_authorized(
+                stamp_ns(base_transform), now_ns,
+                self._motion_base_tf_timeout)
+        )
+
+    def _diagnostic_input_authorized(self, now, hwt_ready):
+        if not getattr(self, '_allow_stage3_diagnostic', False):
+            return False
+        return stage3_diagnostic_authorized(
+            True, self._stage3_active, self._stage3_active_time,
+            self._stage3_command_time, self._status, self._status_time,
+            now, self._status_timeout, self._stage3_diagnostic_health_authorized(now),
+            estop_motion_authorized(self._estop_clear, self._estop_time,
+                                   now, self._estop_timeout),
+            hwt_ready, self._motion_tf_authorized())
+
+    def destroy_node(self):
+        worker = getattr(self, '_hwt_status_worker', None)
+        if worker is not None:
+            worker.close()
+        return super().destroy_node()
+
     def _publish(self):
         now = time.monotonic()
+        guard = getattr(self, '_hwt_guard', None)
+        hwt_failure = None
+        health_status = None
+        if guard is not None:
+            guard.refresh_passive_wheel()
+            # DDS take/callback groups must not be acquired while owning the
+            # health mutex: a dispatched source callback may already own its
+            # group and be waiting for that same mutex. Receive first, then
+            # evaluate and capture one atomic decision under the health lock.
+            guard.refresh_current_wheel()
+            guard.refresh_current_imu()
+            with guard.health.lock:
+                hwt_failure = guard.health.motion_failure()
+                # One source decision supplies both authorization and status.
+                # A second evaluation while formatting could select another
+                # sample and report a different state from the command check.
+                health_status = {
+                    'sources_ready': guard.health.last_source_failure is None,
+                    'active_drive': guard.health.active_drive,
+                    'latched_fault': guard.health.latched_fault,
+                    # Event snapshots are immutable after capture. The queue
+                    # owns this new view/list; no repeated deep copy under the
+                    # source lock and no JSON or publisher I/O here.
+                    'first_fault': guard.health._first_fault,
+                    'last_fault': guard.health.last_fault,
+                    'recovery_state': guard.health.recovery_state,
+                    'hwt_recovery_attempts': guard.health.recovery_attempts,
+                    'wheel_recovery_attempts': guard.health.wheel_recovery_attempts,
+                    'recovery_attempt_limit_per_source': guard.health.recovery_attempt_limit,
+                    'recovery_budget_s': guard.health.recovery_budget_s,
+                    'recovery_events_tail': list(guard.health.recovery_events[-16:]),
+                    'source_contract': guard.health.contract_diagnostics(time.monotonic()),
+                }
+        if (health_status is not None and health_status['recovery_state'] in
+                ('HOLD', 'RECOVERY_VALIDATION', 'TERMINAL_FAULT')):
+            if not getattr(self, '_hwt_resume_pending', False):
+                self._hwt_hold_sequence = None
+            self._hwt_resume_pending = True
+        hwt_motion_ready = (
+            hwt_failure is None
+            and not getattr(self, '_hwt_resume_pending', False))
+        if health_status is not None:
+            health_status.update(
+                hwt_motion_ready=hwt_motion_ready,
+                reason=(hwt_failure or ('awaiting_explore_resume' if not hwt_motion_ready
+                                       else 'raw_sources_ready')),
+                resume_sequence=self._hwt_hold_sequence)
+            worker = getattr(self, '_hwt_status_worker', None)
+            if worker is None:
+                # Object-only unit fixtures; live HWT nodes always have worker.
+                self._hwt_status_pub.publish(String(data=json.dumps(health_status)))
+            elif (now >= self._hwt_diagnostic_next
+                  or self._hwt_diagnostic_event != guard.health._event_sequence):
+                self._hwt_diagnostic_next = now+.2
+                self._hwt_diagnostic_event = guard.health._event_sequence
+                worker.submit(health_status)
+        estop_clear = estop_motion_authorized(
+            self._estop_clear, self._estop_time, now, self._estop_timeout)
         mission_authorized = (
-            self._mission_authorized(self._status, now)
+            estop_clear
+            and hwt_motion_ready
+            and self._motion_tf_authorized()
+            and self._mission_authorized(self._status, now)
             and now - self._status_time <= self._status_timeout
             and localization_motion_authorized(
                 self._require_localization,
@@ -529,12 +1069,22 @@ class CmdVelMissionGate(Node):
                 self._localization_time,
                 now,
                 self._localization_timeout)
-        )
-        command_fresh = now - self._command_time <= self._command_timeout
-        search_authorized = self._search_authorized(now)
+            )
+        diagnostic_active = CmdVelMissionGate._diagnostic_input_authorized(
+            self, now, hwt_motion_ready)
+        command_fresh = (
+            now - self._command_time <= self._command_timeout
+            and (getattr(self, '_hwt_resume_at', None) is None
+                 or self._command_time > self._hwt_resume_at))
+        search_authorized = (estop_clear and self._search_authorized(now)
+                             and hwt_motion_ready
+                             and self._near_quality_authorized(now))
         if search_authorized:
             command = self._search_command
             mode = 'localization_search'
+        elif diagnostic_active:
+            command = self._stage3_command
+            mode = 'stage3_diagnostic'
         elif mission_authorized and command_fresh:
             command = self._command
             mode = 'mission'
@@ -547,14 +1097,39 @@ class CmdVelMissionGate(Node):
             self._mode = mode
 
 
+def spin_passive_gate(executor, stop_requested=lambda: False):
+    """Give independent source workers a bounded scheduling opportunity.
+
+    Older Humble MultiThreadedExecutor.spin() can busy-poll a blocked default
+    callback group and starve its own ready source workers. This yield changes
+    no message time or health deadline; a delayed real source still fails.
+    """
+    while executor.context.ok() and not stop_requested():
+        executor.spin_once(timeout_sec=.02)
+        time.sleep(.001)
+
+
 def main(args=None):
     rclpy.init(args=args)
     node = CmdVelMissionGate()
+    executor = (MultiThreadedExecutor(num_threads=3)
+                if node._hwt_source_cb is not None else SingleThreadedExecutor())
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        if node._hwt_source_cb is not None:
+            spin_passive_gate(executor)
+        else:
+            executor.spin()
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except RuntimeError:
+        # Humble kann beim globalen SIGINT waehrend take_message() statt der
+        # vorgesehenen ExternalShutdownException einen RuntimeError werfen.
+        # Echte RuntimeError im laufenden Kontext bleiben sichtbar.
+        if rclpy.ok():
+            raise
     finally:
+        executor.shutdown()
         if rclpy.ok():
             try:
                 node._publisher.publish(Twist())

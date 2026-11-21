@@ -1,0 +1,20 @@
+..F                                                                      [100%]
+=================================== FAILURES ===================================
+_________ test_raster_join_does_not_command_turn_away_from_rpp_carrot __________
+
+    def test_raster_join_does_not_command_turn_away_from_rpp_carrot():
+        node, inputs = fixture()
+        x, y = inputs[2][:2]
+        # NavFn starts at a cell centre. This connector exceeds half of this
+        # fixture's .1-m cell, yet the interpolated .4-m RPP carrot is straight.
+        route = ((x, y), (x+.055, y-.005), (1.3, y-.005), (2., .75))
+>       assert node._metric_waypoints_clear(inputs, route, math.pi/4) is not None
+E       assert None is not None
+E        +  where None = <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7f55f2f7b3a0>>([nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...], ((0.05, 0.05), (0.10500000000000001, 0.045000000000000005), (1.3, 0.045000000000000005), (2.0, 0.75)), (3.141592653589793 / 4))
+E        +    where <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7f55f2f7b3a0>> = <explore.explore_node.ExploreNode object at 0x7f55f2f7b3a0>._metric_waypoints_clear
+E        +    and   3.141592653589793 = math.pi
+
+evidence/ap06-repo/src/explore/test/test_metric_rpp_egress_turn.py:39: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_rpp_egress_turn.py::test_raster_join_does_not_command_turn_away_from_rpp_carrot
+1 failed, 2 passed in 0.33s

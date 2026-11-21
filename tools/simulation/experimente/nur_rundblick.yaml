@@ -1,0 +1,9 @@
+# Nur Rundblick (Anschlussstelle für ki_erkundung, Freigabe des Projektinhabers
+# vom 21.11.2026): Der Explorer dreht einmal abschnittsweise um 360 Grad und
+# bleibt stehen. Es wird kein Ziel angefahren.
+# Am Roboter wird der Schalter als Startargument gesetzt
+# (app_mapping.launch.py initial_scan_only:=true); hier als Explorer-Parameter
+# über dem Produktprofil. Nur Simulation, keine Abnahme.
+sh_treiber:
+  explorer_parameter:
+    initial_scan_only: true

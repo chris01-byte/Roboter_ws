@@ -1,0 +1,26 @@
+.....F........................                                           [100%]
+=================================== FAILURES ===================================
+_____________ test_recorded_exhausted_a51_history_stays_exhausted ______________
+
+    def test_recorded_exhausted_a51_history_stays_exhausted():
+        node, inputs, metadata = fixture('ap06_a51_selection')
+        state = metadata['checkpoint']
+        policy, _ = restore_policy(state, time.monotonic(), state['saved_wall_time'])
+        node._global_costmap_received_at = time.monotonic()
+        before = [(key, a.tries, a.failures, a.completed) for key, a in policy.attempts.items()]
+>       assert node._metric_select(inputs, policy, .3) == []
+E       AssertionError: assert [MetricCandid...9e64b260d05')] == []
+E         Left contains one more item: MetricCandidate(task_id='metric-task-7', x=0.09530090008266279, y=-0.008472600539803869, yaw=1.6217779805056431, front...4999931268394, 0.10499999765306711),), evidence_key='fe218443be75e7e6bd98733403b9fba86960290e992906a4102729e64b260d05')
+E         Full diff:
+E           [
+E         -  ,
+E         +  MetricCandidate(task_id='metric-task-7',
+E         +                  x=0.09530090008266279,
+E         +                  y=-0.008472600539803869,...
+E         
+E         ...Full output truncated (17 lines hidden), use '-vv' to show
+
+src/explore/test/test_metric_side_before_rejection.py:42: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_side_before_rejection.py::test_recorded_exhausted_a51_history_stays_exhausted
+1 failed, 29 passed in 17.14s

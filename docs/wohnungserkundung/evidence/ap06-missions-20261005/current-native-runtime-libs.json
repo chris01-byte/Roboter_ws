@@ -1,0 +1,244 @@
+{
+  "kind": "only missing third-party runtime dependencies reused; current ROS core/rclpy/rclcpp not replaced",
+  "files": [
+    {
+      "file": "libGeographic.so.19",
+      "original": "/usr/lib/x86_64-linux-gnu/libGeographic.so.19",
+      "original_container": "ap03-nav2",
+      "original_package": "libgeographic19:amd64: /usr/lib/x86_64-linux-gnu/libGeographic.so.19",
+      "sha256": "49d31b1608cfbb7f500cb1b65b62a02a30d42a347994d493dbb74c622b1575d3"
+    },
+    {
+      "file": "libbehaviortree_cpp_v3.so",
+      "original": "/opt/ros/humble/lib/libbehaviortree_cpp_v3.so",
+      "original_container": "ap03-nav2",
+      "original_package": "ros-humble-behaviortree-cpp-v3: /opt/ros/humble/lib/libbehaviortree_cpp_v3.so",
+      "sha256": "fa9015da9652ef62d97564d6b0d85db116a6294efe923e2dc51a078d2329192c"
+    },
+    {
+      "file": "libbondcpp.so",
+      "original": "/opt/ros/humble/lib/libbondcpp.so",
+      "original_container": "ap03-nav2",
+      "original_package": "ros-humble-bondcpp: /opt/ros/humble/lib/libbondcpp.so",
+      "sha256": "e3c49905cc79ea11c585d7aaab525bfe8dd475cb4281ef976264e5144832ce31"
+    },
+    {
+      "file": "libboost_serialization.so.1.74.0",
+      "original": "/usr/lib/x86_64-linux-gnu/libboost_serialization.so.1.74.0",
+      "original_container": "ap03-nav2",
+      "original_package": "libboost-serialization1.74.0:amd64: /usr/lib/x86_64-linux-gnu/libboost_serialization.so.1.74.0",
+      "sha256": "fc22380106a12299c1ffb7d13e1bec2db0e2bf265cf41d9b2fdde35bdae4403c"
+    },
+    {
+      "file": "libboost_thread.so.1.74.0",
+      "original": "/usr/lib/x86_64-linux-gnu/libboost_thread.so.1.74.0",
+      "original_container": "ap03-nav2",
+      "original_package": "libboost-thread1.74.0:amd64: /usr/lib/x86_64-linux-gnu/libboost_thread.so.1.74.0",
+      "sha256": "41c8fe93ef58c42bc46798ce7bb84cbb964185b7529547dec7e501f15bd8a2a0"
+    },
+    {
+      "file": "libinteractive_markers.so",
+      "original": "/opt/ros/humble/lib/libinteractive_markers.so",
+      "original_container": "ap03-nav2",
+      "original_package": "ros-humble-interactive-markers: /opt/ros/humble/lib/libinteractive_markers.so",
+      "sha256": "6c0360de5efb93c08e8129f0154e11a2dc4e26a15bcc41a936a0aa52a00d4983"
+    },
+    {
+      "file": "libtbb.so.12",
+      "original": "/usr/lib/x86_64-linux-gnu/libtbb.so.12",
+      "original_container": "ap03-nav2",
+      "original_package": "libtbb12:amd64: /usr/lib/x86_64-linux-gnu/libtbb.so.12",
+      "sha256": "662cde99c415f7ac2bcedca97f884345f9c158d3b446678d59a8a98603e7938e"
+    },
+    {
+      "file": "libzmq.so.5",
+      "original": "/usr/lib/x86_64-linux-gnu/libzmq.so.5",
+      "original_container": "ap03-nav2",
+      "original_package": "libzmq5:amd64: /usr/lib/x86_64-linux-gnu/libzmq.so.5",
+      "sha256": "540a8defe7b1e1494ac553843a2bea88eaf5426bf367782b5ca6a5a01360989f"
+    },
+    {
+      "file": "libbond__rosidl_typesupport_cpp.so",
+      "original": "/opt/ros/humble/lib/libbond__rosidl_typesupport_cpp.so",
+      "original_container": "ap03-nav2",
+      "original_package": "ros-humble-bond: /opt/ros/humble/lib/libbond__rosidl_typesupport_cpp.so",
+      "sha256": "7da511b128e3bd2d03a54a4d4dc23dbce6cc9702cea631cc46f17222eec64bb7"
+    },
+    {
+      "file": "libboost_context.so.1.74.0",
+      "original": "/usr/lib/x86_64-linux-gnu/libboost_context.so.1.74.0",
+      "original_container": "ap03-nav2",
+      "original_package": "libboost-context1.74.0:amd64: /usr/lib/x86_64-linux-gnu/libboost_context.so.1.74.0",
+      "sha256": "01432c1918c0fafa907b4eb0b5e300b81ad264bae9e4a80d17653fa6cd8b10c7"
+    },
+    {
+      "file": "libnorm.so.1",
+      "original": "/usr/lib/x86_64-linux-gnu/libnorm.so.1",
+      "original_container": "ap03-nav2",
+      "original_package": "libnorm1:amd64: /usr/lib/x86_64-linux-gnu/libnorm.so.1",
+      "sha256": "cc5c631eb267f0159baee696a3fead708397ccc095ddbcde434f678582cb0481"
+    },
+    {
+      "file": "libpgm-5.3.so.0",
+      "original": "/usr/lib/x86_64-linux-gnu/libpgm-5.3.so.0",
+      "original_container": "ap03-nav2",
+      "original_package": "libpgm-5.3-0:amd64: /usr/lib/x86_64-linux-gnu/libpgm-5.3.so.0",
+      "sha256": "fcc27728d8db55fff51c782a665f37f1e5c54f3a37872a272688800e962e0dda"
+    },
+    {
+      "file": "libsodium.so.23",
+      "original": "/usr/lib/x86_64-linux-gnu/libsodium.so.23",
+      "original_container": "ap03-nav2",
+      "original_package": "libsodium23:amd64: /usr/lib/x86_64-linux-gnu/libsodium.so.23",
+      "sha256": "2361eaf7645b2014106c0c05644875b28476fe14d21d9af9d2d94d61d3da5fef"
+    },
+    {
+      "file": "libbond__rosidl_generator_c.so",
+      "original": "/opt/ros/humble/lib/libbond__rosidl_generator_c.so",
+      "original_container": "ap03-nav2",
+      "original_package": "ros-humble-bond: /opt/ros/humble/lib/libbond__rosidl_generator_c.so",
+      "sha256": "a35db3dc720b335da7da10a767d70b0cf25819438bfe311ab5fcabd6059e746a"
+    },
+    {
+      "file": "libbond__rosidl_generator_py.so",
+      "original": "/opt/ros/humble/lib/libbond__rosidl_generator_py.so",
+      "original_container": "ap03-nav2",
+      "original_package": "ros-humble-bond: /opt/ros/humble/lib/libbond__rosidl_generator_py.so",
+      "sha256": "160ea9e4965f0ee3a7ae0a41cbd7db65ac1bbbf1a66bc26099477ca444216153"
+    },
+    {
+      "file": "libbond__rosidl_typesupport_c.so",
+      "original": "/opt/ros/humble/lib/libbond__rosidl_typesupport_c.so",
+      "original_container": "ap03-nav2",
+      "original_package": "ros-humble-bond: /opt/ros/humble/lib/libbond__rosidl_typesupport_c.so",
+      "sha256": "15744439b656769bb2cc4dad37a805cbd24f1ea39d0485419a54802cc93328c4"
+    },
+    {
+      "file": "libbond__rosidl_typesupport_fastrtps_c.so",
+      "original": "/opt/ros/humble/lib/libbond__rosidl_typesupport_fastrtps_c.so",
+      "original_container": "ap03-nav2",
+      "original_package": "ros-humble-bond: /opt/ros/humble/lib/libbond__rosidl_typesupport_fastrtps_c.so",
+      "sha256": "362890ed6e5c64ac9031165ffa86e16b4f234dbd48443922cb98f38bce5ea94a"
+    },
+    {
+      "file": "libbond__rosidl_typesupport_fastrtps_cpp.so",
+      "original": "/opt/ros/humble/lib/libbond__rosidl_typesupport_fastrtps_cpp.so",
+      "original_container": "ap03-nav2",
+      "original_package": "ros-humble-bond: /opt/ros/humble/lib/libbond__rosidl_typesupport_fastrtps_cpp.so",
+      "sha256": "b2ad2bf76b7ecb4142fb264f53849577289d3231d32806efcd21ecee165167da"
+    },
+    {
+      "file": "libbond__rosidl_typesupport_introspection_c.so",
+      "original": "/opt/ros/humble/lib/libbond__rosidl_typesupport_introspection_c.so",
+      "original_container": "ap03-nav2",
+      "original_package": "ros-humble-bond: /opt/ros/humble/lib/libbond__rosidl_typesupport_introspection_c.so",
+      "sha256": "d62359a887d3f10622800d390c90d8a077dec82d96daaf4c218abb0a08556167"
+    },
+    {
+      "file": "libbond__rosidl_typesupport_introspection_cpp.so",
+      "original": "/opt/ros/humble/lib/libbond__rosidl_typesupport_introspection_cpp.so",
+      "original_container": "ap03-nav2",
+      "original_package": "ros-humble-bond: /opt/ros/humble/lib/libbond__rosidl_typesupport_introspection_cpp.so",
+      "sha256": "a19eb42d9911b3c6435717e6715f585d6bb87b80db0b636da21f88a003b1a284"
+    },
+    {
+      "file": "liblaser_geometry.so",
+      "original": "/opt/ros/humble/lib/liblaser_geometry.so",
+      "original_container": "ap03-nav2",
+      "original_package": "ros-humble-laser-geometry: /opt/ros/humble/lib/liblaser_geometry.so",
+      "sha256": "e1bc8c18de2810560fba326c1d5220f63ca718a87ba97ea452da74aece6e97aa"
+    },
+    {
+      "file": "libglog.so.0",
+      "original": "/usr/lib/x86_64-linux-gnu/libglog.so.0",
+      "original_container": "ap03-nav2",
+      "original_package": "libgoogle-glog0v5: /usr/lib/x86_64-linux-gnu/libglog.so.0",
+      "sha256": "c040a6f396c62c619197210241d14ff63e6c0c379d15e0c05fac189f9f939194"
+    },
+    {
+      "file": "libunwind.so.8",
+      "original": "/usr/lib/x86_64-linux-gnu/libunwind.so.8",
+      "original_container": "ap03-nav2",
+      "original_package": "libunwind8:amd64: /usr/lib/x86_64-linux-gnu/libunwind.so.8",
+      "sha256": "5d1f6f104f79698e137c9f17c4b0317dfd96816c0eb6a87c50619a41472ca382"
+    },
+    {
+      "file": "libceres.so.2",
+      "original": "/lib/libceres.so.2",
+      "original_container": "ap03-nav2",
+      "original_package": "not dpkg-owned; existing scratch runtime",
+      "sha256": "07312786fc342f3a73982d0e0708c4e0c159c9c34a0f798d01e265d1a648ae77"
+    },
+    {
+      "file": "libgflags.so.2.2",
+      "original": "/lib/x86_64-linux-gnu/libgflags.so.2.2",
+      "original_container": "ap03-nav2",
+      "original_package": "not dpkg-owned; existing scratch runtime",
+      "sha256": "f3c7dc509e8da8f780666a7c74c92b98af95aecd26d3ef0f3e36470c7490e400"
+    },
+    {
+      "file": "libspqr.so.2",
+      "original": "/lib/x86_64-linux-gnu/libspqr.so.2",
+      "original_container": "ap03-nav2",
+      "original_package": "not dpkg-owned; existing scratch runtime",
+      "sha256": "520d52e3d881672b65ba481c87f77e6141eaa166b98eeb685180d3edc415c5f5"
+    },
+    {
+      "file": "libcholmod.so.3",
+      "original": "/lib/x86_64-linux-gnu/libcholmod.so.3",
+      "original_container": "ap03-nav2",
+      "original_package": "not dpkg-owned; existing scratch runtime",
+      "sha256": "b1dbc5659588e31981fcd6faecd9d1125642e732103ad9d4064a2b75bb29b409"
+    },
+    {
+      "file": "libcxsparse.so.3",
+      "original": "/lib/x86_64-linux-gnu/libcxsparse.so.3",
+      "original_container": "ap03-nav2",
+      "original_package": "not dpkg-owned; existing scratch runtime",
+      "sha256": "acd69618f17f603195a68b7d6ade10b16632554356e28e4dc1643ec8190977a0"
+    },
+    {
+      "file": "libsuitesparseconfig.so.5",
+      "original": "/lib/x86_64-linux-gnu/libsuitesparseconfig.so.5",
+      "original_container": "ap03-nav2",
+      "original_package": "not dpkg-owned; existing scratch runtime",
+      "sha256": "32ecc08cb76987ad03ffc65a0d8cfa29f74afca398fa7741f2bfc8ab1dc8caca"
+    },
+    {
+      "file": "libamd.so.2",
+      "original": "/lib/x86_64-linux-gnu/libamd.so.2",
+      "original_container": "ap03-nav2",
+      "original_package": "not dpkg-owned; existing scratch runtime",
+      "sha256": "b154b7dc0f2c62eb4f345196d68f4040cd8a38afeb3f1391cabb36f943193641"
+    },
+    {
+      "file": "libcolamd.so.2",
+      "original": "/lib/x86_64-linux-gnu/libcolamd.so.2",
+      "original_container": "ap03-nav2",
+      "original_package": "not dpkg-owned; existing scratch runtime",
+      "sha256": "f12827241222913efcd0ace2ca69cac1400d7dfe360bf435ce97872442aaac93"
+    },
+    {
+      "file": "libccolamd.so.2",
+      "original": "/lib/x86_64-linux-gnu/libccolamd.so.2",
+      "original_container": "ap03-nav2",
+      "original_package": "not dpkg-owned; existing scratch runtime",
+      "sha256": "f0d33c287929927b737794cf7a33899428ab60fd501625f78f7f890eaa41e45e"
+    },
+    {
+      "file": "libcamd.so.2",
+      "original": "/lib/x86_64-linux-gnu/libcamd.so.2",
+      "original_container": "ap03-nav2",
+      "original_package": "not dpkg-owned; existing scratch runtime",
+      "sha256": "8029e313234a784c91a913fcc02262a77f5720d6571999021c5659d62cd6072e"
+    },
+    {
+      "file": "libmetis.so.5",
+      "original": "/lib/x86_64-linux-gnu/libmetis.so.5",
+      "original_container": "ap03-nav2",
+      "original_package": "not dpkg-owned; existing scratch runtime",
+      "sha256": "d0ad52903eee2ae1f79540a9de989acd7ddccff1b7499bbcb466184c15cbc4f7"
+    }
+  ],
+  "closure_rounds": 3
+}

@@ -1,0 +1,20 @@
+[INFO] [1791436673.529621020] [slam_toolbox]: Node using stack size 40000000
+[INFO] [1791436673.631345268] [slam_toolbox]: Using solver plugin solver_plugins::CeresSolver
+[INFO] [1791436673.633382891] [slam_toolbox]: CeresSolver: Using SCHUR_JACOBI preconditioner.
+[WARN] [1791436674.908754348] [slam_toolbox]: minimum laser range setting (0.0 m) exceeds the capabilities of the used Lidar (0.1 m)
+Info: clipped range threshold to be within minimum and maximum range!
+Registering sensor: [Custom Described Lidar]
+[WARN] [1791437119.584596511] [slam_toolbox]: Queue size has grown to: 13. Recommend stopping until message is gone if online mapping.
+[WARN] [1791437119.660116960] [slam_toolbox]: Queue size has grown to: 12. Recommend stopping until message is gone if online mapping.
+[WARN] [1791437119.729353634] [slam_toolbox]: Queue size has grown to: 11. Recommend stopping until message is gone if online mapping.
+[WARN] [1791437120.492963852] [slam_toolbox]: Queue size has grown to: 13. Recommend stopping until message is gone if online mapping.
+[WARN] [1791437120.565870158] [slam_toolbox]: Queue size has grown to: 12. Recommend stopping until message is gone if online mapping.
+[WARN] [1791437120.652392226] [slam_toolbox]: Queue size has grown to: 12. Recommend stopping until message is gone if online mapping.
+[WARN] [1791437120.738773541] [slam_toolbox]: Queue size has grown to: 11. Recommend stopping until message is gone if online mapping.
+[WARN] [1791437121.560589196] [slam_toolbox]: Queue size has grown to: 12. Recommend stopping until message is gone if online mapping.
+[WARN] [1791437121.628426572] [slam_toolbox]: Queue size has grown to: 11. Recommend stopping until message is gone if online mapping.
+[WARN] [1791437122.507228173] [slam_toolbox]: Queue size has grown to: 12. Recommend stopping until message is gone if online mapping.
+[WARN] [1791437122.576825521] [slam_toolbox]: Queue size has grown to: 12. Recommend stopping until message is gone if online mapping.
+[WARN] [1791437122.654624000] [slam_toolbox]: Queue size has grown to: 11. Recommend stopping until message is gone if online mapping.
+[WARN] [1791437123.338898171] [slam_toolbox]: Queue size has grown to: 11. Recommend stopping until message is gone if online mapping.
+[INFO] [1791437130.978343616] [rclcpp]: signal_handler(signum=2)

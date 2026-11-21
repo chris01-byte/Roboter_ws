@@ -1,0 +1,289 @@
+{
+  "kind": "Later C44 terminal synthetic raw/cost rasters, actual finite last scan angles and saved policy; component geometry only, not contemporaneous failure inputs",
+  "pose": [
+    3.8384368482452182,
+    0.29474098486804245,
+    1.399133713731483
+  ],
+  "scope": {
+    "scope_id": "ap06-two-rooms",
+    "vertices": [
+      [
+        -1.1999999999999997,
+        -1.4
+      ],
+      [
+        4.4,
+        -1.4
+      ],
+      [
+        4.4,
+        1.4
+      ],
+      [
+        -1.1999999999999997,
+        1.4
+      ]
+    ]
+  },
+  "policy": {
+    "cooldown_s": 30.0,
+    "next_id": 14,
+    "radius": 0.6,
+    "retry_limit": 2,
+    "tasks": {
+      "metric-task-1": {
+        "completed": false,
+        "evidence_key": "9b9cc2d9df76a8d2095d0b01bd3fe8025c3cf80183965baa30774b6a0b1bcb75",
+        "failures": 0,
+        "fingerprint": "b33ada0c02345bbd0d4613f8dfcf743c7857f51d1f68766acc2f32965acab219",
+        "frontier_xy": [
+          3.434999923221767,
+          -0.6149999862536788
+        ],
+        "reason": "proposal_rejected",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          3.884999913163483,
+          -0.2249999949708581
+        ],
+        "tries": 2
+      },
+      "metric-task-10": {
+        "completed": false,
+        "evidence_key": "",
+        "failures": 0,
+        "fingerprint": "",
+        "frontier_xy": [
+          2.5349999433383346,
+          1.3649999694898725
+        ],
+        "reason": "",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          2.5349999433383346,
+          1.3649999694898725
+        ],
+        "tries": 0
+      },
+      "metric-task-11": {
+        "completed": false,
+        "evidence_key": "bbb72627b322e02f2d907b870916f702d2e2665ce2114ddaa24684606d7d8bff",
+        "failures": 0,
+        "fingerprint": "d892a84613926bfd068d8afdb9dfd06c41b0ec18113dec004e57d8d8a3acbb3b",
+        "frontier_xy": [
+          -0.9149999795481563,
+          -0.7949999822303653
+        ],
+        "reason": "proposal_rejected",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          -0.23378679133886146,
+          -0.9062131831801529
+        ],
+        "tries": 1
+      },
+      "metric-task-12": {
+        "completed": false,
+        "evidence_key": "c4fdd9a7c72f6fd4c55c7a13257d7466fedc20725b2286b737e1d77db0b9f401",
+        "failures": 0,
+        "fingerprint": "d892a84613926bfd068d8afdb9dfd06c41b0ec18113dec004e57d8d8a3acbb3b",
+        "frontier_xy": [
+          -0.04499999899417162,
+          -0.19499999564141035
+        ],
+        "reason": "proposal_rejected",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          0.30621319659119794,
+          -0.5462131912267799
+        ],
+        "tries": 3
+      },
+      "metric-task-13": {
+        "completed": false,
+        "evidence_key": "",
+        "failures": 0,
+        "fingerprint": "",
+        "frontier_xy": [
+          -0.7649999829009175,
+          0.704999984242022
+        ],
+        "reason": "",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          -0.7649999829009175,
+          0.704999984242022
+        ],
+        "tries": 0
+      },
+      "metric-task-14": {
+        "completed": false,
+        "evidence_key": "",
+        "failures": 0,
+        "fingerprint": "",
+        "frontier_xy": [
+          1.1249999748542905,
+          0.46499998960644007
+        ],
+        "reason": "",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          1.1249999748542905,
+          0.46499998960644007
+        ],
+        "tries": 0
+      },
+      "metric-task-2": {
+        "completed": true,
+        "evidence_key": "6c98b5e223aecc5e1575753326f7f56510d4e64795544e225e9ba2dccd2f5dc0",
+        "failures": 0,
+        "fingerprint": "c6bf230fccc7b7b49cc2f45e10a243586a64291100d147c69275eeabec856e77",
+        "frontier_xy": [
+          2.5349999433383346,
+          -0.2849999936297536
+        ],
+        "reason": "observed",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          1.8890486043994426,
+          0.007302510173019102
+        ],
+        "tries": 2
+      },
+      "metric-task-3": {
+        "completed": false,
+        "evidence_key": "",
+        "failures": 0,
+        "fingerprint": "",
+        "frontier_xy": [
+          2.384999946691096,
+          0.4349999902769923
+        ],
+        "reason": "",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          2.384999946691096,
+          0.4349999902769923
+        ],
+        "tries": 0
+      },
+      "metric-task-4": {
+        "completed": false,
+        "evidence_key": "6d3fbf9ac80f021af0591d8e0a1d83cea260173afb77aa05244067a8067794a0",
+        "failures": 1,
+        "fingerprint": "a6a0b6ea779b49301527806d4f3d32877afd4546e151e19535991b55cf47c27d",
+        "frontier_xy": [
+          3.194999928586185,
+          0.584999986924231
+        ],
+        "reason": "arrival_without_observation",
+        "retry_remaining_s": 24.685524331987835,
+        "target_xy": [
+          3.756213119477689,
+          0.41378678731554797
+        ],
+        "tries": 2
+      },
+      "metric-task-5": {
+        "completed": false,
+        "evidence_key": "",
+        "failures": 0,
+        "fingerprint": "",
+        "frontier_xy": [
+          3.9749999111518264,
+          -1.0049999775364995
+        ],
+        "reason": "",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          3.9749999111518264,
+          -1.0049999775364995
+        ],
+        "tries": 0
+      },
+      "metric-task-6": {
+        "completed": false,
+        "evidence_key": "",
+        "failures": 0,
+        "fingerprint": "",
+        "frontier_xy": [
+          3.9749999111518264,
+          -0.3449999922886491
+        ],
+        "reason": "",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          3.9749999111518264,
+          -0.3449999922886491
+        ],
+        "tries": 0
+      },
+      "metric-task-7": {
+        "completed": false,
+        "evidence_key": "",
+        "failures": 0,
+        "fingerprint": "",
+        "frontier_xy": [
+          3.9749999111518264,
+          0.4049999909475446
+        ],
+        "reason": "",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          3.9749999111518264,
+          0.4049999909475446
+        ],
+        "tries": 0
+      },
+      "metric-task-8": {
+        "completed": false,
+        "evidence_key": "",
+        "failures": 0,
+        "fingerprint": "",
+        "frontier_xy": [
+          4.304999903775752,
+          1.0349999768659472
+        ],
+        "reason": "",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          4.304999903775752,
+          1.0349999768659472
+        ],
+        "tries": 0
+      },
+      "metric-task-9": {
+        "completed": true,
+        "evidence_key": "0d641928d9536fde7f29800a148b855877f6cb500094eea302ba497cc39a15a4",
+        "failures": 0,
+        "fingerprint": "cb0dda850582a8e2f7fa8bec242db246ed821747f28d3100b7e35f7e2b4cba6a",
+        "frontier_xy": [
+          2.384999946691096,
+          -0.9749999782070518
+        ],
+        "reason": "observed",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          2.5566342415985086,
+          0.06841688494254847
+        ],
+        "tries": 1
+      }
+    }
+  },
+  "raw_geometry": {
+    "resolution": 0.029999999329447746,
+    "origin": [
+      -1.2299999725073576,
+      -1.4399999678134918
+    ]
+  },
+  "cost_geometry": {
+    "resolution": 0.029999999329447746,
+    "origin": [
+      -1.2299999725073576,
+      -1.4399999678134918
+    ]
+  }
+}

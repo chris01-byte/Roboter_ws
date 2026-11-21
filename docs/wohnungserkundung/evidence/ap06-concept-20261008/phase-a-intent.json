@@ -1,0 +1,19 @@
+{
+  "created_utc": "2026-10-08T06:01:18.859592+00:00",
+  "candidate": "b0fa5eb2b5bef5d1066dcf92892a0830811f575e",
+  "case": "door68_start_a",
+  "profile": "finite-unmasked",
+  "purpose": "Compare phase-specific full public rotation validation with visibility-a under original future-departure proof and budgets.",
+  "cpu_affinity": [
+    0,
+    1,
+    3,
+    4
+  ],
+  "original_budgets_preserved": true,
+  "future_departure_deferred": false,
+  "original_qualification": false,
+  "hardware_qualified": false,
+  "source_identity_sha256": "d06e4b874be9a4fd3036f32428f88c5e80f37b1aebab10d2d487eff89b0e4ec6",
+  "native_identity_sha256": "dc471c1b455ae02ab784557c280e6cd75c54fbc0cd1112e65f79d20d19c0c039"
+}

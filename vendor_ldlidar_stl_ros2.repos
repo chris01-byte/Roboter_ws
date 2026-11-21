@@ -1,12 +1,10 @@
 # Herstellertreiber fuer den STL-27L, bewusst auf einen Commit gepinnt.
-# Er wird NICHT in dieses Repository kopiert und NICHT veraendert - so bleibt
-# ein spaeteres Update nachvollziehbar und der Vendor-Code sauber trennbar.
+# Der Vendor-Code bleibt ausserhalb dieses Repositorys. Die enge Amadeus-
+# Korrektur fuer den seriellen Shutdown wird reproduzierbar als Patch gebaut.
 #
 # Aufbau (ausserhalb des Roboter-Workspace, damit der Normalbetrieb
 # unberuehrt bleibt):
-#   mkdir -p ~/amadeus_lidar_ws/src && cd ~/amadeus_lidar_ws
-#   vcs import src < /home/p/roboter_ws/vendor_ldlidar_stl_ros2.repos
-#   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+#   bash tools/kartierung/build_ldlidar_stl27l_overlay.sh
 repositories:
   ldlidar_stl_ros2:
     type: git

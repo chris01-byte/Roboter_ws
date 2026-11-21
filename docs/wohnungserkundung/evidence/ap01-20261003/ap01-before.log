@@ -1,0 +1,22 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+____ test_original_20ms_pause_does_not_latch_and_next_receipt_is_published _____
+
+rig = (<robot_state_estimation.hwt601_imu_node.Hwt601ImuNode object at 0x7f31afacbbe0>, <test_hwt601_time_correlation.Timeline object at 0x7f31afacbc40>, <test_hwt601_time_correlation.Reply object at 0x7f31afacb940>)
+
+    def test_original_20ms_pause_does_not_latch_and_next_receipt_is_published(rig):
+        n, t, link = rig
+        n._poll()
+        assert stamp(n.imu_pub.messages[-1]) == 1010_000_000_000
+        t.mono = 10.010
+        t.pairs.append((0., .020))
+        n._poll()
+>       assert n._terminal_fault is None, n._last_error
+E       AssertionError: HWT-Messzeit nicht monoton
+E       assert 'HWT-Messzeit nicht monoton' is None
+E        +  where 'HWT-Messzeit nicht monoton' = <robot_state_estimation.hwt601_imu_node.Hwt601ImuNode object at 0x7f31afacbbe0>._terminal_fault
+
+src/robot_state_estimation/test/test_hwt601_time_correlation.py:104: AssertionError
+=========================== short test summary info ============================
+FAILED src/robot_state_estimation/test/test_hwt601_time_correlation.py::test_original_20ms_pause_does_not_latch_and_next_receipt_is_published
+1 failed in 0.14s

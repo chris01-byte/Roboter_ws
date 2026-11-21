@@ -1,7 +1,133 @@
 # Werkzeuge für Kartierung und Lokalisierung
 
+## Feste LAB-Diagnose nach einer realen Bewegung
+
+Die bestehende Stage-3-Diagnose nutzt ausschließlich ihren Diagnoseeingang in
+der vorhandenen Fahrtor-/Smoother-/Collision-Monitor-Kette. Fester 25-cm-/±15°-
+Test, frische Quellen, bestätigte Zwischenstillstände und vollständige gepaddete
+Anhaltehülle bleiben erforderlich. Eine erfolgreiche Komponentendiagnose ist
+keine autonome Explorer- oder AP-06-Gesamtabnahme.
+
+Bei einem einmal real gemessenen festen Scope-/Radanker darf Kartenwachstum
+den physischen LAB-Bereich nicht verschieben. Dieselbe Ausgangskartenepoche
+und Session bleiben verbindlich, aktuelle Map-Quelle und Revision müssen frisch
+sein. Nach Bewegung keinen neuen roboterrelativen Scope als Ersatz erzeugen.
+Die Diagnose benötigt keine erfundenen Portale für ihre feste Sequenz.
+
+Nach erfolgreich behobenem HOLD kann ausschließlich im expliziten Diagnose-
+Opt-in `/stage3_motion_test/acknowledge_recovered_hold` die Fortsetzung quittieren.
+Es prüft aktuelle echte Quellen, gesundes Recovery, gemessenen Stillstand,
+inaktive Diagnose, Idle-Mission, TF, Nahfeld und Haltkette. Fehlerbudgets und
+Historie bleiben erhalten; die Quittierung fährt nicht. Der separate Start-
+Trigger bleibt notwendig. Direkte installierte Node-PIDs geordnet stoppen;
+ein `ros2 run`-Wrapper ist kein Nachweis, dass dessen Kind beendet wurde.
+
+## Kontinuierlichen Startkandidaten offline vergleichen
+
+`metric_start_geometrie_pruefen.py` enthält zusätzlich
+`continuous_start_candidate`: ideale 25-cm-Gerade und derselbe Korridor mit
+deklarierter 20-mm-/0,05-rad-Abweichung, getrennt auf gespeichertem Roh- und
+Kostenraster. Der neue `metric_start_sweep` berechnet kontinuierliche
+Überdeckung und exakte Zellpolygone. Ein positives Geometrieergebnis ist
+ausdrücklich keine Reglerqualifikation oder Fahrfreigabe; die aktive Prüfung
+wird dadurch nicht ersetzt. Originalquellen und tatsächliche Messfristen
+bleiben maßgeblich. Ausgabe privater Realgeometrie weiterhin außerhalb Git.
+
+Gezielte gerätefreie Prüfung:
+`python3 -m pytest src/explore/test/test_metric_start_sweep.py`.
+
 Am 27.07.2026 auf dem echten Roboter benutzt und dort verifiziert. Die Skripte
 setzen voraus, dass `~/roboter_ws/install/setup.bash` existiert.
+
+## Aktuellen metrischen LAB-Scope lesend vorbereiten
+
+`metric_scope_vorbereiten.py` bindet ein ausdrücklich lokal geprüftes Polygon
+an die Rohkarte des **bereits laufenden** passiven Stacks. Es erzeugt außerhalb
+jedes Git-Checkouts eine neue Datei mit Modus `0600` für den vorhandenen
+ExploreNode. Es startet weder Explorer noch Mission oder Aktoren. Es nutzt
+die vorhandenen Scope-, Fingerprint- und MapManager-Korrelationsfunktionen;
+fehlende Kartenwerte werden nicht ergänzt. Der einzige eigene Kindprozess
+ist der vorhandene rein lesende native TF-Herkunftsbeobachter.
+
+In der geprüften Releaseumgebung den bestehenden `app_mapping`-Start um
+`start_explorer:=false` ergänzen; `active_drive:=false` und
+`enable_auto_explore:=false` beibehalten. Erst nach aktuellen MapManager-
+Daten das private Scope-JSON erstellen. Es muss genau diese Felder enthalten:
+`schema_version` (1), `session_id`, `scope_id`, `frame_id`,
+`map_fingerprint` (aktueller Wert aus `/robot_map_manager/status_json`),
+`accessible_scope_verified` (bool `true`) und `vertices` (das tatsächlich
+geprüfte lokale Polygon als `[[x,y], ...]` im angegebenen Frame). Sichtbare
+Kartenränder sind keine automatische Scopefreigabe. Reale Koordinaten und
+Karten bleiben außerhalb Git.
+
+Der vorhandene native TF-Beobachter muss einmal im gleichen Release gebaut
+sein; er verknüpft den tatsächlichen DDS-Sender jeder TF-Kante mit dem
+aktuellen ROS-Graphen:
+
+```bash
+cmake -S "$AP06_SOURCE/tools/simulation/tf_ownership_probe" \
+  -B "$AP06_RELEASE/tf-probe-build"
+cmake --build "$AP06_RELEASE/tf-probe-build" -j2
+python3 "$AP06_SOURCE/tools/kartierung/metric_scope_vorbereiten.py" \
+  --scope "$AP06_PRIVATE/lab-scope.json" \
+  --output "$AP06_PRIVATE/metric-current.yaml" \
+  --install-root "$AP06_RELEASE/product-install" \
+  --tf-probe "$AP06_RELEASE/tf-probe-build/tf_ownership_probe"
+```
+
+`AP06_SOURCE`, `AP06_RELEASE` und das vorhandene private Verzeichnis
+`AP06_PRIVATE` bezeichnen die konkret geprüften lokalen Pfade. `--install-root`
+verhindert still gemischte Python-Overlays: tatsächlich aufgelöste Module,
+Runtime und beide installierten Profile müssen aus dieser Installation
+stammen. Ihre Pfade/SHA-256 stehen im privaten Bindungsnachweis, ebenso
+Scope/Probe-SHA, Quellenbesitzer, Karte und Pose. Änderungen während der
+Beobachtung verwerfen die Bindung. Scope und vorhandene Ausgabe werden nie
+überschrieben. Alternative Knotennamen müssen ausdrücklich über
+`--map-owner`, `--manager-owner`, `--odom-owner` angegeben werden.
+
+**Fallen:** Das Ergebnis ist eine aktuelle Momentaufnahme, keine zukünftige
+Startgarantie. Der erste Kartenempfang des anschließend gestarteten Explorers
+muss noch denselben Fingerprint haben; nach Karten-/Stackwechsel neu binden.
+Ein bereits vorhandener Explorer oder ExploreArea-Endpunkt verhindert die
+Ausgabe. Rohkarte/Status brauchen exakten Fingerprint, Frame und Quellstempel;
+zwei Statusbeobachtungen prüfen auch den Verlauf. Nutzdatenalter, Transport-
+und Empfangsalter sowie die gemeinsame reale TF-Zeit werden separat geprüft.
+Humble-Python liefert für Map-/Statuscallbacks keinen DDS-Sender-GID: dort
+ist der Nachweis ein einzelner aktueller Graphbesitzer mit festgehaltenem
+GID plus korreliertem Verlauf, keine Herkunftsbestätigung jeder einzelnen
+Nachricht. TF nutzt deshalb den vorhandenen nativen Beobachter.
+
+Das ausgegebene Startkommando startet ausschließlich den vorhandenen
+Explorer mit `hwt601_active_drive:=false` und konservativer Pfadprüfung.
+Es erteilt keine Bewegung und keinen Modell-RPP-Vertrag; die im Modell
+angenommenen 20 mm/0,05 rad werden nicht auf Hardware übertragen. Der
+passive Stack läuft dabei weiter. Das Werkzeug selbst führt das angezeigte
+Kommando nicht aus.
+
+Offline-Verhaltensprüfung (synthetische Fixtures, keine ROS-Prozesse):
+`python3 -m unittest -v tools/kartierung/test_metric_scope_vorbereiten.py`.
+Der CI-Lauf prüft zusätzlich den separaten CLI-Import mit `--help` gegen die
+frisch gebaute Installation. Dies ersetzt keinen lesenden Jetson-Probelauf.
+
+## Gerätefreie WE-M2-Lastprüfer
+
+`passive_kette_lasttest.py` prüft die vollständige passive Softwarekette aus
+synthetischer Rohkarte, Exaktjoin, Frontier-/Portalereignissen und
+Regions-/Aufgabenverwaltung. Es startet keine ROS-Knoten, liest keine reale
+Karte und greift auf keine Geräte zu. Der Standardlauf umfasst 60 Revisionen;
+der dokumentierte längere Prüfpunkt lautet:
+
+```bash
+source /opt/ros/humble/setup.bash
+source /pfad/zum/geprueften_overlay/install/setup.bash
+python3 tools/kartierung/passive_kette_lasttest.py \
+  --revisionen 240 --wachstumsintervall 10 --max-polsterzellen 24
+```
+
+Die Ausgabe bezeichnet RSS ausdrücklich als Prozess-RSS. Sie belegt weder
+Jetsonlast noch Hardwareeignung. `rohkarten_schatten_lasttest.py` bleibt der
+separate synthetische DDS-/Node-Lastprüfer der Rohkartennaht. Beide Werkzeuge
+senden keine Action, keinen Twist und keine Gerätekommandos.
 
 ## Encoderposition strikt read-only prüfen
 
@@ -36,6 +162,79 @@ python3 tools/kartierung/encoder_position_pruefen.py \
 Die Messung in beiden Richtungen und für Motor 1 und 2 wiederholen. Der genaue
 Akzeptanzvertrag, insbesondere Counts, `0x0011` und `0x0101`, steht in
 `docs/ENCODER_ODOMETRIE_FIX.md`.
+
+## Selbstheilenden Betrieb motorlos prüfen
+
+`selbstheilung_stillstand_pruefen.py` prüft einen bereits laufenden Stack mit
+`self_healing:=true` ([Konzept](../../docs/wohnungserkundung/KONZEPT_SELBSTHEILUNG.md)).
+Das Skript publiziert nichts, sendet keine Aktion und ruft nur
+`GetParameters`/`ListParameters` auf. Es ist **keine Fahrfreigabe**.
+
+| Bereich | Prüft |
+|---|---|
+| A Explorer | jeder Wert aus `self_healing_params.yaml` ist live gesetzt, Baum `navigate_to_pose_self_healing.xml` |
+| B Nav2-Overlay | jeder Wert aus `nav2_params_self_healing.yaml` (Unbekanntes planbar, −0,05 m/s, `simulate_ahead_time`) |
+| C Verdrahtung | Behavior-Server an `cmd_vel_nav_raw` statt `cmd_vel_recovery_blocked`, `/backup` vorhanden, Fahrtor liest mit, `controller_server` hört auf `/speed_limit`, `/cmd_vel` vom `collision_monitor` |
+| D Stillstand | `base_hardware` mit `dry_run=true` und `allow_rs485=false`, auf `/cmd_vel` kein Befehl ungleich null |
+| E VL53 (optional) | Höhe der VL53-Treffer über dem Boden und welche davon die Höhenfilter von Kostenkarten und `collision_monitor` verwerfen |
+
+Bau und Start auf dem Jetson: nicht auf `~/roboter_ws/install` aufbauen. Das
+ist dort der August-Stand ohne `amadeus_map_identity`. Stattdessen wie bei den
+AP06-Kandidaten v11–v17 einen 14-Paket-Build in einem eigenen Release-Ordner
+mit den Unterbauten des v17-Releases anlegen. Die vollständigen Befehle stehen
+im Auftrag SH-1 ([AGENTENAUFTRAG](../../docs/wohnungserkundung/AGENTENAUFTRAG.md)).
+
+In einer Shell mit dieser Umgebung:
+
+```bash
+# Terminal 1: Stack motorlos, active_drive und enable_auto_explore bleiben false
+python3 tools/kartierung/roboterknoten.py --still
+ros2 launch robot_bringup app_mapping.launch.py self_healing:=true start_web_gui:=false
+
+# Terminal 2: nach etwa 30 s
+python3 tools/kartierung/selbstheilung_stillstand_pruefen.py \
+  --json ~/.local/share/amadeus/pruefungen/selbstheilung_stillstand.json
+```
+
+Ohne `active_drive` liefert die Basis keine gemessene Odometrie; Karte und aktive
+Nav2-Kinder sind für A–D nicht nötig (LAB-1 §3). Exitcode 0 = bestanden,
+1 = mindestens ein `FEHL`, 2 = Explorer nicht erreichbar.
+
+Niedrige Hindernisse (Bereich E): Stack wie oben, Testobjekt mittig vor den
+Roboter legen, Höhe und Abstand ab Fahrzeugfront notieren, dann je Lage
+
+```bash
+python3 tools/kartierung/selbstheilung_stillstand_pruefen.py \
+  --vl53-s 10 --notiz "Klotz 6 cm, 0,35 m" \
+  --json ~/.local/share/amadeus/pruefungen/vl53_06cm_035.json
+```
+
+Messreihe: einmal ohne Objekt (Bodenreflexe?), dann 3, 6, 10 und 15 cm hoch bei
+0,30 m und 0,38 m ab Fahrzeugfront (Geometrie-Erwartung im Auftrag SH-1). `verworfen` zählt Treffer unter dem wirksamen Filter
+(`min_obstacle_height`/`min_height` 0,05 m über `base_link` = etwa 0,14 m über
+Boden); `zeilen` zeigt, welche Sensorzeile das Objekt trifft. Die JSON-Dateien
+bleiben lokal.
+
+## Fahrtprotokoll für Laborfahrten im Selbstheilungsbetrieb
+
+`selbstheilung_lauf_protokoll.py` wird vor dem Missionsstart gestartet und
+endet von selbst kurz nach dem Missionsende. Es abonniert nur Status- und
+Messtopics und publiziert nichts. Die JSON-Zusammenfassung enthält:
+- Zustandsfolge und Heilungsverlauf;
+- HWT-, Not-Aus- und Tempolimit-Wechsel;
+- maximale Fahrbefehle und die Strecke laut `/odom`;
+- VL53-Lücken;
+- die automatisch prüfbaren Kriterien der Abnahmestufe 1.
+
+```bash
+python3 tools/kartierung/selbstheilung_lauf_protokoll.py \
+  --json ~/.local/share/amadeus/pruefungen/lauf1_protokoll.json
+```
+
+Exit 0 heißt, die automatischen Kriterien sind erfüllt. Kontakt, Eingriffe,
+Nav2-Zustand und Absturzfreiheit bleiben manuell zu bestätigen. Der vollständige
+Ablauf steht im Auftrag SH-3
+([AGENTENAUFTRAG](../../docs/wohnungserkundung/AGENTENAUFTRAG.md), aktiv seit 02.11.2026).
 
 ## Automatische LiDAR-Raumkartierung
 
@@ -326,3 +525,66 @@ Wahrheit steht in der Datenbank:
 ```bash
 rtabmap-info ~/.local/share/amadeus/rtabmap.db | sed -n '/^Info:/,$p'
 ```
+
+
+### Laufenden SQLite-Bag nicht direkt auswerten (29.09.2026)
+
+Auch eine `mode=ro`-Verbindung kann bei einer langen Abfrage den SQLite-Writer
+blockieren. Im realen Lauf `fe75576` endete rosbag2 mit `database is locked`;
+der Schlussabschnitt fehlte. Erst Recorder geordnet stoppen, dann auswerten.
+Livebeobachtung über vorhandene Topics/Beobachterprotokolle, nicht über den
+aktiven DB-Dateipfad. Ausfall des Recorders beendet einen Nachweislauf.
+
+### Adaptiver metrischer Start und Timing-HOLD (01.10.2026)
+
+`exploration_strategy` bleibt standardmäßig `existing`; das explizite
+`metric_frontier_params.yaml` wählt `metric_frontier` mit
+`metric_start_strategy: adaptive` (auch dessen Deklarationsdefault).
+`configured_scan` erhält den bisherigen Scanablauf für Regressionen.
+Die Strategie ist beim Start unveränderlich; ein Parameterwechsel im laufenden
+Auftrag wird abgelehnt. `initial_scan_enabled` bedeutet im adaptiven Modus
+Verfügbarkeit, keine Pflichtrotation. Ein zulässiger nützlicher voller Sweep,
+sonst ein aus aktuellen Frontierdaten berechnetes erreichbares Beobachtungsziel,
+sonst ein begründeter Warte-/Teilstand wird gewählt. Ein erfolgloser optionaler
+Scan darf erst nach Quellenprüfung und bestätigtem Stillstand zurückgestellt
+werden; er zählt als ein Aufgabenversuch, HOLD setzt seine Frist nicht zurück.
+
+Geometrie prüft Rohkarte und tatsächliche Costmap einschließlich Ausgangskontur,
+aller Vorausrichtungen, vollständiger Route und Zielorientierung. Vor Bewegung
+liest derselbe Explorer `ComputePathToPose`; die bestehende NavigateToPose-
+Action bleibt alleiniger Fahrbesitzer. Tatsächliche `/plan`-Änderungen werden
+nachgeprüft. Die Prüfung ist an live gelesene RPP-Parameter gebunden:
+`use_rotate_to_heading=true`, `rotate_to_heading_min_angle=0.35`,
+`lookahead_dist=0.4`, `use_velocity_scaled_lookahead_dist=false`,
+`allow_reversing=false`, `use_collision_detection=true`,
+`use_interpolation=true`, einziger `general_goal_checker` mit XY-Toleranz 0,15 m
+und Yaw-Toleranz 0,40 rad. Genau ein FollowPath-Controller mit RPP-Klasse
+und ein SimpleGoalChecker sind erforderlich. Der Kreisbogen liegt innerhalb der Sehnenhülle plus
+`0.4/2*tan(0.35/2)` = 0,03536 m Mittelpunktreserve; der Lookahead-Punkt folgt
+der euklidischen 0,4-m-Kreis-/Pfadschnittstelle. Zielrotation benötigt den
+gesamten Positions-Toleranzbereich. Das wird bereits bei der Annäherungsauswahl
+geprüft, damit ein gültiges Ziel nicht erst in der Ausführung abgewiesen wird.
+Herleitung am [installierten RPP 1.1.20](https://github.com/ros-navigation/navigation2/blob/1.1.20/nav2_regulated_pure_pursuit_controller/src/regulated_pure_pursuit_controller.cpp). Ein Pfad ohne Wegpunkt innerhalb des Lookahead-Radius wird als
+`nav2_plan_controller_carrot_unbounded` gesperrt; dadurch kann ein grober
+Plan keine weiter entfernte erste Controllerposition verstecken.
+Abweichungen sperren;
+Headingkorrekturen und Lookahead-Ecken werden mit geprüft. Die 127 Winkel des
+Vollsweeps werden gemeinsam gegen denselben reservierten Zellumfang gerechnet.
+
+Privater Eigenkörperbeleg betrifft nur ganze anfangs unbekannte Zellen innerhalb
+der gemessenen ungepaddeten Kontur. Er bleibt an der ersten physischen Fläche,
+wächst nicht mit dem Roboter und wird durch neue Belegung/Beobachtung nur kleiner.
+Änderung des Karten-/Odometriebezugs oder Raster-/Sitzungskontexts lässt ihn
+permanent erlöschen; keine Neuverankerung. Unbekanntes Padding, Rasterreserve
+und Außenraum bleiben gesperrt. Mast-NaN und Montage-TF bleiben erhalten.
+`metric_start_geometrie_pruefen.py` wertet gespeicherte lokale Raster mit derselben
+adaptiven Auswahl aus; Zellkoordinaten/Flächenberichte ausschließlich außerhalb
+Git. Manuelles Umsetzen oder Vorkartieren gilt nicht als autonomer Kaltstart.
+
+Encodervertrag und wirksame passive/aktive HWT-Auflösung stehen in
+[ENCODER_ODOMETRIE_FIX](../../docs/ENCODER_ODOMETRIE_FIX.md).
+Reader-Diagnosefrist 2 s / zwei Versuche und Fusion-HOLD 5 s / zwei Versuche je
+Quelle verlängern weder 120-ms-Paargrenze noch 180-ms-Frische/Kontinuität.
+Ungültige Diagnosepaare werden nicht publiziert; echte >180-ms-Lücke heilt
+nicht durch zwei spätere Nullgeschwindigkeitspaare. Gesamt-/Aufgabenbudgets
+bleiben über Kindwechsel, Bootstrap und HOLD erhalten.

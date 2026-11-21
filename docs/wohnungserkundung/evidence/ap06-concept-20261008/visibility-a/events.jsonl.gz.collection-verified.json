@@ -1,0 +1,11 @@
+{
+  "compressed_bytes": 41079303,
+  "compressed_sha256": "b60e1883e7a1995e3861bacc4e31d96b95e23587ee17c0ddd8a9f448a2740cb3",
+  "container_path": "/evidence/ap06-concept-20261008/visibility-a/events.jsonl.gz",
+  "independently_verified": true,
+  "metadata_path": "/workspace/scratch/ap06-concept-20261008/visibility-a/events.jsonl.gz.meta.json",
+  "path": "/workspace/scratch/ap06-concept-20261008/visibility-a/events.jsonl.gz",
+  "stored_in_git": false,
+  "uncompressed_bytes": 313158698,
+  "uncompressed_sha256": "1f04971d4ebb83bbf9d868980e14ebe700f9d8bd4316590b44eeb720ac3ff69b"
+}

@@ -1,0 +1,46 @@
+[0.372s] Invoking command in '/evidence/ap05-repo/src/robot_map_manager': AMENT_PREFIX_PATH=/evidence/ap05-final-install/robot_navigation:/evidence/ap05-final-install/mission_manager:/evidence/ap05-final-install/explore:/evidence/ap05-final-install/robot_state_estimation:/evidence/ap05-final-install/nav2_msgs:/evidence/ap05-final-install/robot_interfaces:/evidence/ap05-final-install/nav2_common:/evidence/ap05-final-install/base_hardware:/evidence/ap05-final-install/amadeus_map_identity:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/evidence/ap05-final-install/nav2_msgs:/evidence/ap05-final-install/robot_interfaces:/evidence/ap05-final-install/nav2_common LD_LIBRARY_PATH=/evidence/ap05-final-install/nav2_msgs/lib:/evidence/ap05-final-install/robot_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/evidence/ap05-final-build/robot_map_manager/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap05-final-install/robot_map_manager/lib/python3.10/site-packages:/evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages:/evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages:/evidence/ap05-final-install/explore/lib/python3.10/site-packages:/evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages:/evidence/ap05-final-install/nav2_msgs/local/lib/python3.10/dist-packages:/evidence/ap05-final-install/robot_interfaces/local/lib/python3.10/dist-packages:/evidence/ap05-final-install/nav2_common/local/lib/python3.10/dist-packages:/evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages:/evidence/ap05-final-install/amadeus_map_identity/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap05-final-build/robot_map_manager build --build-base /evidence/ap05-final-build/robot_map_manager/build install --record /evidence/ap05-final-build/robot_map_manager/install.log --install-scripts $base/lib/robot_map_manager --single-version-externally-managed install_data
+[0.509s] running egg_info
+[0.510s] creating ../../../ap05-final-build/robot_map_manager/robot_map_manager.egg-info
+[0.510s] writing ../../../ap05-final-build/robot_map_manager/robot_map_manager.egg-info/PKG-INFO
+[0.510s] writing dependency_links to ../../../ap05-final-build/robot_map_manager/robot_map_manager.egg-info/dependency_links.txt
+[0.510s] writing entry points to ../../../ap05-final-build/robot_map_manager/robot_map_manager.egg-info/entry_points.txt
+[0.510s] writing requirements to ../../../ap05-final-build/robot_map_manager/robot_map_manager.egg-info/requires.txt
+[0.510s] writing top-level names to ../../../ap05-final-build/robot_map_manager/robot_map_manager.egg-info/top_level.txt
+[0.510s] writing manifest file '../../../ap05-final-build/robot_map_manager/robot_map_manager.egg-info/SOURCES.txt'
+[0.511s] reading manifest file '../../../ap05-final-build/robot_map_manager/robot_map_manager.egg-info/SOURCES.txt'
+[0.512s] writing manifest file '../../../ap05-final-build/robot_map_manager/robot_map_manager.egg-info/SOURCES.txt'
+[0.512s] running build
+[0.512s] running build_py
+[0.512s] creating /evidence/ap05-final-build/robot_map_manager/build
+[0.512s] creating /evidence/ap05-final-build/robot_map_manager/build/lib
+[0.512s] creating /evidence/ap05-final-build/robot_map_manager/build/lib/robot_map_manager
+[0.512s] copying robot_map_manager/map_core.py -> /evidence/ap05-final-build/robot_map_manager/build/lib/robot_map_manager
+[0.512s] copying robot_map_manager/robot_map_manager_node.py -> /evidence/ap05-final-build/robot_map_manager/build/lib/robot_map_manager
+[0.512s] copying robot_map_manager/__init__.py -> /evidence/ap05-final-build/robot_map_manager/build/lib/robot_map_manager
+[0.512s] running install
+[0.513s] running install_lib
+[0.513s] creating /evidence/ap05-final-install/robot_map_manager/lib/python3.10/site-packages/robot_map_manager
+[0.513s] copying /evidence/ap05-final-build/robot_map_manager/build/lib/robot_map_manager/map_core.py -> /evidence/ap05-final-install/robot_map_manager/lib/python3.10/site-packages/robot_map_manager
+[0.513s] copying /evidence/ap05-final-build/robot_map_manager/build/lib/robot_map_manager/robot_map_manager_node.py -> /evidence/ap05-final-install/robot_map_manager/lib/python3.10/site-packages/robot_map_manager
+[0.513s] copying /evidence/ap05-final-build/robot_map_manager/build/lib/robot_map_manager/__init__.py -> /evidence/ap05-final-install/robot_map_manager/lib/python3.10/site-packages/robot_map_manager
+[0.514s] byte-compiling /evidence/ap05-final-install/robot_map_manager/lib/python3.10/site-packages/robot_map_manager/map_core.py to map_core.cpython-310.pyc
+[0.523s] byte-compiling /evidence/ap05-final-install/robot_map_manager/lib/python3.10/site-packages/robot_map_manager/robot_map_manager_node.py to robot_map_manager_node.cpython-310.pyc
+[0.526s] byte-compiling /evidence/ap05-final-install/robot_map_manager/lib/python3.10/site-packages/robot_map_manager/__init__.py to __init__.cpython-310.pyc
+[0.526s] running install_data
+[0.527s] creating /evidence/ap05-final-install/robot_map_manager/share/ament_index
+[0.527s] creating /evidence/ap05-final-install/robot_map_manager/share/ament_index/resource_index
+[0.527s] creating /evidence/ap05-final-install/robot_map_manager/share/ament_index/resource_index/packages
+[0.527s] copying resource/robot_map_manager -> /evidence/ap05-final-install/robot_map_manager/share/ament_index/resource_index/packages
+[0.527s] copying package.xml -> /evidence/ap05-final-install/robot_map_manager/share/robot_map_manager
+[0.527s] copying README.md -> /evidence/ap05-final-install/robot_map_manager/share/robot_map_manager
+[0.527s] creating /evidence/ap05-final-install/robot_map_manager/share/robot_map_manager/launch
+[0.527s] copying launch/map_manager.launch.py -> /evidence/ap05-final-install/robot_map_manager/share/robot_map_manager/launch
+[0.527s] copying launch/map_manager_smoke.launch.py -> /evidence/ap05-final-install/robot_map_manager/share/robot_map_manager/launch
+[0.527s] creating /evidence/ap05-final-install/robot_map_manager/share/robot_map_manager/config
+[0.527s] copying config/robot_map_manager.yaml -> /evidence/ap05-final-install/robot_map_manager/share/robot_map_manager/config
+[0.527s] running install_egg_info
+[0.529s] Copying ../../../ap05-final-build/robot_map_manager/robot_map_manager.egg-info to /evidence/ap05-final-install/robot_map_manager/lib/python3.10/site-packages/robot_map_manager-0.1.0-py3.10.egg-info
+[0.529s] running install_scripts
+[0.545s] Installing robot_map_manager script to /evidence/ap05-final-install/robot_map_manager/lib/robot_map_manager
+[0.545s] writing list of installed files to '/evidence/ap05-final-build/robot_map_manager/install.log'
+[0.566s] Invoked command in '/evidence/ap05-repo/src/robot_map_manager' returned '0': AMENT_PREFIX_PATH=/evidence/ap05-final-install/robot_navigation:/evidence/ap05-final-install/mission_manager:/evidence/ap05-final-install/explore:/evidence/ap05-final-install/robot_state_estimation:/evidence/ap05-final-install/nav2_msgs:/evidence/ap05-final-install/robot_interfaces:/evidence/ap05-final-install/nav2_common:/evidence/ap05-final-install/base_hardware:/evidence/ap05-final-install/amadeus_map_identity:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/evidence/ap05-final-install/nav2_msgs:/evidence/ap05-final-install/robot_interfaces:/evidence/ap05-final-install/nav2_common LD_LIBRARY_PATH=/evidence/ap05-final-install/nav2_msgs/lib:/evidence/ap05-final-install/robot_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/evidence/ap05-final-build/robot_map_manager/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap05-final-install/robot_map_manager/lib/python3.10/site-packages:/evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages:/evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages:/evidence/ap05-final-install/explore/lib/python3.10/site-packages:/evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages:/evidence/ap05-final-install/nav2_msgs/local/lib/python3.10/dist-packages:/evidence/ap05-final-install/robot_interfaces/local/lib/python3.10/dist-packages:/evidence/ap05-final-install/nav2_common/local/lib/python3.10/dist-packages:/evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages:/evidence/ap05-final-install/amadeus_map_identity/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap05-final-build/robot_map_manager build --build-base /evidence/ap05-final-build/robot_map_manager/build install --record /evidence/ap05-final-build/robot_map_manager/install.log --install-scripts $base/lib/robot_map_manager --single-version-externally-managed install_data

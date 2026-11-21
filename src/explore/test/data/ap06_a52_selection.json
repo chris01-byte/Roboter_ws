@@ -1,0 +1,390 @@
+{
+  "kind": "Actual later A52 idle raw/cost/finite scan messages, independent TF pose and saved policy; component inputs only, not exact failure inputs or whole acceptance",
+  "pose": [
+    0.6314434928484997,
+    -0.11198178169100272,
+    -2.1530575227935844
+  ],
+  "scope": {
+    "scope_id": "ap06-two-rooms",
+    "vertices": [
+      [
+        -0.8999999999999999,
+        -0.95
+      ],
+      [
+        4.699999999999999,
+        -0.95
+      ],
+      [
+        4.699999999999999,
+        1.8499999999999999
+      ],
+      [
+        -0.8999999999999999,
+        1.8499999999999999
+      ]
+    ]
+  },
+  "checkpoint": {
+    "arrivals": 1,
+    "attempts": 6,
+    "budget_limits": {
+      "completion_window_s": 3.0,
+      "goal_timeout_s": 150.0,
+      "max_failed_goals": 3,
+      "max_frontier_goals": 20
+    },
+    "context": {
+      "frame_id": "map",
+      "map_id": "map-11bc995f287b59dda08a91075dc557b8e87e3085a88ca7a56d5275c6799304b1",
+      "session_id": "ap06-door68_start_a"
+    },
+    "failures": 1,
+    "fingerprint": "528c536030d13a113659308231661649f5e3357019dc33dc7b61e19dcdfe6572",
+    "observations": 1,
+    "observed_area_m2": 0.007199999678134922,
+    "outcome": "in_progress",
+    "policy": {
+      "cooldown_s": 30.0,
+      "next_id": 10,
+      "radius": 0.6,
+      "retry_limit": 2,
+      "tasks": {
+        "metric-task-1": {
+          "completed": false,
+          "evidence_key": "",
+          "failures": 0,
+          "fingerprint": "",
+          "frontier_xy": [
+            -0.7349999835714698,
+            0.704999984242022
+          ],
+          "reason": "",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            -0.7349999835714698,
+            0.704999984242022
+          ],
+          "tries": 0
+        },
+        "metric-task-10": {
+          "completed": false,
+          "evidence_key": "",
+          "failures": 0,
+          "fingerprint": "",
+          "frontier_xy": [
+            3.3749999245628715,
+            1.2449999721720815
+          ],
+          "reason": "",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            3.3749999245628715,
+            1.2449999721720815
+          ],
+          "tries": 0
+        },
+        "metric-task-2": {
+          "completed": false,
+          "evidence_key": "ebd0ed2a2e0f58805ba2b359fdde0ea2b5b902c8f83ffbfcb174c1e90b5c1c6d",
+          "failures": 0,
+          "fingerprint": "528c536030d13a113659308231661649f5e3357019dc33dc7b61e19dcdfe6572",
+          "frontier_xy": [
+            1.304999970830977,
+            0.13499999698251486
+          ],
+          "reason": "proposal_rejected",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            1.304999970830977,
+            0.46499998960644007
+          ],
+          "tries": 3
+        },
+        "metric-task-3": {
+          "completed": false,
+          "evidence_key": "",
+          "failures": 0,
+          "fingerprint": "",
+          "frontier_xy": [
+            1.184999973513186,
+            1.784999960102141
+          ],
+          "reason": "",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            1.184999973513186,
+            1.784999960102141
+          ],
+          "tries": 0
+        },
+        "metric-task-4": {
+          "completed": true,
+          "evidence_key": "8b247b8f027d570e1cca89dee923bab2980d84fce3153afee3e97e27dcc69e88",
+          "failures": 0,
+          "fingerprint": "b21e40254a392e0cceb6b37732a79f4bd31011380053e76d35faae8c15bf547e",
+          "frontier_xy": [
+            -0.7349999835714698,
+            1.6949999621137977
+          ],
+          "reason": "observed",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            0.6947397571504254,
+            -0.005346227304916533
+          ],
+          "tries": 1
+        },
+        "metric-task-5": {
+          "completed": false,
+          "evidence_key": "7dd537a6b1903204b094a2c883c76a01e02e0ba22a87f9a709f1840286fbf850",
+          "failures": 1,
+          "fingerprint": "528c536030d13a113659308231661649f5e3357019dc33dc7b61e19dcdfe6572",
+          "frontier_xy": [
+            -0.5249999882653356,
+            -0.5249999882653356
+          ],
+          "reason": "route_invalidated",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            0.2849999936297536,
+            -0.5249999882653356
+          ],
+          "tries": 1
+        },
+        "metric-task-6": {
+          "completed": false,
+          "evidence_key": "",
+          "failures": 0,
+          "fingerprint": "",
+          "frontier_xy": [
+            2.6849999399855733,
+            0.2849999936297536
+          ],
+          "reason": "",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            2.6849999399855733,
+            0.2849999936297536
+          ],
+          "tries": 0
+        },
+        "metric-task-7": {
+          "completed": false,
+          "evidence_key": "",
+          "failures": 0,
+          "fingerprint": "",
+          "frontier_xy": [
+            3.434999923221767,
+            0.37499999161809683
+          ],
+          "reason": "",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            3.434999923221767,
+            0.37499999161809683
+          ],
+          "tries": 0
+        },
+        "metric-task-8": {
+          "completed": false,
+          "evidence_key": "",
+          "failures": 0,
+          "fingerprint": "",
+          "frontier_xy": [
+            4.304999903775752,
+            0.9749999782070518
+          ],
+          "reason": "",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            4.304999903775752,
+            0.9749999782070518
+          ],
+          "tries": 0
+        },
+        "metric-task-9": {
+          "completed": false,
+          "evidence_key": "",
+          "failures": 0,
+          "fingerprint": "",
+          "frontier_xy": [
+            2.714999939315021,
+            0.9149999795481563
+          ],
+          "reason": "",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            2.714999939315021,
+            0.9149999795481563
+          ],
+          "tries": 0
+        }
+      }
+    },
+    "remaining_s": 729.5046958254825,
+    "resume_authorizes_motion": false,
+    "saved_map_id": "map-528c536030d13a113659308231661649f5e3357019dc33dc7b61e19dcdfe6572",
+    "saved_wall_time": 1791241201.703134,
+    "schema_version": 1,
+    "scope": {
+      "scope_id": "ap06-two-rooms",
+      "vertices": [
+        [
+          -0.8999999999999999,
+          -0.95
+        ],
+        [
+          4.699999999999999,
+          -0.95
+        ],
+        [
+          4.699999999999999,
+          1.8499999999999999
+        ],
+        [
+          -0.8999999999999999,
+          1.8499999999999999
+        ]
+      ]
+    },
+    "strategy": "metric_frontier"
+  },
+  "raw_geometry": {
+    "resolution": 0.029999999329447746,
+    "origin": [
+      -0.9299999792128801,
+      -0.9899999778717756
+    ]
+  },
+  "cost_geometry": {
+    "resolution": 0.029999999329447746,
+    "origin": [
+      -0.9299999792128801,
+      -0.9899999778717756
+    ]
+  },
+  "plans": [
+    {
+      "start_pose": null,
+      "goal": [
+        0.824999981559813,
+        0.13499999698251486,
+        1.5707963267948966
+      ],
+      "error": null,
+      "points": [
+        [
+          0.6299999859184027,
+          -0.11999999731779099
+        ],
+        [
+          0.6280356076053764,
+          -0.10301255949558552
+        ],
+        [
+          0.6270953610443613,
+          -0.08804208558703763
+        ],
+        [
+          0.6347439051849264,
+          -0.07513852905172413
+        ],
+        [
+          0.642405381148933,
+          -0.062242811719116276
+        ],
+        [
+          0.6497943732933464,
+          -0.049188937041410696
+        ],
+        [
+          0.6572749181700885,
+          -0.03618736186204785
+        ],
+        [
+          0.6650696033596333,
+          -0.023371581508854433
+        ],
+        [
+          0.6728950731554235,
+          -0.010574569465788386
+        ],
+        [
+          0.6805872192847602,
+          0.002302894540811451
+        ],
+        [
+          0.6883424223584882,
+          0.015142593045325725
+        ],
+        [
+          0.6915701139367343,
+          0.029791144658823043
+        ],
+        [
+          0.6947560345808554,
+          0.044448965986468636
+        ],
+        [
+          0.6981352459311054,
+          0.059063299766258126
+        ],
+        [
+          0.7017556987310414,
+          0.07361984088376516
+        ],
+        [
+          0.7059174570608704,
+          0.08803092759778508
+        ],
+        [
+          0.7097048791563907,
+          0.1025448966947593
+        ],
+        [
+          0.7217282706112798,
+          0.1115136312355034
+        ],
+        [
+          0.7255069951972288,
+          0.12602988915078583
+        ],
+        [
+          0.7298978642397103,
+          0.14037288352013633
+        ],
+        [
+          0.7352013995825928,
+          0.1544040263949924
+        ],
+        [
+          0.7501391433893332,
+          0.15303897515597242
+        ],
+        [
+          0.7650491924945442,
+          0.15139846463355866
+        ],
+        [
+          0.7800482766319448,
+          0.1515558208922485
+        ],
+        [
+          0.7950420964872364,
+          0.15112311979108028
+        ],
+        [
+          0.8099999818950891,
+          0.14999999664723873
+        ],
+        [
+          0.824999981559813,
+          0.13499999698251486
+        ]
+      ]
+    }
+  ],
+  "native_plan_kind": "Separate read-only native queries on these later rasters and constant recorded pose, not whole acceptance"
+}

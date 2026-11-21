@@ -1,0 +1,7 @@
+# Vergleichsstand SH-8c (15.11.2026): Der Kollisionsmonitor prueft "approach"
+# wie bis dahin immer gegen die volle gepolsterte Kontur der lokalen Karte.
+# Nur fuer den Vorher/Nachher-Vergleich zu KM-2.
+collision_monitor:
+  ros__parameters:
+    FootprintApproach:
+      footprint_topic: "/local_costmap/published_footprint"

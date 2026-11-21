@@ -1,0 +1,27 @@
+{
+  "collected_utc": "2026-10-05T18:05:57.681705+00:00",
+  "git_head": "d9aacb4a9fccdce0d529fbcda215a9f0fed1e42f",
+  "status": "committed d9aacb4 repair candidate; mission C37 running, no final whole-mission qualification",
+  "source_identity": [
+    {
+      "path": "src/explore/explore/metric_frontier_runtime.py",
+      "sha256": "3b976c54da6ffb95bb51d9d832e1bb0f86e2a0524fb0cf2ed234ec8dcd401079",
+      "execution_copy_equal": true
+    },
+    {
+      "path": "src/explore/explore/metric_frontier.py",
+      "sha256": "97c02424d0f06225a7c9b0bd70ef23b0527f77a8cddc0c9045e687cd5ccd4152",
+      "execution_copy_equal": true
+    },
+    {
+      "path": "src/explore/explore/explore_node.py",
+      "sha256": "2cd1fa54a4275fd5567cc871a551fe69969779942ba43903d690e0b754c222c0",
+      "execution_copy_equal": true
+    },
+    {
+      "path": "tools/simulation/ap06_closed_product.py",
+      "sha256": "8ef1eb7330602b28148625b55f86a197612fa593cb96b56cac883d624dd6e881",
+      "execution_copy_equal": true
+    }
+  ]
+}
