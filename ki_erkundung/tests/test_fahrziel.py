@@ -8,10 +8,11 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'werkzeuge'))
 
-from fahrziel_senden import tabelle, waehle_oeffnung  # noqa: E402
+from fahrziel_senden import lies_punkt, tabelle, waehle_oeffnung  # noqa: E402
 
 from lotse.fahrziel import (  # noqa: E402
-    botschaft, durch_die_tuer, geradeaus, im_kartenrahmen, pruefe_grenzen, tuer_punkte,
+    botschaft, durch_die_tuer, geradeaus, im_kartenrahmen, pruefe_grenzen,
+    punkt_relativ, tuer_punkte,
 )
 from lotse.kandidaten import Oeffnung  # noqa: E402
 
@@ -164,3 +165,24 @@ def test_tabelle_nennt_nur_masse():
     assert text.splitlines()[0].startswith('Nr  Breite  Richtung')
     assert ' 1   0.85 m    -60.0°      2.00 m         ja  sprung' in text
     assert 'nein' in text.splitlines()[2]
+
+
+def test_punkt_vom_roboter_aus_voraus_und_links():
+    assert punkt_relativ(0.40, 0.25, (0.0, 0.0, 0.0)) == [pytest.approx((0.40, 0.25))]
+    # der Roboter blickt nach +y: „links“ ist dann -x
+    assert punkt_relativ(0.40, 0.25, (1.0, 1.0, math.pi / 2)) == [pytest.approx((0.75, 1.40))]
+    assert punkt_relativ(0.40, -0.25, (0.0, 0.0, 0.0)) == [pytest.approx((0.40, -0.25))]
+    with pytest.raises(ValueError, match='vor dem Roboter'):
+        punkt_relativ(-0.3, 0.2, (0.0, 0.0, 0.0))
+    with pytest.raises(ValueError, match='erlaubt'):
+        punkt_relativ(3.0, 0.0, (0.0, 0.0, 0.0))
+    with pytest.raises(ValueError, match='erlaubt'):
+        punkt_relativ(0.05, 0.0, (0.0, 0.0, 0.0))
+
+
+def test_punkt_aus_der_befehlszeile():
+    assert lies_punkt('0.40,0.25') == (0.40, 0.25)
+    assert lies_punkt('0.5,-0.2') == (0.5, -0.2)
+    for text in ('0.4', '0.4;0.2', 'a,b', '0.4,0.2,0.1'):
+        with pytest.raises(ValueError, match='Punkt'):
+            lies_punkt(text)

@@ -2019,6 +2019,33 @@ ein“):**
   Weg nicht frei, bleibt Amadeus stehen und meldet es. Das ist der Punkt, an
   dem später Nav2 dazukommt (Türablauf vom 11.09. liegt bereit).
 
+**Nachtrag 21.11.2026 (nachts) – KI-1: erste Bewegung der KI-Linie am Roboter,
+und was der Auftrag falsch gemacht hat:**
+- **Ergebnis:** Mit `initial_scan_only` drehte sich Amadeus einmal
+  abschnittsweise um 363,2° (81,3 s, kein Nav2-Ziel, 8 mm Versatz). Die
+  Kamera lief neben dem Kartier-Stack ohne Einbußen (2,0 Hz Bilder, über
+  9,4 Hz Scans). Aus der Blickrunde wählte die KI in 4,9 s die richtige Tür.
+  Alle sechs vorab festgelegten Kriterien erfüllt. Die Simulation hatte für
+  die Drehung 361,7° in 77 s vorhergesagt; für das Drehen auf der Stelle
+  stimmt sie mit dem Roboter überein.
+- **Fehler im Auftrag, zwei:** (1) Er fragte vor dem scharfen Start nicht
+  nach der Motorsperre und kannte den Fall „Regler antworten nicht“ nur als
+  Abbruch. Die Motoren waren gesperrt; der Agent musste abweichen, um nach
+  Christophers „wieder frei“ neu zu starten. Regel für Aufträge: vor dem
+  ersten scharfen Start einmal nach der konkreten Stellung fragen (LAB-1
+  verlangt keine Fragerunde, aber eine nötige Handschaltung wird benannt),
+  und für genau diesen Fall einen einzigen neuen Start vorsehen. (2) Ein
+  Suchmuster für den Status war nicht an echter Ausgabe geprüft (Leerzeichen
+  nach dem Doppelpunkt). Regel: Aufträge enthalten keine Suchmuster auf
+  Ausgaben, die nicht aus einem echten Lauf stammen; besser zeigt ein
+  Werkzeug die Meldung selbst.
+- **Der Agent hat richtig gehandelt:** Abweichung benannt, genau ein
+  Missionsstart, nichts geändert. Das ist das gewünschte Verhalten bei einer
+  Lücke im Auftrag.
+- **Nächster Schritt:** Auftrag KI-F1, der Fahrteil in drei Stufen. Die Fahrt
+  durch die Labortür führt aus dem Laborraum; sie gehört nur dazu, wenn der
+  Projektinhaber den Flur bei der Übergabe ausdrücklich freigibt.
+
 **Nachtrag 21.11.2026 – Lotsen-Fenster statt unsichtbarem Dienst
 (Projektinhaber):** Der Lotsen-Dienst lief auf dem KI-Rechner als
 Hintergrundprozess; der Projektinhaber sah dort nichts und wollte ein

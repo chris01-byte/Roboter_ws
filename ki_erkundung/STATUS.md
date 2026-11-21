@@ -1,17 +1,19 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 21.11.2026 (nachts):** Die erste Stufe (KI-0, Standbilder) ist
-abgeschlossen: Die KI erkennt die Labortür an echten Bildern und antwortet
-in etwa 1,5 Sekunden. **Als Nächstes dreht sich Amadeus zum ersten Mal
-selbst** (Auftrag KI-1, [AUFTRAG.md](AUFTRAG.md)). Der dafür nötige Schalter
-im Erkunder ist gebaut, getestet und in der Simulation gelaufen; am Roboter
-noch nicht. **Der Fahrteil ist gebaut** (Etappenfahrt ohne Nav2) und in der
-Simulation zweimal durch die Tür gefahren; am Roboter ist er nicht gelaufen.
-**Gefahren ist in dieser Linie am Roboter bisher nichts.**
+**Stand 21.11.2026 (nachts, nach KI-1):** Amadeus hat sich am Roboter zum
+ersten Mal selbst einmal herumgedreht, dabei eine Blickrunde aufgenommen,
+und die KI hat aus acht Bildern in 4,9 Sekunden die richtige Tür gewählt
+(Auftrag KI-1, alle sechs Kriterien erfüllt). **Als Nächstes fährt er zum
+ersten Mal:** drei Stufen vom Einfachen zum Schwierigen (Auftrag KI-F1,
+[AUFTRAG.md](AUFTRAG.md)). Der Fahrteil dafür (Etappenfahrt ohne Nav2) ist
+gebaut und in der Simulation zweimal durch die Tür gefahren; am Roboter ist
+er nicht gelaufen. **Gefahren ist in dieser Linie am Roboter bisher nichts;
+gedreht hat er sich einmal.**
 
-Ein Urteil nach den Kriterien K0-1 bis K0-6 gibt es weiter nicht (zu wenige
-Ansichten, kein Glas, kein Spiegel). Die Vermessung der Öffnungen ist in
-zwei Fällen noch falsch, die Ursache ist dort nicht geklärt.
+Ein Urteil nach den Kriterien K0-1 bis K0-6 gibt es weiter nicht (eine
+Blickrunde, kein Glas, kein Spiegel). Die Vermessung der Öffnungen misst
+Türen zu schmal und ist in zwei Fällen noch falsch; die Ursache ist dort
+nicht geklärt.
 
 Diese Linie ist seit 19.11.2026 (spät) die aktive Arbeit; die Hauptlinie ist
 geparkt. Dies ist der einzige Iststand dieser Linie. Der Stand der
@@ -27,8 +29,8 @@ fährt mit seiner Schutzkette.
 | Schritt | Was Amadeus dann kann | Stufe im Konzept | Stand |
 |---|---|---|---|
 | Erstes Sehen | im Stand Bild und Laser aufnehmen, die KI fragen, die Antwort prüfen | KI-0 | **erledigt** (21.11.) |
-| Blickrunde | sich selbst einmal herumdrehen; aus acht Bildern nennt die KI den Ausgang | KI-1 | **als Nächstes**; Schalter gebaut, Auftrag geschrieben |
-| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **Fahrteil gebaut** (Etappenfahrt ohne Nav2); in der Simulation durch die Tür gefahren; am Roboter nach KI-1 zuerst eine einzelne gerade Etappe |
+| Blickrunde | sich selbst einmal herumdrehen; aus acht Bildern nennt die KI den Ausgang | KI-1 | **am Roboter gelungen** (21.11., eine Runde im Labor); für die Kriterien fehlen weitere Runden |
+| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **als Nächstes:** Fahrteil gebaut (Etappenfahrt ohne Nav2), in der Simulation durch die Tür gefahren; Auftrag KI-F1 bringt ihn in drei Stufen auf den Roboter |
 | Raum für Raum | weiter, bis kein Ausgang mehr offen ist (Laborraum, Flur, Schlafzimmer) | KI-3 | offen |
 | Räume benennen, um Hilfe rufen | Raumnamen als Vorschlag in der App; Hilferuf mit Grund und Bild | KI-4 | offen |
 | Auf Zuruf | „fahr in die Küche“, „such die Tasse“ | KI-5 | offen |
@@ -38,33 +40,40 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-1
-„Blickrunde aus eigener Kraft“** ([AUFTRAG.md](AUFTRAG.md)).
-Auf dem Jetson, mit Christopher, nur im Laborraum. Zuerst Prüfung im Stand
-ohne Motoren (neuer Release, Kamera neben dem Kartier-Stack), dann **eine**
-Drehung von 360° auf der Stelle, dabei Aufnahme der Blickrunde, danach die
-Frage an die KI mit acht Fotos und der Skizze.
+**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-F1
+„Erste Etappen“** ([AUFTRAG.md](AUFTRAG.md)).
+Auf dem Jetson, mit Christopher; ohne Kamera und ohne KI-Rechner. Die eine
+Verhaltensänderung ist der Schalter „Etappenfahrt“. Zuerst Prüfung im Stand
+ohne Motorfreigabe, dann drei Stufen, jede nur, wenn die vorige ihre vorab
+festgelegten Kriterien erfüllt hat: (1) eine gerade Etappe von 0,5 m;
+(2) ausrichten und eine Etappe; (3) durch die offene Labortür in den Flur,
+Ziel von Christopher benannt. Stufe 3 gehört nur dazu, wenn der
+Projektinhaber bei der Übergabe ausdrücklich „mit Tür“ sagt (der Flur liegt
+außerhalb des Laborraums).
 
 **Danach, je nach Ergebnis:**
-- Blickrunde brauchbar: dieselbe Drehung im Flur (braucht die Freigabe für
-  diesen Raum).
-- **Fahrteil am Roboter, vom Einfachen zum Schwierigen, je Test eine
-  Änderung:** (1) eine einzelne gerade Etappe von 0,5 m im freien Raum
-  (Wiederholung des Tests vom 11.09. auf dem heutigen Stand); (2) ausrichten
-  und eine Etappe; (3) durch die offene Labortür, Ziel von einem Menschen
-  gewählt; (4) dasselbe mit der Wahl der KI. Aufträge dafür werden nach dem
-  Bericht zu KI-1 geschrieben.
-- Vermessung der Öffnungen nach der Drehung unbrauchbar: gezielt
-  nachbessern. Die Blickrunde wird über ein Raster ausgewertet, das im Stand
-  schon Schwächen zeigte.
+- Stufen erfüllt: Rundblick, Frage an die KI und Etappenfahrt in einem Zug
+  (die Übergabe der gewählten Öffnung an das Fahrziel ist noch zu bauen);
+  dazu die gespielte KI in der Simulation mit falscher, langsamer, stummer
+  und unsinniger Antwort (Konzept, KI-2).
+- Eine Stufe nicht erfüllt: zuerst die Ursache aus den Meldungen des
+  Erkunders eingrenzen; keine neue Funktion darauf setzen.
+- Daneben, unabhängig: dieselbe Drehung im Flur für weitere Blickrunden
+  (braucht die Freigabe für diesen Raum).
 
-**Offen an der Vermessung (aus KI-0R):**
+**Offen an der Vermessung (aus KI-0R und KI-1):**
+- Nach der Drehung bot die Vermessung hinter dem Roboter ein Regal als
+  0,81 m breite Öffnung an (0,77 m frei dahinter). Die KI hat es als „wand“
+  eingeordnet und nicht gewählt.
 - `labor_tuer_seite_nah_b`: Tür 1,30 m breit, Nummer neben der Tür; Ursache
   unbekannt (die Vermutung „Türblatt“ ist widerlegt). Der Prüftext nennt
   jetzt beide Kanten jeder Lücke und die Vermerke beider Suchrichtungen.
 - Flur: Der Laser sieht vom Standpunkt aus keine Öffnung, obwohl es dort
   zwei Türen gibt. Wird mit der Blickrunde im Flur neu angesehen.
-- Türen werden 8 bis 13 cm zu schmal vermessen (vorsichtige Seite).
+- Türen werden 8 bis 13 cm zu schmal vermessen (vorsichtige Seite); in KI-1
+  die 0,85 m breite Labortür mit 0,73 m nach der Drehung und 0,77 m im
+  Stand vom selben Platz. Für die Etappenfahrt zählt die Lage der Türmitte:
+  Liegt der Fehler an einem Pfosten, verschiebt sie sich um die Hälfte.
 
 **Vorgemerkt:** Für ein Urteil nach den Kriterien fehlen Ansichten mit Glas
 oder Fenster, mit Spiegel, in einem anderen Zimmer und eine Ansicht zweimal
@@ -86,7 +95,42 @@ HomeMy-Konzept ausgewertet · Verbindung zum KI-Rechner · KI-0 Teil A
 (19.11.) und Teil B, KI-0N, KI-0R (alle 21.11.) · Lotsen-Fenster gebaut und
 auf dem KI-Rechner in Gebrauch · Sucher · Schalter „nur Rundblick“ im
 Erkunder (21.11., `6956252`) · Bestand der Türdurchfahrten · Etappenfahrt
-gebaut und simuliert (21.11., nachts).
+gebaut und simuliert (21.11., nachts) · KI-1: erste Drehung und Blickrunde
+am Roboter (21.11., nachts).
+
+## KI-1 – die erste Blickrunde aus eigener Kraft (Jetson, 21.11.2026, 20:43 bis 21:30)
+
+Zahlen, Abweichungen und Lehren stehen im
+[Archiv](archiv/20261121-ki1-blickrunde/). Gelaufen auf `a0ad82b`, also ohne
+den Code der Etappenfahrt.
+
+**Ergebnis nach den vorab festgelegten Kriterien: R1 bis R6 erfüllt.**
+
+- **Drehung:** 363,2° in 81,3 s (Simulation: 361,7° in 77 s), acht
+  Abschnitte, höchstens 0,10 rad/s, kein Fahrbefehl voraus, kein Nav2-Ziel.
+  Endpunkt 8 mm neben dem Start. Christopher: nichts berührt, nicht
+  gewandert, „genau richtig“.
+- **Kamera neben dem Stack:** Bilder 2,00 Hz, Scans mindestens 9,43 Hz, auch
+  in der Drehung; keine Fehlerzeile. Rechenlast im Stand: Last 11, 29 %
+  Leerlauf.
+- **Blickrunde:** 286 Paare, acht Bilder höchstens 4,3° neben dem Soll.
+- **Vermessung:** Labortür als Nr. 1 angeboten (0,73 m, wahr 0,85 m); dazu
+  als Nr. 2 ein Regal hinter dem Roboter.
+- **KI:** gültige Antwort in 4,87 s (davon 2,69 s Laden), Wahl Nr. 1 („Tür
+  offen“), Nr. 2 als „wand“. Christopher bestätigt Nr. 1 als einzigen
+  Ausgang, die Nummer steht mittig auf der Schwelle. Raumname falsch
+  („Wohnzimmer“).
+
+**Abweichungen, die auf den Auftrag zurückgehen:** Der erste scharfe Start
+fiel in der Vorprüfung durch, weil die Motoren noch gesperrt waren; der
+Auftrag fragte nicht danach und sah keinen zweiten Start vor. Der Agent hat
+nach Christophers „motoren sind jetzt wieder frei“ einmal neu gestartet und
+das als Abweichung berichtet. Ein Suchmuster des Auftrags für den Status
+traf nichts. Beides ist im Auftrag KI-F1 berücksichtigt.
+
+**Beobachtung zur Hauptlinie (nicht geändert):** Das Prüfskript ohne
+`--aktiv` meldet „Encoder-Shadow sichtbar“, auch wenn die Motorregler nicht
+antworten. Im Stand ist das unschädlich.
 
 ## Zwei Festlegungen des Projektinhabers (21.11.2026, nachts)
 
@@ -272,8 +316,8 @@ Kollisionsmonitor sind nicht geändert.
 
 Geprüft in der Entwicklungsumgebung: 2285 Tests des Erkunders (18 neue),
 267 in der gezielten Liste, ein Lauf des ganzen Stacks in der Simulation
-(361,7° in 77 s, kein Nav2-Ziel, Mission erfolgreich). **Am Roboter nicht
-gelaufen.**
+(361,7° in 77 s, kein Nav2-Ziel, Mission erfolgreich). **Am Roboter
+gelaufen am 21.11.2026 in KI-1:** 363,2° in 81,3 s, kein Nav2-Ziel.
 
 ## KI-0N – zweiter Durchgang an echten Aufnahmen (Jetson, 21.11.2026)
 
@@ -420,6 +464,8 @@ KONZEPT §13.
 | 21.11.2026 | Etappenfahrt, Tests | Entwicklungsumgebung | 2363 Tests des Erkunders (78 neue), 267 in der gezielten Liste von KI-1 unverändert; KI-Linie 216 bestanden, 2 übersprungen (ohne ROS), 226 (mit ROS) |
 | 21.11.2026 | Etappenfahrt, Simulation | ganzer Stack, Labor mit Tür und Flur | gerade Etappe 0,5 m bestanden; zwei Türdurchfahrten bestanden (ohne Berührung, kein Nav2-Ziel); quer durch den Raum vor niedrigen Mülleimern angehalten; zwei Befunde gefunden und behoben |
 | 21.11.2026 | Rundblick nach der Änderung am Erkunder | Simulation | unverändert: 361,7° in 77 s, kein Nav2-Ziel |
+| 21.11.2026 | **KI-1** | Jetson, Laborraum, mit Christopher; KI-Rechner über WLAN | Release `ki1-20261121_2043` auf `a0ad82b`; 267 und 206 Tests bestanden; R1 bis R6 erfüllt: 363,2° in 81,3 s ohne Nav2-Ziel, 286 Paare, Antwort der KI in 4,87 s, richtige Tür gewählt; ein scharfer Start vorher an gesperrten Motoren abgebrochen |
+| 21.11.2026 | Tests dieser Linie nach KI-1 | Entwicklungsumgebung | 218 bestanden, 2 übersprungen (ohne ROS); 228 bestanden (ROS 2 Jazzy, abgeschottet); gezielte Liste für KI-F1 345 bestanden |
 
 **Gemessen an der künstlichen Beispielwelt** (ausgedachtes Zimmer mit
 80-cm-Tür, 90-cm-Glastür zum Balkon, Schränken, Kiste; LiDAR-Rauschen 1 cm):
@@ -462,7 +508,6 @@ Jetson, echte Bilder.
 
 ## Was nicht geprüft ist
 
-- **Der Schalter „nur Rundblick“ am Roboter.** Nur Tests und Simulation.
 - **Die Etappenfahrt am Roboter.** Nur Tests und Simulation. Offen ist dort
   vor allem: ob eine gerade Etappe mit dem heutigen Antrieb (100 ms
   Anfahrzeit) so fährt wie am 11.09.; wie genau sich Amadeus auf wenige
@@ -474,19 +519,20 @@ Jetson, echte Bilder.
 - **Der Weg von der Antwort der KI zum Fahrziel in einem Zug.** Heute nennt
   ein Mensch dem Werkzeug Nummer oder Richtung; die Übergabe der gewählten
   Öffnung aus der Blickrunde ist nicht gebaut.
-- **Kamera neben dem Kartier-Stack:** Rechenlast, Bildrate und Ortung des
-  Jetson, wenn beides läuft. Das misst Teil A von KI-1.
-- **Die ganze Blickrunde** (acht Bilder nach einer Drehung) an echten
-  Bildern: Drehwinkel aus den Scans, Auswahl der Bilder, Vermessung über das
-  Raster, Antwort der KI auf neun Bilder über WLAN.
+- **Die Blickrunde in anderen Lagen:** Bisher eine Runde von einem Platz im
+  Labor. Andere Standorte, der Flur und Räume mit Glas oder Spiegel fehlen.
+- **Kamera neben dem Stack während einer Fahrt.** Gemessen ist sie im Stand
+  und in der Drehung.
 - **Der Stand nach `b3a1acf` an den echten Aufnahmen** (die zurückgenommene
   Regel).
 - **Glas, Spiegel, anderes Zimmer; `qwen3-vl:8b`; Personen** in Scan und
-  Bild. In KI-1 steht Christopher neben dem Roboter; das wird der erste
-  Befund dazu.
+  Bild (in KI-1 war Christopher auf einem Foto und bekam keine Nummer; ein
+  einzelner Befund).
 - **Der Sucher** auf dem Jetson.
 
 ## Genau ein nächster Schritt
 
-Auftrag KI-1 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): Prüfung im Stand,
-dann eine Drehung im Laborraum mit Aufnahme der Blickrunde.
+Auftrag KI-F1 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): Prüfung im Stand,
+dann die erste gerade Etappe von 0,5 m; bei erfüllten Kriterien ausrichten
+und eine Etappe, und mit ausdrücklicher Freigabe des Flurs die Fahrt durch
+die offene Labortür.

@@ -10,6 +10,9 @@ in kurzen geraden Etappen, mit Fahrtor und Kollisionsmonitor.
     # eine gerade Etappe von einem halben Meter (erster Test)
     python3 fahrziel_senden.py --geradeaus 0.5
 
+    # ein Punkt 0,40 m voraus und 0,25 m links: erst ausrichten, dann eine Etappe
+    python3 fahrziel_senden.py --punkt 0.40,0.25
+
     # durch die Öffnung, die etwa 20° links liegt (Nummer wählt die KI oder ein Mensch)
     python3 fahrziel_senden.py --tuer --richtung 20 --quelle mensch
 
@@ -36,7 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lotse.blickrunde import profil_ursprung, scan_als_dict, stand_profil  # noqa: E402
 from lotse.fahrziel import (  # noqa: E402
-    botschaft, durch_die_tuer, geradeaus, pruefe_grenzen,
+    botschaft, durch_die_tuer, geradeaus, pruefe_grenzen, punkt_relativ,
 )
 from lotse.geometrie import aus_tf  # noqa: E402
 from lotse.kandidaten import TUERBREIT_M, Oeffnung, oeffnungen  # noqa: E402
@@ -78,6 +81,17 @@ def waehle_oeffnung(liste: Sequence[Oeffnung], *, nummer: Optional[int] = None,
     return nah[0]
 
 
+def lies_punkt(text: str):
+    """``'0.40,0.25'`` -> (0.40, 0.25); ``ValueError`` bei allem anderen."""
+    teile = text.split(',')
+    if len(teile) != 2:
+        raise ValueError(f'Punkt {text!r}: erwartet VORAUS,LINKS in Metern')
+    try:
+        return float(teile[0]), float(teile[1])
+    except ValueError as fehler:
+        raise ValueError(f'Punkt {text!r}: keine Zahlen') from fehler
+
+
 def tabelle(liste: Sequence[Oeffnung]) -> str:
     zeilen = ['Nr  Breite  Richtung  Entfernung  befahrbar  Schluss']
     for o in liste:
@@ -99,6 +113,8 @@ def eingabe() -> argparse.ArgumentParser:
     art = e.add_mutually_exclusive_group(required=True)
     art.add_argument('--geradeaus', type=float, metavar='METER',
                      help='ein Punkt genau voraus in dieser Entfernung')
+    art.add_argument('--punkt', metavar='VORAUS,LINKS',
+                     help='ein Punkt vom Roboter aus, in Metern (links negativ = rechts)')
     art.add_argument('--tuer', action='store_true',
                      help='durch eine vermessene Öffnung (Vorpunkt und Auslaufpunkt)')
     e.add_argument('--nummer', type=int, help='Nummer der Öffnung aus der Tabelle')
@@ -128,6 +144,10 @@ def eingabe() -> argparse.ArgumentParser:
 
 
 def main(argv=None) -> int:
+    # Ohne Terminal puffert Python die Ausgabe; die Zeilen kämen sonst erst am Ende.
+    for strom in (sys.stdout, sys.stderr):
+        if hasattr(strom, 'reconfigure'):
+            strom.reconfigure(line_buffering=True)
     wahl = eingabe().parse_args(argv)
     import rclpy
     from rclpy.qos import (QoSDurabilityPolicy, QoSProfile, QoSReliabilityPolicy,
@@ -238,6 +258,8 @@ def main(argv=None) -> int:
             if wahl.tuer:
                 punkte = durch_die_tuer(gewaehlt.pfosten, pose,
                                         vor_m=wahl.vor, hinter_m=wahl.hinter)
+            elif wahl.punkt:
+                punkte = punkt_relativ(*lies_punkt(wahl.punkt), pose)
             else:
                 punkte = geradeaus(wahl.geradeaus, pose)
             gesamt = pruefe_grenzen(punkte, pose[:2])
@@ -245,7 +267,8 @@ def main(argv=None) -> int:
             print(f'Nichts gesendet: {grund}.')
             return 2
 
-        kennung = wahl.kennung or f'{"tuer" if wahl.tuer else "gerade"}-{int(time.time())}'
+        art_name = 'tuer' if wahl.tuer else 'punkt' if wahl.punkt else 'gerade'
+        kennung = wahl.kennung or f'{art_name}-{int(time.time())}'
         text = botschaft(punkte, kennung=kennung, quelle=wahl.quelle, zeit_s=time.time(),
                          frame=wahl.karten_rahmen, bemerkung=bemerkung)
         sender.sende(text)

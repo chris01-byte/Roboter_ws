@@ -1,6 +1,6 @@
 # Konzept „KI-Erkundung“ – eine KI übernimmt Ziel- und Suchwahl
 
-**Version 1.6 · 21.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
+**Version 1.7 · 21.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
 nachgeführt nach drei Durchgängen an echten Aufnahmen, der Freigabe der
 Schalter „nur Rundblick“ und „Etappenfahrt“ und der Festlegung „die KI
 bekommt Zeit, kein stiller Rückfall“**
@@ -259,9 +259,9 @@ Fahrbereich. Erst dann wird gefahren.
 Projektinhabers, 21.11.2026). Amadeus steht, während die KI überlegt; Warten
 kostet nichts und ist ungefährlich. Deshalb gilt:
 
-- Die Zeitgrenze je Frage ist großzügig. Sie wird aus der Messung abgeleitet
-  (KI-1 misst die Antwortzeit für neun Bilder) und liegt deutlich darüber;
-  bis dahin gelten 120 s. Das Kriterium K0-4 (Median 20 s, längste 45 s)
+- Die Zeitgrenze je Frage ist großzügig: **120 s**. Gemessen wurden in KI-1
+  für neun Bilder 4,9 s, davon 2,7 s für das erneute Laden des Modells; die
+  Grenze liegt damit beim Mehr als Zwanzigfachen. Das Kriterium K0-4 (Median 20 s, längste 45 s)
   bewertet die KI und ist nicht die Grenze, nach der Amadeus aufgibt.
 - Kommt keine oder keine brauchbare Antwort, wird dieselbe Frage bis zu
   zweimal erneut gestellt.
@@ -535,12 +535,12 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
 | Punkt | Stand |
 |---|---|
 | Blick der Kamera nach unten (kein Türsturz im Bild) | Rechnung; wird in KI-0 gemessen |
-| Rechenlast der Kamera auf dem Jetson neben der Kartierung | offen; Auftrag KI-1 misst sie in Teil A im Stand |
-| Eine volle Blickrunde dauert gut eine Minute und belastet die Ortung (viele Drehschritte) | bekannt; nur einmal je Raum und im Zweifel |
+| Rechenlast der Kamera auf dem Jetson neben der Kartierung | gemessen in KI-1 (21.11.): Last 11, 29 % Leerlauf, Kamera 11 % eines Kerns; Bilder 2,0 Hz und Scans über 9,4 Hz auch in der Drehung, keine veralteten Transformationen |
+| Eine volle Blickrunde dauert gut eine Minute und belastet die Ortung (viele Drehschritte) | gemessen in KI-1: 81 s für 363°, Endpunkt 8 mm neben dem Start; nur einmal je Raum und im Zweifel |
 | Auswahl des Bild-Sprach-Modells | Kandidaten in Abschnitt 7; KI-0 und KI-1 messen sie |
 | Anschlussstelle für die volle Drehung am Start (KI-1) | gebaut am 21.11.2026 (`initial_scan_only`, Vorgabe aus); in Tests und Simulation gelaufen, am Roboter noch nicht |
 | Große Nachrichten über das WLAN während der Fahrt | im Stand unkritisch; vor KI-1 messen |
-| Personen im Bild und im Scan (Begleitung mit Not-Aus) | können als falsche Öffnung erscheinen; in KI-0 beobachten |
+| Personen im Bild und im Scan (Begleitung mit Not-Aus) | können als falsche Öffnung erscheinen; in KI-1 war Christopher auf einem Foto, bekam aber keine Nummer. Ein einzelner Befund |
 | Breite der Öffnungen | in der künstlichen Beispielwelt 3–7 cm zu schmal gemessen (vorsichtige Seite); an der Labortür (850 mm laut Projektinhaber) am 21.11.2026 von vorn 0,74 und 0,73 m, von der Seite 1,22 und 1,76 m; Nachbesserung in §5, Prüfung an den Aufnahmen offen |
 | Öffnung bei sehr flachem Blick (Standpunkt dicht an der Wand) | wird nicht angeboten, weil die freie Tiefe dahinter nicht zu sehen ist; zählt in K0-6 |
 | Zeitstempel von Kamera und LiDAR am echten Roboter | Zuordnung Bild zu Scan nach Stempel (höchstens 0,15 s Abstand); erst in KI-0 prüfbar |
@@ -610,6 +610,12 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   entschieden hat. Der Fahrteil soll aus vorhandenem, real bewährtem Code
   entstehen; Bestand und Vorschlag stehen im STATUS, entschieden ist dazu
   noch nichts.
+- 21.11.2026, v1.7, nach KI-1: Die erste Blickrunde aus eigener Kraft ist
+  gelungen (Drehung 363°, acht Bilder, Antwort in 4,9 s, richtige Tür
+  gewählt). Zeitgrenze auf 120 s festgelegt; Rechenlast, Dauer der Runde
+  und der erste Befund zu Personen in §11 nachgetragen. Die Kriterien K0-1
+  bis K0-6 haben weiter kein Urteil (eine Runde). Der nächste Auftrag
+  (KI-F1) bringt den Fahrteil in drei Stufen auf den Roboter.
 - 21.11.2026, v1.6 (Entscheidung des Projektinhabers): **Der Fahrteil ist
   eine Etappenfahrt ohne Nav2** aus den am 10./11.09. real bestandenen
   Bausteinen (neuer Abschnitt 6a; zweite Anschlussstelle

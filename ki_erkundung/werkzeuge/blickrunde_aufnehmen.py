@@ -306,6 +306,11 @@ def eingabe() -> argparse.ArgumentParser:
 
 
 def main(argv=None) -> int:
+    # Ohne Terminal puffert Python die Ausgabe; die Zwischenzeilen stünden
+    # dann erst am Ende in der Datei (Befund KI-1).
+    for strom in (sys.stdout, sys.stderr):
+        if hasattr(strom, 'reconfigure'):
+            strom.reconfigure(line_buffering=True)
     wahl = eingabe().parse_args(argv)
     if not wahl.name.replace('_', '').replace('-', '').isalnum():
         print('--name: nur Buchstaben, Ziffern, _ und -', file=sys.stderr)

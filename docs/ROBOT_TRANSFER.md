@@ -380,6 +380,31 @@ mit, setzt den neuen Schalter aber nicht und prüft, dass er `False` meldet.
 Auf den Roboter kommt die Etappenfahrt erst mit einem eigenen Auftrag nach
 KI-1 (zuerst eine einzelne gerade Etappe von 0,5 m im freien Raum).
 
+Nachtrag 21.11.2026 (nachts), tatsächliche Wirkung von KI-1 (Bericht des
+Jetson-Agenten, 20:43 bis 21:30): Arbeitskopie
+`~/roboter_worktrees/selbstheilung-v2` auf `a0ad82b`. Neu angelegt:
+Release `~/.local/share/amadeus/releases/ki1-20261121_2043` (14 Pakete,
+Build 171 s; Prüfdateien unter `pruefung/stand`, `drehung_versuch1`,
+`drehung`), Umgebungsdatei `~/roboter_worktrees/ki1.env` (Kopie mit
+geändertem `SH_REL`), `~/ki_trockenlauf_ki1/` und zwei Blickrunden unter
+`~/.local/share/amadeus/ki_erkundung/blickrunden/` (`ki1_stand_…`,
+`labor_rundblick_1_…`). Drei Stackstarts: einer ohne Motorfreigabe, ein
+scharfer, der in der Vorprüfung abbrach (Motoren gesperrt, keine Mission),
+ein zweiter scharfer mit **einer Drehung von 363,2° auf der Stelle** im
+Laborraum (höchstens 0,10 rad/s, keine Fahrt, nichts berührt). Kamera lief
+daneben. `selbstheilung-v2.env` und alle früheren Releases unverändert.
+Rückfall: `ki1.env` und den Release-Ordner löschen.
+
+Stand 21.11.2026 (nachts), **noch keine weitere Jetson-Wirkung:** Auftrag
+KI-F1 der KI-Linie ist erteilt (`ki_erkundung/AUFTRAG.md`). Er wird, sobald
+übergeben: einen Release `kif1-<STAMP>` bauen (mit `stage_drive_only`), eine
+Umgebungsdatei `~/roboter_worktrees/kif1.env` anlegen, den Stack einmal ohne
+Motorfreigabe und je Stufe einmal scharf starten und Amadeus **zum ersten
+Mal in dieser Linie fahren lassen**: eine gerade Etappe von 0,5 m, dann
+ausrichten und eine Etappe, und nur mit ausdrücklicher Freigabe des Flurs
+durch die offene Labortür (je 5 cm/s, Etappen bis 0,5 m, ohne Nav2).
+Rückfall: `kif1.env` und den Release-Ordner löschen.
+
 Stand 21.11.2026, zum früheren Auftrag KI-0N: die sieben Aufnahmen neu
 auswerten, auf Wunsch weitere Standbilder mit Kamera und LiDAR; keine
 Motoren. Dazu auf dem **KI-Rechner**, noch nicht ausgeführt: das

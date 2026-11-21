@@ -39,7 +39,12 @@ Hauptlinie bleibt geparkt; das ist kein Auftrag der Hauptlinie. Geprüft in
 der Entwicklungsumgebung: 2285 Tests des Erkunders, 267 in der gezielten
 Liste (249 wie am 19.11. und 18 neue), ein Lauf des ganzen Stacks in der
 Simulation (361,7° in 77 s, kein Nav2-Ziel, Mission erfolgreich). Am Roboter
-nicht gelaufen. Rückfall: das Argument weglassen; im Code den Commit
+gelaufen am 21.11.2026 im Auftrag KI-1 der KI-Linie (Release
+`ki1-20261121_2043`): 363,2° in 81,3 s, acht Abschnitte, kein Nav2-Ziel,
+Endpunkt 8 mm neben dem Start, nichts berührt. Dabei beobachtet: Das
+Prüfskript ohne `--aktiv` meldet „Encoder-Shadow sichtbar“, auch wenn die
+Motorregler nicht antworten (Motoren gesperrt); im Stand unschädlich, nicht
+geändert. Rückfall: das Argument weglassen; im Code den Commit
 zurücknehmen.
 **21.11.2026 (nachts) – zweite Anschlussstelle „Etappenfahrt“ (Freigabe des
 Projektinhabers):** Der Erkunder hat ein zweites Startargument

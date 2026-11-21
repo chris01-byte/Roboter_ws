@@ -53,7 +53,8 @@ nicht bestätigt.
 `explore.launch.py`; Vorgabe `false`). Mit `true` macht der Erkunder nur den
 Rundblick (360° auf der Stelle) und endet ohne Ziel. Anschlussstelle für
 die KI-Linie, vom Projektinhaber freigegeben; ohne das Argument unverändert.
-Am Roboter noch nicht gelaufen.
+Am Roboter gelaufen am 21.11.2026 (Auftrag KI-1 der KI-Linie: 363,2° in
+81,3 s, kein Nav2-Ziel).
 
 **Softwaredelta 21.11.2026 (nachts) / Erkunder:** zweites Startargument
 `stage_drive_only` (dieselben drei Startdateien; Vorgabe `false`),

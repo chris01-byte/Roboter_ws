@@ -82,6 +82,18 @@ def geradeaus(strecke_m: float, pose: Sequence[float]) -> List[Punkt]:
     return [im_kartenrahmen((strecke_m, 0.0), pose)]
 
 
+def punkt_relativ(voraus_m: float, links_m: float, pose: Sequence[float]) -> List[Punkt]:
+    """Ein einzelner Punkt, vom Roboter aus gesehen (voraus, links), im Kartenrahmen."""
+    strecke = math.hypot(voraus_m, links_m)
+    if not math.isfinite(strecke) or not MIN_STRECKE_M <= strecke <= MAX_STRECKE_M:
+        raise ValueError(
+            f'Fahrziel: Punkt {strecke:.2f} m entfernt, erlaubt '
+            f'{MIN_STRECKE_M} bis {MAX_STRECKE_M} m')
+    if voraus_m <= 0.0:
+        raise ValueError('Fahrziel: Der Punkt muss vor dem Roboter liegen')
+    return [im_kartenrahmen((voraus_m, links_m), pose)]
+
+
 def durch_die_tuer(pfosten: Sequence[Sequence[float]], pose: Sequence[float], *,
                    vor_m: float = VOR_DER_TUER_M, hinter_m: float = HINTER_DER_TUER_M,
                    vorpunkt_ab_m: float = 0.15) -> List[Punkt]:
