@@ -1,7 +1,7 @@
 # Konzept „KI-Erkundung“ – eine KI übernimmt Ziel- und Suchwahl
 
-**Version 1.2 · 21.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
-nachgeführt nach dem ersten echten Lauf**
+**Version 1.3 · 21.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
+nachgeführt nach den ersten beiden Durchgängen an echten Aufnahmen**
 
 Dieses Dokument ist die verbindliche Beschreibung der zweiten
 Entwicklungslinie. Verankert in MASTERPLAN §10. Den aktuellen Stand führt nur
@@ -185,6 +185,11 @@ Seit dem ersten echten Lauf (21.11.2026) gilt dazu:
 - **Jede geprüfte Lücke wird vermerkt,** mit Maßen und dem Grund, aus dem
   sie angeboten oder verworfen wurde. Ohne das ist an echten Aufnahmen nicht
   zu sehen, warum eine Tür fehlt.
+- **Im Stand wird direkt gemessen (seit KI-0N).** Je Richtung zählt der
+  Median aller Messungen. Ein Raster verschiebt bei echtem Messrauschen die
+  Wandpunkte um einige Zentimeter; gerade Wände gelten dann als krumm, und
+  Türen werden zu schmal oder zu breit vermessen. Nach einer Drehung wird
+  vorerst weiter gerastert.
 
 **Nummern im Bild.** Jede Nummer wird an der vermessenen Stelle in die Fotos
 gezeichnet (am Boden der Öffnung) und in eine Kartenskizze von oben. Grund:
@@ -222,8 +227,12 @@ KI auch entscheiden, wo im Raum weitergesucht wird.
 ```
 
 `wahl` ist eine angebotene Nummer oder `null` („kein geeigneter Ausgang“).
+Wählbar sind nur Nummern, die in einem Foto stehen: Was nur der Laser kennt,
+kann die KI nicht beurteilen (seit KI-0N).
 `art` ist eines von: `tuer_offen`, `tuer_geschlossen`, `durchgang`, `glas`,
-`spiegel`, `moebelspalt`, `nische`, `unklar`.
+`spiegel`, `moebelspalt`, `nische`, `wand`, `unklar`. `wand` heißt: Die
+Nummer steht auf einer Wand, dort ist keine Öffnung. Damit kann die KI einen
+Fehler der Vermessung benennen.
 
 **Prüfung der Antwort** (auf dem Roboter; im Trockenlauf dieselbe Prüfung):
 
@@ -231,6 +240,7 @@ KI auch entscheiden, wo im Raum weitergesucht wird.
 |---|---|
 | kein lesbares JSON | verworfen |
 | `wahl` ist keine angebotene Nummer | verworfen |
+| `wahl` ist eine Nummer, die in keinem Foto steht | verworfen |
 | die KI ordnet ihre eigene Wahl als nicht befahrbar ein (geschlossene Tür, Glas, Spiegel, Möbelspalt, Nische) | verworfen |
 | unbekannte `art` | wird zu `unklar`, Antwort bleibt gültig |
 | `wahl` als Text statt Zahl („2“) | toleriert und gezählt |
@@ -481,6 +491,19 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   wenn Glas oder Spiegel unter den Vorschlägen war. Schwellen unverändert.
   Der Denkschalter bleibt aus (langsamer, einmal ohne brauchbare Antwort,
   in der Wahl nicht besser). Rollen, Grenzen und Stufen unverändert.
+- 21.11.2026, v1.3, nach dem zweiten Durchgang (KI-0N): **Die Frage der
+  Stufe KI-0 ist beantwortet.** Gültige Antworten: ja (0 von 11 verworfen).
+  Zeit: Median 1,6 s ohne Denken. Kamera: 320 × 180, waagerecht 63,9°.
+  Zeitstempel von Bild und Scan passen (kein Paar verworfen). Erster
+  Eindruck: Hat die Tür eine Nummer und ist sie im Foto, wählt die KI sie
+  (sechs von sechs). Breite der bekannten Tür: von vorn 0,71 bis 0,77 m
+  bei wahren 0,85 m. Die Kriterien K0-1 bis K0-6 gehören zu KI-1 und sind
+  nicht entschieden. Neu in §5: im Stand direkt messen. Neu in §6: Einordnung
+  `wand`; wählbar sind nur Nummern im Foto. Die Angaben des Menschen gelten
+  für die Lage der Öffnungen, nicht für ihre Nummern. KI-1 soll den
+  vorhandenen Rundblick der Hauptlinie nutzen (8 × 45°); die dafür nötige
+  Einstellung „nur Rundblick“ ist eine Änderung der Hauptlinie und wartet
+  auf die Entscheidung des Projektinhabers.
 - 21.11.2026, Nachtrag (Wunsch des Projektinhabers): Auf dem KI-Rechner
   gibt es ein Programm für den Bildschirm, das Lotsen-Fenster. Es startet
   den Lotsen-Dienst und zeigt seinen Zustand, die letzten Fragen mit Bildern

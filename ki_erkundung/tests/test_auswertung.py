@@ -239,6 +239,10 @@ def test_angaben_bleiben_bei_gleicher_vermessung_und_folgen_neuen_nummern():
     doppelt = uebertrage(runde_mit_lage('r', [], {1: (2.3, -0.5), 2: (2.05, -0.5)}),
                          WAHR_MIT_LAGE)
     assert doppelt['ausgaenge'] == [2] and doppelt['nicht_beurteilt'] == [1]
+    # Damals war nichts angeboten (leere Lage): Was jetzt angeboten wird, ist neu.
+    leer = uebertrage(runde_mit_lage('r', [], {1: (2.0, 0.0)}),
+                      {'ausgaenge': [], 'ausgang_sichtbar': False, 'lage': {}})
+    assert leer['nicht_beurteilt'] == [1] and leer['naechste_fruehere'] == {}
     # Ohne festgehaltene Lage gelten die Nummern, wie sie sind.
     ohne = uebertrage(runde_mit_lage('r', [], {1: (9.0, 9.0)}), {'ausgaenge': [1]})
     assert ohne['ausgaenge'] == [1] and ohne['nicht_beurteilt'] == []

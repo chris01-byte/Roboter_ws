@@ -331,8 +331,33 @@ Fahr-Stack, kein Build, kein Installwechsel.**
   Folgeauftrag KI-0N beendet. Rückfall: den Prozess mit SIGINT beenden, die
   genannten Ordner löschen, die Modelle mit `ollama rm` entfernen.
 
-Stand 21.11.2026, **noch keine weitere Jetson-Wirkung:** Auftrag KI-0N der
-KI-Linie ist erteilt (`ki_erkundung/AUFTRAG.md`): die sieben Aufnahmen neu
+Nachtrag 21.11.2026 (abends), tatsächliche Wirkung des Auftrags KI-0N
+(Bericht des Jetson-Agenten, 15:41 bis 17:56): **keine Motoren, kein
+Fahr-Stack, kein Build, kein Installwechsel.**
+- `~/roboter_worktrees/selbstheilung-v2` per Fast-forward von `14294ec` auf
+  `f28c84a`. Kamera und LiDAR liefen zweimal aus der Umgebung der
+  WE-1-Release (15:47 und 16:09), für vier neue Standbilder.
+- **Vorfall:** Der Agent öffnete auf Wunsch ein selbst geschriebenes
+  Live-Bild (Scratchpad, nicht im Repository). Das Vollbild ließ sich nicht
+  schließen; Christopher fuhr den Jetson gegen 16:02 herunter. Kamera und
+  LiDAR des ersten Starts endeten dadurch ohne SIGINT. Nach dem Neustart
+  waren Aufnahmen, Angaben, Arbeitskopie und Geräte (OAK, LiDAR-Adapter)
+  vorhanden; kein Amadeus-Prozess lief. Der zweite Start endete geordnet,
+  der LiDAR-Treiber wieder mit `buffer overflow detected`.
+- Lokal neu: `~/ki_trockenlauf_ki0n/`; unter
+  `~/.local/share/amadeus/ki_erkundung/blickrunden/` jetzt elf Aufnahmen,
+  jede mit `wahrheit.json` (sechs zusätzlich mit `wahrheit_vorher_1.json`).
+  `~/roboter_ws`, Releases, `SH_REL`, Kalibrierung und Autostart
+  unverändert.
+- KI-Rechner: Der Lotsen-Dienst antwortete elfmal. Sein Zähler stand um
+  15:41 bei null, er war also seit dem Vormittag neu gestartet worden; ob
+  das Lotsen-Fenster eingerichtet wurde, ist hier nicht berichtet.
+
+Stand 21.11.2026 (abends), **noch keine weitere Jetson-Wirkung:** Auftrag
+KI-0R der KI-Linie ist erteilt (`ki_erkundung/AUFTRAG.md`): die elf
+Aufnahmen mit dem neuen Stand durchrechnen; kein Sensor, kein Motor.
+
+Stand 21.11.2026, zum früheren Auftrag KI-0N: die sieben Aufnahmen neu
 auswerten, auf Wunsch weitere Standbilder mit Kamera und LiDAR; keine
 Motoren. Dazu auf dem **KI-Rechner**, noch nicht ausgeführt: das
 Lotsen-Fenster einrichten (ein Startskript und zwei `.desktop`-Dateien im

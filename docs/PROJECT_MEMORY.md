@@ -1898,6 +1898,34 @@ KI-Rechner (`qwen3.5:9b`) antwortete über WLAN zu sieben Standbildern in
 Stand und Zahlen: `ki_erkundung/STATUS.md`, Archiv des Auftrags unter
 `ki_erkundung/archiv/20261121-ki0-erstes-sehen/`.
 
+**Nachtrag 21.11.2026 (abends) – zweiter Durchgang KI-0N, was daraus
+folgt:** Elf Standbilder, davon vier neue. Entscheidungen und Gründe:
+- **Die Frage der Stufe KI-0 gilt als beantwortet:** Hat die Tür eine
+  Nummer und ist sie im Foto, wählt die KI sie (sechs von sechs), in etwa
+  1,6 s. Die Kriterien K0-1 bis K0-6 sind damit nicht entschieden; sie
+  gehören zur Stufe mit Blickrunden und brauchen mehr Ansichten, auch Glas
+  und Spiegel.
+- **Im Stand wird direkt gemessen statt gerastert.** Der verbliebene Fehler
+  (Tür von der Scharnierseite 1,24 m) ließ sich erst nachstellen, als das
+  künstliche Zimmer mit dem Rauschen und der Strahlenzahl des echten LiDAR
+  gerechnet wurde. Lehre: Die künstliche Welt muss das Messrauschen des
+  Geräts haben, sonst zeigt sie die Fehler nicht; und der Grund jeder
+  Entscheidung der Vermessung gehört ins Protokoll (der Vermerk „keine
+  Wandlinie“ hat hier auf die Ursache geführt).
+- **Die Angaben des Projektinhabers gelten für die Lage, nicht für
+  Nummern.** Sonst verlangt jede Änderung der Vermessung, dass er alle
+  Blätter neu beurteilt.
+- **Vorfall und Regel:** Ein vom Agenten selbst geschriebenes Vollbild ließ
+  sich nicht schließen; der Projektinhaber musste den Jetson herunterfahren,
+  während Kamera und LiDAR liefen. Die Ursache lag im Auftrag (kein
+  Live-Bild vorgesehen). Regel für diese Linie: Agenten schreiben keine
+  eigenen Anzeigeprogramme; für das Live-Bild gibt es `werkzeuge/sucher.py`.
+- **Nächster größerer Schritt, nicht entschieden:** Amadeus dreht sich mit
+  dem vorhandenen Rundblick der Hauptlinie (8 × 45°, 0,08 rad/s, am
+  11.09.2026 real gelaufen) einmal herum. Dafür braucht der Erkunder eine
+  Einstellung „nur Rundblick, dann stehen bleiben“. Das ist eine Änderung an
+  einem bestehenden Paket und braucht die Freigabe des Projektinhabers.
+
 **Nachtrag 21.11.2026 – Lotsen-Fenster statt unsichtbarem Dienst
 (Projektinhaber):** Der Lotsen-Dienst lief auf dem KI-Rechner als
 Hintergrundprozess; der Projektinhaber sah dort nichts und wollte ein

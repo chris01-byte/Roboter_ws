@@ -122,7 +122,10 @@ def uebertrage(runde: dict, wahr: dict, naehe_m: float = 0.35) -> dict:
     lage = wahr.get('lage')
     jetzt = {int(o['nr']): o.get('mitte') for o in runde.get('oeffnungen') or []
              if o.get('mitte') is not None}
-    if not isinstance(lage, dict) or not lage or (runde.get('oeffnungen') and not jetzt):
+    # Ohne festgehaltene Lage (ältere Angaben) gelten die Nummern, wie sie
+    # sind. Eine leere Lage heißt dagegen: Damals war nichts angeboten; was
+    # jetzt angeboten wird, ist dann neu.
+    if not isinstance(lage, dict) or (runde.get('oeffnungen') and not jetzt):
         return dict(wahr, nicht_beurteilt=[], entfallen=[], naechste_fruehere={})
     frueher = {int(nr): eintrag.get('mitte') for nr, eintrag in lage.items()
                if isinstance(eintrag, dict) and eintrag.get('mitte') is not None}

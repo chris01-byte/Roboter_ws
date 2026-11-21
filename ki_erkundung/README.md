@@ -24,6 +24,7 @@ fährt.**
 | `werkzeuge/trockenlauf_auswerten.py` | Antworten gegen die Angaben des Menschen halten; Bericht zu den Kriterien K0-1 bis K0-6 |
 | `werkzeuge/vermessung_pruefen.py` | Zu gespeicherten Blickrunden nennen, welche Lücken der Laser angeboten und welche er verworfen hat, mit Grund. Nur Maße, keine Bilder oder Scans; ohne ROS und ohne KI-Rechner |
 | `werkzeuge/wahrheit_eintragen.py` | Die Angaben des Menschen zu einem Blatt eintragen, mit der Lage jeder Nummer; frühere Angaben bleiben erhalten |
+| `werkzeuge/sucher.py` | Auf dem Jetson: das Kamerabild live in einem gewöhnlichen Browserfenster, um Amadeus für eine Ansicht hinzustellen. Liest nur mit, speichert nichts, nur von diesem Rechner erreichbar |
 | `werkzeuge/lotse_dienst.py` | Auf dem KI-Rechner: Lotsen-Dienst. Nimmt Fragen des Roboters über ROS an und fragt Ollama auf demselben Rechner |
 | `werkzeuge/lotse_fenster.py` | Auf dem KI-Rechner: das Programm für den Bildschirm. Startet den Lotsen-Dienst und zeigt im Browser, ob KI-Programm, Dienst und Roboter da sind, die letzten Fragen mit Bildern und Antwort und das Log. Die Anzeige ist nur von diesem Rechner aus erreichbar |
 | `werkzeuge/ki_verbindung_ros.py` | Gegenstück auf dem Roboter (`trockenlauf.py --ueber-ros`); drei eigene Themen `/ki_erkundung/…`, nur Text |
@@ -56,7 +57,8 @@ fährt.**
    Wohnung liegen nur auf dem Jetson und dem KI-Rechner, nie im Repository
    und nie bei einem Cloud-Dienst (AGENTS §2.5; Entscheidung 19.11.2026).
    Das Lotsen-Fenster zeigt die Bilder der letzten Frage nur am Bildschirm
-   des KI-Rechners; seine Anzeige ist von keinem anderen Rechner erreichbar.
+   des KI-Rechners, der Sucher das Live-Bild nur am Bildschirm des Jetson;
+   beide Anzeigen sind von keinem anderen Rechner erreichbar.
 7. **Dieselben Arbeitsregeln wie in der Hauptlinie.** Erst messen; Kriterien
    und Rückfall vorab; je Realtest genau eine Verhaltensänderung
    (MASTERPLAN §9.1).
@@ -89,6 +91,12 @@ Mit `--modell <Name>` statt `--nur-markieren` wird der KI-Rechner gefragt
 KI-Rechner gedacht, nicht für diese Entwicklungsumgebung.
 
 ## Für Agenten
+
+**Keine eigenen Anzeigeprogramme schreiben.** Braucht der Projektinhaber ein
+Bild am Bildschirm, gibt es dafür den Sucher (Live-Bild) und den vorhandenen
+Bildbetrachter in einem gewöhnlichen Fenster, nie im Vollbild. Am 21.11.2026
+ließ sich ein behelfsmäßiges Vollbild nicht schließen; der Jetson musste
+heruntergefahren werden.
 
 Vor Arbeit an dieser Linie lesen: `AGENTS.md`, [KONZEPT.md](KONZEPT.md),
 [STATUS.md](STATUS.md). Der aktuelle Auftrag dieser Linie steht in

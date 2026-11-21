@@ -1,13 +1,19 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 21.11.2026:** Der erste echte Lauf ist gemacht (Auftrag KI-0
-„Erstes Sehen“, [Archiv](archiv/20261121-ki0-erstes-sehen/)): Amadeus stand
-im Labor, Kamera und LiDAR liefen, der KI-Rechner hat über WLAN zu sieben
-Standbildern geantwortet. **Die Kette läuft an echten Geräten. Ein Urteil
-nach den Kriterien gibt es noch nicht.** Das schwache Glied ist die
-Vermessung der Öffnungen, nicht die KI. Die Vermessung ist nachgebessert,
-aber nur im künstlichen Zimmer geprüft; ob sie an den echten Aufnahmen
-stimmt, klärt der Auftrag KI-0N ([AUFTRAG.md](AUFTRAG.md)).
+**Stand 21.11.2026 (abends):** Die Frage der Stufe KI-0, „erkennt die KI an
+echten Bildern dieser Kamera die Tür, und wie schnell?“, ist beantwortet:
+**Ja, wenn die Tür eine Nummer hat und im Foto zu sehen ist (sechs von sechs
+Ansichten), in etwa 1,6 Sekunden.** Ein Urteil nach den Kriterien K0-1 bis
+K0-6 gibt es weiter nicht (zu wenige Ansichten, kein Glas, kein Spiegel);
+das gehört zur nächsten Stufe. Die Vermessung der Öffnungen ist nach zwei
+Durchgängen an echten Aufnahmen deutlich besser, in zwei Fällen aber noch
+falsch (Tür von der Scharnierseite, Flur). Für den ersten Fall ist die
+Ursache nachgestellt und behoben; ob das an den echten Aufnahmen trägt,
+klärt der kleine Auftrag KI-0R ([AUFTRAG.md](AUFTRAG.md)).
+
+**Nichts ist bisher gefahren.** Der nächste größere Schritt ist, dass Amadeus
+sich für die Blickrunde selbst einmal herumdreht (KI-1). Dafür liegt ein
+Vorschlag vor, der eine Entscheidung des Projektinhabers braucht (unten).
 
 Diese Linie ist seit 19.11.2026 (spät) die aktive Arbeit; die Hauptlinie ist
 geparkt. Dies ist der einzige Iststand dieser Linie. Der Stand der
@@ -15,120 +21,131 @@ Hauptlinie steht ausschließlich in `docs/wohnungserkundung/STATUS.md`.
 
 ## Arbeitsliste
 
-**Aktiv: Auftrag KI-0N „Nachmessen“** ([AUFTRAG.md](AUFTRAG.md)), im Stand,
-ohne Bewegung, auf dem Jetson. Zuerst an den sieben gespeicherten Aufnahmen
-vom 21.11. (kein Sensor nötig), dann, wenn Christopher Zeit hat, weitere
-Ansichten: Tür mit offenem Blatt von der Scharnierseite, geschlossene Tür,
-Glas, Spiegel, Flur, eine Ansicht zweimal an derselben Stelle. Christopher
-beurteilt alle Blätter neu, weil sich die Nummern geändert haben.
+**Aktiv: Auftrag KI-0R „Nachrechnen“** ([AUFTRAG.md](AUFTRAG.md)): Der
+Jetson rechnet die elf gespeicherten Aufnahmen mit dem neuen Stand durch.
+Etwa zehn Minuten, kein Sensor, kein Motor; Christopher nur, falls einzelne
+Blätter neu zu beurteilen sind.
 
-**Dazu, auf dem KI-Rechner: das Lotsen-Fenster einrichten** (Wunsch des
-Projektinhabers vom 21.11.: ein Programm mit Symbol auf dem Desktop, das den
-Dienst startet und zeigt, ob alles läuft und verbunden ist). Gebaut und in
-der Entwicklungsumgebung geprüft; auf dem KI-Rechner noch nicht gelaufen.
-Die Einrichtung steht im Auftrag, Abschnitt „KI-Rechner“.
+**Offen auf dem KI-Rechner: das Lotsen-Fenster einrichten** (Programm
+„Amadeus Lotse“ mit Symbol auf dem Desktop). Gebaut und hier geprüft. Ob es
+auf dem KI-Rechner schon eingerichtet ist, ist hier nicht bekannt: Ein
+Bericht dazu liegt nicht vor. (Der Zähler des Dienstes stand am 21.11. um
+15:41 wieder bei null; der Dienst wurde also seit dem Vormittag neu
+gestartet.)
 
-**Danach, je nach Ergebnis:**
-- Stimmt die Vermessung an den echten Aufnahmen: Fahrteil vorbereiten
-  (unten).
-- Stimmt sie nicht: mit dem Prüftext aus KI-0N gezielt nachbessern. Als
-  zweiter Weg ist vorgemerkt, dass die KI die Tür im Foto selbst zeigt und
-  der Laser nur an dieser Stelle misst; dann hängt das Erkennen nicht mehr
-  an den vermessenen Vorschlägen.
+**Wartet auf Entscheidung des Projektinhabers: KI-1 „Blickrunde aus eigener
+Kraft“.** Vorschlag:
+- Amadeus dreht sich mit dem **vorhandenen Rundblick** der Hauptlinie einmal
+  ganz herum: 8 × 45°, 0,08 rad/s, je 1 s Pause, etwa drei Minuten. Diese
+  Drehung ist am 11.09.2026 real gelaufen (`WE_PARITY_RESET.md`); die Werte
+  stehen in `explore_params.yaml` und `hwt601_parity_params.yaml`.
+- Sie geht wie bisher durch das Fahrtor (nur Drehen auf der Stelle,
+  höchstens 0,15 rad/s, frische Daten aller Sensoren, Not-Aus frei) und
+  weiter über Glättung und Kollisionsmonitor.
+- **Was fehlt:** eine Einstellung „nur Rundblick, danach stehen bleiben“.
+  Heute fährt der Erkunder nach dem Rundblick Ziele an. Nötig ist ein neuer
+  Schalter im Erkunder (`src/explore`, Vorgabe aus; ausgeschaltet bleibt
+  alles, wie es ist) und ein eigenes Profil. Das ist eine Änderung an einem
+  bestehenden Paket der Hauptlinie und damit nach README, Regel 2, nur mit
+  ausdrücklicher Freigabe des Projektinhabers möglich: eigener Branch,
+  eigene Tests, getrennt von dieser Linie.
+- Im Selbstheilungsweg geht es nicht: Er dreht in einem Zug mit 0,10 rad/s,
+  nimmt kein eigenes Profil an und fährt danach Ziele an.
+- **Kamera:** Sie ist im Kartier-Stack bewusst aus und würde wie in KI-0
+  getrennt gestartet. Vorher wird im Stand gemessen, ob Ortung und
+  Rechenlast des Jetson das vertragen.
+- Ergebnis wäre die erste echte Blickrunde mit acht Bildern, auch im Flur,
+  wo ein einzelnes Standbild nicht reicht.
+Alles hier Genannte stammt aus dem Lesen des Codes; gebaut und geprüft ist
+davon nichts.
 
-**Fahrteil (in der Entwicklung, ohne Roboter).** Vorgabe des
-Projektinhabers: nichts Neues erfinden, sondern an den Türdurchfahrten
-orientieren, die funktioniert haben. Im Repository belegt:
-- 11.09.2026 (Stand `1d91229`, Protokoll `WE_PARITY_RESET.md`): Rundblick in
-  8 × 45° mit 0,08 rad/s und 1 s Pause, danach Ziele, eine Tür als
-  „verbunden“ erkannt und über die Navigation durchfahren, mit Aufstellen in
-  begrenzten Etappen davor und Bestätigen des Auslaufs dahinter.
-- 08.11.2026 (Release `selbstheilung-sh7-20261108_1617`): zwei Durchfahrten
-  durch die 80-cm-Tür in drei Fahrten, über gewöhnliche Ziele der Navigation.
-- Dazu ein begrenztes Türprofil (`door_test_params.yaml`): gerade Fahrt mit
-  Mittenführung durch den LiDAR, höchstens 0,08 m/s, Abbruch ab 6 cm
-  seitlicher Abweichung. Dieser Code ist vorhanden, in der geparkten Linie
-  abgeschaltet und seit September nicht mehr real gelaufen.
-Offen ist, wie Amadeus einem gefundenen Weg im Raum folgt (wie am 08.11.
-oder in geraden Stücken mit Drehen auf der Stelle); wird mit dem
-Projektinhaber besprochen.
+**Danach: Fahrteil.** Vorgabe des Projektinhabers: nichts Neues erfinden,
+sondern an den Türdurchfahrten orientieren, die funktioniert haben
+(11.09.2026 Stand `1d91229`; 08.11.2026 Release
+`selbstheilung-sh7-20261108_1617`; dazu das begrenzte Türprofil
+`door_test_params.yaml`). Offen ist, wie Amadeus einem gefundenen Weg folgt;
+wird mit dem Projektinhaber besprochen.
 
-**Danach: KI-1 „Blickrunden aus eigener Kraft“.** Dafür fehlen zwei Dinge,
-die diese Linie nicht allein herstellen kann:
-- **Volle Drehung am Start.** Der Rundblick der Hauptlinie dreht 90°; der
-  Wert steht fest im Profil und lässt sich im Selbstheilungsbetrieb beim
-  Start nicht von außen setzen (`nav_mapping.launch.py` gibt dem Erkunder
-  dort immer `self_healing_params.yaml`). Nötig ist eine kleine
-  Anschlussstelle in der Hauptlinie; ohne Freigabe des Projektinhabers wird
-  dort nichts geändert.
-- **Kamera neben der Kartierung.** Sie ist dort bewusst abgeschaltet; ihre
-  Last wird zuerst im Stand gemessen.
+**Vorgemerkt:** Für ein Urteil nach den Kriterien fehlen Ansichten mit Glas
+oder Fenster, mit Spiegel, in einem anderen Zimmer und eine Ansicht zweimal
+an derselben Stelle. Zum Hinstellen gibt es jetzt den Sucher
+(`werkzeuge/sucher.py`). Sinnvoll erst mit der Blickrunde aus eigener Kraft.
 
 **Geparkt:** Anschluss der KI-Wahl an die vorhandene Erkundung (Entscheidung
 vor KI-2); Raumnamen in der App (KI-4); Gegenstände finden (KI-5); größere
-Kamerabilder für die KI (geliefert werden 320 × 180). Der Lotsen-Dienst als
-Systemdienst ist ersetzt durch das Lotsen-Fenster, das Christopher selbst
-öffnet; ein Start von selbst beim Hochfahren ist damit möglich, aber nicht
-eingerichtet.
+Kamerabilder für die KI (geliefert werden 320 × 180); der zweite Weg, bei
+dem die KI die Tür im Foto selbst zeigt und der Laser nur dort misst.
 
 **Erledigt:** Konzept und Trennregeln · Werkzeuge für den Trockenlauf ·
 HomeMy-Konzept ausgewertet · Verbindung zum KI-Rechner · KI-0 Teil A
-(19.11.) und Teil B (21.11.) · Vermessung und Auswertung nach Teil B
-nachgebessert (21.11.).
+(19.11.) und Teil B (21.11.) · KI-0N (21.11.) · Lotsen-Fenster gebaut ·
+Vermessung, Frage und Auswertung zweimal nachgebessert (21.11.).
 
-## KI-0 Teil B – erster echter Lauf (Jetson, 21.11.2026)
+## KI-0N – zweiter Durchgang an echten Aufnahmen (Jetson, 21.11.2026)
 
-Zahlen und Antworten je Ansicht stehen im
-[Archiv](archiv/20261121-ki0-erstes-sehen/). Kurz:
+Zahlen je Ansicht stehen im [Archiv](archiv/20261121-ki0n-nachmessen/).
 
-**Was lief.** 158 Tests am Jetson (Python 3.10, ROS 2 Humble). 14 Fragen
-über WLAN an den Lotsen-Dienst, alle beantwortet. Bild und Scan passen
-zeitlich zusammen (je Aufnahme 16 Paare, keines verworfen). Ohne Denken
-kommt die Antwort in 1,5 bis 2,7 s (die erste 4,0 s, davon 2,4 s Laden).
+**Was besser wurde.** Vier der fünf vorab notierten Erwartungen trafen zu:
+Die Tür aus 4–5 m hat jetzt eine Nummer; von der Seite aus der Ferne wird
+sie 0,77 m breit vermessen statt 1,76 m, in der Ecke 0,72 statt 1,74 m; an
+den sieben alten Aufnahmen gibt es 9 statt 12 Vorschläge, davon 2 statt 7 an
+Möbeln. Eine geschlossene Tür wird nicht angeboten.
 
-**Was die KI kann und was nicht.**
-- Hatte die Tür eine Nummer und war sie im Foto zu sehen, hat die KI sie
-  gewählt: vier von vier Ansichten.
-- War kein Ausgang im Foto (er lag nur in der Skizze), hat sie nichts
-  gewählt. Das ist vorsichtig, aber zu wenig: Ein Bild allein reicht nicht,
-  es braucht die Blickrunde.
-- War nur eine Möbellücke angeboten, hat sie diese als „Durchgang“ gewählt
-  (Sicherheit 0,95). Die KI nimmt also, was man ihr anbietet. Eine fast
-  geschlossene Tür nannte sie „offen“.
-- Raumnamen: in allen Ansichten falsch (Schlafzimmer, Flur, Wohnzimmer; es
-  war das Labor). Für Raumnamen ist ein einzelnes kleines Bild keine Basis.
-- Mit Denken: 8 bis 16 s statt 2 s, einmal 64,6 s ohne brauchbare Antwort,
-  in der Wahl nicht besser. **Denken bleibt aus.**
-- Glas und Spiegel waren nicht dabei. K0-2 ist ungeprüft.
+**Was nicht stimmte.**
+- **Tür von der Scharnierseite** (`labor_tuer_seite_nah_b`): weiter 1,24 m
+  breit, Nummer rechts neben der Tür auf der Wand. Der Prüftext zeigte den
+  Grund: An diesem und den meisten anderen Türpfosten wurde keine gerade
+  Wand erkannt; die Regeln für Türblatt und schräge Türen griffen deshalb
+  nicht.
+- **Flur:** Angeboten wurde eine 0,98 m breite „Öffnung“ in 0,56 m, die
+  laut Christopher die Wand zwischen zwei Türen ist. Die beiden Türen hatten
+  keine Nummer. Die KI wählte die Nummer als „Durchgang in die Küche“.
+- **Halb geschlossene Tür:** Die Nummer stand auf dem Mauerwerk neben der
+  Tür. Die KI wählte nichts.
+- Türen von vorn werden 0,71 bis 0,77 m breit vermessen bei wahren 0,85 m.
 
-**Was an der Vermessung nicht stimmte.**
-- Von vorn: Tür 0,74 und 0,73 m bei wahren 0,85 m. Zu schmal, vorsichtige
-  Seite.
-- Von der Seite: Tür 1,22 m und 1,76 m breit, die Nummer stand neben der
-  Tür oder auf dem Türblatt.
-- Aus 4–5 m: Tür nicht angeboten, nur eine 2,25 m breite Möbellücke davor.
-- Sieben von zwölf Vorschlägen waren Lücken an Möbeln, die meisten seitlich
-  oder hinter dem Roboter.
+**Was die KI tat.** Tür mit Nummer im Foto: sechs von sechs gewählt. Kein
+Ausgang angeboten: dreimal richtig nichts gewählt, einmal falsch (Flur).
+Ausgang nur in der Skizze: nichts gewählt. Raumname in 1 von 11 richtig.
+K0-1 richtig 9 von 11 (82 %), K0-6 Ausgang angeboten in 7 von 8 (88 %);
+beides ohne Urteil oder unter der Schwelle.
 
-**Nach den Kriterien (nachgerechnet mit der korrigierten Auswertung, ohne
-Denken):** K0-1 richtig 4 von 6 (67 %), nötig 90 % bei mindestens zehn
-Ansichten mit angebotenem Ausgang (es waren fünf): kein Urteil. K0-2: kein
-Urteil. K0-3: 0 von 6 verworfen, bestanden. K0-4: Median 1,9 s, bestanden.
-K0-5: ein Paar, gleiche Wahl; der Standort war nur ungefähr derselbe. K0-6:
-Ausgang angeboten in 5 von 6 (83 %), nötig 90 %: nicht bestanden.
+**Vorfall.** Zum Hinstellen wollte Christopher das Kamerabild sehen; im
+Auftrag gab es dafür nichts. Der Agent schrieb ein eigenes Anzeigeprogramm.
+Dessen Vollbild ließ sich nicht schließen, **Christopher musste den Jetson
+herunterfahren**; Kamera und LiDAR endeten ohne SIGINT. Daten gingen nicht
+verloren. Der Fehler lag im Auftrag: Er hätte das Live-Bild vorsehen müssen.
+Folgen: Es gibt jetzt den Sucher (gewöhnliches Browserfenster, speichert
+nichts, endet von selbst), und die Aufträge verbieten eigene
+Anzeigeprogramme.
 
-**Was dabei auffiel und offen bleibt.**
-- Die Kamera liefert 320 × 180, nicht 640 × 360 wie für August im
-  ROBOT_TRANSFER vermerkt (`i_isp_den: 6` in den Releases).
-- `~/roboter_ws/install` (Stand 27.07.) startet weder das Kamera-Relay noch
-  das LiDAR; der SH-9-Release fehlt `semantic_perception`. Benutzt wurde auf
-  Christophers Entscheidung die WE-1-Release `we1-10e1858074e7-r1`.
-- Der LiDAR-Treiber endete beim Beenden mit `buffer overflow detected`.
-- Während der Messung lief `update-manager` mit etwa 94 % eines Kerns.
-- Der Lotsen-Dienst auf dem KI-Rechner lief nach Teil B weiter (A6 offen;
-  KI-0N benutzt ihn und beendet ihn danach).
+## Nachbesserung nach KI-0N (21.11.2026, Commit `70b0a5d`)
 
-## Nachbesserung nach Teil B (21.11.2026, Commit `5319b7f`)
+| Befund | Ursache | Änderung |
+|---|---|---|
+| Tür von der Scharnierseite 1,24 m, „keine Wandlinie“; Türen von vorn 10 cm zu schmal | Die Scans wurden über ein Raster mit 4 cm Zellen gelegt. Mit dem Rauschen des echten LiDAR (nachgestellt mit 2 cm und 2160 Strahlen) verschiebt das jeden Wandpunkt um einige Zentimeter; gerade Wände gelten dann als krumm. Das künstliche Zimmer ergab so denselben Fehler: 1,22 m, Mitte 0,4 m vor der Tür | Im Stand wird nicht mehr gerastert: je Richtung der Median aller Messungen. Im künstlichen Zimmer mit 1 bis 3 cm Rauschen: Tür 0,80 bis 0,82 m (wahr 0,80), mit Türblatt von vier Standpunkten 0,80 bis 0,82 m |
+| Warum keine Wandlinie entstand, stand nicht im Prüftext | fehlte | Der Prüftext nennt den Grund mit Maß |
+| Flur: KI wählt eine Nummer auf einer Wand | Die Nummer stand am unteren Bildrand (Öffnung näher als das Bild reicht); die KI nahm den Durchgang, den sie im Foto sah. „Wand“ konnte sie nicht sagen | Neue Einordnung „wand“; Nummern am unteren Bildrand werden erklärt |
+| KI ordnet Nummern ein, die in keinem Foto stehen | Im Stand gibt es nur ein Foto | Wählbar sind nur Nummern, die in einem Foto stehen; die anderen gelten als nicht beurteilbar |
+| Jede Änderung der Vermessung verlangte neue Angaben von Christopher | Die Angaben hingen an Nummern | Sie gelten jetzt für die Lage; die Auswertung überträgt sie und meldet, was neu zu beurteilen ist |
+
+**Nicht geklärt:** warum im Flur die beiden Türen keine Nummer bekamen und
+was die „Öffnung“ dort war. KI-0R liefert dazu den vollen Prüftext.
+**Bekannte Grenzen:** Nach einer Drehung wird weiter gerastert; dort ist mit
+denselben Schwächen zu rechnen, bis auch das geändert ist. Ein Türblatt, das
+genau von der Kante gesehen wird, ist nicht zu verfolgen; die Tür wird dann
+bis zu 15 cm zu breit vermessen.
+
+## Frühere Durchgänge
+
+**KI-0 Teil B (21.11.2026, vormittags):** erster echter Lauf, sieben
+Standbilder; Kette läuft, Antwort in 1,5 bis 4 s, Tür mit Nummer im Foto vier
+von vier gewählt; Vermessung von der Seite 1,22 und 1,76 m, Tür aus 4–5 m
+ohne Nummer. Mit Denken langsamer und einmal ohne brauchbare Antwort:
+**Denken bleibt aus.** Kamera liefert 320 × 180. Einzelheiten im
+[Archiv](archiv/20261121-ki0-erstes-sehen/).
+
+**Nachbesserung nach Teil B (Commit `5319b7f`):**
 
 Im künstlichen Zimmer nachgestellt, dann geändert:
 
@@ -144,8 +161,9 @@ Neu sind `vermessung_pruefen.py` (nennt je Aufnahme angebotene und
 verworfene Lücken mit Grund; nur Maße, keine Bilder oder Scans) und
 `wahrheit_eintragen.py`.
 
-**Nicht nachgestellt:** die 1,76 m (`labor_tuer_weit_seite`) und die 1,74 m
-(`labor_ecke`). Ob die Blattregel sie trifft, ist offen.
+Die 1,76 m (`labor_tuer_weit_seite`) und die 1,74 m (`labor_ecke`) waren
+nicht nachgestellt; in KI-0N wurden beide Türen richtig angeboten (0,77 und
+0,72 m).
 **Bekannte Grenze:** Ein Türblatt, das genau von der Kante gesehen wird,
 ist nicht zu verfolgen; die Tür wird dann bis zu 15 cm zu breit vermessen.
 Steht das Blatt weniger als 90° offen und sieht man es von der Türseite,
@@ -167,18 +185,19 @@ KONZEPT §13.
 | Baustein | Aufgabe |
 |---|---|
 | `lotse/geometrie.py` | Montage von Kamera und LiDAR, Projektion ins Bild |
-| `lotse/blickrunde.py` | Aufnahmeformat; Drehwinkel aus den Scans; Auswahl der acht Bilder; Rundum-Profil (im Stand vom Ort des LiDAR aus); Ruhe des Echos je Richtung |
+| `lotse/blickrunde.py` | Aufnahmeformat; Drehwinkel aus den Scans; Auswahl der acht Bilder; Profil des Standpunkts (im Stand der Median der Messungen vom Ort des LiDAR aus, nach einer Drehung über ein Raster); Ruhe des Echos je Richtung |
 | `lotse/kandidaten.py` | Öffnungen vermessen (Breite, Lage, freie Tiefe), auch mit offenem Türblatt; Protokoll jeder geprüften Lücke mit Grund |
 | `lotse/markierung.py` | Nummern ins Foto, Kartenskizze, Übersichtsblatt |
 | `lotse/frage.py`, `lotse/antwort.py` | Frage an die KI (ganze Runde, Teilrunde, Einzelbild); Prüfung der Antwort |
 | `lotse/ki_rechner.py` | Verbindung zu Ollama ohne Proxy; Denkschalter; Fassung und Kennung des Modells |
 | `lotse/botschaft.py` | Frage und Antwort für die Übertragung packen und begrenzen |
-| `lotse/auswertung.py`, `lotse/ablauf.py` | Kennzahlen K0-1 bis K0-6 mit Median und 95-%-Wert, Vergleich getrennter Aufnahmen; Ablauf einer Runde |
+| `lotse/auswertung.py`, `lotse/ablauf.py` | Kennzahlen K0-1 bis K0-6 mit Median und 95-%-Wert, Vergleich getrennter Aufnahmen, Übertragung der Angaben des Menschen nach Lage; Ablauf einer Runde |
 | `werkzeuge/lotse_dienst.py` | KI-Rechner: nimmt Fragen über ROS an, fragt Ollama lokal, eine Frage zur Zeit; legt mit `--zustand` seinen Zustand und die letzte Frage für das Fenster ab |
 | `werkzeuge/ki_verbindung_ros.py` | Roboter: stellt die Frage über ROS; keine Antwort ist ein Ergebnis, kein Fehler |
 | `werkzeuge/lotse_fenster.py`, `lotse_fenster_seite.html` | KI-Rechner: Programm für den Bildschirm. Startet den Lotsen-Dienst und zeigt KI-Programm, Dienst, Roboter im Netz, die letzten Fragen mit Bildern und Antwort und das Log. Nur von diesem Rechner aus erreichbar |
 | `werkzeuge/blickrunde_aufnehmen.py`, `trockenlauf.py`, `trockenlauf_auswerten.py`, `beispielrunde_erzeugen.py` | Aufnahme, Trockenlauf (direkt oder `--ueber-ros`), Auswertung, künstliche Beispielrunde (auf Wunsch mit Türblatt) |
 | `werkzeuge/vermessung_pruefen.py`, `wahrheit_eintragen.py` | Prüftext der Vermessung zu gespeicherten Aufnahmen; Angaben des Menschen mit Lage der Nummern eintragen |
+| `werkzeuge/sucher.py` | Jetson: das Kamerabild live in einem gewöhnlichen Browserfenster, zum Hinstellen für eine Ansicht. Liest nur mit, speichert nichts, endet von selbst |
 
 ## Nachweise
 
@@ -197,6 +216,9 @@ KONZEPT §13.
 | 21.11.2026 | Vermessung und Auswertung nachgebessert, zwei Werkzeuge neu | Entwicklungsumgebung | `5319b7f`; 170 Tests bestanden, 2 übersprungen (ohne ROS); 178 bestanden (ROS 2 Jazzy, abgeschottet); Syntax für Python 3.10 geprüft |
 | 21.11.2026 | Lotsen-Fenster und Zustandsablage des Dienstes | Entwicklungsumgebung | 178 Tests bestanden, 2 übersprungen (ohne ROS); 187 bestanden (ROS 2 Jazzy, abgeschottet); Strecke Trockenlauf → Dienst → gespieltes Ollama → Anzeige einmal ganz durchlaufen |
 | 21.11.2026 | Befunde nachgestellt | künstliches Zimmer mit Türblatt | 0,80-m-Tür mit Blatt bei 90° von der Scharnierseite: vorher 1,14 m breit und 0,4 m vor der Tür (bei tieferem Flur; sonst gar nicht angeboten), jetzt 0,79 bis 0,84 m an der Tür. Blatt bei 75°, 90°, 100° und 110° von vier Standpunkten (16 Fälle): in 15 Fällen Tür 0,73 bis 0,89 m an der Tür, in einem Fall nicht angeboten (75°, von der Öffnung waren 6 cm zu sehen). Bei 100° und 110° erscheint in vier Fällen zusätzlich die Tasche zwischen Blatt und Schrank als eigene Öffnung. Tür hinter einer breiten Möbellücke: vorher nicht angeboten, jetzt 0,71 und 0,72 m |
+| 21.11.2026 | KI-0N | Jetson, vier neue Ansichten mit Kamera und LiDAR, KI-Rechner über WLAN | 187 Tests bestanden; elf Standbilder; vier von fünf Erwartungen erfüllt; Tür mit Nummer im Foto sechs von sechs gewählt; Tür von der Scharnierseite weiter 1,24 m; im Flur eine Wand als Öffnung; Einzelheiten im Archiv |
+| 21.11.2026 | Nachbesserung nach KI-0N, Sucher | Entwicklungsumgebung | `70b0a5d`; 192 Tests bestanden, 2 übersprungen (ohne ROS); 202 bestanden (ROS 2 Jazzy, abgeschottet); Fehler mit echtem Rauschen nachgestellt (Raster 1,22 m, Median 0,81 m) |
+| 21.11.2026 | Vorhandener Rundblick der Hauptlinie | Code und Dokumente gelesen | 8 × 45° bei 0,08 rad/s mit Pause steht in `explore_params.yaml`; im Selbstheilungsbetrieb ersetzt `nav_mapping.launch.py` jedes eigene Profil; „nur Rundblick“ gibt es nicht; nichts gebaut |
 
 **Gemessen an der künstlichen Beispielwelt** (ausgedachtes Zimmer mit
 80-cm-Tür, 90-cm-Glastür zum Balkon, Schränken, Kiste; LiDAR-Rauschen 1 cm):
@@ -239,19 +261,21 @@ Jetson, echte Bilder.
 
 ## Was nicht geprüft ist
 
-- **Die nachgebesserte Vermessung an echten Aufnahmen.** Sie ist nur im
-  künstlichen Zimmer geprüft. Das künstliche Zimmer hat die Fehler vom
-  21.11. vorher nicht gezeigt, weil es kein Türblatt und kaum Möbel hatte.
-- **Glas, Spiegel, geschlossene Tür, Flur mit mehreren Türen** an echten
-  Bildern.
+- **Der Stand `70b0a5d` an den echten Aufnahmen.** Die Nachbesserung ist
+  nur im künstlichen Zimmer geprüft. Sie beruht diesmal auf einem dort
+  nachgestellten echten Fehler, aber das künstliche Zimmer hat schon zweimal
+  nicht gezeigt, was am Roboter schiefging.
+- **Die geänderte Frage** an echten Bildern (Einordnung „wand“, nur
+  sichtbare Nummern).
+- **Glas, Spiegel, anderes Zimmer** an echten Bildern.
 - **Die ganze Blickrunde** (acht Bilder nach einer Drehung) an echten
   Bildern; bisher nur Standbilder mit einem Foto.
 - **`qwen3-vl:8b`** an echten Bildern; gefragt wurde nur `qwen3.5:9b`.
 - **Personen** in Scan und Bild.
-- **Größere Kamerabilder.** Ob 320 × 180 der KI auf Dauer genügt, ist offen.
+- **Lotsen-Fenster und Sucher** auf den Zielgeräten.
 
 ## Genau ein nächster Schritt
 
-Auftrag KI-0N auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): die sieben
-gespeicherten Aufnahmen neu vermessen und fragen, Christopher beurteilt die
-Blätter; wenn Zeit ist, weitere Ansichten dazu.
+Auftrag KI-0R auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): die elf
+gespeicherten Aufnahmen mit dem neuen Stand durchrechnen. Unabhängig davon
+wartet der Vorschlag zu KI-1 auf die Entscheidung des Projektinhabers.

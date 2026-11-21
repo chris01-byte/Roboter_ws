@@ -191,5 +191,5 @@ Bereiche enthalten.
 |---|---|---|
 | iOS-App „Amadeus" | `ios/Robotersteuerung/` | Raumeditor und Raumwahl am realen ROS-System abgenommen |
 | Übergabeprotokolle | `integration/` | Dokumentation |
-| KI-Erkundung (getrennte Linie) | `ki_erkundung/` | Entwurf (Konzept v1.2; am 21.11.2026 im Stand mit Kamera, LiDAR und KI-Rechner gelaufen, noch kein Urteil nach den Kriterien; nichts fährt) |
+| KI-Erkundung (getrennte Linie) | `ki_erkundung/` | Entwurf (Konzept v1.3; am 21.11.2026 zweimal im Stand mit Kamera, LiDAR und KI-Rechner gelaufen, noch kein Urteil nach den Kriterien; nichts fährt) |
 | Prüfplan | `Roboter_Pruefplan.md`, `pruefplan_jetson.sh` | produktiv genutzt |

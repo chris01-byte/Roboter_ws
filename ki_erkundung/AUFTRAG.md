@@ -1,88 +1,86 @@
-# Aktueller Auftrag der KI-Linie: KI-0N – Nachmessen (im Stand, ohne Bewegung)
+# Aktueller Auftrag der KI-Linie: KI-0R – Nachrechnen (nur Jetson, ohne Sensoren)
 
-**Erteilt am 21.11.2026.** Er wird aktiv, sobald der Projektinhaber ihn
-übergibt. Zwei Teile: zuerst auf dem **KI-Rechner** das Lotsen-Fenster
-einrichten (Abschnitt „KI-Rechner“ weiter unten, etwa 15 Minuten), dann der
-eigentliche Auftrag auf dem **Jetson**. Der Jetson-Teil geht auch ohne das
-Fenster, solange der Lotsen-Dienst vom 21.11. noch läuft.
+**Erteilt am 21.11.2026 (abends).** Er wird aktiv, sobald der Projektinhaber
+ihn übergibt. Er läuft auf dem **Jetson**, dauert etwa zehn Minuten und
+braucht Christopher nur, falls am Ende einzelne Blätter neu zu beurteilen
+sind. Auf dem KI-Rechner muss der Lotsen-Dienst laufen (Programm „Amadeus
+Lotse“ oder der Dienst vom 21.11.).
 
-Der vorige Auftrag KI-0 „Erstes Sehen“ ist ausgeführt und liegt mit seinem
-Ergebnis unter [archiv/20261121-ki0-erstes-sehen/](archiv/20261121-ki0-erstes-sehen/).
+Die vorigen Aufträge liegen mit Ergebnis im Archiv:
+[KI-0](archiv/20261121-ki0-erstes-sehen/),
+[KI-0N](archiv/20261121-ki0n-nachmessen/).
 
-**Frage dieses Auftrags:** Bietet die nachgebesserte Vermessung an den
-sieben Aufnahmen vom 21.11.2026 die Labortür richtig an (Breite, Lage der
-Nummer, auch aus 4–5 m), und wählt die KI dann richtig? Nichts fährt.
+**Frage dieses Auftrags:** Vermisst der neue Stand an den elf gespeicherten
+Aufnahmen die Labortür jetzt auch von der Scharnierseite richtig, und was
+bietet er im Flur an? Nichts fährt, kein Sensor wird gestartet.
 
 | | |
 |---|---|
-| Konzept | `ki_erkundung/KONZEPT.md` v1.2, Stufe KI-0 |
+| Konzept | `ki_erkundung/KONZEPT.md` v1.3, Stufe KI-0 |
 | Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens der Commit, der diesen Auftrag enthält |
-| Erwartetes Ergebnis | Prüftext der Vermessung zu den gespeicherten Aufnahmen; neue Antworten der KI; Christophers Urteil je Blatt; Auswertung nach K0-1 bis K0-6 |
-| Nicht-Ziele | Keine Fahrt, keine Drehung, kein Motor; kein Eingriff in vorhandene Dienste, Pakete, Profile oder `~/roboter_ws`; keine Änderung an den Werkzeugen (nur ausführen und berichten) |
-| Rückfall | Kamera und LiDAR beenden, falls in Teil 2 gestartet; `~/ki_trockenlauf_ki0n/` darf gelöscht werden; die Aufnahmen vom 21.11. und ihre früheren Angaben bleiben erhalten |
+| Erwartetes Ergebnis | Prüftext der Vermessung zu den elf Aufnahmen; neue Antworten der KI auf die geänderte Frage; Auswertung, bei der die Angaben vom 21.11. nach Lage übertragen sind |
+| Nicht-Ziele | Kein Motor, kein Fahr-Stack, keine Kamera, kein LiDAR; kein Eingriff in vorhandene Dienste, Pakete, Profile oder `~/roboter_ws`; keine Änderung an den Werkzeugen; **kein eigenes Anzeigeprogramm schreiben** |
+| Rückfall | `~/ki_trockenlauf_ki0r/` darf gelöscht werden; die Aufnahmen und ihre Angaben bleiben unberührt |
+
+## Was sich geändert hat
+
+1. **Im Stand wird direkt gemessen, nicht mehr gerastert.** Nachgestellt mit
+   dem Rauschen des echten LiDAR: Das Raster ergab im künstlichen Zimmer
+   denselben Fehler wie an der echten Tür (1,22 m, Nummer neben der Tür) und
+   zu schmale Türen; der Median der Messungen je Richtung nicht.
+2. Der Prüftext nennt, warum an einem Pfosten keine Wandlinie entstand.
+3. Die Frage an die KI kennt die Einordnung „wand“, lässt nur Nummern
+   wählen, die in einem Foto stehen, und erklärt Nummern am unteren Bildrand.
+4. Die Auswertung überträgt Christophers Angaben nach der Lage der
+   Öffnungen. Öffnungen an neuer Stelle sind „nicht beurteilt“.
 
 ## Vorab festgelegte Erwartungen
 
 Sie stehen hier, bevor gemessen wird. Trifft eine nicht zu, ist das ein
 Befund und wird berichtet, nicht nachgebessert.
 
-| Aufnahme | Am 21.11. vermessen | Erwartung jetzt |
+| Aufnahme | In KI-0N vermessen | Erwartung jetzt |
 |---|---|---|
-| `labor_tuer_vorn`, `labor_tuer_vorn_2` | Tür 0,74 und 0,73 m | unverändert etwa 0,75 m, eine Nummer auf der Schwelle |
-| `labor_tuer_seite_nah_b` | Tür als 1,22 m breite Lücke, Nummer neben der Tür | Tür zwischen 0,70 und 0,95 m, zweite Kante „blatt“ oder „lot“, Nummer auf der Schwelle |
-| `labor_tuer_weit_seite` | Tür als 1,76 m breite Lücke, Nummer auf dem Türblatt | Tür zwischen 0,70 und 0,95 m, Nummer links vom Türblatt auf der Schwelle |
-| `labor_tuer_weit` | Tür in 4–5 m ohne Nummer; nur eine 2,25 m breite Möbellücke | die Tür hat eine Nummer |
-| `labor_ecke` | Ausgang als 1,74 m breite Lücke | Ausgang zwischen 0,70 und 0,95 m |
-| alle | sieben von zwölf Vorschlägen waren Lücken an Möbeln | weniger Vorschläge seitlich und hinter dem Roboter als am 21.11. |
+| `labor_tuer_vorn`, `labor_tuer_vorn_2`, `labor_blatt_90` | Tür 0,75, 0,72 und 0,71 m bei wahren 0,85 m | Tür zwischen 0,78 und 0,90 m |
+| `labor_tuer_seite_nah_b` | Tür als 1,24 m breite Lücke, „sprung“, Vermerk „keine_wandlinie“ | Tür zwischen 0,75 und 0,95 m, zweite Kante „blatt“ oder „lot“; die Auswertung meldet sie als Öffnung an neuer Stelle, 0,3 bis 0,6 m von der früheren Nr. 2 und links davon |
+| `labor_tuer_weit`, `labor_tuer_weit_seite`, `labor_ecke` | Tür 0,70, 0,77 und 0,72 m in 3,5 bis 4 m | Tür weiter angeboten, zwischen 0,75 und 0,90 m |
+| `labor_tuer_zu` | nichts angeboten | weiter nichts angeboten |
+| alle | an den meisten Türpfosten Vermerk „keine_wandlinie“ | an Türpfosten überwiegend kein Vermerk „wand_…“ mehr |
+| `flur` | Nr. 1 auf der Wand zwischen zwei Türen; die Türen ohne Nummer | keine Erwartung; der Prüftext mit `--alle` soll zeigen, was dort geprüft und verworfen wird |
 
-Ob das zutrifft, ist offen: Die Korrekturen sind nur im künstlichen Zimmer
-geprüft.
+Zur KI gibt es keine Erwartung; die Frage hat sich geändert, das Ergebnis
+wird berichtet.
 
 ## Regeln
 
-- **Kein Motor, kein Fahr-Stack.** Teil 1 startet nichts außer den
-  Werkzeugen dieser Linie. Teil 2 startet, nur wenn neue Ansichten
-  aufgenommen werden, Kamera und LiDAR.
-- **Bilder bleiben im Haus.** Aufnahmen, Blätter und Ergebnisdateien liegen
-  nur auf dem Jetson (`~/.local/share/amadeus/ki_erkundung/`,
-  `~/ki_trockenlauf_ki0n/`). Nichts davon in ein Repository. In den Bericht
-  kommen nur Zahlen, Antworttexte und der Prüftext der Vermessung (er
-  enthält Maße einzelner Lücken, keine Bilder, keine Scans, keine Karte).
-  **Kein Bild und keine Scan-Datei in den Chat laden.** Die Blätter sieht
-  Christopher am Bildschirm des Jetson.
-- **Nichts Vorhandenes ändern, nichts reparieren.** Läuft ein Schritt nicht,
-  die Meldung wörtlich berichten und beim nächsten sinnvollen Schritt
-  weitermachen.
-- **Prozesse einzeln beenden:** genau ein SIGINT an die jeweilige PID, nie
-  an eine Prozessgruppe (AGENTS §3).
+- **Kein Motor, kein Fahr-Stack, keine Sensoren.** Gestartet werden nur die
+  drei Werkzeuge unten.
+- **Bilder bleiben im Haus.** Kein Bild und keine Scan-Datei in den Chat. In
+  den Bericht kommen nur Zahlen, Antworttexte und die Texte der Werkzeuge.
+- **Nichts ändern, nichts reparieren, kein eigenes Programm für die
+  Anzeige.** Braucht Christopher ein Blatt, wird es mit dem vorhandenen
+  Bildbetrachter in einem gewöhnlichen Fenster geöffnet, nie im Vollbild:
+  `env --default-signal=INT eog DATEI &`. Geschlossen wird es mit dem Kreuz
+  oder einem SIGINT an seine PID.
 
----
+## Schritte
 
-## Teil 1 – ohne Christopher möglich
-
-### N0 – Bestand und Umgebung
-
-Wie am 21.11.2026 entschieden, gilt für alles mit ROS die Umgebung der
-WE-1-Release (`~/ki_trockenlauf_ki0/umgebung_we1.bash`, damals angelegt).
-`~/roboter_ws/install` und die SH-9-Release sind für diese Linie nicht
-brauchbar (Befund 21.11.2026).
+### R0 – Bestand und Umgebung
 
 ```bash
-date -Iseconds; MY=$$; pgrep -af "ros2 launch|ldlidar|depthai|base_hardware|slam_toolbox" | grep -v "^$MY " || echo "keine Amadeus-Prozesse"
-KI=~/ki_trockenlauf_ki0n; mkdir -p "$KI"
-R=~/.local/share/amadeus/ki_erkundung/blickrunden; ls "$R"
+date -Iseconds; pgrep -af "[r]os2 launch|[l]dlidar|[d]epthai|[b]ase_hardware|[s]lam_toolbox" || echo "keine Amadeus-Prozesse"
 source ~/ki_trockenlauf_ki0/umgebung_we1.bash
-timeout 15 ros2 topic echo --once /ki_erkundung/lotse_status_json
+KI=~/ki_trockenlauf_ki0r; mkdir -p "$KI"          # nach dem source: die Datei setzt KI selbst
+R=~/.local/share/amadeus/ki_erkundung/blickrunden; ls "$R" | wc -l
+timeout 15 ros2 topic echo --once --full-length /ki_erkundung/lotse_status_json > "$KI/lotse_status.txt" 2>&1; cat "$KI/lotse_status.txt"
 ```
 
-`MY=$$;` steht mit Semikolon in derselben Zeile wie `pgrep`. Läuft ein Stack
-oder ein fremder Test: Christopher einmal fragen, nichts selbst beenden.
+Die eckigen Klammern im Muster sorgen dafür, dass `pgrep` die eigene Shell
+nicht trifft. Kommt kein Status des Lotsen-Dienstes: R1 und R2 trotzdem
+ausführen, Christopher bitten, auf dem KI-Rechner „Amadeus Lotse“ zu öffnen,
+dann R3.
 
-Kommt kein Status des Lotsen-Dienstes: Teil 1 trotzdem bis N2 ausführen.
-Christopher bitten, den KI-Rechner einzuschalten und dort das Programm
-„Amadeus Lotse“ zu öffnen (Abschnitt „KI-Rechner“ unten).
-
-### N1 – Stand holen und Tests
+### R1 – Stand holen und Tests
 
 ```bash
 cd ~/roboter_worktrees/selbstheilung-v2 && git status --short | head -5 && \
@@ -91,261 +89,65 @@ cd ~/roboter_worktrees/selbstheilung-v2 && git status --short | head -5 && \
   python3 -m pytest -q -p no:cacheprovider ki_erkundung/tests 2>&1 | tail -5 )
 ```
 
-Erwartung: `187 passed`.
+Erwartung: `202 passed`.
 
-### N2 – Vermessung der gespeicherten Aufnahmen prüfen (ohne ROS, ohne KI)
+### R2 – Vermessung prüfen (ohne ROS, ohne KI)
 
 ```bash
-python3 ki_erkundung/werkzeuge/vermessung_pruefen.py --runden "$R" --bericht "$KI/pruefung.md"
+python3 ki_erkundung/werkzeuge/vermessung_pruefen.py --runden "$R" --bericht "$KI/pruefung.md" > /dev/null
+python3 ki_erkundung/werkzeuge/vermessung_pruefen.py --runden "$R" --alle --bericht "$KI/pruefung_alle.md" > /dev/null
+wc -l "$KI/pruefung.md" "$KI/pruefung_alle.md"
 ```
 
-Der ganze Text von `$KI/pruefung.md` gehört in den Bericht. Er nennt je
-Aufnahme die angebotenen Öffnungen und die verworfenen Lücken mit Grund.
+In den Bericht: der ganze Text von `pruefung.md`; aus `pruefung_alle.md`
+nur der Abschnitt `flur`.
 
-### N3 – die KI zu allen gespeicherten Aufnahmen fragen (ohne Denken)
-
-Nur wenn Christopher in Teil 2 **keine** neuen Ansichten aufnimmt; sonst
-erst nach den Aufnahmen (Schritt C3), damit alle Blätter aus einem Lauf
-stammen.
+### R3 – die KI zu allen elf Aufnahmen fragen (ohne Denken) und auswerten
 
 ```bash
 python3 ki_erkundung/werkzeuge/trockenlauf.py --runden "$R" --ausgabe "$KI/alle" \
-  --ueber-ros --denken aus | tee "$KI/alle.txt"
-```
-
-Mit Denken wird nicht mehr gefragt (am 21.11. langsamer, einmal 64,6 s ohne
-brauchbare Antwort, in der Wahl nicht besser).
-
----
-
-## Teil 2 – mit Christopher
-
-### C1 bis C3 – neue Ansichten (wenn Christopher Zeit hat; sonst weiter bei C4)
-
-Für ein Urteil nach den Kriterien fehlen: mehr Ansichten mit Tür (zehn sind
-nötig, fünf gibt es), eine Glasfläche oder ein Spiegel im Blick, eine
-Ansicht zweimal an genau derselben Stelle. Amadeus wird von Hand hingestellt
-und steht bei jeder Aufnahme still.
-
-**C1 – Kamera und LiDAR starten (keine Motoren):**
-
-```bash
-nohup env --default-signal=INT ros2 launch robot_bringup oak.launch.py pointcloud:=false \
-  > "$KI/oak.log" 2>&1 < /dev/null & echo $! > "$KI/oak.pid"
-nohup env --default-signal=INT ros2 launch amadeus_lidar_bringup stl27l.launch.py publish_static_tf:=true \
-  > "$KI/lidar.log" 2>&1 < /dev/null & echo $! > "$KI/lidar.pid"
-sleep 20
-timeout -s INT 30 ros2 topic hz /oak/semantic/rgb/compressed 2>&1 | tail -2
-timeout -s INT 30 ros2 topic hz /scan 2>&1 | tail -2
-```
-
-Erwartung: Bilder etwa 2 Hz, Scans etwa 10 Hz.
-
-**C2 – je Ansicht 8 Sekunden aufnehmen:**
-
-```bash
-NAME=labor_blatt_90
-python3 ki_erkundung/werkzeuge/blickrunde_aufnehmen.py --name "$NAME" --dauer 8 | tee "$KI/${NAME}_aufnahme.txt"
-```
-
-Gewünschte Ansichten, so viele wie möglich, in dieser Reihenfolge der
-Wichtigkeit (Namen kurz, ohne Leerzeichen):
-
-1. Labortür offen, Türblatt etwa im rechten Winkel, Amadeus steht auf der
-   Scharnierseite und schaut an der Blattspitze vorbei in die Tür.
-2. Labortür geschlossen, von vorn.
-3. Ein Fenster, eine Balkon- oder Glastür im Blick.
-4. Ein Spiegel im Blick, falls es einen gibt.
-5. Flur mit mehreren Türen.
-6. Ein anderes Zimmer mit offener Tür im Blick.
-7. Eine der Ansichten mit Tür zweimal an **genau derselben Stelle**: Räder
-   vorher mit Klebeband am Boden markieren, Amadeus wegstellen, wieder
-   hinstellen, zweite Aufnahme mit demselben Namen und dem Zusatz `_2`.
-
-Zu jeder Ansicht in einem Satz notieren, was Christopher über die Stelle
-sagt (zum Beispiel „Tür offen, Blatt 90 Grad, 2 m“).
-
-**C3 – beenden und alle Aufnahmen fragen:**
-
-```bash
-kill -INT "$(cat "$KI/oak.pid")"; kill -INT "$(cat "$KI/lidar.pid")"; sleep 5; MY=$$; pgrep -af "ros2 launch|ldlidar|depthai" | grep -v "^$MY " || echo "keine Amadeus-Prozesse"
-python3 ki_erkundung/werkzeuge/vermessung_pruefen.py --runden "$R" --bericht "$KI/pruefung.md"
-python3 ki_erkundung/werkzeuge/trockenlauf.py --runden "$R" --ausgabe "$KI/alle" \
-  --ueber-ros --denken aus | tee "$KI/alle.txt"
-```
-
-Meldet der LiDAR-Treiber beim Beenden wieder `buffer overflow detected`
-(21.11.2026), die Zeile berichten; das ist bekannt und kein Abbruchgrund.
-
-### C4 – Christopher sieht jedes Blatt
-
-Für jede Aufnahme (auch die sieben vom 21.11., ihre Nummern haben sich
-geändert) das Blatt `$KI/alle/<Name>/uebersicht.jpg` im Vollbild auf dem
-Bildschirm des Jetson zeigen, die Antwort der KI aus `$KI/alle.txt` nennen
-und fragen, je einzeln, Antworten wörtlich notieren:
-
-1. Welche Nummern sind echte, offene Ausgänge, durch die Amadeus fahren könnte?
-2. Was ist jede Nummer wirklich (offene Tür, geschlossene Tür, Durchgang, Glas, Spiegel, Lücke an Möbeln, Nische)?
-3. Gibt es von hier einen offenen Ausgang, der keine Nummer bekommen hat?
-4. Steht die Nummer der Tür im Foto auf der Türschwelle, oder daneben (wo)?
-5. In welchem Raum steht Amadeus?
-
-Die Angaben eintragen (frühere Angaben bleiben als `wahrheit_vorher_1.json`
-erhalten):
-
-```bash
-python3 ki_erkundung/werkzeuge/wahrheit_eintragen.py --ergebnis "$KI/alle/ergebnis.json" --runden "$R" \
-  --name labor_tuer_vorn --ausgaenge 1 --arten 1=tuer_offen --raum Labor \
-  --ausgang-ohne-nummer nein --bemerkung "Nummer auf der Schwelle"
-```
-
-Erlaubte Arten: `tuer_offen`, `tuer_geschlossen`, `durchgang`, `glas`,
-`spiegel`, `moebelspalt`, `nische`, `unklar`. Ohne echten Ausgang unter den
-Nummern bleibt `--ausgaenge` leer. Die Aufnahme `labor_tuer_seite_nah` (Tür
-fast zu) wird diesmal mitgewertet, so wie Christopher sie beurteilt.
-
-### C5 – auswerten
-
-```bash
+  --ueber-ros --denken aus > "$KI/alle.txt" 2>&1; cat "$KI/alle.txt"
 python3 ki_erkundung/werkzeuge/trockenlauf_auswerten.py --ergebnis "$KI/alle/ergebnis.json" \
-  --runden "$R" --bericht "$KI/auswertung.md" --json "$KI/auswertung.json"
+  --runden "$R" --bericht "$KI/auswertung.md" --json "$KI/auswertung.json" > /dev/null; cat "$KI/auswertung.md"
 ```
 
----
+Die Angaben in den `wahrheit.json` werden dabei **nicht** verändert.
 
-## KI-Rechner – Lotsen-Fenster einrichten (vor dem Teil auf dem Jetson)
+### R4 – nur wenn die Auswertung „nicht beurteilt“ meldet und Christopher Zeit hat
 
-Wunsch des Projektinhabers (21.11.2026): Auf dem KI-Rechner soll es ein
-Programm mit Symbol auf dem Desktop geben, das den Lotsen-Dienst startet und
-zeigt, ob alles läuft und verbunden ist, mit Log. Das ist
-`werkzeuge/lotse_fenster.py`: Es startet den Dienst und zeigt seine Anzeige
-im Browser. Die Anzeige ist nur von diesem Rechner aus erreichbar
-(127.0.0.1); die Bilder der letzten Frage liegen nur auf diesem Rechner.
+Für jede Aufnahme, bei der eine Öffnung „an neuer Stelle“ liegt, das Blatt
+`$KI/alle/<Name>/uebersicht.jpg` in einem gewöhnlichen Fenster zeigen und
+fragen, je einzeln, Antworten wörtlich notieren:
 
-Nicht ändern: `amadeus-ki.service`, seine Einstellungen, Netz und Firewall
-des Rechners, `~/roboter_ws`. Nichts reparieren; Meldungen wörtlich
-berichten. Kein Bild in den Chat laden.
+1. Welche Nummern sind echte, offene Ausgänge?
+2. Was ist jede Nummer wirklich (offene Tür, geschlossene Tür, Durchgang, Glas, Spiegel, Lücke an Möbeln, Nische, Wand)?
+3. Steht die Nummer der Tür im Foto auf der Türschwelle, oder daneben (wo)?
 
-**F0 – Bestand:**
+Dann mit `wahrheit_eintragen.py` eintragen wie in KI-0N (`--ergebnis
+"$KI/alle/ergebnis.json"`; erlaubte Arten jetzt auch `wand`) und R3, zweite
+Zeile, noch einmal ausführen. Hat Christopher keine Zeit, entfällt R4; das
+berichten.
 
-```bash
-date -Iseconds; ps -ef | grep lotse_dienst.py | grep -v grep
-ls -l ~/ki_trockenlauf_ki0/cyclonedds_lotse.xml ~/.config/amadeus/ 2>&1 | head
-```
+## KI-Rechner – Lotsen-Fenster einrichten (falls noch nicht geschehen)
 
-Die Umgebung `umg` ist dieselbe wie im archivierten Auftrag (A0). Notieren,
-mit welcher DDS-Datei der laufende Dienst gestartet wurde (Pfad, keine
-Adressen).
-
-**F1 – neuen Stand holen und Tests:**
-
-```bash
-git -C ~/ki_erkundung_ws fetch origin claude/blissful-pasteur-s1eivj
-git -C ~/ki_erkundung_ws checkout --detach FETCH_HEAD; git -C ~/ki_erkundung_ws rev-parse HEAD
-umg 'cd ~/ki_erkundung_ws && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 env -u CYCLONEDDS_URI \
-     ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 python3 -m pytest -q -p no:cacheprovider ki_erkundung/tests 2>&1 | tail -3'
-```
-
-Erwartung: `187 passed`.
-
-**F2 – DDS-Einstellung des Lotsen an einen dauerhaften Ort kopieren**
-(der Ordner `~/ki_trockenlauf_ki0/` darf später gelöscht werden):
-
-```bash
-mkdir -p ~/.config/amadeus && cp -n ~/ki_trockenlauf_ki0/cyclonedds_lotse.xml ~/.config/amadeus/cyclonedds_lotse.xml
-```
-
-**F3 – Startskript anlegen** (liegt nur auf diesem Rechner, nicht im
-Repository). Es setzt genau die Umgebung von `umg`; Pfad der Pixi-Datei,
-Domain und Middleware an `umg` angleichen:
-
-```bash
-mkdir -p ~/.local/share/amadeus/ki_erkundung
-cat > ~/.local/share/amadeus/ki_erkundung/lotse_fenster_start.sh <<'ENDE'
-#!/bin/bash
-# Startet das Lotsen-Fenster (Lotsen-Dienst mit Anzeige) für Amadeus.
-export ROS_DOMAIN_ID=42 RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-export CYCLONEDDS_URI="file://$HOME/.config/amadeus/cyclonedds_lotse.xml"
-exec pixi run --manifest-path "$HOME/roboter_ws/src/robot_bringup/config/offboard_pixi.toml" \
-     python3 "$HOME/ki_erkundung_ws/ki_erkundung/werkzeuge/lotse_fenster.py" --modell qwen3.5:9b
-ENDE
-chmod +x ~/.local/share/amadeus/ki_erkundung/lotse_fenster_start.sh
-```
-
-Findet die Desktop-Umgebung `pixi` nicht (anderer Suchpfad als im Terminal),
-im Skript den vollen Pfad aus `command -v pixi` einsetzen.
-
-**F4 – Symbol auf dem Desktop und im Programmmenü:**
-
-```bash
-D="$(xdg-user-dir DESKTOP)/Amadeus-Lotse.desktop"
-cat > "$D" <<ENDE
-[Desktop Entry]
-Type=Application
-Name=Amadeus Lotse
-Comment=Lotsen-Dienst für Amadeus starten und anzeigen
-Exec=$HOME/.local/share/amadeus/ki_erkundung/lotse_fenster_start.sh
-Icon=applications-science
-Terminal=false
-Categories=Utility;
-ENDE
-chmod +x "$D"; gio set "$D" metadata::trusted true 2>&1 | tail -1
-mkdir -p ~/.local/share/applications && cp "$D" ~/.local/share/applications/amadeus-lotse.desktop
-```
-
-**F5 – den alten Hintergrunddienst beenden und das Programm starten.**
-Den am 21.11. von Hand gestarteten Dienst mit genau einem SIGINT an seine
-PID beenden (die PID aus F0). Dann bittet der Agent Christopher, das Symbol
-„Amadeus Lotse“ doppelt anzuklicken. Es öffnet sich ein Fenster des Browsers.
-Danach prüfen und die Ausgabe berichten (sie enthält keine Adressen):
-
-```bash
-kill -INT <PID aus F0>; sleep 3; ps -ef | grep lotse_dienst.py | grep -v grep
-# nach dem Doppelklick:
-curl -s --noproxy '*' http://127.0.0.1:8765/api/zustand | python3 -c "import json,sys; z=json.load(sys.stdin); print(json.dumps({k: z[k] for k in ('modell','ollama','dienst','roboter','fremde_dienste')}, ensure_ascii=False, indent=1))"
-tail -5 ~/.local/share/amadeus/ki_erkundung/lotse/lotse_dienst.log
-```
-
-Erwartung: `ollama.erreichbar` und `modell_vorhanden` wahr, `dienst.laeuft`
-und `bereit` wahr, `fremde_dienste` leer. `roboter.im_netz` ist wahr, wenn
-der Jetson eingeschaltet ist.
-
-Christopher fragen und wörtlich notieren: Öffnet sich das Fenster? Zeigt es
-oben „Bereit“? Ist etwas unklar oder fehlt etwas?
-
-**Bedienung für Christopher:** Rechner einschalten, Symbol „Amadeus Lotse“
-doppelt anklicken, fertig. Das Fenster zu schließen beendet nichts; ein
-neuer Doppelklick öffnet es wieder. Beendet wird über „Programm beenden“
-unten auf der Seite oder mit dem Herunterfahren des Rechners. **Nach KI-0N
-bleibt das Programm einfach offen oder wird dort beendet;** der frühere
-Schritt A6 entfällt damit.
-
-**Rückfall:** die beiden `.desktop`-Dateien, das Startskript,
-`~/.config/amadeus/cyclonedds_lotse.xml` und den Ordner
-`~/.local/share/amadeus/ki_erkundung/lotse` löschen. Der Dienst lässt sich
-weiter wie am 21.11. von Hand starten (archivierter Auftrag, Abschnitt N3).
-
-**Bericht des KI-Rechners:** Datei `~/ki_erkundung_bericht_fenster.md` mit
-HEAD, Testergebnis, den angelegten Dateien (Inhalt des Startskripts ohne
-Adressen), der Ausgabe aus F5, Christophers Antworten und allem, was nicht
-lief.
-
----
+Der Abschnitt steht unverändert im archivierten Auftrag
+[KI-0N](archiv/20261121-ki0n-nachmessen/AUFTRAG.md), Schritte F0 bis F5, und
+gilt weiter. Einzige Änderung: Die Tests melden jetzt `202 passed`. Ein
+Bericht dazu liegt noch nicht vor.
 
 ## Bericht
 
-Datei `~/ki_erkundung_bericht_ki0n.md`, ohne Bilder und ohne Scans:
+Datei `~/ki_erkundung_bericht_ki0r.md`, ohne Bilder und ohne Scans:
 
 1. Stand (HEAD), Testergebnis, Status des Lotsen-Dienstes.
-2. Der ganze Text aus `$KI/pruefung.md`.
-3. Die Tabelle „Vorab festgelegte Erwartungen“ von oben, je Zeile mit dem,
-   was gemessen wurde, und „trifft zu“ oder „trifft nicht zu“.
-4. Je Aufnahme: aus `$KI/alle.txt` die Zeile der KI; aus `ergebnis.json` die
-   vermessenen Öffnungen (Nummer, Breite, Entfernung, Richtung, zweite
-   Kante); Christophers Antworten wörtlich; der eingetragene Befehl.
+2. Der ganze Text aus `$KI/pruefung.md`; aus `$KI/pruefung_alle.md` der
+   Abschnitt `flur`.
+3. Die Tabelle „Vorab festgelegte Erwartungen“, je Zeile mit dem Gemessenen
+   und „trifft zu“ oder „trifft nicht zu“.
+4. Der Inhalt von `$KI/alle.txt` und je Aufnahme die Begründung der KI aus
+   `ergebnis.json`.
 5. Der Text aus `$KI/auswertung.md`.
-6. Bei neuen Ansichten: Bildrate, Scanrate, die Zeilen des
-   Aufnahmewerkzeugs, Christophers Satz zur Stelle.
+6. Falls R4 lief: Christophers Antworten wörtlich und die Befehle.
 7. Alles, was nicht lief, mit Meldung. Keine Deutung.
 
 ## Ende
