@@ -431,7 +431,14 @@ def _zeile(g: dict, ursprung: np.ndarray, ergebnis: str, nr: Optional[int] = Non
     def gerundet(wert, stellen=2):
         return None if wert is None else round(float(wert), stellen)
 
+    def polar(punkt) -> List[float]:
+        p = np.asarray(punkt, dtype=float) + ursprung
+        return [round(math.degrees(math.atan2(p[1], p[0])), 1),
+                round(float(np.hypot(p[0], p[1])), 2)]
+
     return {
+        # die beiden Kanten der Lücke: Richtung in Grad und Entfernung in m
+        'pfosten': [polar(g['a']), polar(g['b'])],
         'ergebnis': ergebnis, 'nr': nr, 'schluss': g['schluss'],
         'breite_m': gerundet(g['breite']),
         'richtung_grad': gerundet(math.degrees(math.atan2(mitte[1], mitte[0])), 1),
@@ -509,23 +516,18 @@ def oeffnungen(winkel_rad, entfernung_m, *,
 
     # Überdecken sich zwei Lücken im Blickwinkel, bleibt eine:
     # - türgroß vor breit: Hinter einer breiten Möbellücke zählt die Tür.
-    # - zwei türgroße in verschiedener Entfernung: die nähere. Die fernere
-    #   ist dann eine Tür, die man durch die nähere hindurch sieht.
     # - sonst die schmalere. Sonst entsteht aus einer Möbelkante und einem
     #   Türpfosten eine breite Scheinöffnung quer über die echte Tür (und
     #   dieselbe Tür doppelt aus beiden Durchlaufrichtungen).
+    # Die Regel „von zwei türgroßen die nähere“ (für eine Tür, durch die man
+    # eine zweite sieht) galt nur am 21.11.2026: An der echten Labortür
+    # verdrängte damit eine 0,90 m breite Lücke 0,5 m vor der Tür die Tür
+    # selbst, und die Nummer stand auf der Türzarge (KI-0R). Ohne sie hatte
+    # dieselbe Aufnahme die Tür richtig angeboten (KI-0N).
     gefunden: List[dict] = []
     for g in sorted(alle, key=lambda g: (g['breite'] > tuerbreit_m, g['breite'])):
-        gegner = [v for v in gefunden
-                  if _ueberdeckung(g, v) > 0.5 * min(g['spanne'], v['spanne'])]
-        if not gegner:
-            gefunden.append(g)
-        elif (g['breite'] <= tuerbreit_m
-              and all(v['breite'] <= tuerbreit_m
-                      and g['entfernung'] < v['entfernung'] - 0.5 for v in gegner)):
-            for v in gegner:
-                gefunden.remove(v)
-                verdraengt.append((v, 'hinter_naeherer_tuer'))
+        if all(_ueberdeckung(g, v) <= 0.5 * min(g['spanne'], v['spanne'])
+               for v in gefunden):
             gefunden.append(g)
         else:
             verdraengt.append((g, 'ueberdeckt'))

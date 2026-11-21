@@ -34,7 +34,6 @@ GRUENDE = {
     'blick_zu_flach': 'Blick zu flach auf die Lücke',
     'entfernung': 'zu nah oder zu weit',
     'ueberdeckt': 'von einer anderen Lücke überdeckt',
-    'hinter_naeherer_tuer': 'liegt hinter einer näheren Tür',
     'schmalere_gewaehlt': 'von derselben Kante aus gab es eine schmalere',
     'nur_bis_zur_blattspitze': 'reicht nur bis zur Spitze eines Türblatts',
     'blatt_im_weg': 'das Türblatt steht im Weg',
@@ -81,16 +80,24 @@ def pruefe_runde(runde: Blickrunde, alle: bool = False) -> List[str]:
     ]
     if gefunden:
         zeilen += ['Angeboten:', '',
-                   '| Nr. | Breite | Richtung | Entfernung | freie Tiefe | zweite Kante | '
-                   'Vermerk | ohne Echo | unruhiges Echo |',
-                   '|---|---|---|---|---|---|---|---|---|']
-        vermerk = {z['nr']: z.get('blatt') for z in protokoll if z['ergebnis'] == 'angeboten'}
+                   '| Nr. | Breite | Richtung | Entfernung | Kanten (Richtung / Entfernung) | '
+                   'freie Tiefe | zweite Kante | Vermerk | ohne Echo | unruhiges Echo |',
+                   '|---|---|---|---|---|---|---|---|---|---|']
+        eintrag = {z['nr']: z for z in protokoll if z['ergebnis'] == 'angeboten'}
         for o in gefunden:
             u = _unruhe(o, ursprung, *echo) if echo else None
+            # Dieselbe Lücke aus der anderen Durchlaufrichtung trägt oft den
+            # aufschlussreicheren Vermerk (dort begann die Suche am anderen Pfosten).
+            vermerke = [eintrag[o.nr].get('blatt')] + [
+                z.get('blatt') for z in protokoll if z['ergebnis'] != 'angeboten'
+                and abs((z['richtung_grad'] - o.richtung_grad + 180.0) % 360.0 - 180.0) < 3.0
+                and abs(z['breite_m'] - o.breite_m) < 0.1]
+            vermerke = list(dict.fromkeys(v for v in vermerke if v))
+            kanten = ' · '.join(f'{r:+.1f}° / {d:.2f} m' for r, d in eintrag[o.nr]['pfosten'])
             zeilen.append(
                 f'| {o.nr} | {o.breite_m:.2f} m | {o.richtung_grad:+.1f}° | '
-                f'{o.entfernung_m:.2f} m | {o.tiefe_m:.2f} m | {o.schluss} | '
-                f'{vermerk.get(o.nr) or "–"} | '
+                f'{o.entfernung_m:.2f} m | {kanten} | {o.tiefe_m:.2f} m | {o.schluss} | '
+                f'{"; ".join(vermerke) or "–"} | '
                 + (f'{100 * u["ohne_echo"]:.0f} % | {100 * u["unruhig"]:.0f} % |'
                    if u else '– | – |'))
     else:

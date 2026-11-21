@@ -300,7 +300,11 @@ def test_protokoll_nennt_angebotene_und_abgelehnte_luecken_mit_grund():
     assert any(z['ergebnis'] == 'ueberdeckt' for z in protokoll)
     assert all(set(z) == {'ergebnis', 'nr', 'schluss', 'breite_m', 'richtung_grad',
                           'entfernung_m', 'strahlen', 'tiefe_m', 'anteil_tief',
-                          'anteil_davor', 'blatt'} for z in protokoll)
+                          'anteil_davor', 'blatt', 'pfosten'} for z in protokoll)
+    # die beiden Kanten der Tür: je Richtung in Grad und Entfernung in m
+    (r1, d1), (r2, d2) = angeboten[0]['pfosten']
+    assert sorted([r1, r2]) == pytest.approx([-11.3, 11.3], abs=0.6)
+    assert d1 == pytest.approx(2.04, abs=0.03) and d2 == pytest.approx(2.04, abs=0.03)
 
 
 def test_profil_von_einem_anderen_punkt_ergibt_dieselbe_lage_im_standpunktrahmen():
@@ -312,3 +316,23 @@ def test_profil_von_einem_anderen_punkt_ergibt_dieselbe_lage_im_standpunktrahmen
     assert von_dort[0].pfosten[0][0] == pytest.approx(2.0, abs=0.03)
     ohne_angabe = oeffnungen(*profil(zimmer(), ursprung=lidar))
     assert ohne_angabe[0].mitte[0] == pytest.approx(1.755, abs=0.03)
+
+
+def test_von_zwei_ueberdeckenden_tuergrossen_luecken_bleibt_die_schmalere():
+    """Befund KI-0R (21.11.2026), `labor_tuer_vorn`.
+
+    Für einen Tag galt „die nähere zählt“. An der echten Labortür verdrängte
+    damit eine 0,90 m breite Lücke 0,5 m vor der Tür die 0,78 m breite Tür;
+    die Nummer stand auf der Türzarge. Die Regel ist wieder entfernt; im
+    Protokoll gibt es ihren Grund nicht mehr.
+    """
+    from lotse import kandidaten
+    nah = {'breite': 0.90, 'entfernung': 1.44, 'von': -0.45, 'spanne': 0.60, 'tiefe': 0.77}
+    tuer = {'breite': 0.78, 'entfernung': 1.95, 'von': -0.22, 'spanne': 0.40, 'tiefe': 1.11}
+    assert kandidaten._ueberdeckung(nah, tuer) > 0.5 * min(nah['spanne'], tuer['spanne'])
+    protokoll = []
+    oeffnungen(*profil(zimmer()), protokoll=protokoll)
+    assert not any(z['ergebnis'] == 'hinter_naeherer_tuer' for z in protokoll)
+    import inspect
+    assert 'hinter_naeherer_tuer' not in inspect.getsource(kandidaten).replace(
+        "'hinter_naeherer_tuer'", '', 0).split('gefunden: List[dict] = []')[1]
