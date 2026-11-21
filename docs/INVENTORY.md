@@ -43,6 +43,10 @@ die Ziel- und Suchwahl übernehmen. Eigenes Konzept, eigener Status, eigene
 Software ohne ROS-Paket; kein bestehendes Paket, Profil oder Werkzeug
 geändert, keine Jetson-Wirkung, kein neuer Hardware-Reifegrad. Stand
 ausschließlich in [ki_erkundung/STATUS.md](../ki_erkundung/STATUS.md).
+Seit 21.11.2026 am Roboter erstmals gelaufen (im Stand, nur Kamera und
+LiDAR): Aufnahme, Verbindung zum KI-Rechner und Antwortprüfung arbeiten;
+die Vermessung der Öffnungen ist nachgebessert und an echten Aufnahmen noch
+nicht bestätigt.
 
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
@@ -187,5 +191,5 @@ Bereiche enthalten.
 |---|---|---|
 | iOS-App „Amadeus" | `ios/Robotersteuerung/` | Raumeditor und Raumwahl am realen ROS-System abgenommen |
 | Übergabeprotokolle | `integration/` | Dokumentation |
-| KI-Erkundung (getrennte Linie) | `ki_erkundung/` | Entwurf (Konzept v1.0; Werkzeuge nur in der Entwicklungsumgebung geprüft) |
+| KI-Erkundung (getrennte Linie) | `ki_erkundung/` | Entwurf (Konzept v1.2; am 21.11.2026 im Stand mit Kamera, LiDAR und KI-Rechner gelaufen, noch kein Urteil nach den Kriterien; nichts fährt) |
 | Prüfplan | `Roboter_Pruefplan.md`, `pruefplan_jetson.sh` | produktiv genutzt |

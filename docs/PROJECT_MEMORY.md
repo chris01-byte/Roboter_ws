@@ -1867,3 +1867,33 @@ auskommen, an der SH-9 scheiterte. Ausgangspunkt der Überlegung: Das
 vorhandene Fahrtor lässt vom Erkunder schon heute genau zwei begrenzte
 Bewegungen zu, Drehen auf der Stelle (Rundblick) und Geradeausfahrt mit
 kleiner Lenkkorrektur (frühere Türdurchfahrt).
+
+**Nachtrag 21.11.2026 – erster echter Lauf der KI-Linie (KI-0 Teil B) und
+was daraus folgt:** Amadeus stand im Labor, Kamera und LiDAR liefen, der
+KI-Rechner (`qwen3.5:9b`) antwortete über WLAN zu sieben Standbildern in
+1,5 bis 4 s. Entscheidungen und Gründe:
+- **Das schwache Glied ist die Vermessung der Öffnungen, nicht die KI.** Wo
+  die Tür eine Nummer hatte und im Foto zu sehen war, wurde sie gewählt
+  (vier von vier). Die Vermessung maß die 85-cm-Tür von der Seite aber 1,22
+  und 1,76 m breit, bot sie aus 4–5 m gar nicht an und schlug überwiegend
+  Lücken an Möbeln vor. Deshalb wird zuerst die Vermessung nachgebessert und
+  an den gespeicherten Aufnahmen geprüft (Auftrag KI-0N), bevor am Fahrteil
+  weitergebaut wird.
+- **Die KI nimmt, was man ihr anbietet.** War nur eine Möbellücke angeboten,
+  wählte sie diese als Durchgang. Folge: Die Prüfung durch die Vermessung
+  bleibt Pflicht, und K0-1 zählt jetzt auch Runden ohne angebotenen Ausgang
+  (richtig ist dort keine Wahl).
+- **Denkschalter aus:** 8 bis 16 s statt 2 s, einmal 64,6 s ohne brauchbare
+  Antwort, in der Wahl nicht besser.
+- **Raumnamen aus einem einzelnen Bild sind unbrauchbar** (in allen
+  Ansichten falsch); Raumnamen bleiben eine spätere Stufe (KI-4).
+- **Lehre für die Arbeitsweise:** Das künstliche Zimmer hatte kein Türblatt
+  und kaum Möbel und zeigte deshalb keinen der Fehler. Die Vermessung
+  schreibt jetzt zu jeder geprüften Lücke den Grund mit; ein Prüfwerkzeug
+  gibt das am Jetson als Text aus (nur Maße, keine Bilder oder Scans), damit
+  die nächste Korrektur auf Messung beruht und nicht auf Vermutung.
+- **Nicht entschieden:** größere Kamerabilder (geliefert werden 320 × 180);
+  der zweite Weg, bei dem die KI die Tür im Foto selbst zeigt und der Laser
+  nur dort misst. Beides nach dem Ergebnis von KI-0N.
+Stand und Zahlen: `ki_erkundung/STATUS.md`, Archiv des Auftrags unter
+`ki_erkundung/archiv/20261121-ki0-erstes-sehen/`.

@@ -300,6 +300,42 @@ des Agenten). `SH_REL` zeigt weiter auf `selbstheilung-w1-20261115_1801`.
 `~/roboter_ws`, Releases, Kalibrierung und Autostart unverändert; danach
 keine Amadeus-Knoten aktiv.
 
+Nachtrag 21.11.2026, tatsächliche Wirkung des Auftrags KI-0 der KI-Linie
+(Bericht des Jetson-Agenten, 10:00 bis 11:29): **keine Motoren, kein
+Fahr-Stack, kein Build, kein Installwechsel.**
+- **Jetson:** `~/roboter_worktrees/selbstheilung-v2` per Fast-forward von
+  `c567c2d` auf `14294ec` gebracht. Gestartet und wieder beendet wurden nur
+  `oak.launch.py pointcloud:=false` und `stl27l.launch.py
+  publish_static_tf:=true`, aus der Umgebung der WE-1-Release
+  `we1-10e1858074e7-r1` (Entscheidung Christopher; `~/roboter_ws/install`
+  vom 27.07. startet weder Kamera-Relay noch LiDAR, der SH-9-Release fehlt
+  `semantic_perception`). Lokal neu: `~/ki_trockenlauf_ki0/` (Logs,
+  Ausgaben, Umgebungsdatei `umgebung_we1.bash`) und sieben Aufnahmen unter
+  `~/.local/share/amadeus/ki_erkundung/blickrunden/`; Bilder und Scans nur
+  dort. `~/roboter_ws`, Releases, `SH_REL`, Kalibrierung und Autostart
+  unverändert; danach keine Amadeus-Knoten aktiv.
+- **Gemessen:** Bildstrom `/oak/semantic/rgb/compressed` 320 × 180 bei
+  2,0 Hz (in den Releases `i_isp_den: 6`; der August-Abschnitt unten nennt
+  640 × 360), `/scan` 9,9 Hz. Beim Beenden meldete der LiDAR-Treiber
+  `buffer overflow detected` (Ende mit −6); während des Laufs keine Fehler.
+  `update-manager` belegte währenddessen etwa 94 % eines Kerns.
+- **KI-Rechner:** Modelle `qwen3.5:9b` und `qwen3-vl:8b` geladen; eigener
+  Ordner `~/ki_erkundung_ws`; `~/ki_trockenlauf_ki0/`. Für den
+  Lotsen-Dienst sah der Auftrag eine **Kopie** der DDS-Einstellung vor, in
+  der nur die Netzwerkschnittstelle auf WLAN zeigt
+  (`cyclonedds_lotse.xml`); ein eigener Bericht dazu liegt nicht vor, belegt
+  ist, dass der Dienst am 21.11. vom Jetson aus über WLAN antwortete. Laut
+  Auftrag unverändert: `amadeus-ki.service`, seine DDS-Datei und das Netz
+  des Rechners. **Der Lotsen-Dienst (ein Python-Prozess,
+  kein Systemdienst) lief nach dem Auftrag weiter;** er wird nach dem
+  Folgeauftrag KI-0N beendet. Rückfall: den Prozess mit SIGINT beenden, die
+  genannten Ordner löschen, die Modelle mit `ollama rm` entfernen.
+
+Stand 21.11.2026, **noch keine weitere Jetson-Wirkung:** Auftrag KI-0N der
+KI-Linie ist erteilt (`ki_erkundung/AUFTRAG.md`): die sieben Aufnahmen neu
+auswerten, auf Wunsch weitere Standbilder mit Kamera und LiDAR; keine
+Motoren. Die tatsächliche Wirkung wird nach dem Bericht nachgetragen.
+
 Stand 16.11.2026 (abends), **noch keine Jetson-Wirkung:** Auftrag SH-9 ist
 erteilt (`bab7cc7`, Profil mit EK-1). Er wird einen neuen Release
 `selbstheilung-sh9-<STAMP>` bauen und `SH_REL` darauf stellen (Rückfall:

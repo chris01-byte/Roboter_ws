@@ -22,10 +22,13 @@ fährt.**
 | `werkzeuge/blickrunde_aufnehmen.py` | Auf dem Jetson: hört während einer Drehung mit und speichert Bilder, Tiefenbilder und Scans als Blickrunde. Nur lesend; legt außerhalb des Repositorys ab |
 | `werkzeuge/trockenlauf.py` | Auf dem KI-Rechner: Blickrunden aufbereiten (Drehwinkel, acht Bilder, Öffnungen, Nummern, Skizze) und die KI befragen |
 | `werkzeuge/trockenlauf_auswerten.py` | Antworten gegen die Angaben des Menschen halten; Bericht zu den Kriterien K0-1 bis K0-6 |
+| `werkzeuge/vermessung_pruefen.py` | Zu gespeicherten Blickrunden nennen, welche Lücken der Laser angeboten und welche er verworfen hat, mit Grund. Nur Maße, keine Bilder oder Scans; ohne ROS und ohne KI-Rechner |
+| `werkzeuge/wahrheit_eintragen.py` | Die Angaben des Menschen zu einem Blatt eintragen, mit der Lage jeder Nummer; frühere Angaben bleiben erhalten |
 | `werkzeuge/lotse_dienst.py` | Auf dem KI-Rechner: Lotsen-Dienst. Nimmt Fragen des Roboters über ROS an und fragt Ollama auf demselben Rechner |
 | `werkzeuge/ki_verbindung_ros.py` | Gegenstück auf dem Roboter (`trockenlauf.py --ueber-ros`); drei eigene Themen `/ki_erkundung/…`, nur Text |
 | `werkzeuge/beispielrunde_erzeugen.py` | Künstliche Blickrunde (ausgedachtes Zimmer) zum Ausprobieren und Testen |
 | `quellen/` | Unverändert abgelegte Vorlagen (HomeMy-Konzept des Projektinhabers) |
+| `archiv/` | Ausgeführte Aufträge dieser Linie in der Fassung, in der sie liefen, mit Ergebnis in Zahlen |
 | `tests/` | Tests dieser Linie, darunter die Trennregeln als Tests (`test_trennung.py`) |
 
 ## Trennregeln (verbindlich, MASTERPLAN §10)

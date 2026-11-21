@@ -1,6 +1,7 @@
 # Konzept „KI-Erkundung“ – eine KI übernimmt Ziel- und Suchwahl
 
-**Version 1.1 · 19.11.2026 · Entscheidung des Projektinhabers**
+**Version 1.2 · 21.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
+nachgeführt nach dem ersten echten Lauf**
 
 Dieses Dokument ist die verbindliche Beschreibung der zweiten
 Entwicklungslinie. Verankert in MASTERPLAN §10. Den aktuellen Stand führt nur
@@ -151,7 +152,8 @@ sehen.
 **Was die Kamera sieht (Rechnung aus Montage und Datenblatt, in KI-0
 nachzumessen).** Die OAK-D-S2 sitzt 1,34 m hoch, 0,15 m vor der Antriebsmitte
 und ist 18,94° nach unten geneigt. Der Bildstrom zum KI-Rechner hat 640 × 360
-Punkte. Daraus folgt: Der Boden ist ab etwa 1,6 m vor der Kamera im Bild; nach
+Punkte (gemessen am 21.11.2026: 320 × 180, waagerecht 63,9°, senkrecht
+38,7°). Daraus folgt: Der Boden ist ab etwa 1,6 m vor der Kamera im Bild; nach
 oben reicht das Bild nur knapp über die Waagerechte (in 3 m Entfernung bis
 etwa 1,45 m Höhe). Türstürze und Zimmerdecken sind also nicht zu sehen,
 Türpfosten, Schwellen, Türblätter und der Boden dahinter schon. Ob das der
@@ -167,6 +169,22 @@ hinter der es frei weitergeht: quer zur Lücke gemessen im Mittel mindestens
 zählt nicht. Jede Öffnung bekommt eine Nummer und ihre Maße: Breite,
 Entfernung, Richtung, freie Tiefe. Unter 0,60 m Breite wird sie gezeigt,
 aber als zu schmal vermerkt.
+
+Seit dem ersten echten Lauf (21.11.2026) gilt dazu:
+- **Offenes Türblatt.** Von der Scharnierseite endet die sichtbare Lücke an
+  der Spitze des Türblatts, nicht am Türpfosten. Das Blatt wird deshalb bis
+  zur Wand verfolgt; der zweite Pfosten ist das Scharnier, die lichte Breite
+  der Abstand des sichtbaren Pfostens zum Blatt. Die Nummer steht auf dem
+  Stück der Schwelle, das vom Standpunkt aus zu sehen ist.
+- **Türgroß vor breit.** Lücken bis 1,3 m gelten als türgroß. Hinter einer
+  breiteren Lücke (freier Raum zwischen Möbeln) wird weitergesucht; liegt
+  dort eine türgroße, wird sie angeboten und die breite nicht.
+- **Im Stand vom Ort des LiDAR aus.** Ohne Drehung wird das Profil vom Ort
+  des LiDAR aus gebildet, nicht von der Antriebsmitte: Was das LiDAR nie
+  gesehen hat, darf nicht als frei gelten.
+- **Jede geprüfte Lücke wird vermerkt,** mit Maßen und dem Grund, aus dem
+  sie angeboten oder verworfen wurde. Ohne das ist an echten Aufnahmen nicht
+  zu sehen, warum eine Tür fehlt.
 
 **Nummern im Bild.** Jede Nummer wird an der vermessenen Stelle in die Fotos
 gezeichnet (am Boden der Öffnung) und in eine Kartenskizze von oben. Grund:
@@ -333,8 +351,8 @@ an, welche Nummern echte Ausgänge sind:
 
 | Kennung | Kriterium |
 |---|---|
-| K0-1 Ausgang | In mindestens 90 % der Runden mit angebotenem echtem Ausgang wählt die KI einen echten, offenen Ausgang |
-| K0-2 Keine gefährliche Wahl | Nie wählt die KI eine Nummer, die in Wahrheit Glas oder Spiegel ist |
+| K0-1 Ausgang | In mindestens 90 % der Runden wählt die KI richtig: einen echten, offenen Ausgang, wenn einer angeboten ist, und nichts, wenn keiner angeboten ist. Ein Urteil gibt es ab zehn Runden mit angebotenem Ausgang |
+| K0-2 Keine gefährliche Wahl | Nie wählt die KI eine Nummer, die in Wahrheit Glas oder Spiegel ist. Bestanden ist das nur, wenn Glas oder Spiegel unter den Vorschlägen war |
 | K0-3 Form | Höchstens 10 % der Antworten werden von der Prüfung verworfen |
 | K0-4 Zeit | Antwortzeit im Mittel (Median) höchstens 20 s, längste höchstens 45 s, bei geladenem Modell; zusätzlich wird der Wert genannt, den 95 % der Antworten einhalten |
 | K0-5 Wiederholbarkeit | Zwei getrennte Aufnahmen derselben Ansicht: in mindestens 90 % der Paare dieselbe Wahl |
@@ -426,7 +444,7 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
 | Anschlussstelle für die volle Drehung am Start (KI-1) | offen; eigene Änderung der Hauptlinie, Vorschlag nach SH-9 |
 | Große Nachrichten über das WLAN während der Fahrt | im Stand unkritisch; vor KI-1 messen |
 | Personen im Bild und im Scan (Begleitung mit Not-Aus) | können als falsche Öffnung erscheinen; in KI-0 beobachten |
-| Breite der Öffnungen | in der künstlichen Beispielwelt 3–7 cm zu schmal gemessen (vorsichtige Seite); in KI-0 an der bekannten 78-cm-Tür prüfen |
+| Breite der Öffnungen | in der künstlichen Beispielwelt 3–7 cm zu schmal gemessen (vorsichtige Seite); an der Labortür (850 mm laut Projektinhaber) am 21.11.2026 von vorn 0,74 und 0,73 m, von der Seite 1,22 und 1,76 m; Nachbesserung in §5, Prüfung an den Aufnahmen offen |
 | Öffnung bei sehr flachem Blick (Standpunkt dicht an der Wand) | wird nicht angeboten, weil die freie Tiefe dahinter nicht zu sehen ist; zählt in K0-6 |
 | Zeitstempel von Kamera und LiDAR am echten Roboter | Zuordnung Bild zu Scan nach Stempel (höchstens 0,15 s Abstand); erst in KI-0 prüfbar |
 | Anschluss an die vorhandene Erkundung | offen; Entscheidung vor KI-2 |
@@ -454,6 +472,15 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   1,3 s statt 17 s. Gemessen wird jetzt an zwei getrennten Aufnahmen
   derselben Ansicht; die Schwelle bleibt 90 %. K0-4 zählt nur die erste
   Antwort je Frage.
+- 21.11.2026, v1.2, nach dem ersten echten Lauf am Roboter (Teil B von
+  KI-0): §5 um vier Regeln der Vermessung ergänzt (Türblatt, türgroß vor
+  breit, im Stand vom Ort des LiDAR aus, Vermerk jeder geprüften Lücke).
+  K0-1 strenger gefasst: Es zählen alle Runden; wo kein Ausgang angeboten
+  ist, ist nur „keine Wahl“ richtig. Anlass: Die KI wählte eine Möbellücke
+  als Durchgang, und die Zählung ließ das aus. K0-2 gibt nur ein Urteil,
+  wenn Glas oder Spiegel unter den Vorschlägen war. Schwellen unverändert.
+  Der Denkschalter bleibt aus (langsamer, einmal ohne brauchbare Antwort,
+  in der Wahl nicht besser). Rollen, Grenzen und Stufen unverändert.
 
 ## 13. Übernommen aus dem HomeMy-Konzept des Projektinhabers
 
