@@ -243,11 +243,32 @@ def bilder_waehlen(gier_rad: Sequence[float], anzahl: int = 8,
             'ende_grad': round(math.degrees(gesamt), 1)}
 
 
+def profil_ursprung(gier_rad: Sequence[float], boden_lidar: np.ndarray,
+                    stand_grad: float = 3.0) -> np.ndarray:
+    """Der Punkt, von dem aus das Rundum-Profil gebildet wird (Standpunktrahmen).
+
+    Hat sich der Roboter gedreht, ist es die Antriebsmitte: Das LiDAR
+    umkreist sie und sieht jede Richtung einmal genau von dort aus. Stand er
+    still, ist es der Ort des LiDAR selbst (24,5 cm vor der Antriebsmitte).
+    Von der Antriebsmitte aus gesehen läge sonst hinter jeder nahen Kante
+    ein Keil, den das LiDAR nie gesehen hat; das Profil hielte ihn für frei
+    und die Vermessung fände dort Scheinöffnungen oder falsche Pfosten.
+    """
+    gier = np.asarray(gier_rad, dtype=float)
+    if gier.size == 0 or float(np.max(np.abs(gier - gier[0]))) > math.radians(stand_grad):
+        return np.zeros(2)
+    mittel = float(np.mean(gier))
+    c, s = math.cos(mittel), math.sin(mittel)
+    x, y = float(boden_lidar[0, 3]), float(boden_lidar[1, 3])
+    return np.array([c * x - s * y, s * x + c * y])
+
+
 def rundum_profil(scans: Sequence[dict], gier_rad: Sequence[float],
                   boden_lidar: np.ndarray, bins: int = 720,
                   zelle_m: float = 0.04, reichweite_m: float = 8.0,
-                  min_aufnahmen: int = 2,
-                  min_anteil: float = 0.15) -> Tuple[np.ndarray, np.ndarray]:
+                  min_aufnahmen: int = 2, min_anteil: float = 0.15,
+                  ursprung: Optional[Sequence[float]] = None
+                  ) -> Tuple[np.ndarray, np.ndarray]:
     """Rundum-Profil des Standpunkts aus allen Scans einer Blickrunde.
 
     Alle Messpunkte werden in den Standpunktrahmen gedreht und in ein Raster
@@ -257,12 +278,13 @@ def rundum_profil(scans: Sequence[dict], gier_rad: Sequence[float],
     genügt eine). Der Anteil hält die Kanten scharf: Kleine Winkelfehler
     verschmieren jede Kante über Nachbarzellen, die aber nur selten
     getroffen werden; ohne ihn würde jede Öffnung einige Zentimeter zu schmal.
-    Danach wird von der Antriebsmitte aus je Richtung die erste belegte
-    Zelle gesucht.
+    Danach wird vom Punkt ``ursprung`` aus (ohne Angabe die Antriebsmitte,
+    siehe ``profil_ursprung``) je Richtung die erste belegte Zelle gesucht.
 
-    Rückgabe: (Richtungen, Entfernung); ``nan`` = Richtung nie beobachtet,
-    ``inf`` = frei bis zur Reichweite.
+    Rückgabe: (Richtungen, Entfernung ab ``ursprung``); ``nan`` = Richtung
+    nie beobachtet, ``inf`` = frei bis zur Reichweite.
     """
+    start = np.zeros(2) if ursprung is None else np.asarray(ursprung, dtype=float)
     raster = _Raster(halb_m=reichweite_m + 1.0, zelle_m=zelle_m)
     schritt = 2 * math.pi / bins
     abgedeckt = np.zeros(bins, dtype=bool)
@@ -283,8 +305,8 @@ def rundum_profil(scans: Sequence[dict], gier_rad: Sequence[float],
     belegt = raster.maske(min_treffer=schwelle)
     winkel = -math.pi + (np.arange(bins) + 0.5) * schritt
     weg = np.arange(0.10, reichweite_m, zelle_m / 2.0)
-    strahlen = np.stack([np.outer(np.cos(winkel), weg),
-                         np.outer(np.sin(winkel), weg)], axis=-1)
+    strahlen = np.stack([start[0] + np.outer(np.cos(winkel), weg),
+                         start[1] + np.outer(np.sin(winkel), weg)], axis=-1)
     ix, iy, ok = raster.index(strahlen)
     ix, iy = np.clip(ix, 0, raster.n - 1), np.clip(iy, 0, raster.n - 1)
     treffer = belegt[iy, ix] & ok
@@ -292,6 +314,59 @@ def rundum_profil(scans: Sequence[dict], gier_rad: Sequence[float],
     r = np.where(treffer.any(axis=1), weg[erster], np.inf)
     r[~abgedeckt] = np.nan
     return winkel, lecks_schliessen(r)
+
+
+def echo_statistik(scans: Sequence[dict], gier_rad: Sequence[float],
+                   boden_lidar: np.ndarray, ursprung: Sequence[float],
+                   bins: int = 720, reichweite_m: float = 8.0
+                   ) -> Tuple[np.ndarray, np.ndarray]:
+    """Je Richtung: wie oft kam ein Echo, und wie stark schwankt die Entfernung?
+
+    Nur für Aufnahmen im Stand sinnvoll (``ursprung`` = Ort des LiDAR): Dann
+    sieht jede Aufnahme jede Richtung vom selben Punkt. Eine Wand ergibt in
+    jeder Aufnahme dasselbe Echo. Glas, Spiegel und Kanten, die der Strahl
+    nur streift (Tischplatte in Höhe des LiDAR), ergeben mal ein nahes, mal
+    ein fernes, mal gar kein Echo.
+
+    Rückgabe: (Anteil der Aufnahmen mit Echo, Spanne der Entfernung in m),
+    je Richtung wie in ``rundum_profil``. ``nan`` steht beim Anteil, wo in
+    keiner Aufnahme ein Strahl in die Richtung ging, und bei der Spanne, wo
+    es weniger als zwei Echos gab.
+    """
+    start = np.asarray(ursprung, dtype=float)
+    schritt = 2 * math.pi / bins
+    lidar_gier = math.atan2(boden_lidar[1, 0], boden_lidar[0, 0])
+    naechstes = np.full((len(scans), bins), np.nan)
+    gesendet = np.zeros((len(scans), bins), dtype=bool)
+    for k, (scan, gier) in enumerate(zip(scans, gier_rad)):
+        # Strahlen ohne Echo zählen in dem Fach, in das sie gezielt haben;
+        # Strahlen mit Echo dort, wo ihr Messpunkt liegt.
+        w, r = scan_felder(scan)
+        stumm = ~(np.isfinite(r) & (r >= 0.15) & (r <= reichweite_m + 0.5))
+        strahl = np.floor(((w[stumm] + lidar_gier + float(gier) + math.pi)
+                           % (2 * math.pi)) / schritt).astype(int) % bins
+        gesendet[k, strahl] = True
+        punkte = scan_punkte(scan, boden_lidar, min_r=0.15, max_r=reichweite_m + 0.5)
+        if not len(punkte):
+            continue
+        punkte = _drehe(punkte, np.array([float(gier)]))[0] - start
+        entfernung = np.hypot(punkte[:, 0], punkte[:, 1])
+        richtung = np.arctan2(punkte[:, 1], punkte[:, 0])
+        fach = np.floor((richtung + math.pi) / schritt).astype(int) % bins
+        gesendet[k, fach] = True
+        reihe = np.full(bins, np.inf)
+        np.minimum.at(reihe, fach, entfernung)
+        naechstes[k] = np.where(np.isfinite(reihe), reihe, np.nan)
+    fehlt = np.isnan(naechstes)
+    gezaehlt = np.sum(~fehlt, axis=0)
+    moeglich = np.sum(gesendet, axis=0)
+    with np.errstate(invalid='ignore', divide='ignore'):
+        anteil = np.where(moeglich > 0, gezaehlt / np.maximum(moeglich, 1), np.nan)
+    groesstes = np.max(np.where(fehlt, -np.inf, naechstes), axis=0, initial=-np.inf)
+    kleinstes = np.min(np.where(fehlt, np.inf, naechstes), axis=0, initial=np.inf)
+    with np.errstate(invalid='ignore'):
+        spanne = np.where(gezaehlt >= 2, groesstes - kleinstes, np.nan)
+    return anteil, spanne
 
 
 # ------------------------------------------------------------------ Ordner

@@ -17,7 +17,7 @@ from PIL import Image
 
 from .antwort import pruefe, wahl_nachmessen
 from .blickrunde import (Blickrunde, bilder_waehlen, gier_schaetzen,
-                         rundum_profil)
+                         profil_ursprung, rundum_profil)
 from .frage import Frage, baue_frage
 from .kandidaten import Oeffnung, oeffnungen
 from .ki_rechner import STANDARD_URL, Rohantwort, frage_stellen
@@ -39,6 +39,9 @@ class Vorbereitung:
     skizze: Optional[Image.Image] = None
     blatt: Optional[Image.Image] = None                        # alles auf einem Blatt
     kamera_winkel_grad: Sequence[float] = (0.0, 0.0)
+    # Von wo aus vermessen wurde (Standpunktrahmen) und was dabei geprüft wurde
+    ursprung: Sequence[float] = (0.0, 0.0)
+    protokoll: List[dict] = field(default_factory=list)
 
     def bilder_fuer_ki(self, mosaik: bool = False) -> List[bytes]:
         if mosaik:
@@ -62,6 +65,8 @@ class Vorbereitung:
             'oeffnungen': [o.als_dict() for o in self.oeffnungen],
             'sichtbar_in': {str(k): v for k, v in sorted(self.sichtbar.items())},
             'kamera_winkel_grad': [round(v, 1) for v in self.kamera_winkel_grad],
+            'vermessen_von': ('antriebsmitte' if not any(self.ursprung) else 'lidar'),
+            'protokoll': list(self.protokoll),
         }
 
 
@@ -78,8 +83,12 @@ def bereite_vor(runde: Blickrunde, anzahl_bilder: int = 8,
     kamera = runde.kamera()
     gier, guete = gier_schaetzen(scans, boden_lidar, runde.vorgabe_gier())
     auswahl = bilder_waehlen(gier, anzahl_bilder)
-    winkel, entfernung = rundum_profil(scans, gier, boden_lidar)
-    gefunden = oeffnungen(winkel, entfernung)
+    # Im Stand vom Ort des LiDAR aus vermessen, nach einer Drehung von der
+    # Antriebsmitte aus (siehe profil_ursprung).
+    ursprung = profil_ursprung(gier, boden_lidar)
+    winkel, entfernung = rundum_profil(scans, gier, boden_lidar, ursprung=ursprung)
+    protokoll: List[dict] = []
+    gefunden = oeffnungen(winkel, entfernung, ursprung=ursprung, protokoll=protokoll)
 
     marken_je_bild = {}
     fotos = []
@@ -90,7 +99,8 @@ def bereite_vor(runde: Blickrunde, anzahl_bilder: int = 8,
                               schild=f'B{eintrag["bild"]}'))
     sichtbar = sichtbar_in(marken_je_bild)
     skizze_bild = skizze(winkel, entfernung, gefunden,
-                         [b['gier_rad'] for b in auswahl['bilder']])
+                         [b['gier_rad'] for b in auswahl['bilder']],
+                         ursprung=ursprung)
     frage = baue_frage(gefunden, len(auswahl['bilder']), sichtbar,
                        drehsinn=auswahl['drehsinn'], verlauf=verlauf,
                        als_mosaik=mosaik, schritt_grad=360.0 / anzahl_bilder,
@@ -100,7 +110,8 @@ def bereite_vor(runde: Blickrunde, anzahl_bilder: int = 8,
         guete_min=float(np.min(guete)) if len(guete) else 0.0,
         oeffnungen=gefunden, sichtbar=sichtbar, frage=frage, fotos=fotos,
         skizze=skizze_bild, blatt=uebersicht(fotos, skizze_bild),
-        kamera_winkel_grad=kamera.oeffnungswinkel_grad())
+        kamera_winkel_grad=kamera.oeffnungswinkel_grad(),
+        ursprung=(float(ursprung[0]), float(ursprung[1])), protokoll=protokoll)
 
 
 def befrage(vorbereitung: Vorbereitung, modell: str, url: str = STANDARD_URL,

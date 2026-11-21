@@ -150,7 +150,8 @@ def test_hoechstens_max_anzahl_vorschlaege():
 def test_als_dict_enthaelt_keine_langen_kommazahlen():
     eintrag = oeffnungen(*profil(zimmer()))[0].als_dict()
     assert set(eintrag) == {'nr', 'breite_m', 'mitte', 'pfosten', 'richtung_grad',
-                            'entfernung_m', 'tiefe_m', 'befahrbar'}
+                            'entfernung_m', 'tiefe_m', 'befahrbar', 'schluss'}
+    assert eintrag['schluss'] == 'sprung'
     assert eintrag['breite_m'] == round(eintrag['breite_m'], 2)
 
 
@@ -171,3 +172,143 @@ def test_lecks_schliessen_entfernt_einzelne_ausreisser_aber_keine_oeffnung():
 def test_kurze_oder_ungleich_lange_eingaben_ergeben_nichts():
     assert oeffnungen([0.0, 0.1], [1.0, 1.0]) == []
     assert oeffnungen(np.linspace(-3, 3, 100), np.ones(50)) == []
+
+
+# ---------------------------------------------------------------- Türblatt
+# Befund KI-0 am 21.11.2026: Von der Seite wurde die 85-cm-Labortür 1,22 m
+# breit vermessen, die Nummer stand neben der Tür. Ursache im Nachstellen:
+# Die sichtbare Lücke endet an der Spitze des offenen Türblatts.
+
+def blatt(grad, laenge=0.8, scharnier=(2.0, 0.4)):
+    """Türblatt am Pfosten ``scharnier``; 0° = zu, 90° = rechtwinklig im Zimmer."""
+    w = math.radians(grad)
+    return (scharnier[0], scharnier[1],
+            scharnier[0] - math.sin(w) * laenge, scharnier[1] - math.cos(w) * laenge)
+
+
+def test_offenes_tuerblatt_verdeckt_den_pfosten_die_tuer_wird_trotzdem_richtig_vermessen():
+    stand = (0.0, 0.8)                    # Scharnierseite, Blick an der Blattspitze vorbei
+    welt = zimmer() + [blatt(90)]
+    ohne_regel = oeffnungen(*profil(welt, ursprung=stand), blatt_min_m=9.0)
+    assert len(ohne_regel) == 1
+    assert ohne_regel[0].breite_m == pytest.approx(1.13, abs=0.05)     # Spitze bis Pfosten
+    assert ohne_regel[0].mitte[0] + stand[0] == pytest.approx(1.6, abs=0.05)   # vor der Tür
+
+    gefunden = oeffnungen(*profil(welt, ursprung=stand))
+    assert len(gefunden) == 1
+    o = gefunden[0]
+    assert o.schluss == 'blatt'
+    assert o.breite_m == pytest.approx(0.8, abs=0.05)
+    assert (o.mitte[0] + stand[0], o.mitte[1] + stand[1]) == pytest.approx((2.0, 0.0), abs=0.05)
+    # Die Nummer steht auf dem sichtbaren Stück der Schwelle (von y = -0,4 bis 0,13)
+    assert o.marke is not None
+    marke = (o.marke[0] + stand[0], o.marke[1] + stand[1])
+    assert marke == pytest.approx((2.0, -0.13), abs=0.06)
+    assert o.als_dict()['marke'] == [round(o.marke[0], 2), round(o.marke[1], 2)]
+
+
+@pytest.mark.parametrize('grad', [80, 90, 100])
+def test_tuerblatt_bei_verschiedenen_winkeln_und_von_der_anderen_seite(grad):
+    welt = zimmer() + [blatt(grad)]
+    for stand in ((0.0, 0.8), (-0.6, 0.9)):
+        gefunden = oeffnungen(*profil(welt, ursprung=stand))
+        tueren = [o for o in gefunden
+                  if abs(o.mitte[0] + stand[0] - 2.0) < 0.1 and abs(o.mitte[1] + stand[1]) < 0.1]
+        assert len(tueren) == 1, (grad, stand, gefunden)
+        if tueren[0].schluss == 'blatt':
+            assert tueren[0].breite_m == pytest.approx(
+                0.8 * min(1.0, math.sin(math.radians(grad))), abs=0.06)
+        else:
+            # Blatt fast von der Kante gesehen: Es ist nicht zu verfolgen, der
+            # zweite Pfosten ist das Lot der Blattspitze auf die Wand. Bei 100°
+            # liegt es 14 cm hinter dem Scharnier; die Tür wird so viel zu breit.
+            assert (grad, stand, tueren[0].schluss) == (100, (-0.6, 0.9), 'lot')
+            assert tueren[0].breite_m == pytest.approx(0.8 + 0.14, abs=0.06)
+    # Von der anderen Seite liegt das Blatt hinter der Öffnung und stört nicht.
+    drueben = oeffnungen(*profil(welt, ursprung=(0.0, -0.8)))
+    assert [o.schluss for o in drueben] == ['sprung']
+    assert drueben[0].breite_m == pytest.approx(0.8, abs=0.05)
+
+
+def test_tuerblatt_das_im_weg_steht_macht_die_tuer_unpassierbar():
+    protokoll = []
+    stand = (0.5, -0.2)
+    gefunden = oeffnungen(*profil(zimmer() + [blatt(30)], ursprung=stand), protokoll=protokoll)
+    assert gefunden == []                 # lichte Breite 0,8 m * sin(30°) = 0,40 m
+    assert any(z['ergebnis'] == 'blatt_im_weg' for z in protokoll)
+
+
+def test_moebelseite_neben_der_luecke_zaehlt_wie_ein_blatt():
+    """Ein Schrank, der neben der Tür von der Wand absteht: Die Tür reicht bis zur Wand."""
+    schrank = _kasten(1.4, 0.4, 2.0, 1.4)             # 60 cm tief, Seite am Türpfosten
+    gefunden = oeffnungen(*profil(zimmer() + schrank, ursprung=(0.0, 0.9)))
+    tuer = [o for o in gefunden if abs(o.mitte[1] + 0.9) < 0.15 and abs(o.mitte[0] - 2.0) < 0.15]
+    assert len(tuer) == 1
+    assert tuer[0].breite_m == pytest.approx(0.8, abs=0.06)
+
+
+# ------------------------------------------------- Tür hinter einer Möbellücke
+# Befund KI-0 am 21.11.2026: Eine offene Tür in 4–5 m wurde nicht angeboten,
+# nur die 2,25 m breite Lücke zwischen Möbeln davor.
+
+def test_tuer_hinter_einer_breiten_moebelluecke_wird_angeboten():
+    moebel = _kasten(0.2, 0.9, 0.7, 1.6) + _kasten(0.2, -1.6, 0.7, -0.9)
+    stand = (-1.2, 0.0)
+    alt = oeffnungen(*profil(zimmer() + moebel, ursprung=stand), tuerbreit_m=10.0)
+    assert not any(o.breite_m < 1.0 and abs(o.mitte[0] + stand[0] - 2.0) < 0.1 for o in alt)
+
+    gefunden = oeffnungen(*profil(zimmer() + moebel, ursprung=stand))
+    tuer = [o for o in gefunden if abs(o.mitte[0] + stand[0] - 2.0) < 0.1]
+    assert len(tuer) == 1
+    assert tuer[0].breite_m == pytest.approx(0.8, abs=0.05)
+    assert tuer[0].entfernung_m == pytest.approx(3.2, abs=0.05)
+    # die breite Lücke davor wird nicht zusätzlich angeboten
+    assert not any(o.breite_m > 1.3 and abs(o.richtung_grad) < 20 for o in gefunden)
+
+
+def test_tuer_durch_eine_tuer_gesehen_die_naehere_bleibt():
+    welt = [(-2, -2, 2, -2), (-2, 2, 2, 2), (-2, -2, -2, 2),
+            (2, -2, 2, -0.4), (2, 0.4, 2, 2),                     # nahe Tür, 80 cm
+            (2, -2, 3.5, -2), (2, 2, 3.5, 2),
+            (3.5, -2, 3.5, -0.3), (3.5, 0.35, 3.5, 2),            # ferne Tür, 65 cm
+            (3.5, -2, 6, -2), (6, -2, 6, 2), (6, 2, 3.5, 2)]
+    gefunden = oeffnungen(*profil(welt))
+    assert len(gefunden) == 1
+    assert gefunden[0].entfernung_m == pytest.approx(2.0, abs=0.05)
+    assert gefunden[0].breite_m == pytest.approx(0.8, abs=0.03)
+
+
+# ------------------------------------------------------ Protokoll und Ursprung
+
+def test_protokoll_nennt_angebotene_und_abgelehnte_luecken_mit_grund():
+    nische = zimmer(tiefe_dahinter=0.45)              # hinter der Lücke nur 45 cm frei
+    protokoll = []
+    assert oeffnungen(*profil(nische), protokoll=protokoll) == []
+    assert protokoll and {z['ergebnis'] for z in protokoll} == {'zu_flach'}
+    zeile = protokoll[0]
+    assert zeile['breite_m'] == pytest.approx(0.8, abs=0.03)
+    assert zeile['tiefe_m'] == pytest.approx(0.45, abs=0.03)
+    assert zeile['anteil_tief'] == 0.0 and zeile['nr'] is None
+
+    protokoll = []
+    gefunden = oeffnungen(*profil(zimmer()), protokoll=protokoll)
+    angeboten = [z for z in protokoll if z['ergebnis'] == 'angeboten']
+    assert [z['nr'] for z in angeboten] == [o.nr for o in gefunden] == [1]
+    assert angeboten[0]['schluss'] == 'sprung'
+    assert angeboten[0]['richtung_grad'] == pytest.approx(0.0, abs=1.5)
+    # dieselbe Tür aus der zweiten Durchlaufrichtung ist als überdeckt vermerkt
+    assert any(z['ergebnis'] == 'ueberdeckt' for z in protokoll)
+    assert all(set(z) == {'ergebnis', 'nr', 'schluss', 'breite_m', 'richtung_grad',
+                          'entfernung_m', 'strahlen', 'tiefe_m', 'anteil_tief',
+                          'anteil_davor', 'blatt'} for z in protokoll)
+
+
+def test_profil_von_einem_anderen_punkt_ergibt_dieselbe_lage_im_standpunktrahmen():
+    lidar = (0.245, 0.0)
+    von_dort = oeffnungen(*profil(zimmer(), ursprung=lidar), ursprung=lidar)
+    assert len(von_dort) == 1
+    assert von_dort[0].mitte == pytest.approx((2.0, 0.0), abs=0.03)
+    assert von_dort[0].entfernung_m == pytest.approx(2.0, abs=0.03)
+    assert von_dort[0].pfosten[0][0] == pytest.approx(2.0, abs=0.03)
+    ohne_angabe = oeffnungen(*profil(zimmer(), ursprung=lidar))
+    assert ohne_angabe[0].mitte[0] == pytest.approx(1.755, abs=0.03)

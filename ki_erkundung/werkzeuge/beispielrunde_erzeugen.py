@@ -4,7 +4,7 @@
 Zweck: den Trockenlauf ohne Roboter und ohne Wohnungsdaten ausprobieren und
 testen. Die Welt ist ein ausgedachtes Zimmer mit einer 80-cm-Tür zum Flur,
 einer Glastür zum Balkon, zwei Schränken mit einer Lücke dazwischen und
-einer Kiste. Der Roboter dreht
+einer Kiste; auf Wunsch hängt in der Tür ein offenes Türblatt. Der Roboter dreht
 sich auf der Stelle; das LiDAR sitzt wie am echten Amadeus 0,245 m vor der
 Antriebsmitte und sieht den Mastsektor nicht. Die „Fotos“ sind einfache
 gezeichnete Ansichten, damit man sieht, ob die Nummern an der richtigen
@@ -20,7 +20,7 @@ import io
 import math
 import sys
 from pathlib import Path
-from typing import List, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 from PIL import Image, ImageDraw
@@ -49,8 +49,26 @@ def _kasten(x1: float, y1: float, x2: float, y2: float) -> List[Strecke]:
     return [(x1, y1, x2, y1), (x2, y1, x2, y2), (x2, y2, x1, y2), (x1, y2, x1, y1)]
 
 
-def welt() -> List[dict]:
-    """Flächen der Welt: Strecke am Boden, Höhe und Farbe."""
+def tuerblatt(winkel_grad: float, laenge_m: Optional[float] = None) -> Strecke:
+    """Das Türblatt der Flurtür als Strecke.
+
+    Es hängt am Pfosten ``TUER[1]`` und öffnet ins Zimmer: 0° = geschlossen
+    (liegt in der Öffnung), 90° = steht rechtwinklig im Zimmer, 180° = liegt
+    an der Wand.
+    """
+    laenge = (TUER[1][1] - TUER[0][1]) if laenge_m is None else laenge_m
+    w = math.radians(winkel_grad)
+    x, y = TUER[1]
+    return (x, y, x - math.sin(w) * laenge, y - math.cos(w) * laenge)
+
+
+def welt(tuerblatt_grad: Optional[float] = None,
+         flur_breite_m: float = 1.3) -> List[dict]:
+    """Flächen der Welt: Strecke am Boden, Höhe und Farbe.
+
+    ``tuerblatt_grad``: Öffnungswinkel des Türblatts der Flurtür; ohne Angabe
+    hat die Tür kein Blatt (ausgehängt).
+    """
     flaechen = []
 
     def wand(strecke: Strecke, hoehe: float = 2.4, farbe=(205, 205, 200),
@@ -70,12 +88,15 @@ def welt() -> List[dict]:
     wand((0.0, 0.0, 0.0, 3.4))
     wand((4.0, 0.0, 4.0, TUER[0][1]))
     wand((4.0, TUER[1][1], 4.0, 3.4))
-    # Flur östlich davon, 1,3 m breit
+    # Flur östlich davon, in der Regel 1,3 m breit
+    ost = 4.0 + flur_breite_m
     wand((4.0, -1.0, 4.0, 0.0), farbe=(190, 195, 200))
     wand((4.0, 3.4, 4.0, 5.0), farbe=(190, 195, 200))
-    wand((5.3, -1.0, 5.3, 5.0), farbe=(190, 195, 200))
-    wand((4.0, -1.0, 5.3, -1.0), farbe=(190, 195, 200))
-    wand((4.0, 5.0, 5.3, 5.0), farbe=(190, 195, 200))
+    wand((ost, -1.0, ost, 5.0), farbe=(190, 195, 200))
+    wand((4.0, -1.0, ost, -1.0), farbe=(190, 195, 200))
+    wand((4.0, 5.0, ost, 5.0), farbe=(190, 195, 200))
+    if tuerblatt_grad is not None:
+        wand(tuerblatt(tuerblatt_grad), hoehe=2.0, farbe=(235, 235, 230))
     # Zwei Schränke an der Nordwand mit Lücke, eine Kiste an der Westwand
     for strecke in _kasten(0.3, SPALT[0][1], SPALT[0][0], 3.4):
         wand(strecke, hoehe=1.9, farbe=(150, 110, 70))
@@ -183,10 +204,11 @@ def foto(flaechen: Sequence[dict], kamera: Kamera, x: float, y: float,
 def erzeuge(ausgabe, name: str = 'beispiel_zimmer', schritt_grad: float = 5.0,
             gesamt_grad: float = 365.0, drehsinn: int = 1, saat: int = 1,
             mit_odometrie: bool = False,
-            standpunkt: Tuple[float, float, float] = STANDPUNKT) -> Path:
+            standpunkt: Tuple[float, float, float] = STANDPUNKT,
+            tuerblatt_grad: Optional[float] = None) -> Path:
     """Die künstliche Blickrunde in ``ausgabe/name`` schreiben."""
     zufall = np.random.default_rng(saat)
-    flaechen = welt()
+    flaechen = welt(tuerblatt_grad)
     kamera = Kamera.aus_oeffnungswinkel(640, 360, 69.0)
     x, y, gier0 = standpunkt
     bilder, scans, zeiten, odometrie = [], [], [], []
@@ -227,10 +249,14 @@ def main(argv=None) -> int:
     eingabe.add_argument('--rechtsherum', action='store_true',
                          help='im Uhrzeigersinn drehen')
     eingabe.add_argument('--mit-odometrie', action='store_true')
+    eingabe.add_argument('--tuerblatt', type=float, default=None, metavar='GRAD',
+                         help='offenes Türblatt in der Flurtür (90 = rechtwinklig '
+                              'im Zimmer); ohne Angabe hat die Tür kein Blatt')
     wahl = eingabe.parse_args(argv)
     ordner = erzeuge(wahl.ausgabe, wahl.name, wahl.schritt_grad,
                      drehsinn=-1 if wahl.rechtsherum else 1,
-                     mit_odometrie=wahl.mit_odometrie)
+                     mit_odometrie=wahl.mit_odometrie,
+                     tuerblatt_grad=wahl.tuerblatt)
     print(f'Künstliche Blickrunde geschrieben: {ordner}')
     return 0
 

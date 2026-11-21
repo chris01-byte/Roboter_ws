@@ -236,8 +236,11 @@ def nehme_auf(wahl, halt=None) -> Optional[Path]:
         v, q = tf.transform.translation, tf.transform.rotation
         return aus_tf([v.x, v.y, v.z], [q.x, q.y, q.z, q.w], wahl.basis_hoehe)
 
+    # Kurze Aufnahmen sind Ansichten im Stand (KI-0); zum Drehen ist keine Zeit.
+    hinweis = ('Der Roboter bleibt stehen.' if wahl.dauer <= 20.0
+               else 'Für eine Blickrunde dreht sich der Roboter einmal langsam ganz herum.')
     print(f'Aufnahme „{wahl.name}“ läuft (höchstens {wahl.dauer:.0f} s). '
-          'Roboter jetzt einmal langsam ganz herumdrehen; Ende mit Strg+C.')
+          f'{hinweis} Ende mit Strg+C.')
     beginn = time.monotonic()
     letzte_meldung = beginn
     try:

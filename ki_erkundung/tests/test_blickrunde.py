@@ -6,9 +6,12 @@ import numpy as np
 import pytest
 
 import beispielrunde_erzeugen as welt
-from lotse.blickrunde import (Blickrunde, bilder_waehlen, gier_schaetzen,
-                              runden_finden, rundum_profil, scan_als_dict,
-                              scan_felder, scan_punkte, schreibe_runde)
+from lotse.blickrunde import (Blickrunde, bilder_waehlen, echo_statistik,
+                              gier_schaetzen, profil_ursprung, runden_finden,
+                              rundum_profil,
+                              scan_als_dict, scan_felder, scan_punkte,
+                              schreibe_runde)
+from lotse.kandidaten import oeffnungen
 from lotse.geometrie import Kamera, kamera_montage, lidar_montage
 
 
@@ -170,3 +173,63 @@ def test_unbekannte_fassung_und_kaputte_montage_werden_abgelehnt(tmp_path):
     (ordner / 'meta.json').write_text(json.dumps(meta), encoding='utf-8')
     with pytest.raises(ValueError, match='4x4'):
         Blickrunde.lade(ordner).boden_lidar()
+
+
+def test_profil_ursprung_ist_im_stand_das_lidar_und_nach_drehung_die_antriebsmitte():
+    lidar = lidar_montage()
+    assert profil_ursprung([0.0, 0.001, -0.002], lidar) == pytest.approx((0.245, 0.0), abs=1e-3)
+    assert profil_ursprung(np.radians([0, 20, 45, 90]), lidar) == pytest.approx((0.0, 0.0))
+    assert profil_ursprung([], lidar) == pytest.approx((0.0, 0.0))
+    # Der Stand zählt in der Blickrichtung, in der gestanden wurde.
+    assert profil_ursprung([math.pi / 2] * 3, lidar) == pytest.approx((0.0, 0.245), abs=1e-3)
+
+
+def test_im_stand_entsteht_von_der_antriebsmitte_aus_eine_scheinoeffnung_vom_lidar_aus_nicht():
+    """Hinter jeder nahen Kante liegt ein Keil, den das LiDAR nie gesehen hat.
+
+    Standpunkt dicht am Schrank: Von der Antriebsmitte aus gerechnet wirkt
+    die 50 cm tiefe Schranknische wie eine Öffnung, weil der Strahl an der
+    Schrankecke vorbei in den nie gesehenen Keil läuft. Vom Ort des LiDAR
+    aus gerechnet gibt es den Keil nicht.
+    """
+    zufall = np.random.default_rng(3)
+    stand = (2.3, 2.3, 0.0)
+    flaechen = welt.welt()
+    scans = [welt.scan(flaechen, *stand, 1000.0 + 0.5 * k, zufall=zufall) for k in range(16)]
+    lidar = lidar_montage()
+    gier, _ = gier_schaetzen(scans, lidar)
+    spalt = np.array([1.55, 3.15]) - np.array(stand[:2])       # Mitte der Schranknische
+
+    def in_der_nische(gefunden):
+        return [o for o in gefunden if np.hypot(*(np.array(o.mitte) - spalt)) < 0.4]
+
+    von_der_mitte = oeffnungen(*rundum_profil(scans, gier, lidar))
+    assert len(in_der_nische(von_der_mitte)) == 1
+    ursprung = profil_ursprung(gier, lidar)
+    vom_lidar = oeffnungen(*rundum_profil(scans, gier, lidar, ursprung=ursprung),
+                           ursprung=ursprung)
+    assert in_der_nische(vom_lidar) == []
+    # Tür und Glastür bleiben dieselben.
+    assert len(vom_lidar) == 2 and len(von_der_mitte) == 3
+
+
+def test_echo_statistik_zeigt_ruhige_waende_und_unruhige_oder_stumme_richtungen():
+    """Glas und gestreifte Kanten geben mal ein nahes, mal ein fernes, mal kein Echo."""
+    lidar = lidar_montage()
+    winkel = -math.pi + (2 * math.pi / 720) * np.arange(720)
+    scans = []
+    for k in range(10):
+        r = np.full(720, 3.0)
+        r[100:140] = 1.5 if k % 2 else 4.0            # unruhig: springt zwischen den Aufnahmen
+        r[300:340] = np.nan                           # stumm: nie ein Echo
+        scans.append(scan_als_dict(float(winkel[0]), 2 * math.pi / 720, r, 0.03, 25.0, k))
+    ursprung = profil_ursprung(np.zeros(10), lidar)
+    anteil, spanne = echo_statistik(scans, np.zeros(10), lidar, ursprung)
+    assert anteil.shape == spanne.shape == (720,)
+    unruhig = np.nan_to_num(spanne) > 0.3
+    with np.errstate(invalid='ignore'):
+        stumm = anteil < 0.5                              # nan (kein Strahl) zählt nicht
+    assert 30 <= unruhig.sum() <= 45 and 30 <= stumm.sum() <= 45
+    assert not (unruhig & stumm).any()
+    ruhig = ~unruhig & ~stumm & ~np.isnan(anteil)
+    assert ruhig.sum() >= 500 and float(np.nanmax(spanne[ruhig])) < 0.05

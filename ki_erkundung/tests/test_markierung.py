@@ -100,6 +100,27 @@ def test_uebersicht_legt_fotos_und_skizze_auf_ein_blatt():
     assert Image.open(io.BytesIO(als_jpeg(blatt))).format == 'JPEG'
 
 
+def test_uebersicht_vergroessert_kleine_fotos_und_laesst_keine_leere_spalte():
+    """Am 21.11.2026 lieferte die Kamera 320 x 180; das Blatt war kaum zu erkennen."""
+    klein = [Image.new('RGB', (320, 180), (0, 90, 0))]
+    blatt = uebersicht(klein, Image.new('RGB', (640, 640), (255, 255, 255)))
+    assert blatt.size == (2 * 640, 360)                   # Foto und Skizze nebeneinander
+    assert blatt.getpixel((320, 180)) == (0, 90, 0)
+
+
+def test_nummer_steht_auf_der_marke_wenn_die_mitte_verdeckt_ist():
+    """Offenes Türblatt: Die Nummer gehört auf das sichtbare Stück der Schwelle."""
+    import dataclasses
+    mitte = oeffnung(1, (3.0, 0.0))
+    versetzt = dataclasses.replace(mitte, marke=(3.0, 0.3))
+    u_mitte = marken_fuer_bild([mitte], 0.0, kamera_montage(), KAMERA)[0]['u']
+    marke = marken_fuer_bild([versetzt], 0.0, kamera_montage(), KAMERA)[0]
+    assert marke['u'] < u_mitte - 20                      # 30 cm weiter links im Bild
+    assert versetzt.marke_oder_mitte == (3.0, 0.3) and mitte.marke_oder_mitte == (3.0, 0.0)
+    bild = skizze(np.array([0.0]), np.array([3.0]), [versetzt], [0.0], groesse=400)
+    assert bild.size == (400, 400)
+
+
 def test_sichtbar_in_fasst_je_nummer_die_bilder_zusammen():
     marken = {1: [{'nr': 2}], 2: [{'nr': 2}, {'nr': 5}], 3: []}
     assert sichtbar_in(marken) == {2: [1, 2], 5: [2]}

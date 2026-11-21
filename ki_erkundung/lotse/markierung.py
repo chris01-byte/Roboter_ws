@@ -86,7 +86,10 @@ def marken_fuer_bild(oeffnungen: Sequence[Oeffnung], gier_rad: float,
     """
     marken = []
     for o in oeffnungen:
-        punkte = np.array([[o.mitte[0], o.mitte[1], 0.0],
+        # Verdeckt ein Türblatt die Mitte, steht die Nummer auf dem sichtbaren
+        # Stück der Schwelle.
+        stelle = o.marke_oder_mitte
+        punkte = np.array([[stelle[0], stelle[1], 0.0],
                            [o.pfosten[0][0], o.pfosten[0][1], 0.0],
                            [o.pfosten[1][0], o.pfosten[1][1], 0.0]])
         im_kamerarahmen = standpunkt_nach_kamera(punkte, gier_rad, boden_kamera)
@@ -134,8 +137,12 @@ def markiere(bild_bytes: bytes, marken: Sequence[dict],
 
 def skizze(winkel_rad, entfernung_m, oeffnungen: Sequence[Oeffnung],
            bildrichtungen_rad: Sequence[float], groesse: int = 640,
-           reichweite_m: Optional[float] = None) -> Image.Image:
+           reichweite_m: Optional[float] = None,
+           ursprung: Sequence[float] = (0.0, 0.0)) -> Image.Image:
     """Kartenskizze von oben: Roboter in der Mitte, Blick von Bild 1 nach oben.
+
+    ``ursprung``: Punkt im Standpunktrahmen, von dem aus das Profil
+    gemessen ist (im Stand der Ort des LiDAR).
 
     Ohne Angabe richtet sich der Ausschnitt nach dem Raum (zwischen 2,5 und
     6 m Halbmesser), damit ein kleines Zimmer das Blatt füllt.
@@ -164,7 +171,8 @@ def skizze(winkel_rad, entfernung_m, oeffnungen: Sequence[Oeffnung],
     r = np.asarray(entfernung_m, dtype=float)
     ok = np.isfinite(r) & (r <= reichweite_m)
     dick = max(1, groesse // 320)
-    for x, y in zip(r[ok] * np.cos(w[ok]), r[ok] * np.sin(w[ok])):
+    for x, y in zip(ursprung[0] + r[ok] * np.cos(w[ok]),
+                    ursprung[1] + r[ok] * np.sin(w[ok])):
         u, v = px(x, y)
         zeichner.rectangle([u - dick, v - dick, u + dick, v + dick], fill=(0, 0, 0))
     aussen = mitte - rand * 0.45
@@ -180,7 +188,7 @@ def skizze(winkel_rad, entfernung_m, oeffnungen: Sequence[Oeffnung],
         zeichner.line([px(*o.pfosten[0]), px(*o.pfosten[1])], fill=(0, 0, 0),
                       width=max(3, groesse // 160))
     for o in oeffnungen:
-        u, v = px(*o.mitte)
+        u, v = px(*o.marke_oder_mitte)
         _scheibe(bild, u, v, o.nr, radius)
     return bild
 
@@ -192,13 +200,23 @@ def als_jpeg(bild: Image.Image, guete: int = 88) -> bytes:
 
 
 def uebersicht(bilder: Sequence[Image.Image], skizze_bild: Image.Image,
-               spalten: int = 3) -> Image.Image:
-    """Alle Fotos und die Skizze auf einem Blatt (für den Menschen)."""
+               spalten: int = 3, min_feldbreite: int = 640) -> Image.Image:
+    """Alle Fotos und die Skizze auf einem Blatt (für den Menschen).
+
+    Kleine Fotos werden ganzzahlig vergrößert, bis ein Feld mindestens
+    ``min_feldbreite`` breit ist: Die Kamera lieferte am 21.11.2026 Bilder
+    von 320 × 180, auf dem Blatt war damit kaum etwas zu erkennen.
+    """
     if not bilder:
         return skizze_bild.copy()
+    faktor = max(1, math.ceil(min_feldbreite / bilder[0].width))
+    if faktor > 1:
+        bilder = [b.resize((b.width * faktor, b.height * faktor), Image.BICUBIC)
+                  for b in bilder]
     breite, hoehe = bilder[0].size
     felder = list(bilder) + [skizze_bild.resize(
         (int(skizze_bild.width * hoehe / skizze_bild.height), hoehe), Image.BILINEAR)]
+    spalten = min(spalten, len(felder))
     zeilen = math.ceil(len(felder) / spalten)
     blatt = Image.new('RGB', (spalten * breite, zeilen * hoehe), (255, 255, 255))
     for i, feld in enumerate(felder):

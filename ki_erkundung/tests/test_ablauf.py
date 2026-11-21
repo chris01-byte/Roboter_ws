@@ -68,7 +68,10 @@ def test_ergebniseintrag_enthaelt_zahlen_aber_keine_bilddaten(vorbereitung):
     eintrag = vorbereitung.als_dict()
     text = json.dumps(eintrag)
     assert eintrag['vollstaendig'] and len(eintrag['oeffnungen']) == 2
-    assert 'JFIF' not in text and len(text) < 4000
+    assert eintrag['vermessen_von'] == 'antriebsmitte'          # es wurde gedreht
+    assert [z['nr'] for z in eintrag['protokoll'] if z['ergebnis'] == 'angeboten'] == [1, 2]
+    ohne_protokoll = json.dumps({k: v for k, v in eintrag.items() if k != 'protokoll'})
+    assert 'JFIF' not in text and len(ohne_protokoll) < 4000 and len(text) < 40000
 
 
 def test_richtige_wahl_wird_angenommen_und_nachgemessen(vorbereitung, ki_attrappe):
@@ -206,3 +209,88 @@ def test_blickrunde_im_stand_ergibt_ein_bild_und_die_tuer_davor(tmp_path):
     assert 'schaut in eine Richtung' in vorbereitung.frage.text
     assert len(vorbereitung.bilder_fuer_ki()) == 2          # ein Foto und die Skizze
     assert math.isclose(vorbereitung.auswahl['gedreht_grad'], 0.0, abs_tol=1.0)
+    # Im Stand wird vom Ort des LiDAR aus vermessen (24,5 cm vor der Antriebsmitte).
+    assert vorbereitung.als_dict()['vermessen_von'] == 'lidar'
+    assert vorbereitung.ursprung == pytest.approx((0.245, 0.0), abs=0.005)
+    assert vorn[0].entfernung_m == pytest.approx(2.2, abs=0.06)   # ab Antriebsmitte
+
+
+def test_im_stand_mit_offenem_tuerblatt_wird_die_tuer_und_nicht_die_blattspitze_vermessen(
+        tmp_path):
+    """Befund KI-0 vom 21.11.2026, nachgestellt: Blick von der Scharnierseite."""
+    import math
+    stand = (2.0, 2.2, math.radians(-20.0))
+    welt.erzeuge(tmp_path, 'blatt', schritt_grad=0.01, gesamt_grad=0.15, standpunkt=stand,
+                 tuerblatt_grad=90.0)
+    vorbereitung = bereite_vor(Blickrunde.lade(tmp_path / 'blatt'))
+    tuer, _, _ = welt.tuer_im_standpunktrahmen(stand)
+    nah = [o for o in vorbereitung.oeffnungen
+           if math.hypot(o.mitte[0] - tuer[0], o.mitte[1] - tuer[1]) < 0.15]
+    assert len(nah) == 1, [o.als_dict() for o in vorbereitung.oeffnungen]
+    assert nah[0].schluss == 'blatt'
+    assert nah[0].breite_m == pytest.approx(0.80, abs=0.08)
+    # Die Nummer steht auf dem sichtbaren Stück der Schwelle und damit im Foto.
+    assert nah[0].marke is not None and vorbereitung.sichtbar[nah[0].nr] == [1]
+    assert any(z['ergebnis'] == 'angeboten' and z['schluss'] == 'blatt'
+               for z in vorbereitung.protokoll)
+
+
+def test_pruefwerkzeug_nennt_angebotene_und_verworfene_luecken_ohne_bilddaten(tmp_path, capsys):
+    """vermessung_pruefen.py: nur Maße einzelner Lücken, lesbar ohne Roboter."""
+    import math
+    import vermessung_pruefen
+    welt.erzeuge(tmp_path / 'runden', 'stand_blatt', schritt_grad=0.01, gesamt_grad=0.15,
+                 standpunkt=(2.0, 2.2, math.radians(-20.0)), tuerblatt_grad=90.0)
+    welt.erzeuge(tmp_path / 'runden', 'gedreht')
+    bericht = tmp_path / 'pruefung.md'
+    assert vermessung_pruefen.main(['--runden', str(tmp_path / 'runden'),
+                                    '--bericht', str(bericht)]) == 0
+    text = capsys.readouterr().out
+    assert bericht.read_text(encoding='utf-8').strip() == text.strip()
+    assert '## stand_blatt' in text and 'vom Ort des LiDAR (im Stand)' in text
+    assert '## gedreht' in text and 'von der Antriebsmitte' in text
+    blatt = [z for z in text.splitlines() if '| blatt |' in z]
+    assert len(blatt) == 1 and '0.8' in blatt[0] and 'blatt_0.' in blatt[0]
+    # die Lücke bis zur Blattspitze steht mit Grund unter den verworfenen
+    assert 'dahinter zu wenig freie Tiefe' in text
+    assert 'bild_' not in text and 'scan_' not in text
+    assert vermessung_pruefen.main(['--runden', str(tmp_path / 'leer')]) == 2
+
+
+def test_wahrheit_eintragen_prueft_nummern_und_bewahrt_fruehere_angaben(beispielordner, tmp_path,
+                                                                        capsys):
+    import shutil
+    import trockenlauf
+    import trockenlauf_auswerten
+    import wahrheit_eintragen
+    runden = tmp_path / 'runden'
+    shutil.copytree(beispielordner, runden)
+    ausgabe = tmp_path / 'aus'
+    assert trockenlauf.main(['--runden', str(runden), '--ausgabe', str(ausgabe),
+                             '--nur-markieren']) == 0
+    fest = ['--ergebnis', str(ausgabe / 'ergebnis.json'), '--runden', str(runden),
+            '--name', 'beispiel_zimmer']
+    assert wahrheit_eintragen.main(fest + ['--ausgaenge', '2', '--arten', '1=glas',
+                                           '2=tuer_offen', '--raum', 'Zimmer']) == 0
+    datei = runden / 'beispiel_zimmer' / 'wahrheit.json'
+    erste = json.loads(datei.read_text(encoding='utf-8'))
+    assert erste['ausgaenge'] == [2] and erste['ausgang_sichtbar'] is True
+    assert erste['arten'] == {'1': 'glas', '2': 'tuer_offen'} and erste['raum'] == 'Zimmer'
+    assert set(erste['lage']) == {'1', '2'} and len(erste['lage']['2']['mitte']) == 2
+    # zweite Angabe: kein Ausgang unter den Nummern, aber einer ohne Nummer
+    assert wahrheit_eintragen.main(fest + ['--arten', '1=moebelspalt',
+                                           '--ausgang-ohne-nummer', 'ja',
+                                           '--bemerkung', 'Tür weiter links']) == 0
+    zweite = json.loads(datei.read_text(encoding='utf-8'))
+    assert zweite['ausgaenge'] == [] and zweite['ausgang_sichtbar'] is True
+    assert zweite['bemerkung'] == 'Tür weiter links'
+    vorher = runden / 'beispiel_zimmer' / 'wahrheit_vorher_1.json'
+    assert json.loads(vorher.read_text(encoding='utf-8')) == erste
+    assert 'aufbewahrt als wahrheit_vorher_1.json' in capsys.readouterr().out
+    # die Auswertung liest die neue Form
+    assert trockenlauf_auswerten.lies_wahrheiten(runden)['beispiel_zimmer']['ausgaenge'] == []
+    # falsche Angaben werden abgelehnt, die Datei bleibt
+    assert wahrheit_eintragen.main(fest + ['--ausgaenge', '7']) == 2
+    assert wahrheit_eintragen.main(fest + ['--arten', '1=fenster']) == 2
+    assert wahrheit_eintragen.main(fest[:-1] + ['gibt_es_nicht']) == 2
+    assert json.loads(datei.read_text(encoding='utf-8')) == zweite
