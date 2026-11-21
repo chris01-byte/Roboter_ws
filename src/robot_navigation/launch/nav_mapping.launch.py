@@ -225,6 +225,12 @@ def generate_launch_description():
                         'auf der Stelle drehen) und bleibt stehen; kein Ziel. '
                         'Anschlussstelle fuer ki_erkundung, Vorgabe aus.'),
         DeclareLaunchArgument(
+            'stage_drive_only', default_value='false',
+            description='true = Etappenfahrt: der Explorer wartet auf genau '
+                        'ein Fahrziel und faehrt es ohne Nav2 in kurzen geraden '
+                        'Etappen an; ohne Ziel bewegt sich nichts. Zweite '
+                        'Anschlussstelle fuer ki_erkundung, Vorgabe aus.'),
+        DeclareLaunchArgument(
             'self_healing', default_value='false',
             description='true = selbstheilender Erkundungsbetrieb: Explorer-'
                         'Profil self_healing, Planung durch Unbekanntes, '
@@ -291,6 +297,7 @@ def generate_launch_description():
                 'hwt601_active_drive': active_drive,
                 'hwt_development_contract': hwt_development_contract,
                 'initial_scan_only': initial_scan_only,
+                'stage_drive_only': LaunchConfiguration('stage_drive_only'),
             }.items()),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(_launch_file(

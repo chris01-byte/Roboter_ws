@@ -41,6 +41,24 @@ Liste (249 wie am 19.11. und 18 neue), ein Lauf des ganzen Stacks in der
 Simulation (361,7° in 77 s, kein Nav2-Ziel, Mission erfolgreich). Am Roboter
 nicht gelaufen. Rückfall: das Argument weglassen; im Code den Commit
 zurücknehmen.
+**21.11.2026 (nachts) – zweite Anschlussstelle „Etappenfahrt“ (Freigabe des
+Projektinhabers):** Der Erkunder hat ein zweites Startargument
+`stage_drive_only` (Vorgabe `false`). Mit `true` wartet ein Erkundungsauftrag
+stehend auf genau ein Fahrziel der KI-Linie (ein bis drei Punkte in der
+Karte, Thema `/ki_erkundung/fahrziel_json`) und fährt es **ohne Nav2** an:
+auf der Stelle ausrichten, gerade, vom Laser gemessene Etappen von höchstens
+0,5 m bei 0,05 m/s, vor jeder Etappe die Prüfung des Streifens in
+Fahrzeugbreite. Das gilt vor jeder Erkundungsstrategie; zusammen mit
+`initial_scan_only` kommt zuerst der Rundblick. Ohne gültiges Ziel bewegt
+sich nichts. Verwendet werden die am 10./11.09.2026 real bestandenen
+Bausteine (`_rotate_in_place`, `_drive_forward_lidar`,
+`front_lidar_corridor_check`); am Erkunder kamen nur Zeilen hinzu (397, keine
+geändert), dazu das neue Modul `stage_drive.py`. Standardweg,
+Selbstheilungsweg, Profile, Fahrtor und Kollisionsmonitor sind nicht
+geändert; die Hauptlinie bleibt geparkt. Am Roboter nicht gelaufen.
+Rückfall: das Argument weglassen; im Code den Commit zurücknehmen. Nachweise
+und Simulationsläufe stehen in
+[ki_erkundung/STATUS.md](../../ki_erkundung/STATUS.md).
 Wo wir stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.

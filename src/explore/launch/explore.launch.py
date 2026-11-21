@@ -45,6 +45,11 @@ def generate_launch_description():
             'initial_scan_only', default_value='false',
             description='true = nur Rundblick: einmal auf der Stelle drehen '
                         'und stehen bleiben, kein Ziel. Gilt vor jedem Profil.'),
+        DeclareLaunchArgument(
+            'stage_drive_only', default_value='false',
+            description='true = Etappenfahrt: auf genau ein Fahrziel warten '
+                        'und es ohne Nav2 in kurzen geraden Etappen anfahren. '
+                        'Ohne Ziel bewegt sich nichts. Gilt vor jedem Profil.'),
         Node(
             package='explore',
             executable='explore',
@@ -61,6 +66,8 @@ def generate_launch_description():
                         LaunchConfiguration('hwt_development_contract'), value_type=bool),
                     'initial_scan_only': ParameterValue(
                         LaunchConfiguration('initial_scan_only'), value_type=bool),
+                    'stage_drive_only': ParameterValue(
+                        LaunchConfiguration('stage_drive_only'), value_type=bool),
                 }],
         )
     ])

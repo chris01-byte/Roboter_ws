@@ -55,6 +55,16 @@ Rundblick (360° auf der Stelle) und endet ohne Ziel. Anschlussstelle für
 die KI-Linie, vom Projektinhaber freigegeben; ohne das Argument unverändert.
 Am Roboter noch nicht gelaufen.
 
+**Softwaredelta 21.11.2026 (nachts) / Erkunder:** zweites Startargument
+`stage_drive_only` (dieselben drei Startdateien; Vorgabe `false`),
+„Etappenfahrt“. Mit `true` wartet der Erkunder auf genau ein Fahrziel auf
+`/ki_erkundung/fahrziel_json` und fährt es ohne Nav2 in kurzen geraden,
+vom Laser gemessenen Etappen an (neues Modul
+`src/explore/explore/stage_drive.py`, sonst vorhandene Bausteine). Ohne
+Ziel bewegt sich nichts. Zweite Anschlussstelle für die KI-Linie, vom
+Projektinhaber freigegeben; ohne das Argument unverändert. Nur in Tests und
+Simulation gelaufen, am Roboter nicht.
+
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 

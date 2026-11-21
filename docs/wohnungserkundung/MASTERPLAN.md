@@ -448,7 +448,10 @@ Amadeus dreht sich für die Blickrunde selbst. Der KI-Rechner wird nur
 eingeschaltet; die Verbindung baut sich von selbst auf, wie bei der
 Objekterkennung (ROS 2 DDS im WLAN, im Repository auf `main`). Der Lotse
 bekommt dafür einen eigenen Dienst auf dem KI-Rechner mit drei eigenen
-Themen `/ki_erkundung/…`; Fahrbefehle gibt es dort nicht.
+Themen `/ki_erkundung/…`; Fahrbefehle gibt es dort nicht. Ein viertes Thema
+(`/ki_erkundung/fahrziel_json`, seit 21.11.2026) gibt es nur auf dem
+Roboter: Darauf nennt die KI-Linie dem Erkunder ein Fahrziel; der KI-Rechner
+sendet dort nie.
 
 ### 10.3 Verhältnis zur Hauptlinie
 
@@ -463,5 +466,20 @@ Themen `/ki_erkundung/…`; Fahrbefehle gibt es dort nicht.
   ein Ziel anzufahren; ohne das Argument ist alles wie zuvor. Sie dient der
   Blickrunde von KI-1. Weitere Anschlussstellen brauchen je eine eigene
   Freigabe.
+- **Zweite Anschlussstelle (21.11.2026, vom Projektinhaber freigegeben):**
+  Startargument `stage_drive_only` des Erkunders, Vorgabe `false`
+  („Etappenfahrt“). Mit `true` wartet ein Erkundungsauftrag stehend auf genau
+  ein Fahrziel der KI-Linie (ein bis drei Punkte in der Karte) und fährt es
+  **ohne Nav2** an: auf der Stelle ausrichten und kurze gerade, vom Laser
+  gemessene Etappen von höchstens 0,5 m bei 0,05 m/s, vor jeder Etappe die
+  Prüfung des Streifens in Fahrzeugbreite. Das sind die am 10./11.09.2026
+  real bestandenen Bausteine des Erkunders, unverändert; Fahrtor,
+  Geschwindigkeitsglätter und Kollisionsmonitor bleiben davor. Ohne gültiges
+  Ziel bewegt sich nichts, und der Auftrag meldet das. Zusammen mit
+  `initial_scan_only` kommt zuerst der Rundblick. Der Erkunder bleibt der
+  einzige Besitzer der Navigation; die KI-Linie liefert nur das Ziel und
+  nennt, wer es gewählt hat. Entscheidung des Projektinhabers dazu: erst
+  ohne Nav2, vom Einfachen zum Schwierigen; Nav2 kommt nur dazu, wenn das
+  nicht reicht.
 - **Rückfall der ganzen Linie:** `ki_erkundung/` und die Verweise darauf
   entfernen. Sonst ändert sich nichts.

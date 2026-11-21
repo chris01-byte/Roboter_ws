@@ -84,6 +84,10 @@ def generate_launch_description():
             description='true = der Explorer macht nur den Rundblick und '
                         'bleibt stehen (nav_mapping.launch.py); Vorgabe aus.'),
         DeclareLaunchArgument(
+            'stage_drive_only', default_value='false',
+            description='true = Etappenfahrt ohne Nav2 zu einem Fahrziel '
+                        '(nav_mapping.launch.py); Vorgabe aus.'),
+        DeclareLaunchArgument(
             'self_healing', default_value='false',
             description='true = selbstheilender Erkundungsbetrieb '
                         '(nav_mapping.launch.py self_healing); false = bisher.'),
@@ -113,6 +117,7 @@ def generate_launch_description():
                 'explore_params_overlay': explore_params_overlay,
                 'self_healing': self_healing,
                 'initial_scan_only': LaunchConfiguration('initial_scan_only'),
+                'stage_drive_only': LaunchConfiguration('stage_drive_only'),
             }.items()),
 
         # Beide Manager sind reine Beobachter/Persistenzschichten. Sie senden
