@@ -3,12 +3,12 @@
 
 Startet den Lotsen-Dienst (``lotse_dienst.py``) und zeigt in einem Fenster
 des Browsers, was er tut: ob das KI-Programm (Ollama) läuft, ob der Dienst
-bereit ist, ob der Roboter im Netz ist, die letzten Fragen des Roboters mit
-Bildern und Antwort, und das Log.
+bereit ist, ob der Roboter im Netz ist, die letzten zehn Fragen des Roboters
+mit Bildern und Antwort (zum Durchblättern), und das Log.
 
 Die Anzeige ist eine Seite, die dieses Programm selbst ausliefert. Sie ist
 **nur von diesem Rechner aus erreichbar** (Adresse 127.0.0.1); ins Netz
-geht davon nichts. Die Bilder der letzten Frage liegen im Ordner des
+geht davon nichts. Die Bilder der letzten Fragen liegen im Ordner des
 Programms auf dem KI-Rechner und verlassen ihn nicht.
 
 Start (in der ROS-Umgebung des KI-Rechners, gleiche ``ROS_DOMAIN_ID`` und
@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -46,6 +47,9 @@ VORGABE_ORDNER = Path.home() / '.local/share/amadeus/ki_erkundung/lotse'
 SEITE = Path(__file__).resolve().with_name('lotse_fenster_seite.html')
 DIENST = Path(__file__).resolve().with_name('lotse_dienst.py')
 KOPFZEILE = 'X-Lotse-Fenster'          # nur die eigene Seite sendet sie mit
+# Unterordner einer abgelegten Frage (wie ``lotse_dienst.ABLAGE_MUSTER``).
+ABLAGE_MUSTER = re.compile(r'[0-9]{1,16}_[A-Za-z0-9]{1,16}')
+BILD_PFAD = re.compile(r'/bild/(?:([0-9]{1,16}_[A-Za-z0-9]{1,16})/)?([0-9]{1,3})')
 
 
 def _in_arbeitskopie(ordner: Path) -> bool:
@@ -262,14 +266,22 @@ class Fenster:
                 'ros_fragende': gemeldet.get('ros_fragende') if frisch else None,
             },
             'verlauf': (gemeldet.get('verlauf') or [])[::-1] if gemeldet else [],
+            # die letzten Fragen mit Bildern, neueste zuerst
+            'fragen': (gemeldet.get('fragen') or [])[::-1] if gemeldet else [],
             'letzte_frage': gemeldet.get('letzte_frage') if gemeldet else None,
             'log': self._log_ende(),
         }
 
-    def bild(self, nummer: int) -> Optional[bytes]:
-        datei = self.ordner / 'letzte_frage' / f'bild_{int(nummer)}.jpg'
+    def bild(self, nummer: int, ablage: Optional[str] = None) -> Optional[bytes]:
+        """Ein Bild einer abgelegten Frage; ohne Ablage aus ``letzte_frage`` (ältere Dienste)."""
+        if ablage is None:
+            ordner = self.ordner / 'letzte_frage'
+        elif ABLAGE_MUSTER.fullmatch(ablage):
+            ordner = self.ordner / 'fragen' / ablage
+        else:
+            return None
         try:
-            return datei.read_bytes()
+            return (ordner / f'bild_{int(nummer)}.jpg').read_bytes()
         except OSError:
             return None
 
@@ -311,8 +323,9 @@ def baue_bearbeiter(fenster: Fenster, beenden):
                 return self._sende(200, SEITE.read_bytes(), 'text/html; charset=utf-8')
             if pfad == '/api/zustand':
                 return self._json(200, fenster.zustand())
-            if pfad.startswith('/bild/') and pfad[6:].isdigit():
-                bild = fenster.bild(int(pfad[6:]))
+            treffer = BILD_PFAD.fullmatch(pfad)
+            if treffer:
+                bild = fenster.bild(int(treffer.group(2)), treffer.group(1))
                 if bild is not None:
                     return self._sende(200, bild, 'image/jpeg')
             return self._json(404, {'fehler': 'unbekannt'})
@@ -345,7 +358,7 @@ def main(argv=None) -> int:
     eingabe.add_argument('--url', default=STANDARD_URL,
                          help='Adresse von Ollama auf diesem Rechner')
     eingabe.add_argument('--ordner', default=str(VORGABE_ORDNER),
-                         help='Ordner für Zustand, Log und die Bilder der letzten Frage '
+                         help='Ordner für Zustand, Log und die Bilder der letzten Fragen '
                               '(auf diesem Rechner, außerhalb des Repositorys)')
     eingabe.add_argument('--port', type=int, default=VORGABE_PORT)
     eingabe.add_argument('--kein-browser', action='store_true',

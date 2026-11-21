@@ -17,8 +17,10 @@ ein, bekommt sie sofort die Antwort ``beschaeftigt``.
 
 Mit ``--zustand ORDNER`` legt er jede Sekunde seinen Zustand als
 ``zustand.json`` ab und dazu die Bilder, den Text und die Antwort der
-letzten Frage. Daraus liest das Lotsen-Fenster (``lotse_fenster.py``), was
-es anzeigt. Der Ordner liegt auf dem KI-Rechner außerhalb des Repositorys.
+letzten zehn Fragen, jede in einem eigenen Unterordner von ``fragen/``;
+ältere werden gelöscht. Daraus liest das Lotsen-Fenster
+(``lotse_fenster.py``), was es anzeigt. Der Ordner liegt auf dem
+KI-Rechner außerhalb des Repositorys.
 """
 from __future__ import annotations
 
@@ -26,6 +28,8 @@ import argparse
 import collections
 import json
 import os
+import re
+import shutil
 import sys
 import threading
 import time
@@ -41,6 +45,16 @@ from lotse.antwort import pruefe  # noqa: E402
 from lotse.botschaft import entpacke_frage, packe_antwort  # noqa: E402
 from lotse.ki_rechner import (STANDARD_URL, Rohantwort, frage_stellen,  # noqa: E402
                               umgebung)
+
+# So viele Fragen behält der Dienst mit Bildern für das Fenster.
+FRAGEN_BEHALTEN = 10
+# Name eines Unterordners in ``fragen/``: Zeit in Millisekunden, Kennung der Frage.
+ABLAGE_MUSTER = re.compile(r'[0-9]{1,16}_[A-Za-z0-9]{1,16}')
+
+
+def ablage_name(zeit_unix: float, frage_id) -> str:
+    kennung = ''.join(z for z in str(frage_id or '') if z.isascii() and z.isalnum())[:16]
+    return f'{int(round(zeit_unix * 1000))}_{kennung or "frage"}'
 
 
 class Dienst:
@@ -58,7 +72,7 @@ class Dienst:
         self._abgelehnt = 0
         self._gestartet = time.time()
         self._verlauf = collections.deque(maxlen=30)       # jüngste Fragen, neueste zuletzt
-        self._letzte_frage = None
+        self._fragen = collections.deque(maxlen=FRAGEN_BEHALTEN)   # mit Bildern, neueste zuletzt
         self._zustand_ordner = None if zustand_ordner is None else Path(zustand_ordner)
         self._umgebung = umgebung(modell, url)
         self._antwort = knoten.create_publisher(String, THEMA_ANTWORT, qos_botschaft())
@@ -82,7 +96,7 @@ class Dienst:
             andere, fragende = [], 0
         with self._sperre:
             verlauf = list(self._verlauf)
-            letzte = self._letzte_frage
+            fragen = list(self._fragen)
         return {
             'schema_version': SCHEMA_VERSION, 'pid': os.getpid(),
             'zeit_unix': round(time.time(), 1), 'gestartet_unix': round(self._gestartet, 1),
@@ -93,7 +107,8 @@ class Dienst:
             # Andere ROS-Programme im selben Netz (Roboter) und Programme, die
             # gerade eine Frage stellen können.
             'ros_andere_knoten': len(andere), 'ros_fragende': fragende,
-            'verlauf': verlauf, 'letzte_frage': letzte,
+            'verlauf': verlauf, 'fragen': fragen,
+            'letzte_frage': fragen[-1] if fragen else None,
         }
 
     def schreibe_zustand(self) -> None:
@@ -109,26 +124,39 @@ class Dienst:
 
     def _merke(self, eintrag: dict, frage=None, bilder=(), antworttext=None) -> None:
         """Eine Frage im Verlauf vermerken und ihre Bilder für das Fenster ablegen."""
-        letzte = None
+        abgelegt = None
         if frage is not None and self._zustand_ordner is not None:
-            ordner = self._zustand_ordner / 'letzte_frage'
+            wurzel = self._zustand_ordner / 'fragen'
+            name = ablage_name(eintrag['zeit_unix'], eintrag.get('frage_id'))
+            ordner = wurzel / name
             try:
                 ordner.mkdir(parents=True, exist_ok=True)
-                for alt in ordner.glob('bild_*.jpg'):
-                    alt.unlink()
                 for nummer, bild in enumerate(bilder, start=1):
                     (ordner / f'bild_{nummer}.jpg').write_bytes(bytes(bild))
                 (ordner / 'frage.txt').write_text(frage.text, encoding='utf-8')
                 (ordner / 'antwort.txt').write_text(antworttext or '', encoding='utf-8')
-                letzte = dict(eintrag, bilder=len(bilder), antworttext=antworttext,
-                              angeboten=list(frage.angeboten))
+                eintrag = dict(eintrag, ablage=name)
+                abgelegt = dict(eintrag, bilder=len(bilder), antworttext=antworttext,
+                                angeboten=list(frage.angeboten))
             except OSError as fehler:
-                self.knoten.get_logger().warning(f'Letzte Frage nicht abgelegt: {fehler}')
+                self.knoten.get_logger().warning(f'Frage nicht abgelegt: {fehler}')
+            self._raeume_auf(wurzel)
         with self._sperre:
             self._verlauf.append(eintrag)
-            if letzte is not None:
-                self._letzte_frage = letzte
+            if abgelegt is not None:
+                self._fragen.append(abgelegt)
         self.schreibe_zustand()
+
+    def _raeume_auf(self, wurzel: Path) -> None:
+        """Nur die jüngsten FRAGEN_BEHALTEN Ablagen behalten (auch aus früheren Läufen)."""
+        try:
+            ablagen = [p for p in wurzel.iterdir()
+                       if p.is_dir() and ABLAGE_MUSTER.fullmatch(p.name)]
+        except OSError:
+            return
+        ablagen.sort(key=lambda p: int(p.name.split('_')[0]))
+        for alt in ablagen[:-FRAGEN_BEHALTEN]:
+            shutil.rmtree(alt, ignore_errors=True)
 
     def _melde_status(self) -> None:
         if self._umgebung.get('modell_kennung') is None and not self._beschaeftigt:

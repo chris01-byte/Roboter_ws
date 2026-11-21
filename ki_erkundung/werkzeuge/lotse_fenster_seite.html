@@ -85,6 +85,15 @@
            flex-wrap: wrap; align-items: center; }
   footer code { font-size: 12.5px; }
   footer button { margin-left: auto; }
+  .leiste { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; align-items: center; }
+  .leiste button { padding: 4px 10px; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  .leiste button.gewaehlt { border-color: var(--akzent); box-shadow: inset 0 0 0 1px var(--akzent);
+                            font-weight: 600; }
+  .leiste .dazu { color: var(--leise); font-size: 13px; margin-left: 4px; }
+  tr.waehlbar { cursor: pointer; }
+  tr.waehlbar:hover td { background: var(--aus-grund); }
+  tr.gewaehlt td { background: var(--aus-grund); }
+  tr.gewaehlt td:first-child { box-shadow: inset 3px 0 0 var(--akzent); }
   #gross { position: fixed; inset: 0; background: rgba(0, 0, 0, .86); display: none;
            align-items: center; justify-content: center; cursor: zoom-out; z-index: 5; }
   #gross img { max-width: 96vw; max-height: 94vh; border-radius: 8px; image-rendering: auto; }
@@ -126,7 +135,8 @@
     </section>
   </div>
 
-  <h2>Letzte Frage</h2>
+  <h2 id="frage-titel">Letzte Frage</h2>
+  <div class="leiste" id="leiste"></div>
   <div class="tafel" id="letzte"><div class="leer">Noch keine Frage, seit der Dienst läuft.</div></div>
 
   <h2>Verlauf</h2>
@@ -153,6 +163,8 @@ const ERGEBNIS = {antwort: 'Antwort', zeitgrenze: 'zu spät (Zeitgrenze)',
   beschaeftigt: 'abgewiesen (beschäftigt)', dienstfehler: 'Fehler im Dienst',
   nicht_erreichbar: 'KI-Programm nicht erreichbar', unbrauchbare_frage: 'unbrauchbare Frage'};
 let letzteId = null, beendet = false;
+// Gewählte Frage (Name ihrer Ablage); null = immer die neueste zeigen.
+let auswahl = null, leisteId = null, verlaufId = null, letzterZustand = null;
 
 function text(el, wert) { if (el.textContent !== wert) el.textContent = wert; }
 function punkt(id, art) { $(id).className = 'punkt' + (art ? ' ' + art : ''); }
@@ -258,10 +270,51 @@ function zeigeKacheln(z) {
   } else fremd.style.display = 'none';
 }
 
+function abgelegteFragen(z) {
+  // Neueste zuerst. Ältere Dienste melden nur die letzte Frage.
+  if (z.fragen && z.fragen.length) return z.fragen;
+  return z.letzte_frage ? [z.letzte_frage] : [];
+}
+function kurzWahl(f) {
+  if (f.ergebnis !== 'antwort') return ERGEBNIS[f.ergebnis] || f.ergebnis;
+  return f.wahl === null || f.wahl === undefined ? 'keine Wahl' : 'Nr. ' + f.wahl;
+}
+function waehle(ablage) {
+  auswahl = ablage;
+  if (letzterZustand) { zeigeLetzte(letzterZustand); zeigeVerlauf(letzterZustand); }
+}
+
+function zeigeLeiste(fragen, gezeigt) {
+  const leiste = $('leiste');
+  const kennung = fragen.map((f) => f.ablage).join(',') + '|' + (gezeigt ? gezeigt.ablage : '') + '|' + auswahl;
+  if (kennung === leisteId) return;
+  leisteId = kennung;
+  leiste.textContent = '';
+  if (fragen.length < 2 || !fragen[0].ablage) return;
+  fragen.forEach((f, i) => {
+    const knopf = element('button', f === gezeigt ? 'gewaehlt' : '', uhr(f.zeit_unix) + ' · ' + kurzWahl(f));
+    knopf.title = i === 0 ? 'Neueste Frage' : (i + 1) + '. Frage von oben';
+    knopf.onclick = () => waehle(i === 0 ? null : f.ablage);
+    leiste.appendChild(knopf);
+  });
+  leiste.appendChild(element('span', 'dazu', auswahl === null
+    ? 'Neue Fragen erscheinen von selbst.'
+    : 'Ältere Frage gewählt; neue Fragen erscheinen erst nach Klick auf die erste.'));
+}
+
 function zeigeLetzte(z) {
-  const f = z.letzte_frage;
+  const fragen = abgelegteFragen(z);
+  let f = fragen.length ? fragen[0] : null;
+  if (auswahl !== null) {
+    const gewaehlt = fragen.find((a) => a.ablage === auswahl);
+    if (gewaehlt) f = gewaehlt; else auswahl = null;        // inzwischen gelöscht
+  }
+  zeigeLeiste(fragen, f);
   if (!f) return;
-  const kennung = f.frage_id + '/' + f.zeit_unix;
+  const neueste = f === fragen[0];
+  text($('frage-titel'), neueste ? 'Letzte Frage'
+    : 'Frage von ' + uhr(f.zeit_unix) + ' (' + (fragen.indexOf(f) + 1) + ' von ' + fragen.length + ', neueste zuerst)');
+  const kennung = f.ablage || (f.frage_id + '/' + f.zeit_unix);
   if (kennung === letzteId) return;
   letzteId = kennung;
   const tafel = $('letzte');
@@ -270,8 +323,8 @@ function zeigeLetzte(z) {
   const bilder = element('div', 'bilder' + (f.bilder <= 2 ? ' wenige' : ''));
   for (let n = 1; n <= f.bilder; n++) {
     const bild = element('img');
-    bild.alt = 'Bild ' + n + ' der letzten Frage';
-    bild.src = '/bild/' + n + '?f=' + encodeURIComponent(kennung);
+    bild.alt = 'Bild ' + n + ' der Frage von ' + uhr(f.zeit_unix);
+    bild.src = f.ablage ? '/bild/' + f.ablage + '/' + n : '/bild/' + n + '?f=' + encodeURIComponent(kennung);
     bild.onclick = () => { $('gross').firstElementChild.src = bild.src; $('gross').style.display = 'flex'; };
     bilder.appendChild(bild);
   }
@@ -319,14 +372,26 @@ function zeigeLetzte(z) {
 
 function zeigeVerlauf(z) {
   const tafel = $('verlauf');
-  if (!z.verlauf.length) { if (!tafel.querySelector('.leer')) tafel.innerHTML = '<div class="leer">Noch keine Frage.</div>'; return; }
+  if (!z.verlauf.length) { verlaufId = null; if (!tafel.querySelector('.leer')) tafel.innerHTML = '<div class="leer">Noch keine Frage.</div>'; return; }
   const tabelle = element('table');
   const kopf = element('tr');
   for (const [name, klasse] of [['Zeit', ''], ['Bilder', 'zahl'], ['Dauer', 'zahl'], ['Ergebnis', ''], ['Wahl', ''], ['Raum', '']])
     kopf.appendChild(element('th', klasse, name));
   tabelle.appendChild(kopf);
+  const fragen = abgelegteFragen(z);
+  const mitBild = new Set(fragen.map((f) => f.ablage).filter(Boolean));
+  const gezeigt = auswahl !== null && mitBild.has(auswahl) ? auswahl : (fragen.length ? fragen[0].ablage : null);
+  // Nur neu zeichnen, wenn sich etwas geändert hat; sonst gingen Klicks verloren.
+  const kennung = JSON.stringify([z.verlauf, gezeigt, [...mitBild]]);
+  if (kennung === verlaufId) return;
+  verlaufId = kennung;
   for (const e of z.verlauf) {
     const reihe = element('tr');
+    if (e.ablage && mitBild.has(e.ablage)) {
+      reihe.className = 'waehlbar' + (e.ablage === gezeigt ? ' gewaehlt' : '');
+      reihe.title = 'Diese Frage oben mit Bildern zeigen';
+      reihe.onclick = () => { waehle(fragen[0].ablage === e.ablage ? null : e.ablage); window.scrollTo({top: $('frage-titel').offsetTop - 10, behavior: 'smooth'}); };
+    }
     reihe.appendChild(element('td', '', uhr(e.zeit_unix)));
     reihe.appendChild(element('td', 'zahl', e.bilder === undefined ? '–' : String(e.bilder)));
     reihe.appendChild(element('td', 'zahl', e.dauer_s === undefined ? '–' : String(e.dauer_s).replace('.', ',') + ' s'));
@@ -357,6 +422,7 @@ async function hole() {
   try {
     const antwort = await fetch('/api/zustand', {cache: 'no-store'});
     const z = await antwort.json();
+    letzterZustand = z;
     zeigeKacheln(z); zeigeLetzte(z); zeigeVerlauf(z); zeigeLog(z);
   } catch (fehler) {
     const lage = $('lage');

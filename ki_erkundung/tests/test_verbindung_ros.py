@@ -197,7 +197,8 @@ def test_dienst_legt_zustand_und_letzte_frage_fuer_das_fenster_ab(ros, ki_attrap
         letzte = zustand['letzte_frage']
         assert letzte['frage_id'] == eintrag['frage_id'] and letzte['angeboten'] == [1]
         assert '"wahl": 1' in letzte['antworttext']
-        abgelegt = ordner / 'letzte_frage'
+        assert zustand['fragen'] == [letzte] and letzte['ablage'] == eintrag['ablage']
+        abgelegt = ordner / 'fragen' / eintrag['ablage']
         assert [(abgelegt / f'bild_{n}.jpg').read_bytes() for n in (1, 2)] == BILDER
         assert (abgelegt / 'frage.txt').read_text(encoding='utf-8') == FRAGE.text
         assert zustand['zeit_unix'] >= zustand['gestartet_unix']

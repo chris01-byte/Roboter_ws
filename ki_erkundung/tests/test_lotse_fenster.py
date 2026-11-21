@@ -24,6 +24,10 @@ GESPIELTER_DIENST = textwrap.dedent('''
     os.makedirs(os.path.join(ordner, 'letzte_frage'), exist_ok=True)
     with open(os.path.join(ordner, 'letzte_frage', 'bild_1.jpg'), 'wb') as datei:
         datei.write(b'\\xff\\xd8bild')
+    for ablage, inhalt in (('1000_a', b'\\xff\\xd8frueher'), ('2000_b', b'\\xff\\xd8spaeter')):
+        os.makedirs(os.path.join(ordner, 'fragen', ablage), exist_ok=True)
+        with open(os.path.join(ordner, 'fragen', ablage, 'bild_1.jpg'), 'wb') as datei:
+            datei.write(inhalt)
     beginn = time.time()
     try:
         while True:
@@ -34,6 +38,10 @@ GESPIELTER_DIENST = textwrap.dedent('''
                        'verlauf': [{'zeit_unix': beginn, 'frage_id': 'a', 'ergebnis': 'zeitgrenze'},
                                    {'zeit_unix': beginn + 1, 'frage_id': 'b', 'ergebnis': 'antwort',
                                     'wahl': 2, 'gueltig': True}],
+                       'fragen': [{'frage_id': 'a', 'ablage': '1000_a', 'zeit_unix': beginn,
+                                   'bilder': 1, 'ergebnis': 'zeitgrenze'},
+                                  {'frage_id': 'b', 'ablage': '2000_b', 'zeit_unix': beginn + 1,
+                                   'bilder': 1, 'ergebnis': 'antwort', 'wahl': 2}],
                        'letzte_frage': {'frage_id': 'b', 'zeit_unix': beginn + 1, 'bilder': 1,
                                         'ergebnis': 'antwort', 'wahl': 2}}
             with open(os.path.join(ordner, 'zustand.json'), 'w') as datei:
@@ -103,8 +111,12 @@ def test_dienst_starten_zustand_lesen_und_mit_einem_sigint_beenden(fenster):
     assert z['roboter'] == {'gegenstellen': 0, 'im_netz': None, 'ros_andere_knoten': 3,
                             'ros_fragende': 1}
     assert [e['frage_id'] for e in z['verlauf']] == ['b', 'a']          # neueste zuerst
+    assert [f['ablage'] for f in z['fragen']] == ['2000_b', '1000_a']    # neueste zuerst
     assert z['letzte_frage']['wahl'] == 2 and fenster.bild(1) == b'\xff\xd8bild'
     assert fenster.bild(2) is None
+    assert fenster.bild(1, '1000_a') == b'\xff\xd8frueher'
+    assert fenster.bild(1, '2000_b') == b'\xff\xd8spaeter'
+    assert fenster.bild(2, '1000_a') is None and fenster.bild(1, '../lotse') is None
     assert any('gespielter Dienst gestartet' in zeile for zeile in z['log'])
     assert fenster.stoppe_dienst() == 'beendet'
     assert fenster.stoppe_dienst() == 'lief_nicht'
@@ -160,6 +172,9 @@ def test_seite_zustand_und_bild_nur_von_diesem_rechner(fenster, seite):
     assert status == 200 and zustand['dienst']['laeuft'] and zustand['modell'] == 'pruefmodell'
     assert seite('/bild/1') == (200, b'\xff\xd8bild')
     assert seite('/bild/9')[0] == 404 and seite('/bild/../zustand.json')[0] == 404
+    assert seite('/bild/1000_a/1') == (200, b'\xff\xd8frueher')
+    assert seite('/bild/1000_a/2')[0] == 404 and seite('/bild/9999_x/1')[0] == 404
+    assert seite('/bild/1000_a/../../zustand.json')[0] == 404
     assert seite('/etwas')[0] == 404
     # Unter fremdem Namen angesprochen (eine Webseite, die hierher zeigt): abgelehnt.
     assert seite('/api/zustand', kopf={'Host': 'boese.example'})[0] == 403
