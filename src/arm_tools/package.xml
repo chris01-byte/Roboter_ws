@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>arm_tools</name>
+  <version>0.1.0</version>
+  <description>Explicit arm inventory and read-only probe CLI.</description>
+  <maintainer email="qtg0900@example.com">QTG0900</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_python</buildtool_depend>
+  <exec_depend>arm_hardware</exec_depend>
+  <test_depend>python3-pytest</test_depend>
+  <export><build_type>ament_python</build_type></export>
+</package>

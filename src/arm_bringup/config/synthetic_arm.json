@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "config_id": "synthetic-demo-v1",
+  "environment": "synthetic",
+  "joints": [
+    {
+      "name": "joint1",
+      "motor_model": "SYNTHETIC-ESS",
+      "firmware": "fixture-v1",
+      "device_id": 1,
+      "read_profile": "synthetic-v1",
+      "identity_evidence": "Synthetic fixture only; not the actual joint/address mapping",
+      "homing_input": null,
+      "calibration": {
+        "gear_ratio": null,
+        "feedback_counts_per_motor_rev": null,
+        "command_counts_per_motor_rev": null,
+        "direction_sign": null,
+        "home_offset_rad": null,
+        "soft_lower_rad": null,
+        "soft_upper_rad": null,
+        "max_velocity_rad_s": null,
+        "max_acceleration_rad_s2": null,
+        "homing_direction_sign": null
+      }
+    },
+    {
+      "name": "joint2",
+      "motor_model": "SYNTHETIC-ESS",
+      "firmware": "fixture-v1",
+      "device_id": 2,
+      "read_profile": "synthetic-v1",
+      "identity_evidence": "Synthetic fixture only; not the actual joint/address mapping",
+      "homing_input": null,
+      "calibration": {
+        "gear_ratio": null,
+        "feedback_counts_per_motor_rev": null,
+        "command_counts_per_motor_rev": null,
+        "direction_sign": null,
+        "home_offset_rad": null,
+        "soft_lower_rad": null,
+        "soft_upper_rad": null,
+        "max_velocity_rad_s": null,
+        "max_acceleration_rad_s2": null,
+        "homing_direction_sign": null
+      }
+    },
+    {
+      "name": "joint3",
+      "motor_model": "SYNTHETIC-ESS",
+      "firmware": "fixture-v1",
+      "device_id": 3,
+      "read_profile": "synthetic-v1",
+      "identity_evidence": "Synthetic fixture only; not the actual joint/address mapping",
+      "homing_input": null,
+      "calibration": {
+        "gear_ratio": null,
+        "feedback_counts_per_motor_rev": null,
+        "command_counts_per_motor_rev": null,
+        "direction_sign": null,
+        "home_offset_rad": null,
+        "soft_lower_rad": null,
+        "soft_upper_rad": null,
+        "max_velocity_rad_s": null,
+        "max_acceleration_rad_s2": null,
+        "homing_direction_sign": null
+      }
+    },
+    {
+      "name": "joint4",
+      "motor_model": "SYNTHETIC-ESS",
+      "firmware": "fixture-v1",
+      "device_id": 4,
+      "read_profile": "synthetic-v1",
+      "identity_evidence": "Synthetic fixture only; not the actual joint/address mapping",
+      "homing_input": null,
+      "calibration": {
+        "gear_ratio": null,
+        "feedback_counts_per_motor_rev": null,
+        "command_counts_per_motor_rev": null,
+        "direction_sign": null,
+        "home_offset_rad": null,
+        "soft_lower_rad": null,
+        "soft_upper_rad": null,
+        "max_velocity_rad_s": null,
+        "max_acceleration_rad_s2": null,
+        "homing_direction_sign": null
+      }
+    },
+    {
+      "name": "joint5",
+      "motor_model": "SYNTHETIC-ESS",
+      "firmware": "fixture-v1",
+      "device_id": 5,
+      "read_profile": "synthetic-v1",
+      "identity_evidence": "Synthetic fixture only; not the actual joint/address mapping",
+      "homing_input": null,
+      "calibration": {
+        "gear_ratio": null,
+        "feedback_counts_per_motor_rev": null,
+        "command_counts_per_motor_rev": null,
+        "direction_sign": null,
+        "home_offset_rad": null,
+        "soft_lower_rad": null,
+        "soft_upper_rad": null,
+        "max_velocity_rad_s": null,
+        "max_acceleration_rad_s2": null,
+        "homing_direction_sign": null
+      }
+    },
+    {
+      "name": "joint6",
+      "motor_model": "SYNTHETIC-ESS",
+      "firmware": "fixture-v1",
+      "device_id": 6,
+      "read_profile": "synthetic-v1",
+      "identity_evidence": "Synthetic fixture only; not the actual joint/address mapping",
+      "homing_input": null,
+      "calibration": {
+        "gear_ratio": null,
+        "feedback_counts_per_motor_rev": null,
+        "command_counts_per_motor_rev": null,
+        "direction_sign": null,
+        "home_offset_rad": null,
+        "soft_lower_rad": null,
+        "soft_upper_rad": null,
+        "max_velocity_rad_s": null,
+        "max_acceleration_rad_s2": null,
+        "homing_direction_sign": null
+      }
+    }
+  ]
+}

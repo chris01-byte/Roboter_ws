@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "config_id": "amadeus-arm-unmeasured-v1",
+  "environment": "hardware",
+  "joints": [
+    {
+      "name": "joint1",
+      "motor_model": null,
+      "firmware": null,
+      "device_id": null,
+      "read_profile": null,
+      "identity_evidence": null,
+      "homing_input": null,
+      "calibration": {
+        "gear_ratio": null,
+        "feedback_counts_per_motor_rev": null,
+        "command_counts_per_motor_rev": null,
+        "direction_sign": null,
+        "home_offset_rad": null,
+        "soft_lower_rad": null,
+        "soft_upper_rad": null,
+        "max_velocity_rad_s": null,
+        "max_acceleration_rad_s2": null,
+        "homing_direction_sign": null
+      }
+    },
+    {
+      "name": "joint2",
+      "motor_model": null,
+      "firmware": null,
+      "device_id": null,
+      "read_profile": null,
+      "identity_evidence": null,
+      "homing_input": null,
+      "calibration": {
+        "gear_ratio": null,
+        "feedback_counts_per_motor_rev": null,
+        "command_counts_per_motor_rev": null,
+        "direction_sign": null,
+        "home_offset_rad": null,
+        "soft_lower_rad": null,
+        "soft_upper_rad": null,
+        "max_velocity_rad_s": null,
+        "max_acceleration_rad_s2": null,
+        "homing_direction_sign": null
+      }
+    },
+    {
+      "name": "joint3",
+      "motor_model": null,
+      "firmware": null,
+      "device_id": null,
+      "read_profile": null,
+      "identity_evidence": null,
+      "homing_input": null,
+      "calibration": {
+        "gear_ratio": null,
+        "feedback_counts_per_motor_rev": null,
+        "command_counts_per_motor_rev": null,
+        "direction_sign": null,
+        "home_offset_rad": null,
+        "soft_lower_rad": null,
+        "soft_upper_rad": null,
+        "max_velocity_rad_s": null,
+        "max_acceleration_rad_s2": null,
+        "homing_direction_sign": null
+      }
+    },
+    {
+      "name": "joint4",
+      "motor_model": null,
+      "firmware": null,
+      "device_id": null,
+      "read_profile": null,
+      "identity_evidence": null,
+      "homing_input": null,
+      "calibration": {
+        "gear_ratio": null,
+        "feedback_counts_per_motor_rev": null,
+        "command_counts_per_motor_rev": null,
+        "direction_sign": null,
+        "home_offset_rad": null,
+        "soft_lower_rad": null,
+        "soft_upper_rad": null,
+        "max_velocity_rad_s": null,
+        "max_acceleration_rad_s2": null,
+        "homing_direction_sign": null
+      }
+    },
+    {
+      "name": "joint5",
+      "motor_model": null,
+      "firmware": null,
+      "device_id": null,
+      "read_profile": null,
+      "identity_evidence": null,
+      "homing_input": null,
+      "calibration": {
+        "gear_ratio": null,
+        "feedback_counts_per_motor_rev": null,
+        "command_counts_per_motor_rev": null,
+        "direction_sign": null,
+        "home_offset_rad": null,
+        "soft_lower_rad": null,
+        "soft_upper_rad": null,
+        "max_velocity_rad_s": null,
+        "max_acceleration_rad_s2": null,
+        "homing_direction_sign": null
+      }
+    },
+    {
+      "name": "joint6",
+      "motor_model": null,
+      "firmware": null,
+      "device_id": null,
+      "read_profile": null,
+      "identity_evidence": null,
+      "homing_input": null,
+      "calibration": {
+        "gear_ratio": null,
+        "feedback_counts_per_motor_rev": null,
+        "command_counts_per_motor_rev": null,
+        "direction_sign": null,
+        "home_offset_rad": null,
+        "soft_lower_rad": null,
+        "soft_upper_rad": null,
+        "max_velocity_rad_s": null,
+        "max_acceleration_rad_s2": null,
+        "homing_direction_sign": null
+      }
+    }
+  ]
+}
