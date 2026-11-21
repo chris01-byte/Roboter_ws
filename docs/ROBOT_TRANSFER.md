@@ -353,9 +353,24 @@ Fahr-Stack, kein Build, kein Installwechsel.**
   15:41 bei null, er war also seit dem Vormittag neu gestartet worden; ob
   das Lotsen-Fenster eingerichtet wurde, ist hier nicht berichtet.
 
-Stand 21.11.2026 (abends), **noch keine weitere Jetson-Wirkung:** Auftrag
-KI-0R der KI-Linie ist erteilt (`ki_erkundung/AUFTRAG.md`): die elf
-Aufnahmen mit dem neuen Stand durchrechnen; kein Sensor, kein Motor.
+Nachtrag 21.11.2026 (spät), tatsächliche Wirkung von KI-0R (Bericht des
+Jetson-Agenten, 18:55 bis 19:09): nur Werkzeuge der KI-Linie und der
+Bildbetrachter; kein Sensor, kein Motor. Arbeitskopie auf `2579913`. Lokal
+neu `~/ki_trockenlauf_ki0r/`; in drei Aufnahmen neue Angaben, die vorigen
+als `wahrheit_vorher_2.json` daneben. Auf dem KI-Rechner ist das
+Lotsen-Fenster in Gebrauch (der Agent dort hat es am 21.11. um die letzten
+zehn Fragen erweitert, Commit `2579913`).
+
+Stand 21.11.2026 (spät), **noch keine weitere Jetson-Wirkung:** Auftrag KI-1
+der KI-Linie ist erteilt (`ki_erkundung/AUFTRAG.md`). Er wird, sobald
+übergeben: einen neuen Release `~/.local/share/amadeus/releases/ki1-<STAMP>`
+bauen (14 Pakete wie am 19.11., neu nur das Startargument
+`initial_scan_only`), eine eigene Umgebungsdatei `~/roboter_worktrees/ki1.env`
+anlegen (Kopie mit geändertem `SH_REL`; `selbstheilung-v2.env` und `SH_REL`
+der Hauptlinie bleiben), den Stack einmal ohne und einmal mit Motorfreigabe
+starten und **eine Drehung von 360° auf der Stelle im Laborraum** ausführen.
+Keine Fahrt. Rückfall: `ki1.env` und den Release-Ordner löschen. Die
+tatsächliche Wirkung wird nach dem Bericht nachgetragen.
 
 Stand 21.11.2026, zum früheren Auftrag KI-0N: die sieben Aufnahmen neu
 auswerten, auf Wunsch weitere Standbilder mit Kamera und LiDAR; keine

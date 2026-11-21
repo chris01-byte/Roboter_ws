@@ -1,7 +1,8 @@
 # Konzept „KI-Erkundung“ – eine KI übernimmt Ziel- und Suchwahl
 
-**Version 1.3 · 21.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
-nachgeführt nach den ersten beiden Durchgängen an echten Aufnahmen**
+**Version 1.4 · 21.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
+nachgeführt nach drei Durchgängen an echten Aufnahmen und der Freigabe des
+Schalters „nur Rundblick“**
 
 Dieses Dokument ist die verbindliche Beschreibung der zweiten
 Entwicklungslinie. Verankert in MASTERPLAN §10. Den aktuellen Stand führt nur
@@ -342,7 +343,15 @@ Die KI beantwortet im Hintergrund dieselben Entscheidungen wie die Regel,
 steuert aber nichts. So entstehen die Blickrunden für die Kriterien, ohne
 Joystick und ohne Kopieren.
 
-Dafür sind zwei Dinge nötig, die es heute nicht gibt:
+**Seit v1.4 (21.11.2026):** Die Hauptlinie ist geparkt; es gibt keine
+Fahrten, bei denen die KI mitlaufen könnte. KI-1 beginnt deshalb mit einer
+einzelnen Drehung auf der Stelle, ohne Fahrt (Auftrag KI-1; für die Drehung
+gelten die Kriterien R1 bis R6 dort). Woher die zwölf Blickrunden für die
+Kriterien unten kommen (weitere Drehungen an anderen Stellen und in anderen
+Räumen, jeder neue Raum mit eigener Freigabe), legt der Projektinhaber nach
+dem Ergebnis der ersten Drehung fest.
+
+Dafür waren zwei Dinge nötig, die es bis zum 21.11.2026 nicht gab:
 
 - **Die Kamera läuft bei der Erkundung mit.** Sie ist in der automatischen
   Kartierung bewusst abgeschaltet. Deshalb zuerst im Stand messen, dass
@@ -352,8 +361,9 @@ Dafür sind zwei Dinge nötig, die es heute nicht gibt:
   lässt sich beim Start nicht von außen setzen. Eine volle Drehung braucht
   deshalb eine kleine Anschlussstelle in der Hauptlinie (ein Startwert, ohne
   den alles bleibt, wie es ist). Das ist eine eigene Änderung der Hauptlinie
-  nach README, Regel 2; sie wird erst nach der Auswertung von SH-9
-  vorgeschlagen.
+  nach README, Regel 2. **Seit 21.11.2026 gibt es sie:** das Startargument
+  `initial_scan_only` (Freigabe des Projektinhabers). Mit ihm dreht Amadeus
+  einmal abschnittsweise um 360° und bleibt stehen, ohne zu fahren.
 
 Kriterien dieser Stufe (vorab festgelegt), an zusammen mindestens zwölf
 Blickrunden aus mindestens zwei Fahrten; der Projektinhaber gibt je Runde
@@ -448,10 +458,10 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
 | Punkt | Stand |
 |---|---|
 | Blick der Kamera nach unten (kein Türsturz im Bild) | Rechnung; wird in KI-0 gemessen |
-| Rechenlast der Kamera auf dem Jetson neben der Kartierung | offen; KI-1 misst zuerst im Stand |
+| Rechenlast der Kamera auf dem Jetson neben der Kartierung | offen; Auftrag KI-1 misst sie in Teil A im Stand |
 | Eine volle Blickrunde dauert gut eine Minute und belastet die Ortung (viele Drehschritte) | bekannt; nur einmal je Raum und im Zweifel |
 | Auswahl des Bild-Sprach-Modells | Kandidaten in Abschnitt 7; KI-0 und KI-1 messen sie |
-| Anschlussstelle für die volle Drehung am Start (KI-1) | offen; eigene Änderung der Hauptlinie, Vorschlag nach SH-9 |
+| Anschlussstelle für die volle Drehung am Start (KI-1) | gebaut am 21.11.2026 (`initial_scan_only`, Vorgabe aus); in Tests und Simulation gelaufen, am Roboter noch nicht |
 | Große Nachrichten über das WLAN während der Fahrt | im Stand unkritisch; vor KI-1 messen |
 | Personen im Bild und im Scan (Begleitung mit Not-Aus) | können als falsche Öffnung erscheinen; in KI-0 beobachten |
 | Breite der Öffnungen | in der künstlichen Beispielwelt 3–7 cm zu schmal gemessen (vorsichtige Seite); an der Labortür (850 mm laut Projektinhaber) am 21.11.2026 von vorn 0,74 und 0,73 m, von der Seite 1,22 und 1,76 m; Nachbesserung in §5, Prüfung an den Aufnahmen offen |
@@ -504,6 +514,17 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   vorhandenen Rundblick der Hauptlinie nutzen (8 × 45°); die dafür nötige
   Einstellung „nur Rundblick“ ist eine Änderung der Hauptlinie und wartet
   auf die Entscheidung des Projektinhabers.
+- 21.11.2026, v1.4: **KI-1 beginnt mit einer Drehung ohne Fahrt.** Statt
+  eines Mitlaufs bei Fahrten der Hauptlinie (die geparkt ist) dreht sich
+  Amadeus mit dem neuen, vom Projektinhaber freigegebenen Startargument
+  `initial_scan_only` einmal um sich selbst und bleibt stehen. Die Kamera
+  läuft dabei getrennt neben dem Kartier-Stack; das wird zuerst im Stand
+  gemessen. Die Kriterien K0-1 bis K0-7 bleiben; für die Drehung selbst
+  gelten die Kriterien R1 bis R6 im Auftrag KI-1. Zurückgenommen: die Regel
+  „von zwei türgroßen Lücken die nähere“ (§5 nannte sie nicht eigens). Die
+  Stufen KI-2 bis KI-5 bleiben, wie sie in §8 stehen; wie der Fahrteil
+  (KI-2, KI-3) im Einzelnen geschnitten wird, wird mit dem Projektinhaber
+  besprochen, bevor dort etwas gebaut wird.
 - 21.11.2026, Nachtrag (Wunsch des Projektinhabers): Auf dem KI-Rechner
   gibt es ein Programm für den Bildschirm, das Lotsen-Fenster. Es startet
   den Lotsen-Dienst und zeigt seinen Zustand, die letzten Fragen mit Bildern

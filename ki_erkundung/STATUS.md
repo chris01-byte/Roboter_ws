@@ -1,85 +1,122 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 21.11.2026 (abends):** Die Frage der Stufe KI-0, „erkennt die KI an
-echten Bildern dieser Kamera die Tür, und wie schnell?“, ist beantwortet:
-**Ja, wenn die Tür eine Nummer hat und im Foto zu sehen ist (sechs von sechs
-Ansichten), in etwa 1,6 Sekunden.** Ein Urteil nach den Kriterien K0-1 bis
-K0-6 gibt es weiter nicht (zu wenige Ansichten, kein Glas, kein Spiegel);
-das gehört zur nächsten Stufe. Die Vermessung der Öffnungen ist nach zwei
-Durchgängen an echten Aufnahmen deutlich besser, in zwei Fällen aber noch
-falsch (Tür von der Scharnierseite, Flur). Für den ersten Fall ist die
-Ursache nachgestellt und behoben; ob das an den echten Aufnahmen trägt,
-klärt der kleine Auftrag KI-0R ([AUFTRAG.md](AUFTRAG.md)).
+**Stand 21.11.2026 (spät):** Die erste Stufe (KI-0, Standbilder) ist
+abgeschlossen: Die KI erkennt die Labortür an echten Bildern und antwortet
+in etwa 1,5 Sekunden. **Als Nächstes dreht sich Amadeus zum ersten Mal
+selbst** (Auftrag KI-1, [AUFTRAG.md](AUFTRAG.md)). Der dafür nötige Schalter
+im Erkunder ist gebaut, getestet und in der Simulation gelaufen; am Roboter
+noch nicht. **Gefahren ist in dieser Linie bisher nichts.**
 
-**Nichts ist bisher gefahren.** Der nächste größere Schritt ist, dass Amadeus
-sich für die Blickrunde selbst einmal herumdreht (KI-1). Dafür liegt ein
-Vorschlag vor, der eine Entscheidung des Projektinhabers braucht (unten).
+Ein Urteil nach den Kriterien K0-1 bis K0-6 gibt es weiter nicht (zu wenige
+Ansichten, kein Glas, kein Spiegel). Die Vermessung der Öffnungen ist in
+zwei Fällen noch falsch, die Ursache ist dort nicht geklärt.
 
 Diese Linie ist seit 19.11.2026 (spät) die aktive Arbeit; die Hauptlinie ist
 geparkt. Dies ist der einzige Iststand dieser Linie. Der Stand der
 Hauptlinie steht ausschließlich in `docs/wohnungserkundung/STATUS.md`.
 
+## Wo wir stehen und wohin es geht
+
+**Ziel:** Amadeus erkundet eine Wohnung Raum für Raum selbst und fährt
+danach auf Zuruf in einen benannten Raum oder zu einem Gegenstand. Die KI
+auf dem KI-Rechner entscheidet, wohin es geht; der Roboter misst nach und
+fährt mit seiner Schutzkette.
+
+| Schritt | Was Amadeus dann kann | Stufe im Konzept | Stand |
+|---|---|---|---|
+| Erstes Sehen | im Stand Bild und Laser aufnehmen, die KI fragen, die Antwort prüfen | KI-0 | **erledigt** (21.11.) |
+| Blickrunde | sich selbst einmal herumdrehen; aus acht Bildern nennt die KI den Ausgang | KI-1 | **als Nächstes**; Schalter gebaut, Auftrag geschrieben |
+| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | offen; die Fahrweise wird vorher mit dem Projektinhaber besprochen. Vorbild sind die Türdurchfahrten vom 11.09. und 08.11. |
+| Raum für Raum | weiter, bis kein Ausgang mehr offen ist (Laborraum, Flur, Schlafzimmer) | KI-3 | offen |
+| Räume benennen, um Hilfe rufen | Raumnamen als Vorschlag in der App; Hilferuf mit Grund und Bild | KI-4 | offen |
+| Auf Zuruf | „fahr in die Küche“, „such die Tasse“ | KI-5 | offen |
+
+Die Stufen und ihre Kriterien stehen verbindlich im
+[Konzept](KONZEPT.md), Abschnitt 8.
+
 ## Arbeitsliste
 
-**Aktiv: Auftrag KI-0R „Nachrechnen“** ([AUFTRAG.md](AUFTRAG.md)): Der
-Jetson rechnet die elf gespeicherten Aufnahmen mit dem neuen Stand durch.
-Etwa zehn Minuten, kein Sensor, kein Motor; Christopher nur, falls einzelne
-Blätter neu zu beurteilen sind.
+**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-1
+„Blickrunde aus eigener Kraft“** ([AUFTRAG.md](AUFTRAG.md)).
+Auf dem Jetson, mit Christopher, nur im Laborraum. Zuerst Prüfung im Stand
+ohne Motoren (neuer Release, Kamera neben dem Kartier-Stack), dann **eine**
+Drehung von 360° auf der Stelle, dabei Aufnahme der Blickrunde, danach die
+Frage an die KI mit acht Fotos und der Skizze.
 
-**Offen auf dem KI-Rechner: das Lotsen-Fenster einrichten** (Programm
-„Amadeus Lotse“ mit Symbol auf dem Desktop). Gebaut und hier geprüft. Ob es
-auf dem KI-Rechner schon eingerichtet ist, ist hier nicht bekannt: Ein
-Bericht dazu liegt nicht vor. (Der Zähler des Dienstes stand am 21.11. um
-15:41 wieder bei null; der Dienst wurde also seit dem Vormittag neu
-gestartet.)
+**Danach, je nach Ergebnis:**
+- Blickrunde brauchbar: dieselbe Drehung im Flur (braucht die Freigabe für
+  diesen Raum), dann der Fahrteil.
+- Vermessung der Öffnungen nach der Drehung unbrauchbar: gezielt
+  nachbessern. Die Blickrunde wird über ein Raster ausgewertet, das im Stand
+  schon Schwächen zeigte.
 
-**Wartet auf Entscheidung des Projektinhabers: KI-1 „Blickrunde aus eigener
-Kraft“.** Vorschlag:
-- Amadeus dreht sich mit dem **vorhandenen Rundblick** der Hauptlinie einmal
-  ganz herum: 8 × 45°, 0,08 rad/s, je 1 s Pause, etwa drei Minuten. Diese
-  Drehung ist am 11.09.2026 real gelaufen (`WE_PARITY_RESET.md`); die Werte
-  stehen in `explore_params.yaml` und `hwt601_parity_params.yaml`.
-- Sie geht wie bisher durch das Fahrtor (nur Drehen auf der Stelle,
-  höchstens 0,15 rad/s, frische Daten aller Sensoren, Not-Aus frei) und
-  weiter über Glättung und Kollisionsmonitor.
-- **Was fehlt:** eine Einstellung „nur Rundblick, danach stehen bleiben“.
-  Heute fährt der Erkunder nach dem Rundblick Ziele an. Nötig ist ein neuer
-  Schalter im Erkunder (`src/explore`, Vorgabe aus; ausgeschaltet bleibt
-  alles, wie es ist) und ein eigenes Profil. Das ist eine Änderung an einem
-  bestehenden Paket der Hauptlinie und damit nach README, Regel 2, nur mit
-  ausdrücklicher Freigabe des Projektinhabers möglich: eigener Branch,
-  eigene Tests, getrennt von dieser Linie.
-- Im Selbstheilungsweg geht es nicht: Er dreht in einem Zug mit 0,10 rad/s,
-  nimmt kein eigenes Profil an und fährt danach Ziele an.
-- **Kamera:** Sie ist im Kartier-Stack bewusst aus und würde wie in KI-0
-  getrennt gestartet. Vorher wird im Stand gemessen, ob Ortung und
-  Rechenlast des Jetson das vertragen.
-- Ergebnis wäre die erste echte Blickrunde mit acht Bildern, auch im Flur,
-  wo ein einzelnes Standbild nicht reicht.
-Alles hier Genannte stammt aus dem Lesen des Codes; gebaut und geprüft ist
-davon nichts.
-
-**Danach: Fahrteil.** Vorgabe des Projektinhabers: nichts Neues erfinden,
-sondern an den Türdurchfahrten orientieren, die funktioniert haben
-(11.09.2026 Stand `1d91229`; 08.11.2026 Release
-`selbstheilung-sh7-20261108_1617`; dazu das begrenzte Türprofil
-`door_test_params.yaml`). Offen ist, wie Amadeus einem gefundenen Weg folgt;
-wird mit dem Projektinhaber besprochen.
+**Offen an der Vermessung (aus KI-0R):**
+- `labor_tuer_seite_nah_b`: Tür 1,30 m breit, Nummer neben der Tür; Ursache
+  unbekannt (die Vermutung „Türblatt“ ist widerlegt). Der Prüftext nennt
+  jetzt beide Kanten jeder Lücke und die Vermerke beider Suchrichtungen.
+- Flur: Der Laser sieht vom Standpunkt aus keine Öffnung, obwohl es dort
+  zwei Türen gibt. Wird mit der Blickrunde im Flur neu angesehen.
+- Türen werden 8 bis 13 cm zu schmal vermessen (vorsichtige Seite).
 
 **Vorgemerkt:** Für ein Urteil nach den Kriterien fehlen Ansichten mit Glas
 oder Fenster, mit Spiegel, in einem anderen Zimmer und eine Ansicht zweimal
-an derselben Stelle. Zum Hinstellen gibt es jetzt den Sucher
-(`werkzeuge/sucher.py`). Sinnvoll erst mit der Blickrunde aus eigener Kraft.
+an derselben Stelle. Der zweite Weg, bei dem die KI die Tür im Foto selbst
+zeigt und der Laser nur dort misst, bleibt eine Möglichkeit, falls die
+Vermessung weiter Türen verfehlt.
 
-**Geparkt:** Anschluss der KI-Wahl an die vorhandene Erkundung (Entscheidung
-vor KI-2); Raumnamen in der App (KI-4); Gegenstände finden (KI-5); größere
-Kamerabilder für die KI (geliefert werden 320 × 180); der zweite Weg, bei
-dem die KI die Tür im Foto selbst zeigt und der Laser nur dort misst.
+**Vor einem Einsatz ohne Aufsicht:** Der Schalter „nur Rundblick“ prüft
+nicht, ob der Drehkreis in der Karte frei ist (der Rundblick des
+Selbstheilungswegs tut das).
+
+**Geparkt:** Anschluss der KI-Wahl an die vorhandene Erkundung; Raumnamen in
+der App; Gegenstände finden; größere Kamerabilder für die KI (geliefert
+werden 320 × 180).
 
 **Erledigt:** Konzept und Trennregeln · Werkzeuge für den Trockenlauf ·
 HomeMy-Konzept ausgewertet · Verbindung zum KI-Rechner · KI-0 Teil A
-(19.11.) und Teil B (21.11.) · KI-0N (21.11.) · Lotsen-Fenster gebaut ·
-Vermessung, Frage und Auswertung zweimal nachgebessert (21.11.).
+(19.11.) und Teil B, KI-0N, KI-0R (alle 21.11.) · Lotsen-Fenster gebaut und
+auf dem KI-Rechner in Gebrauch · Sucher · Schalter „nur Rundblick“ im
+Erkunder (21.11., `6956252`).
+
+## KI-0R – Nachrechnen an den elf Aufnahmen (Jetson, 21.11.2026, abends)
+
+Zahlen stehen im [Archiv](archiv/20261121-ki0r-nachrechnen/).
+
+**Erwartungen:** Zwei von fünf trafen zu (geschlossene Tür nicht angeboten;
+Wandlinien werden jetzt gefunden). Nicht zugetroffen: die Tür von der
+Scharnierseite (weiter 1,30 m), die Türbreiten (0,72 bis 0,78 m statt
+mindestens 0,78 m bei wahren 0,85 m).
+
+**Verschlechterung durch die eigene Änderung:** Bei `labor_tuer_vorn` stand
+die Nummer auf der Türzarge. Eine 0,90 m breite Lücke 0,5 m vor der Tür
+hatte die Tür verdrängt, weil seit dem Vormittag von zwei türgroßen Lücken
+die nähere zählte. Die Regel stammte aus einem Gedankenfall und ist wieder
+entfernt (`b3a1acf`).
+
+**Die KI mit der geänderten Frage:** keine falsche Wahl in elf Ansichten.
+Nummer auf der Schwelle: Tür gewählt, vier von vier. Nummer auf Zarge, Wand
+oder Mauerwerk: „wand“ genannt und nichts gewählt, dreimal. K0-1 richtig
+8 von 11 (73 %), kein Urteil; K0-6 Ausgang angeboten in 7 von 8 (88 %).
+
+**Lehre:** Der Fehler von der Scharnierseite ließ sich im künstlichen Zimmer
+mit derselben Zahl nachstellen (1,22 m) und dort beheben; an der echten Tür
+änderte das nichts. Eine passende Zahl ist kein Beleg für die Ursache.
+
+## Schalter „nur Rundblick“ (21.11.2026, Commit `6956252`)
+
+Freigegeben vom Projektinhaber am 21.11.2026. Neues Startargument
+`initial_scan_only` (Vorgabe aus) in `app_mapping.launch.py`,
+`nav_mapping.launch.py` und `explore.launch.py`. Eingeschaltet dreht der
+Erkunder einmal mit dem vorhandenen Rundblick (acht Abschnitte von 45°, je
+mit bestätigtem Stillstand) und beendet den Auftrag, ohne ein Ziel
+anzufahren. Das gilt in jedem Betrieb, auch im Selbstheilungsbetrieb, dem
+Stack vom 19.11. Standardweg, Selbstheilungsweg, Profile, Fahrtor und
+Kollisionsmonitor sind nicht geändert.
+
+Geprüft in der Entwicklungsumgebung: 2285 Tests des Erkunders (18 neue),
+267 in der gezielten Liste, ein Lauf des ganzen Stacks in der Simulation
+(361,7° in 77 s, kein Nav2-Ziel, Mission erfolgreich). **Am Roboter nicht
+gelaufen.**
 
 ## KI-0N – zweiter Durchgang an echten Aufnahmen (Jetson, 21.11.2026)
 
@@ -219,6 +256,9 @@ KONZEPT §13.
 | 21.11.2026 | KI-0N | Jetson, vier neue Ansichten mit Kamera und LiDAR, KI-Rechner über WLAN | 187 Tests bestanden; elf Standbilder; vier von fünf Erwartungen erfüllt; Tür mit Nummer im Foto sechs von sechs gewählt; Tür von der Scharnierseite weiter 1,24 m; im Flur eine Wand als Öffnung; Einzelheiten im Archiv |
 | 21.11.2026 | Nachbesserung nach KI-0N, Sucher | Entwicklungsumgebung | `70b0a5d`; 192 Tests bestanden, 2 übersprungen (ohne ROS); 202 bestanden (ROS 2 Jazzy, abgeschottet); Fehler mit echtem Rauschen nachgestellt (Raster 1,22 m, Median 0,81 m) |
 | 21.11.2026 | Vorhandener Rundblick der Hauptlinie | Code und Dokumente gelesen | 8 × 45° bei 0,08 rad/s mit Pause steht in `explore_params.yaml`; im Selbstheilungsbetrieb ersetzt `nav_mapping.launch.py` jedes eigene Profil; „nur Rundblick“ gibt es nicht; nichts gebaut |
+| 21.11.2026 | KI-0R | Jetson, elf gespeicherte Aufnahmen, KI-Rechner über WLAN | 205 Tests bestanden; zwei von fünf Erwartungen erfüllt; eine Verschlechterung gefunden und behoben (`b3a1acf`); keine falsche Wahl der KI; Einzelheiten im Archiv |
+| 21.11.2026 | Schalter „nur Rundblick“ | Entwicklungsumgebung, Simulation des ganzen Stacks | `6956252`; 2285 Tests des Erkunders, 267 gezielt; in der Simulation 361,7° in 77 s ohne Nav2-Ziel |
+| 21.11.2026 | Tests dieser Linie nach KI-0R | Entwicklungsumgebung | 196 bestanden, 2 übersprungen (ohne ROS); 206 bestanden (ROS 2 Jazzy, abgeschottet) |
 
 **Gemessen an der künstlichen Beispielwelt** (ausgedachtes Zimmer mit
 80-cm-Tür, 90-cm-Glastür zum Balkon, Schränken, Kiste; LiDAR-Rauschen 1 cm):
@@ -261,21 +301,20 @@ Jetson, echte Bilder.
 
 ## Was nicht geprüft ist
 
-- **Der Stand `70b0a5d` an den echten Aufnahmen.** Die Nachbesserung ist
-  nur im künstlichen Zimmer geprüft. Sie beruht diesmal auf einem dort
-  nachgestellten echten Fehler, aber das künstliche Zimmer hat schon zweimal
-  nicht gezeigt, was am Roboter schiefging.
-- **Die geänderte Frage** an echten Bildern (Einordnung „wand“, nur
-  sichtbare Nummern).
-- **Glas, Spiegel, anderes Zimmer** an echten Bildern.
+- **Der Schalter „nur Rundblick“ am Roboter.** Nur Tests und Simulation.
+- **Kamera neben dem Kartier-Stack:** Rechenlast, Bildrate und Ortung des
+  Jetson, wenn beides läuft. Das misst Teil A von KI-1.
 - **Die ganze Blickrunde** (acht Bilder nach einer Drehung) an echten
-  Bildern; bisher nur Standbilder mit einem Foto.
-- **`qwen3-vl:8b`** an echten Bildern; gefragt wurde nur `qwen3.5:9b`.
-- **Personen** in Scan und Bild.
-- **Lotsen-Fenster und Sucher** auf den Zielgeräten.
+  Bildern: Drehwinkel aus den Scans, Auswahl der Bilder, Vermessung über das
+  Raster, Antwort der KI auf neun Bilder über WLAN.
+- **Der Stand nach `b3a1acf` an den echten Aufnahmen** (die zurückgenommene
+  Regel).
+- **Glas, Spiegel, anderes Zimmer; `qwen3-vl:8b`; Personen** in Scan und
+  Bild. In KI-1 steht Christopher neben dem Roboter; das wird der erste
+  Befund dazu.
+- **Der Sucher** auf dem Jetson.
 
 ## Genau ein nächster Schritt
 
-Auftrag KI-0R auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): die elf
-gespeicherten Aufnahmen mit dem neuen Stand durchrechnen. Unabhängig davon
-wartet der Vorschlag zu KI-1 auf die Entscheidung des Projektinhabers.
+Auftrag KI-1 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): Prüfung im Stand,
+dann eine Drehung im Laborraum mit Aufnahme der Blickrunde.

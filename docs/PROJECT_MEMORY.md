@@ -1926,6 +1926,34 @@ folgt:** Elf Standbilder, davon vier neue. Entscheidungen und Gründe:
   Einstellung „nur Rundblick, dann stehen bleiben“. Das ist eine Änderung an
   einem bestehenden Paket und braucht die Freigabe des Projektinhabers.
 
+**Nachtrag 21.11.2026 (spät) – KI-0R, und die erste Anschlussstelle in der
+Hauptlinie (Projektinhaber: „Ja baue den Schalter“):**
+- **KI-0R widerlegt eine Erklärung und zeigt eine selbst verursachte
+  Verschlechterung.** Die Vermutung „offenes Türblatt“ für die 1,24 m breite
+  Tür war falsch, obwohl sie sich im künstlichen Zimmer mit derselben Zahl
+  nachstellen ließ; und eine nur im künstlichen Zimmer begründete Regel („von
+  zwei türgroßen Lücken die nähere“) setzte an der echten Tür die Nummer auf
+  die Zarge. Lehre: Eine Regel, die nur aus einem Gedankenfall stammt, geht
+  nicht in den Stand, der am Roboter gemessen wird; eine passende Zahl aus
+  dem künstlichen Zimmer ist kein Beleg für die Ursache am Roboter.
+- **Die KI bleibt mit der geänderten Frage auf der vorsichtigen Seite:**
+  keine falsche Wahl in elf Ansichten; steht die Nummer nicht auf einer
+  Öffnung, nennt sie sie „wand“ und wählt nichts.
+- **Schalter „nur Rundblick“ (`initial_scan_only`):** eigener kurzer Ablauf
+  im Erkunder vor jeder Erkundungsstrategie, als Startargument durch die
+  drei Startdateien gereicht, Vorgabe aus. Gründe für diese Form: Er läuft
+  damit in genau dem Stack, der zuletzt am Roboter fuhr (Selbstheilung,
+  19.11.), statt im Standardweg, der seit Oktober nicht mehr real lief; er
+  berührt weder den Standardweg noch den Selbstheilungsweg noch ein Profil;
+  und er kann nichts anfahren, weil er keine Frontier abfragt und kein
+  Nav2-Ziel sendet. Verworfen: ein eigenes Profil im Standardweg (anderer
+  Stack als zuletzt gefahren) und ein Parameter, der zur Laufzeit gesetzt
+  wird (leicht zu vergessen, dann führe Amadeus los).
+- **Bekannte Lücke:** Anders als der Rundblick des Selbstheilungswegs prüft
+  der Schalter nicht, ob der Drehkreis in der Karte frei ist. Für den
+  beaufsichtigten Test im Labor trägt das die Schutzkette und die Aufsicht;
+  vor einem Einsatz ohne Aufsicht gehört die Prüfung dazu.
+
 **Nachtrag 21.11.2026 – Lotsen-Fenster statt unsichtbarem Dienst
 (Projektinhaber):** Der Lotsen-Dienst lief auf dem KI-Rechner als
 Hintergrundprozess; der Projektinhaber sah dort nichts und wollte ein
