@@ -4,8 +4,8 @@
 ersten Mal selbst einmal herumgedreht, dabei eine Blickrunde aufgenommen,
 und die KI hat aus acht Bildern in 4,9 Sekunden die richtige Tür gewählt
 (Auftrag KI-1, alle sechs Kriterien erfüllt). **Als Nächstes fährt er zum
-ersten Mal:** drei Stufen vom Einfachen zum Schwierigen (Auftrag KI-F1,
-[AUFTRAG.md](AUFTRAG.md)). Der Fahrteil dafür (Etappenfahrt ohne Nav2) ist
+ersten Mal:** eine gerade Etappe, dann in einem Zug durch die Labortür
+(Auftrag KI-F1, [AUFTRAG.md](AUFTRAG.md)). Der Fahrteil dafür (Etappenfahrt ohne Nav2) ist
 gebaut und in der Simulation zweimal durch die Tür gefahren; am Roboter ist
 er nicht gelaufen. **Gefahren ist in dieser Linie am Roboter bisher nichts;
 gedreht hat er sich einmal.**
@@ -30,7 +30,7 @@ fährt mit seiner Schutzkette.
 |---|---|---|---|
 | Erstes Sehen | im Stand Bild und Laser aufnehmen, die KI fragen, die Antwort prüfen | KI-0 | **erledigt** (21.11.) |
 | Blickrunde | sich selbst einmal herumdrehen; aus acht Bildern nennt die KI den Ausgang | KI-1 | **am Roboter gelungen** (21.11., eine Runde im Labor); für die Kriterien fehlen weitere Runden |
-| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **als Nächstes:** Fahrteil gebaut (Etappenfahrt ohne Nav2), in der Simulation durch die Tür gefahren; Auftrag KI-F1 bringt ihn in drei Stufen auf den Roboter |
+| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **als Nächstes:** Fahrteil gebaut (Etappenfahrt ohne Nav2), in der Simulation durch die Tür gefahren; Auftrag KI-F1 bringt ihn in zwei Stufen auf den Roboter |
 | Raum für Raum | weiter, bis kein Ausgang mehr offen ist (Laborraum, Flur, Schlafzimmer) | KI-3 | offen |
 | Räume benennen, um Hilfe rufen | Raumnamen als Vorschlag in der App; Hilferuf mit Grund und Bild | KI-4 | offen |
 | Auf Zuruf | „fahr in die Küche“, „such die Tasse“ | KI-5 | offen |
@@ -44,12 +44,14 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 „Erste Etappen“** ([AUFTRAG.md](AUFTRAG.md)).
 Auf dem Jetson, mit Christopher; ohne Kamera und ohne KI-Rechner. Die eine
 Verhaltensänderung ist der Schalter „Etappenfahrt“. Zuerst Prüfung im Stand
-ohne Motorfreigabe, dann drei Stufen, jede nur, wenn die vorige ihre vorab
-festgelegten Kriterien erfüllt hat: (1) eine gerade Etappe von 0,5 m;
-(2) ausrichten und eine Etappe; (3) durch die offene Labortür in den Flur,
-Ziel von Christopher benannt. Stufe 3 gehört nur dazu, wenn der
-Projektinhaber bei der Übergabe ausdrücklich „mit Tür“ sagt (der Flur liegt
-außerhalb des Laborraums).
+ohne Motorfreigabe, dann zwei Stufen: (1) eine gerade Etappe von 0,5 m;
+(2) nur wenn Stufe 1 ihre vorab festgelegten Kriterien erfüllt, in einem
+Zug durch die offene Labortür in den Flur, Ziel von Christopher benannt.
+**Entscheidungen des Projektinhabers dazu (21.11.2026, nachts):** Die
+Türdurchfahrt kommt gleich als zweiter Schritt, ohne eigene Stufe
+„ausrichten und eine Etappe“; damit ist der Flur unmittelbar hinter der
+Labortür für diese eine Durchfahrt freigegeben. Der Agent fragt nicht vorab,
+ob die Motoren frei sind.
 
 **Danach, je nach Ergebnis:**
 - Stufen erfüllt: Rundblick, Frage an die KI und Etappenfahrt in einem Zug
@@ -126,7 +128,10 @@ fiel in der Vorprüfung durch, weil die Motoren noch gesperrt waren; der
 Auftrag fragte nicht danach und sah keinen zweiten Start vor. Der Agent hat
 nach Christophers „motoren sind jetzt wieder frei“ einmal neu gestartet und
 das als Abweichung berichtet. Ein Suchmuster des Auftrags für den Status
-traf nichts. Beides ist im Auftrag KI-F1 berücksichtigt.
+traf nichts. Im Auftrag KI-F1 gibt es kein Suchmuster mehr; antworten die
+Motorregler nicht, meldet der Agent das als Befund und darf nach
+Christophers „frei“ einmal neu starten. Eine Vorabfrage nach der
+Motorsperre gibt es auf Wunsch des Projektinhabers nicht.
 
 **Beobachtung zur Hauptlinie (nicht geändert):** Das Prüfskript ohne
 `--aktiv` meldet „Encoder-Shadow sichtbar“, auch wenn die Motorregler nicht
@@ -533,6 +538,5 @@ Jetson, echte Bilder.
 ## Genau ein nächster Schritt
 
 Auftrag KI-F1 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): Prüfung im Stand,
-dann die erste gerade Etappe von 0,5 m; bei erfüllten Kriterien ausrichten
-und eine Etappe, und mit ausdrücklicher Freigabe des Flurs die Fahrt durch
-die offene Labortür.
+dann die erste gerade Etappe von 0,5 m; bei erfüllten Kriterien in einem
+Zug durch die offene Labortür.

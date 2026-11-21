@@ -2031,10 +2031,10 @@ und was der Auftrag falsch gemacht hat:**
 - **Fehler im Auftrag, zwei:** (1) Er fragte vor dem scharfen Start nicht
   nach der Motorsperre und kannte den Fall „Regler antworten nicht“ nur als
   Abbruch. Die Motoren waren gesperrt; der Agent musste abweichen, um nach
-  Christophers „wieder frei“ neu zu starten. Regel für Aufträge: vor dem
-  ersten scharfen Start einmal nach der konkreten Stellung fragen (LAB-1
-  verlangt keine Fragerunde, aber eine nötige Handschaltung wird benannt),
-  und für genau diesen Fall einen einzigen neuen Start vorsehen. (2) Ein
+  Christophers „wieder frei“ neu zu starten. Regel für Aufträge: für genau
+  diesen Fall einen einzigen neuen Start vorsehen. **Keine Vorabfrage nach
+  der Motorsperre** (Projektinhaber, 21.11.: „unnötig“); antworten die
+  Regler nicht, meldet der Agent den Befund in einem Satz. (2) Ein
   Suchmuster für den Status war nicht an echter Ausgabe geprüft (Leerzeichen
   nach dem Doppelpunkt). Regel: Aufträge enthalten keine Suchmuster auf
   Ausgaben, die nicht aus einem echten Lauf stammen; besser zeigt ein
@@ -2042,9 +2042,16 @@ und was der Auftrag falsch gemacht hat:**
 - **Der Agent hat richtig gehandelt:** Abweichung benannt, genau ein
   Missionsstart, nichts geändert. Das ist das gewünschte Verhalten bei einer
   Lücke im Auftrag.
-- **Nächster Schritt:** Auftrag KI-F1, der Fahrteil in drei Stufen. Die Fahrt
-  durch die Labortür führt aus dem Laborraum; sie gehört nur dazu, wenn der
-  Projektinhaber den Flur bei der Übergabe ausdrücklich freigibt.
+- **Nächster Schritt:** Auftrag KI-F1, der Fahrteil in zwei Stufen: eine
+  gerade Etappe, dann in einem Zug durch die Labortür. Der Projektinhaber
+  hat die Türdurchfahrt als zweiten Schritt ausdrücklich verlangt (21.11.,
+  nachts) und damit den Flur unmittelbar hinter der Labortür für diese eine
+  Durchfahrt freigegeben. Die zuerst vorgesehene Zwischenstufe „ausrichten
+  und eine Etappe“ entfällt: Das Ausrichten ist Teil der Türdurchfahrt,
+  geschieht dort mindestens 0,7 m vor der Türlinie (die Ecken des Gehäuses
+  bleiben dabei über 0,3 m von der Türlinie entfernt), und dieselbe Drehung
+  hat in KI-1 je Halt etwa 0,4° nachgedreht. Die gerade Etappe davor bleibt,
+  weil sie seit dem 11.09. am Roboter nicht mehr gelaufen ist.
 
 **Nachtrag 21.11.2026 – Lotsen-Fenster statt unsichtbarem Dienst
 (Projektinhaber):** Der Lotsen-Dienst lief auf dem KI-Rechner als

@@ -615,7 +615,8 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   gewählt). Zeitgrenze auf 120 s festgelegt; Rechenlast, Dauer der Runde
   und der erste Befund zu Personen in §11 nachgetragen. Die Kriterien K0-1
   bis K0-6 haben weiter kein Urteil (eine Runde). Der nächste Auftrag
-  (KI-F1) bringt den Fahrteil in drei Stufen auf den Roboter.
+  (KI-F1) bringt den Fahrteil in zwei Stufen auf den Roboter: eine gerade
+  Etappe, dann in einem Zug durch die Labortür.
 - 21.11.2026, v1.6 (Entscheidung des Projektinhabers): **Der Fahrteil ist
   eine Etappenfahrt ohne Nav2** aus den am 10./11.09. real bestandenen
   Bausteinen (neuer Abschnitt 6a; zweite Anschlussstelle

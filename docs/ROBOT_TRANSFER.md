@@ -400,9 +400,10 @@ KI-F1 der KI-Linie ist erteilt (`ki_erkundung/AUFTRAG.md`). Er wird, sobald
 übergeben: einen Release `kif1-<STAMP>` bauen (mit `stage_drive_only`), eine
 Umgebungsdatei `~/roboter_worktrees/kif1.env` anlegen, den Stack einmal ohne
 Motorfreigabe und je Stufe einmal scharf starten und Amadeus **zum ersten
-Mal in dieser Linie fahren lassen**: eine gerade Etappe von 0,5 m, dann
-ausrichten und eine Etappe, und nur mit ausdrücklicher Freigabe des Flurs
-durch die offene Labortür (je 5 cm/s, Etappen bis 0,5 m, ohne Nav2).
+Mal in dieser Linie fahren lassen**: eine gerade Etappe von 0,5 m und, wenn
+sie ihre Kriterien erfüllt, in einem Zug durch die offene Labortür in den
+Flur (vom Projektinhaber ausdrücklich verlangt; je 5 cm/s, Etappen bis
+0,5 m, ohne Nav2).
 Rückfall: `kif1.env` und den Release-Ordner löschen.
 
 Stand 21.11.2026, zum früheren Auftrag KI-0N: die sieben Aufnahmen neu

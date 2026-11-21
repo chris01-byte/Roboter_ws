@@ -15,19 +15,19 @@ Die vorigen Aufträge liegen mit Ergebnis im Archiv:
 
 **Frage dieses Auftrags:** Fährt Amadeus am echten Roboter mit dem neuen
 Schalter „Etappenfahrt“ eine gerade Etappe so wie am 11.09.2026 und in der
-Simulation, lässt er sich genau genug ausrichten, und kommt er damit durch
-die offene Labortür?
+Simulation, und kommt er damit in einem Zug durch die offene Labortür
+(anfahren, ausrichten, hindurch)?
 
 | | |
 |---|---|
 | Konzept | `ki_erkundung/KONZEPT.md`, Abschnitt 6a |
 | Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens der Commit, der diesen Auftrag enthält; neuer Release `kif1-<STAMP>`. Der letzte real gelaufene Release ist `ki1-20261121_2043` (ohne Etappenfahrt) |
 | Was neu ist | Genau eine Verhaltensänderung: Startargument `stage_drive_only:=true` (der Erkunder wartet auf ein Fahrziel und fährt es ohne Nav2 in geraden Etappen an). Das Fahrziel sendet `ki_erkundung/werkzeuge/fahrziel_senden.py` |
-| Stufen | **1** eine gerade Etappe von 0,5 m · **2** ausrichten und eine Etappe · **3** durch die offene Labortür. Jede Stufe nur, wenn die vorige ihre Kriterien erfüllt hat |
+| Stufen | **1** eine gerade Etappe von 0,5 m · **2** durch die offene Labortür, in einem Zug. Stufe 2 nur, wenn Stufe 1 ihre Kriterien erfüllt hat. Eine eigene Stufe „ausrichten und eine Etappe“ entfällt auf Wunsch des Projektinhabers: Das Ausrichten gehört zur Türdurchfahrt und geschieht dort mindestens 0,7 m vor der Türlinie |
 | Erwartetes Ergebnis | Bericht `~/ki_erkundung_bericht_kif1.md`: Build, Tests, Prüfung im Stand, je Stufe die Meldungen des Erkunders, die Kriterien und Christophers Antworten wörtlich |
 | Nicht-Ziele | Keine KI, keine Kamera, kein Rundblick, kein Nav2-Ziel; keine eigene Code- oder Parameteränderung; keine Wiederholung einer misslungenen Stufe |
 | Rückfall | `~/roboter_worktrees/kif1.env` und den Release-Ordner `kif1-<STAMP>` löschen; alle bisherigen Releases und Umgebungsdateien bleiben unberührt. Ohne das Startargument verhält sich der Stack wie am 19.11. |
-| Bereich und Freigabe | Stufe 1 und 2: **nur der Laborraum** (LAB-1). **Stufe 3 führt durch die Labortür in den Flur** und gehört nur dazu, wenn der Projektinhaber bei der Übergabe ausdrücklich „mit Tür“ sagt; damit gibt er den Flur unmittelbar hinter der Labortür für diese eine Durchfahrt frei. Christopher ist dabei, die Hand am Not-Aus. 100 ms Anfahrzeit wie seit dem 15.11. |
+| Bereich und Freigabe | Stufe 1: **nur der Laborraum** (LAB-1). **Stufe 2 führt durch die Labortür in den Flur.** Der Projektinhaber hat die Türdurchfahrt am 21.11.2026 ausdrücklich verlangt; mit der Übergabe dieses Auftrags gibt er den Flur unmittelbar hinter der Labortür für diese eine Durchfahrt frei. Christopher ist dabei, die Hand am Not-Aus. 100 ms Anfahrzeit wie seit dem 15.11. |
 
 ## Verboten
 
@@ -46,8 +46,11 @@ die offene Labortür?
   `hwt601_accel_ms:=100`; `operator_stationary_confirmed:=true` nur nach
   Christophers „ja“;
 - **keine Stufe zweimal.** Misslingt eine Stufe, wird sie nicht wiederholt
-  und die nächste nicht begonnen. Einzige Ausnahme steht unter „Motoren
-  gesperrt“;
+  und die nächste nicht begonnen. Einzige Ausnahme steht unter „Motorregler
+  antworten nicht“;
+- **keine Frage vorab, ob die Motoren frei sind**, und keine Fragerunde zu
+  unveränderten Laborbedingungen (LAB-1). Gefragt wird nur, was in diesem
+  Auftrag wörtlich als Frage steht;
 - Not-Aus und Nutzerabbruch nie zurücksetzen (LAB-1 §4);
 - nichts in `~/roboter_ws`, nichts an `~/roboter_worktrees/selbstheilung-v2.env`,
   an `ki1.env` und an bestehenden Releases;
@@ -75,17 +78,12 @@ nicht frisch“ 0-mal, „process has died“ 0-mal.
 | F1-5 Kette | wie oben |
 | F1-6 Mensch | gerade gefahren, von selbst angehalten, nichts berührt, kein Eingriff |
 | **Stufe 2** | |
-| F2-1 Abschluss | Meldung „Etappenfahrt abgeschlossen: 1 Etappe(n) …“ |
-| F2-2 Ausrichten | höchstens drei Zeilen „ausgerichtet um …“; der letzte „Restfehler“ höchstens 3,5 Grad |
-| F2-3 Etappe | „realer LiDAR-Weg“ 0,42 bis 0,54 m; „seitlich“ höchstens 0,03 m |
-| F2-4 Kette | wie oben |
-| F2-5 Mensch | nach links gedreht, dann gerade gefahren; nichts berührt, kein Eingriff |
-| **Stufe 3** | |
-| F3-1 Vermessung | die von Christopher benannte Öffnung ist „befahrbar ja“ und 0,70 bis 0,90 m breit |
-| F3-2 Abschluss | Meldung „Etappenfahrt abgeschlossen: … Quelle mensch; kein Nav2-Ziel“ mit höchstens 10 Etappen |
-| F3-3 Durch die Tür | Christopher: Amadeus steht ganz im Flur, auch die Hinterkante ist durch; nichts berührt, kein Eingriff |
-| F3-4 Abstand | Christopher: an beiden Türpfosten blieb mindestens eine Handbreit |
-| F3-5 Kette | wie oben |
+| F2-1 Vermessung | die von Christopher benannte Öffnung ist „befahrbar ja“ und 0,70 bis 0,90 m breit |
+| F2-2 Abschluss | Meldung „Etappenfahrt abgeschlossen: … Quelle mensch; kein Nav2-Ziel“ mit höchstens 10 Etappen |
+| F2-3 Ausrichten | je Punkt höchstens drei Zeilen „ausgerichtet um …“; der jeweils letzte „Restfehler“ höchstens 3,5 Grad |
+| F2-4 Durch die Tür | Christopher: Amadeus steht ganz im Flur, auch die Hinterkante ist durch; nichts berührt, kein Eingriff |
+| F2-5 Abstand | Christopher: an beiden Türpfosten blieb mindestens eine Handbreit |
+| F2-6 Kette | wie oben |
 
 Keine Erwartung gibt es zu „Robot to slowdown“ und „Robot to approach“ (der
 Kollisionsmonitor darf an der Tür bremsen); beides wird gezählt und
@@ -263,16 +261,14 @@ python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still && echo "alles beend
 
 ## Teil B – die Etappen
 
-### Ablauf je Stufe (für N = 1, 2, 3 gleich)
+### Ablauf je Stufe (für N = 1 und 2 gleich)
 
-In allen Blöcken dieses Abschnitts steht `N=1`; für Stufe 2 und 3 dort die
-Nummer der Stufe einsetzen. Jede Stufe hat ihren eigenen scharfen Stackstart
-und ihren eigenen Ordner `stufeN`.
+In allen Blöcken dieses Abschnitts steht `N=1`; für Stufe 2 dort `N=2`
+einsetzen. Jede Stufe hat ihren eigenen scharfen Stackstart und ihren
+eigenen Ordner `stufeN`.
 
 **B-a, Aufbau:** die Anweisung der Stufe stellen (unten), Antworten wörtlich
-festhalten. Vor der ersten Stufe zusätzlich einmal: „Für die Fahrt müssen
-die Motoren frei sein (Motorsperre gelöst, Not-Aus nicht gedrückt). Sind sie
-frei?“ Nur nach „ja“ weiter.
+festhalten. Nach der Motorsperre wird nicht gefragt.
 
 **B-b, Stack scharf starten** (`N` in der ersten Zeile setzen; `source` steht
 in einer eigenen Zeile):
@@ -308,12 +304,12 @@ Exit 0 wie in KI-1. **Trifft etwas davon nicht zu (nach einer Wiederholung
 bei „erreichbar“, „nicht deklariert“, „Graph unvollständig“): keine Mission,
 Stack geordnet beenden, berichten.**
 
-**Motoren gesperrt (einzige Ausnahme):** Fehlt die Zeile zur Anfahrzeit und
-steht im Log „Modbus-Fehler Motor … No response received“, den Stack
-geordnet beenden und Christopher einmal fragen: „Die Motorregler antworten
-nicht. Sind die Motoren gesperrt oder ist der Not-Aus gedrückt?“ Sagt er,
-sie seien jetzt frei, ist **genau ein** weiterer scharfer Start dieser Stufe
-erlaubt. Den Not-Aus löst nur Christopher.
+**Motorregler antworten nicht (einzige Ausnahme):** Fehlt die Zeile zur
+Anfahrzeit und steht im Log „Modbus-Fehler Motor … No response received“,
+den Stack geordnet beenden und Christopher den Befund in einem Satz melden:
+„Die Motorregler antworten nicht; so kann ich nicht starten.“ Sagt er
+daraufhin, die Motoren seien frei, ist **genau ein** weiterer scharfer Start
+dieser Stufe erlaubt. Den Not-Aus löst nur Christopher.
 
 **B-c, Mission starten und Fahrziel senden.** Genau einmal die Mission, dann
 das Werkzeug der Stufe; es wartet, bis der Erkunder wartet, sendet das Ziel
@@ -363,8 +359,8 @@ python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still && echo "alles beend
 ```
 
 Danach die Kriterien der Stufe gegen `etappen.txt`, `zaehler.txt` und
-Christophers Antworten halten. **Nur wenn alle zutreffen, folgt die nächste
-Stufe.**
+Christophers Antworten halten. **Stufe 2 folgt nur, wenn alle Kriterien von
+Stufe 1 zutreffen.**
 
 ### Stufe 1 – eine gerade Etappe von 0,5 m (N=1)
 
@@ -390,52 +386,32 @@ Fragen danach:
 3. Hat er etwas berührt, oder musstest du eingreifen?
 4. Wie wirkte die Fahrt: ruhig, ruckelig, zu langsam, zu schnell?
 
-### Stufe 2 – ausrichten und eine Etappe (N=2)
+### Stufe 2 – durch die offene Labortür, in einem Zug (N=2)
 
-Anweisung: „Bitte stelle Amadeus wieder so hin, dass rundherum mindestens
-0,5 m frei sind und **schräg links vor ihm** (etwa auf halb elf) mindestens
-1,5 m. Gleich dreht er sich **auf der Stelle etwa 30 Grad nach links**,
-fährt dann **knapp einen halben Meter geradeaus** und bleibt stehen. Du
-stehst rechts oder hinter ihm.“ Frage wie in Stufe 1.
-
-Werkzeugzeile:
-
-```bash
-python3 "$SH_SRC/ki_erkundung/werkzeuge/fahrziel_senden.py" --punkt 0.40,0.25 --quelle test --warten 120 --beobachten 300
-```
-
-Fragen danach:
-
-1. Hat sich Amadeus erst nach links gedreht und ist dann gerade gefahren?
-2. Hat er sich in einem Zug ausgerichtet oder mehrmals nachgestellt?
-3. Hat er etwas berührt, oder musstest du eingreifen?
-
-### Stufe 3 – durch die offene Labortür (N=3; nur bei Übergabe „mit Tür“)
-
-Ohne die ausdrückliche Übergabe „mit Tür“ endet der Auftrag nach Stufe 2.
+Eine Mission: Amadeus fährt bis vor die Tür, richtet sich dort auf die
+Türachse aus, fährt hindurch und bleibt im Flur stehen.
 
 Anweisung: „Bitte stelle Amadeus **1,5 bis 2 m vor die offene Labortür**,
 den Blick ungefähr zur Tür; die Tür steht ganz offen und ist gesichert, das
 Türblatt ragt nicht in den Durchgang. Auf der geraden Linie zur Tür, im
 Umkreis von einem Meter vor der Tür und in der Tür liegt und steht nichts.
-Gleich fährt
-er in kurzen Etappen bis vor die Tür, richtet sich aus, fährt hindurch und
-bleibt etwa einen halben Meter dahinter im Flur stehen; das dauert etwa
-zwei Minuten. Du stehst seitlich im Laborraum, nicht in der Tür und nicht
-im Flur vor ihm.“ Fragen, je einzeln:
+Gleich fährt er in kurzen Etappen bis vor die Tür, richtet sich aus, fährt
+hindurch und bleibt etwa einen halben Meter dahinter im Flur stehen; das
+dauert etwa zwei Minuten. Du stehst seitlich im Laborraum, nicht in der Tür
+und nicht im Flur vor ihm.“ Fragen, je einzeln:
 
 1. Steht Amadeus so, und bleibt er während des Starts unberührt?
 2. Wie weit ist es von der Türschwelle geradeaus bis zum ersten Hindernis im
    Flur (Wand, Regal, Schuhe), in cm?
 
-**Sind es weniger als 115 cm, entfällt Stufe 3** (der Auslauf braucht Platz);
+**Sind es weniger als 115 cm, entfällt Stufe 2** (der Auslauf braucht Platz);
 berichten.
 
 Nach B-b (Stack scharf, Vorprüfung bestanden) und **vor** dem Missionsstart
 messen:
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/stufe3"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/stufe2"
 python3 "$SH_SRC/ki_erkundung/werkzeuge/fahrziel_senden.py" --tuer --nur-messen 2>&1 | tee "$D/messen.txt"
 ```
 
@@ -485,10 +461,10 @@ Koordinaten und Adressen:
 3. Je Stufe: Christophers Antworten zum Aufbau wörtlich; Anfahrzeit,
    Schalter, Vorprüfung; der Inhalt von `werkzeug.txt`, `etappen.txt` und
    `zaehler.txt`; größtes |v| und |w| an der Basis; Christophers Antworten
-   nach der Fahrt wörtlich; in Stufe 3 zusätzlich `messen.txt` und die
+   nach der Fahrt wörtlich; in Stufe 2 zusätzlich `messen.txt` und die
    benannte Nummer.
 4. Die Tabelle der Kriterien mit dem Gemessenen und „trifft zu“ oder „trifft
-   nicht zu“; für nicht gefahrene Stufen „nicht gefahren“ mit Grund.
+   nicht zu“; ist Stufe 2 nicht gefahren, „nicht gefahren“ mit Grund.
 5. Alles, was nicht lief oder abwich, mit Meldung. Keine Deutung.
 
 ## Ende

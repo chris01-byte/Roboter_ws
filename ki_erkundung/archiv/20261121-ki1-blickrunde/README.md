@@ -80,7 +80,8 @@ old“, keine „Odometrie kurzzeitig nicht frisch“.
 
 - Der Schalter „nur Rundblick“ arbeitet am Roboter wie in der Simulation.
 - Nachgebessert: Das Aufnahmewerkzeug schreibt zeilenweise; der nächste
-  Auftrag fragt vor dem scharfen Start nach der Motorsperre, erlaubt bei
-  stummen Reglern nach Christophers „frei“ genau einen neuen Start und
-  enthält kein Suchmuster für den Status mehr.
+  Auftrag enthält kein Suchmuster für den Status mehr. Eine Vorabfrage nach
+  der Motorsperre will der Projektinhaber nicht („unnötig“); antworten die
+  Regler nicht, meldet der Agent das als Befund, und nach Christophers
+  „frei“ ist genau ein neuer Start erlaubt.
 - Nächster Auftrag: die ersten Etappen des Fahrteils (KI-F1).
