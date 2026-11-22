@@ -2053,6 +2053,40 @@ und was der Auftrag falsch gemacht hat:**
   hat in KI-1 je Halt etwa 0,4° nachgedreht. Die gerade Etappe davor bleibt,
   weil sie seit dem 11.09. am Roboter nicht mehr gelaufen ist.
 
+**Nachtrag 22.11.2026 – KI-F1: erste Fahrt gelungen, Tür nicht gestartet; eine
+voreilige „Widerlegung“ zurückgenommen:**
+- **Ergebnis:** Die gerade Etappe von 0,5 m erfüllte am Roboter alle sechs
+  Kriterien (Laser 0,505 m, seitlich 0,000 m, 12,8 s, nichts berührt); die
+  Simulation hatte 0,505 m vorhergesagt. Die Türdurchfahrt wurde nicht
+  gestartet: Aus der Lage, in der Amadeus stand, wurde die Tür 1,25 m breit
+  vermessen (wahr 0,85 m), und das Kriterium sperrte die Fahrt. Der
+  Projektinhaber: „warum ist der Roboter nicht gefahren, es war alles soweit
+  aufgebaut und fertig“.
+- **Fehler der Planung:** (1) Ein bekannter, offener Messfehler (KI-0R: Tür
+  von der Seite 1,30 m) lag genau auf dem Weg zum Ziel des Auftrags und war
+  nicht behoben. Regel: Vor einem Auftrag die Liste „offen“ gegen den Ablauf
+  halten; was darauf liegt, wird vorher behoben oder der Auftrag umgeht es
+  ausdrücklich. (2) Ein Schritt, der nichts bewegt (Messen), darf im Auftrag
+  wiederholt werden, bis er passt; ein Auftrag endet nicht ohne Not, wenn
+  der Projektinhaber aufgebaut hat. (3) Aufstellanweisungen nennen Maße,
+  und das Werkzeug prüft sie selbst und sagt, was zu ändern ist. (4) Keine
+  Frage an den Projektinhaber, die er ohne Bild nicht beantworten kann.
+- **Zurückgenommen:** Am 21.11. stand hier, die Vermutung „offenes Türblatt“
+  sei falsch. Belegt war nur, dass die dafür gebaute Regel an der echten Tür
+  nicht griff. Die Maße vom 22.11. (1,23 und 1,25 m) passen zur Lücke
+  zwischen der Spitze eines 0,85 m breiten, etwas über 90° offenen Blatts
+  und dem gegenüberliegenden Pfosten; die Simulation mit einem solchen Blatt
+  zeigt diese Lücke mit 1,20 m. Das ist wieder nur eine passende Zahl und
+  kein Beleg. Deshalb misst KI-F2 nach, mit vorab notierter Erwartung (zwei
+  Kanten, eine mindestens 0,5 m näher; Blatt geht in den Laborraum auf;
+  Amadeus stand auf der Seite des Blatts). Lehre: „Die Abhilfe hat nicht
+  gewirkt“ und „die Ursache ist widerlegt“ sind zwei verschiedene Sätze.
+- **Bauform:** Das Türfenster (0,65 bis 0,95 m) und die Bewertung der
+  Aufstellung stecken jetzt im Werkzeug statt nur im Auftragstext; ohne das
+  Kriterium im Auftrag hätte das Werkzeug am 22.11. ein Ziel durch die
+  falsch vermessene Lücke gesendet. Der Vorpunkt liegt 1,1 m vor der Tür,
+  vor der Spitze eines in den Raum offenen Blatts.
+
 **Nachtrag 21.11.2026 – Lotsen-Fenster statt unsichtbarem Dienst
 (Projektinhaber):** Der Lotsen-Dienst lief auf dem KI-Rechner als
 Hintergrundprozess; der Projektinhaber sah dort nichts und wollte ein

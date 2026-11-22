@@ -27,11 +27,18 @@ MAX_STRECKE_M = 2.5
 MAX_GESAMT_M = 4.0
 
 # Antriebsmitte bis Vorderkante 0,27 m, bis Hinterkante 0,11 m. Der Vorpunkt
-# liegt so, dass die Vorderkante noch gut 0,4 m vor der Türlinie steht; am
-# Auslaufpunkt ist die Hinterkante knapp einen halben Meter durch.
-VOR_DER_TUER_M = 0.70
+# liegt 1,1 m vor der Türlinie: Ein Türblatt, das in den Raum hinein offen
+# steht (bis 0,9 m lang), endet davor; richtet sich der Roboter am Vorpunkt
+# aus, schwenken seine Ecken (0,39 m um die Antriebsmitte) nicht bis ans
+# Blatt. Am Auslaufpunkt ist die Hinterkante knapp einen halben Meter durch.
+VOR_DER_TUER_M = 1.10
 HINTER_DER_TUER_M = 0.60
 MIN_BREITE_M = 0.60
+# Als Tür gilt für eine Durchfahrt nur, was so breit vermessen ist. Breiter
+# vermessene „Türen“ sind falsch vermessen (Befund KI-F1: 1,25 m statt
+# 0,85 m bei schrägem Blick); ihre Achse stimmt dann nicht.
+TUER_MIN_M = 0.65
+TUER_MAX_M = 0.95
 
 
 def tuer_punkte(pfosten: Sequence[Sequence[float]],
@@ -63,6 +70,61 @@ def tuer_punkte(pfosten: Sequence[Sequence[float]],
         nx, ny = -nx, -ny
     return ((mx - vor_m * nx, my - vor_m * ny),
             (mx + hinter_m * nx, my + hinter_m * ny))
+
+
+def aufstellung(pfosten: Sequence[Sequence[float]],
+                standpunkt: Sequence[float] = (0.0, 0.0),
+                blick_rad: float = 0.0) -> dict:
+    """Wie der Roboter zur Tür steht.
+
+    ``abstand_m``: bis zur Türlinie, entlang der Türachse.
+    ``seitlich_m``: Versatz neben der Türachse; positiv = der Roboter steht
+    links der Achse (mit Blick zur Tür).
+    ``winkel_grad``: Richtung der Türachse gegen die Blickrichtung; positiv =
+    die Achse liegt links, der Roboter müsste sich nach links drehen.
+    """
+    (ax, ay), (bx, by) = [(float(p[0]), float(p[1])) for p in pfosten]
+    sx, sy = float(standpunkt[0]), float(standpunkt[1])
+    breite = math.hypot(bx - ax, by - ay)
+    if not math.isfinite(breite) or breite <= 0.0:
+        raise ValueError('Fahrziel: Pfosten fallen zusammen')
+    mx, my = 0.5 * (ax + bx), 0.5 * (ay + by)
+    nx, ny = -(by - ay) / breite, (bx - ax) / breite
+    if (sx - mx) * nx + (sy - my) * ny > 0.0:      # Achse zeigt vom Standpunkt weg
+        nx, ny = -nx, -ny
+    abstand = (mx - sx) * nx + (my - sy) * ny
+    seitlich = (sx - mx) * (-ny) + (sy - my) * nx
+    winkel = math.degrees(math.atan2(math.sin(math.atan2(ny, nx) - blick_rad),
+                                     math.cos(math.atan2(ny, nx) - blick_rad)))
+    return {'breite_m': breite, 'abstand_m': abstand, 'seitlich_m': seitlich,
+            'winkel_grad': winkel}
+
+
+def aufstellung_hinweise(lage: dict, *, abstand_min_m: float = 1.5,
+                         abstand_max_m: float = 2.6, seitlich_max_m: float = 0.25,
+                         winkel_max_grad: float = 25.0) -> List[str]:
+    """Was an der Aufstellung zu ändern ist; leere Liste = sie passt."""
+    hinweise = []
+    abstand, seitlich, winkel = lage['abstand_m'], lage['seitlich_m'], lage['winkel_grad']
+    if abstand < abstand_min_m:
+        hinweise.append(
+            f'zu nah an der Tür ({abstand:.2f} m bis zur Türlinie): bitte auf '
+            f'{abstand_min_m:.1f} bis {abstand_max_m:.1f} m zurückstellen')
+    elif abstand > abstand_max_m:
+        hinweise.append(
+            f'zu weit von der Tür ({abstand:.2f} m bis zur Türlinie): bitte auf '
+            f'{abstand_min_m:.1f} bis {abstand_max_m:.1f} m heranstellen')
+    if abs(seitlich) > seitlich_max_m:
+        hinweise.append(
+            f'steht {abs(seitlich):.2f} m {"links" if seitlich > 0 else "rechts"} neben '
+            f'der Türmitte: bitte etwa {100 * abs(seitlich):.0f} cm nach '
+            f'{"rechts" if seitlich > 0 else "links"} versetzen')
+    if abs(winkel) > winkel_max_grad:
+        hinweise.append(
+            f'die Tür liegt {abs(winkel):.0f}° {"links" if winkel > 0 else "rechts"} '
+            f'von seiner Blickrichtung: bitte nach '
+            f'{"links" if winkel > 0 else "rechts"} zur Tür drehen')
+    return hinweise
 
 
 def im_kartenrahmen(punkt: Sequence[float], pose: Sequence[float]) -> Punkt:
@@ -104,7 +166,18 @@ def durch_die_tuer(pfosten: Sequence[Sequence[float]], pose: Sequence[float], *,
     Vorpunkt (näher als ``vorpunkt_ab_m``), entfällt dieser.
     """
     vorpunkt, auslauf = tuer_punkte(pfosten, (0.0, 0.0), vor_m=vor_m, hinter_m=hinter_m)
-    punkte = [] if math.hypot(*vorpunkt) < vorpunkt_ab_m else [vorpunkt]
+    lage = aufstellung(pfosten)
+    if lage['abstand_m'] < vor_m + vorpunkt_ab_m:
+        # Der Roboter steht schon so nah wie der Vorpunkt oder näher. Zurück
+        # wird nicht gefahren: Auf der Türachse geht es direkt zum Auslauf,
+        # neben ihr gibt es kein Ziel.
+        if abs(lage['seitlich_m']) > vorpunkt_ab_m:
+            raise ValueError(
+                f'Fahrziel: zu nah an der Tür ({lage["abstand_m"]:.2f} m) und '
+                f'{abs(lage["seitlich_m"]):.2f} m neben der Türachse')
+        punkte = []
+    else:
+        punkte = [vorpunkt]
     return [im_kartenrahmen(p, pose) for p in (*punkte, auslauf)]
 
 

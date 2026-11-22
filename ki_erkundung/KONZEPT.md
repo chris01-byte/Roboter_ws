@@ -1,6 +1,6 @@
 # Konzept „KI-Erkundung“ – eine KI übernimmt Ziel- und Suchwahl
 
-**Version 1.7 · 21.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
+**Version 1.8 · 22.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
 nachgeführt nach drei Durchgängen an echten Aufnahmen, der Freigabe der
 Schalter „nur Rundblick“ und „Etappenfahrt“ und der Festlegung „die KI
 bekommt Zeit, kein stiller Rückfall“**
@@ -288,8 +288,14 @@ So läuft es:
 
 1. Die KI nennt eine Nummer; die Antwort ist geprüft (Abschnitt 6).
 2. Der Roboter misst die gewählte Öffnung im Stand neu und rechnet daraus
-   zwei Punkte auf der Türachse: einen **Vorpunkt** 0,7 m vor der Türlinie
-   und einen **Auslaufpunkt** 0,6 m dahinter (`lotse/fahrziel.py`).
+   zwei Punkte auf der Türachse: einen **Vorpunkt** 1,1 m vor der Türlinie
+   und einen **Auslaufpunkt** 0,6 m dahinter (`lotse/fahrziel.py`). Als Tür
+   gilt dabei nur, was 0,65 bis 0,95 m breit vermessen ist, und der Roboter
+   muss passend davor stehen (1,5 bis 2,6 m vor der Türlinie, höchstens
+   0,25 m neben der Türmitte); sonst wird nichts gesendet und das Werkzeug
+   sagt, was zu ändern ist. Der Vorpunkt liegt vor der Spitze eines in den
+   Raum offenen Türblatts, damit sich der Roboter nicht neben dem Blatt
+   ausrichtet.
 3. Diese Punkte gehen als **Fahrziel** an den Erkunder
    (`/ki_erkundung/fahrziel_json`, nur auf dem Roboter). Darin steht, wer
    gewählt hat: `ki`, `mensch` oder `test`.
@@ -610,6 +616,14 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   entschieden hat. Der Fahrteil soll aus vorhandenem, real bewährtem Code
   entstehen; Bestand und Vorschlag stehen im STATUS, entschieden ist dazu
   noch nichts.
+- 22.11.2026, v1.8, nach KI-F1: Die gerade Etappe ist am Roboter gelungen
+  (0,505 m, keine Abweichung). Die Türdurchfahrt wurde nicht gestartet, weil
+  die Tür aus der schrägen Lage 1,25 m breit vermessen wurde. In §6a
+  nachgezogen: Türfenster 0,65 bis 0,95 m, Bewertung der Aufstellung,
+  Vorpunkt 1,1 m statt 0,7 m vor der Tür. Festgehalten als Grenze des
+  heutigen Stands: Aus einer Lage auf der Seite des offenen Türblatts ist
+  die Tür nicht verlässlich vermessen; bis das geklärt ist, fährt Amadeus
+  nur aus einer Aufstellung vor der Tür.
 - 21.11.2026, v1.7, nach KI-1: Die erste Blickrunde aus eigener Kraft ist
   gelungen (Drehung 363°, acht Bilder, Antwort in 4,9 s, richtige Tür
   gewählt). Zeitgrenze auf 120 s festgelegt; Rechenlast, Dauer der Runde

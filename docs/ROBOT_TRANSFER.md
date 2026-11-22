@@ -406,6 +406,24 @@ Flur (vom Projektinhaber ausdrücklich verlangt; je 5 cm/s, Etappen bis
 0,5 m, ohne Nav2).
 Rückfall: `kif1.env` und den Release-Ordner löschen.
 
+Nachtrag 22.11.2026, tatsächliche Wirkung von KI-F1 (Bericht des
+Jetson-Agenten, 15:15 bis 16:15): Arbeitskopie auf `baa16b7`. Neu angelegt:
+Release `~/.local/share/amadeus/releases/kif1-20261122_1515` (14 Pakete,
+Build 186 s, mit `stage_drive_only`; Prüfdateien unter `pruefung/stand`,
+`stufe1`, `stufe2`) und `~/roboter_worktrees/kif1.env`. Drei Stackstarts:
+einer ohne Motorfreigabe, zwei scharfe. **Eine Fahrt: eine gerade Etappe von
+0,5 m im Laborraum** (höchstens 0,050 m/s, 12,8 s, nichts berührt). Beim
+zweiten scharfen Start gab es keine Mission und keine Bewegung (Tür falsch
+vermessen). Keine Kamera, kein KI-Rechner. Frühere Releases und
+Umgebungsdateien unverändert.
+
+Stand 22.11.2026, **noch keine weitere Jetson-Wirkung:** Folgeauftrag KI-F2
+ist erteilt (`ki_erkundung/AUFTRAG.md`). Er baut nichts und legt nur
+Prüfdateien unter `kif1-20261122_1515/pruefung/kif2/` an. Er startet den
+Stack einmal ohne Motorfreigabe (aufstellen und messen) und einmal scharf
+und lässt Amadeus **einmal in Etappen durch die offene Labortür in den Flur
+fahren** (5 cm/s, ohne Nav2).
+
 Stand 21.11.2026, zum früheren Auftrag KI-0N: die sieben Aufnahmen neu
 auswerten, auf Wunsch weitere Standbilder mit Kamera und LiDAR; keine
 Motoren. Dazu auf dem **KI-Rechner**, noch nicht ausgeführt: das

@@ -17,9 +17,12 @@ in kurzen geraden Etappen, mit Fahrtor und Kollisionsmonitor.
     python3 fahrziel_senden.py --tuer --richtung 20 --quelle mensch
 
 Für ``--tuer`` misst das Werkzeug die Öffnungen im Stand neu (zwei Sekunden
-Laser), nimmt die gewählte und legt einen Punkt 0,7 m vor und einen 0,6 m
-hinter die Tür, beide auf der Türachse. Findet es die Öffnung nicht
-eindeutig, sendet es nichts.
+Laser), nimmt die gewählte und legt einen Punkt 1,1 m vor und einen 0,6 m
+hinter die Tür, beide auf der Türachse. Es sendet nichts, wenn es die
+Öffnung nicht eindeutig findet, wenn sie nicht türbreit vermessen ist (0,65
+bis 0,95 m) oder wenn der Roboter nicht passend vor der Tür steht; dann sagt
+es, was an der Aufstellung zu ändern ist. ``--tuer --nur-messen`` zeigt
+dasselbe, ohne zu senden, und dazu das Protokoll der Vermessung.
 
 Ausgegeben werden nur Maße und Meldungen, keine Bilder und keine Koordinaten
 der Wohnung.
@@ -39,7 +42,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lotse.blickrunde import profil_ursprung, scan_als_dict, stand_profil  # noqa: E402
 from lotse.fahrziel import (  # noqa: E402
-    botschaft, durch_die_tuer, geradeaus, pruefe_grenzen, punkt_relativ,
+    HINTER_DER_TUER_M, TUER_MAX_M, TUER_MIN_M, VOR_DER_TUER_M, aufstellung,
+    aufstellung_hinweise, botschaft, durch_die_tuer, geradeaus, pruefe_grenzen,
+    punkt_relativ,
 )
 from lotse.geometrie import aus_tf  # noqa: E402
 from lotse.kandidaten import TUERBREIT_M, Oeffnung, oeffnungen  # noqa: E402
@@ -50,10 +55,25 @@ WARTEPHASE = 'stage_drive_wait_target'
 def waehle_oeffnung(liste: Sequence[Oeffnung], *, nummer: Optional[int] = None,
                     richtung_grad: Optional[float] = None,
                     toleranz_grad: float = 25.0,
-                    nur_tuergross: bool = True) -> Oeffnung:
-    """Die gemeinte Öffnung; ``ValueError`` mit Grund, wenn sie nicht eindeutig ist."""
+                    nur_tuergross: bool = True,
+                    breite_von_m: Optional[float] = None,
+                    breite_bis_m: Optional[float] = None) -> Oeffnung:
+    """Die gemeinte Öffnung; ``ValueError`` mit Grund, wenn sie nicht eindeutig ist.
+
+    Mit ``breite_von_m`` und ``breite_bis_m`` zählt nur, was so breit vermessen
+    ist; eine als Tür gemeinte, aber falsch vermessene Öffnung wird dann mit
+    ihrem Maß genannt und nicht gewählt.
+    """
     waehlbar = [o for o in liste if o.befahrbar
                 and (not nur_tuergross or o.breite_m <= TUERBREIT_M)]
+    if breite_von_m is not None and breite_bis_m is not None:
+        passend = [o for o in waehlbar if breite_von_m <= o.breite_m <= breite_bis_m]
+        if waehlbar and not passend:
+            masse = ', '.join(f'{o.breite_m:.2f} m' for o in waehlbar)
+            raise ValueError(
+                f'keine Öffnung ist türbreit vermessen ({breite_von_m:.2f} bis '
+                f'{breite_bis_m:.2f} m); vermessen: {masse}')
+        waehlbar = passend
     if not waehlbar:
         raise ValueError('keine befahrbare, türgroße Öffnung vermessen')
     if nummer is not None:
@@ -101,11 +121,56 @@ def tabelle(liste: Sequence[Oeffnung]) -> str:
     return '\n'.join(zeilen)
 
 
-def vermesse(scans: List[dict], boden_lidar) -> List[Oeffnung]:
+def vermesse(scans: List[dict], boden_lidar,
+             protokoll: Optional[List[dict]] = None) -> List[Oeffnung]:
     """Öffnungen aus Scans im Stand, im Standpunktrahmen (Antriebsmitte)."""
     gier = [0.0] * len(scans)
     winkel, profil = stand_profil(scans, gier, boden_lidar)
-    return oeffnungen(winkel, profil, ursprung=profil_ursprung(gier, boden_lidar))
+    return oeffnungen(winkel, profil, ursprung=profil_ursprung(gier, boden_lidar),
+                      protokoll=protokoll)
+
+
+def lage_text(o: Oeffnung) -> str:
+    """Die Aufstellung zu einer Öffnung in einem Satz, mit dem, was zu ändern ist."""
+    lage = aufstellung(o.pfosten)
+    hinweise = aufstellung_hinweise(lage)
+    seite = 'links' if lage['seitlich_m'] > 0 else 'rechts'
+    text = (f'Nr. {o.nr}: {lage["abstand_m"]:.2f} m vor der Türlinie, '
+            f'{abs(lage["seitlich_m"]):.2f} m {seite} neben der Türmitte, Tür '
+            f'{abs(lage["winkel_grad"]):.0f}° '
+            f'{"links" if lage["winkel_grad"] > 0 else "rechts"} von der Blickrichtung')
+    return text + (' – Aufstellung passt.' if not hinweise
+                   else ' – Aufstellung passt nicht: ' + '; '.join(hinweise) + '.')
+
+
+def protokoll_text(protokoll: Sequence[dict], max_breite_m: float = 1.6,
+                   max_zeilen: int = 16) -> str:
+    """Das Protokoll der Vermessung als Zeilen, nur Maße vom Roboter aus."""
+    def kanten(z: dict) -> str:
+        return ' · '.join(f'{w:+.1f}°/{r:.2f} m' for w, r in z['pfosten'])
+
+    def anteil(wert) -> str:
+        return '–' if wert is None else f'{100 * wert:.0f} %'
+
+    zeilen, gesehen = ['Protokoll der Vermessung (Maße vom Roboter aus):'], set()
+    for z in sorted(protokoll, key=lambda z: (z['ergebnis'] != 'angeboten',
+                                              z['richtung_grad'], z['breite_m'])):
+        if z['breite_m'] is None or z['breite_m'] > max_breite_m:
+            continue
+        schluessel = (z['ergebnis'], round(z['richtung_grad'] / 2.0), round(z['breite_m'], 1))
+        if schluessel in gesehen:
+            continue
+        gesehen.add(schluessel)
+        if len(zeilen) > max_zeilen:
+            zeilen.append('  … weitere Zeilen ausgelassen')
+            break
+        tiefe = '–' if z['tiefe_m'] is None else f'{z["tiefe_m"]:.2f} m'
+        zeilen.append(
+            f'  {z["ergebnis"]:<10} {z["breite_m"]:.2f} m  {z["richtung_grad"]:+6.1f}°  '
+            f'{z["entfernung_m"]:.2f} m  {z["schluss"]:<6} Kanten {kanten(z)}  '
+            f'tief {tiefe} ({anteil(z["anteil_tief"])}), davor {anteil(z["anteil_davor"])}  '
+            f'Vermerk {z.get("blatt") or "–"}')
+    return '\n'.join(zeilen)
 
 
 def eingabe() -> argparse.ArgumentParser:
@@ -124,9 +189,16 @@ def eingabe() -> argparse.ArgumentParser:
     e.add_argument('--quelle', choices=('ki', 'mensch', 'test'), default='test',
                    help='wer gewählt hat; steht später in jeder Meldung des Erkunders')
     e.add_argument('--kennung', default='')
-    e.add_argument('--vor', type=float, default=0.70, help='Vorpunkt vor der Türlinie, m')
-    e.add_argument('--hinter', type=float, default=0.60,
+    e.add_argument('--vor', type=float, default=VOR_DER_TUER_M,
+                   help='Vorpunkt vor der Türlinie, m')
+    e.add_argument('--hinter', type=float, default=HINTER_DER_TUER_M,
                    help='Auslaufpunkt hinter der Türlinie, m')
+    e.add_argument('--breite-min', type=float, default=TUER_MIN_M,
+                   help='so breit muss die Öffnung mindestens vermessen sein, m')
+    e.add_argument('--breite-max', type=float, default=TUER_MAX_M,
+                   help='so breit darf sie höchstens vermessen sein, m')
+    e.add_argument('--aufstellung-egal', action='store_true',
+                   help='auch senden, wenn der Roboter nicht passend vor der Tür steht')
     e.add_argument('--messdauer', type=float, default=2.0,
                    help='so lange Laser sammeln, s (nur --tuer)')
     e.add_argument('--warten', type=float, default=300.0,
@@ -227,21 +299,38 @@ def main(argv=None) -> int:
                 return 4
             v, q = montage.translation, montage.rotation
             boden_lidar = aus_tf([v.x, v.y, v.z], [q.x, q.y, q.z, q.w], wahl.basis_hoehe)
-            gefunden = vermesse(stand['scans'], boden_lidar)
+            protokoll: List[dict] = []
+            gefunden = vermesse(stand['scans'], boden_lidar, protokoll)
             print(f'{len(stand["scans"])} Scans, {len(gefunden)} Öffnung(en):')
             print(tabelle(gefunden))
+            tueren = [o for o in gefunden
+                      if o.befahrbar and wahl.breite_min <= o.breite_m <= wahl.breite_max]
             if wahl.nur_messen:
+                if tueren:
+                    print(f'Türbreit vermessen ({wahl.breite_min:.2f} bis '
+                          f'{wahl.breite_max:.2f} m):')
+                    for o in tueren:
+                        print('  ' + lage_text(o))
+                else:
+                    print(f'Keine Öffnung ist türbreit vermessen ({wahl.breite_min:.2f} '
+                          f'bis {wahl.breite_max:.2f} m). So würde nichts gesendet.')
+                print(protokoll_text(protokoll))
                 return 0
             try:
                 gewaehlt = waehle_oeffnung(
                     gefunden, nummer=wahl.nummer, richtung_grad=wahl.richtung,
-                    toleranz_grad=wahl.richtung_toleranz)
+                    toleranz_grad=wahl.richtung_toleranz,
+                    breite_von_m=wahl.breite_min, breite_bis_m=wahl.breite_max)
             except ValueError as grund:
                 print(f'Nichts gesendet: {grund}.')
                 return 2
             bemerkung = (f'Öffnung {gewaehlt.nr}, {gewaehlt.breite_m:.2f} m breit, '
                          f'{gewaehlt.richtung_grad:+.0f}°, {gewaehlt.entfernung_m:.2f} m')
             print(f'Gewählt: {bemerkung}.')
+            print(lage_text(gewaehlt))
+            if aufstellung_hinweise(aufstellung(gewaehlt.pfosten)) and not wahl.aufstellung_egal:
+                print('Nichts gesendet: Die Aufstellung passt nicht.')
+                return 2
 
         lage = tf(wahl.karten_rahmen, wahl.basis_rahmen)
         if lage is None:
