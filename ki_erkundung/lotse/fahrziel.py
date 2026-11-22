@@ -1,10 +1,17 @@
-"""Fahrziel: aus einer gewählten Öffnung zwei Punkte für die Etappenfahrt.
+"""Fahrziel: aus einer gewählten Öffnung die Punkte für die Etappenfahrt.
 
 Die KI nennt nur eine Nummer. Aus der dazu vermessenen Öffnung rechnet der
-Roboter hier selbst zwei Punkte auf der Türachse: einen **Vorpunkt** vor der
-Tür und einen **Auslaufpunkt** dahinter. Der Erkunder fährt sie in kurzen
-geraden Etappen an (Anschlussstelle ``stage_drive_only``), prüft vor jeder
-Etappe den Streifen vor sich und behält seine ganze Schutzkette.
+Roboter hier selbst, wohin er fährt, in zwei Schritten:
+
+- **Anfahrt** (``anfahrt``): vom Standplatz im Raum vor die Tür, über einen
+  Vorpunkt auf der Türachse; danach steht er mittig davor, Blick zur Tür.
+- **Durchfahrt** (``gerade_linie``): von dort auf gerader Linie durch die
+  Türmitte, neu vermessen.
+
+Jeder Weg wird vor dem Senden an dem geprüft, was der Laser sieht. Der
+Erkunder fährt die Punkte in kurzen geraden Etappen an (Anschlussstelle
+``stage_drive_only``), prüft vor jeder Etappe den Streifen vor sich und
+behält seine ganze Schutzkette.
 
 Dieses Modul rechnet nur; es sendet nichts und kennt kein ROS.
 """
@@ -267,6 +274,268 @@ def freiraum_hinweise(frei: dict, *, noetig_m: float = FREI_NEBEN_DER_LINIE_M) -
             text += ': von hier ist die Durchfahrt zu knapp'
         hinweise.append(text)
     return hinweise
+
+
+# Anfahrt: Der Roboter stellt sich selbst vor die Tür. Er fährt zu einem
+# Vorpunkt auf der Türachse, dreht sich dort zur Tür und fährt ein kurzes
+# Stück auf sie zu. Danach steht er so, wie ihn sonst ein Mensch hinstellt
+# (``aufstellung_hinweise``), und die Durchfahrt wird von dort neu vermessen.
+# Endpunkt so weit vor der Türlinie (die Aufstellung passt bei 1,5 bis 2,6 m;
+# der Erkunder kommt auf 0,10 m genau an):
+ANFAHRT_VOR_M = (1.6, 1.7, 1.8, 1.9, 2.0, 2.1)
+# Der Vorpunkt liegt so viel weiter von der Tür weg. Mehr als 0,35 m, damit
+# der Erkunder sich dort zur Tür ausrichtet.
+ANFAHRT_ANLAUF_M = 0.45
+# Zum Drehen auf der Stelle: Die vorderen Ecken kreisen 0,40 m um die
+# Antriebsmitte (0,33 m voraus, 0,23 m seitlich); dazu 5 cm.
+DREHKREIS_M = 0.45
+MIN_ANLAUF_M = 0.40
+
+
+def frei_gesehen(sicht: Optional[dict], punkt: Sequence[float], *,
+                 spiel_m: float = 0.05) -> bool:
+    """Ob der Laser bis zu diesem Punkt freie Sicht hatte.
+
+    ``sicht``: ``{'ursprung': (x, y), 'winkel': …, 'profil': …}`` aus der
+    Vermessung im Stand (je Richtung die Entfernung; ``nan`` = nicht
+    beobachtet, ``inf`` = kein Echo). Liegt vor dem Punkt etwas, oder hat der
+    Laser in diese Richtung nicht gemessen, ist der Punkt nicht „frei
+    gesehen“: Was dahinter liegt, kennt der Roboter von hier nicht.
+    Ohne ``sicht`` wird nichts geprüft.
+    """
+    if sicht is None:
+        return True
+    winkel = np.asarray(sicht['winkel'], dtype=float)
+    profil = np.asarray(sicht['profil'], dtype=float)
+    dx = float(punkt[0]) - float(sicht['ursprung'][0])
+    dy = float(punkt[1]) - float(sicht['ursprung'][1])
+    strecke = math.hypot(dx, dy)
+    if strecke < 0.15:
+        return True
+    unterschied = np.abs((winkel - math.atan2(dy, dx) + math.pi) % (2 * math.pi) - math.pi)
+    weite = float(profil[int(np.argmin(unterschied))])
+    if math.isnan(weite):
+        return False
+    return weite >= strecke - spiel_m
+
+
+def frei_um(hindernisse: Sequence[Sequence[float]], punkt: Sequence[float]) -> float:
+    """Abstand des nächsten Laserpunkts von ``punkt``; ``inf`` ohne Punkte."""
+    feld = np.asarray(hindernisse, dtype=float).reshape(-1, 2)
+    if feld.size == 0:
+        return math.inf
+    return float(np.min(np.hypot(feld[:, 0] - float(punkt[0]), feld[:, 1] - float(punkt[1]))))
+
+
+def _winkel(rad: float) -> float:
+    return math.degrees(math.atan2(math.sin(rad), math.cos(rad)))
+
+
+def wandrichtung(pfosten: Sequence[Sequence[float]], hindernisse: Sequence[Sequence[float]], *,
+                 band_m: float = 0.30, bis_m: float = 1.5, spiel_m: float = 0.03,
+                 min_punkte: int = 12, min_laenge_m: float = 0.40,
+                 max_abweichung_grad: float = 20.0) -> Optional[dict]:
+    """Die Richtung der Wand, in der die Tür sitzt, aus den Laserpunkten daneben.
+
+    Warum: Schräg gesehen liegen die zwei vermessenen Türkanten nicht auf
+    einer Linie mit der Wand. Die nahe Kante ist die raumseitige Ecke des
+    Pfostens, die ferne die hintere Ecke der Laibung oder ein Punkt auf dem
+    offenen Türblatt. Die Verbindung der Kanten ist dann um einige Grad
+    verdreht (Simulation, 22.11.2026: 6°), und ein Punkt 1,6 m vor der Tür
+    auf dieser „Achse“ liegt 17 cm neben der wahren. Die Wand neben der Tür
+    ist dagegen ein langes gerades Stück.
+
+    Gesucht wird je Seite der Tür die gerade Linie mit den meisten
+    Laserpunkten (höchstens ``spiel_m`` daneben), die höchstens
+    ``max_abweichung_grad`` von der Verbindung der Türkanten abweicht.
+    Rückgabe ``{'richtung': (x, y), 'punkte': n, 'laenge_m': …}`` für die
+    bessere Seite oder ``None``, wenn neben der Tür keine gerade Wand
+    gesehen wird.
+    """
+    (ax, ay), (bx, by) = [(float(q[0]), float(q[1])) for q in pfosten]
+    breite = math.hypot(bx - ax, by - ay)
+    feld = np.asarray(hindernisse, dtype=float).reshape(-1, 2)
+    if breite <= 0.0 or feld.shape[0] < min_punkte:
+        return None
+    u = np.array([(bx - ax) / breite, (by - ay) / breite])
+    quer = np.array([-u[1], u[0]])
+    mitte = np.array([0.5 * (ax + bx), 0.5 * (ay + by)])
+    rel = feld - mitte
+    laengs, tief = rel @ u, rel @ quer
+    grenze = math.cos(math.radians(max_abweichung_grad))
+    beste = None
+    for seite in (-1.0, 1.0):
+        maske = ((np.abs(tief) <= band_m) & (seite * laengs >= 0.5 * breite + 0.03)
+                 & (seite * laengs <= 0.5 * breite + bis_m))
+        punkte = feld[maske]
+        if punkte.shape[0] < min_punkte:
+            continue
+        fund = None
+        for i in range(punkte.shape[0] - 1):
+            differenz = punkte[i + 1:] - punkte[i]
+            weite = np.hypot(differenz[:, 0], differenz[:, 1])
+            for j in np.flatnonzero(weite >= 0.25):
+                richtung = differenz[j] / weite[j]
+                if abs(float(richtung @ u)) < grenze:
+                    continue
+                abstand = np.abs((punkte - punkte[i]) @ np.array([-richtung[1], richtung[0]]))
+                zahl = int(np.count_nonzero(abstand <= spiel_m))
+                if fund is None or zahl > fund[0]:
+                    fund = (zahl, abstand <= spiel_m)
+        if fund is None or fund[0] < min_punkte:
+            continue
+        drin = punkte[fund[1]]
+        schwer = drin.mean(axis=0)
+        _, _, vt = np.linalg.svd(drin - schwer)
+        richtung = vt[0] if float(vt[0] @ u) >= 0.0 else -vt[0]
+        entlang = (drin - schwer) @ richtung
+        laenge = float(entlang.max() - entlang.min())
+        if laenge < min_laenge_m or abs(float(richtung @ u)) < grenze:
+            continue
+        if beste is None or laenge > beste['laenge_m']:
+            beste = {'richtung': (float(richtung[0]), float(richtung[1])),
+                     'punkte': int(drin.shape[0]), 'laenge_m': laenge}
+    return beste
+
+
+def anfahrt(pfosten: Sequence[Sequence[float]], hindernisse: Sequence[Sequence[float]],
+            sicht: Optional[dict] = None, *,
+            vor_m: Sequence[float] = ANFAHRT_VOR_M, anlauf_m: float = ANFAHRT_ANLAUF_M,
+            noetig_m: float = FREI_NEBEN_DER_LINIE_M,
+            drehkreis_m: float = DREHKREIS_M) -> dict:
+    """Der Weg vom Standplatz vor die Tür, geprüft an dem, was der Laser sieht.
+
+    Im Standpunktrahmen (Antriebsmitte im Ursprung, x voraus, y links).
+    Rückgabe: ``punkte`` (ein oder zwei), ``vor_m`` (wie weit vor der
+    Türlinie der Roboter danach steht), ``drehen_grad`` (je Punkt, links
+    positiv), ``strecken_m`` (je Punkt), ``frei_m`` (kleinster Abstand neben
+    dem Weg) und ``drehkreis_m`` (kleinster freier Kreis an den Stellen, an
+    denen er sich dreht). ``ValueError`` mit Grund, wenn kein Weg passt.
+
+    Geprüft wird je Strecke der Freiraum links und rechts, an jeder
+    Drehstelle ein freier Kreis und dass der Laser die Punkte frei gesehen
+    hat. Was der Laser von hier nicht sieht, gilt nicht als frei.
+
+    Die Türachse steht senkrecht auf der Wand neben der Tür
+    (``wandrichtung``); nur wenn dort keine gerade Wand gesehen wird,
+    senkrecht auf der Verbindung der Türkanten. ``achse_aus`` nennt, woraus.
+    """
+    lage = aufstellung(pfosten)
+    if lage['breite_m'] < MIN_BREITE_M:
+        raise ValueError(
+            f'Anfahrt: Öffnung {lage["breite_m"]:.2f} m breit, nötig {MIN_BREITE_M:.2f} m')
+    if lage['abstand_m'] <= 0.3:
+        raise ValueError('Anfahrt: Der Standpunkt liegt in oder hinter der Türlinie')
+    (ax, ay), (bx, by) = [(float(q[0]), float(q[1])) for q in pfosten]
+    mx, my = 0.5 * (ax + bx), 0.5 * (ay + by)
+    # Die Türachse zeigt vom Standplatz weg durch die Tür.
+    wand = wandrichtung(pfosten, hindernisse)
+    if wand is not None:
+        nx, ny = -wand['richtung'][1], wand['richtung'][0]
+    else:
+        nx, ny = -(by - ay) / lage['breite_m'], (bx - ax) / lage['breite_m']
+    if mx * nx + my * ny < 0.0:
+        nx, ny = -nx, -ny
+    achse = math.atan2(ny, nx)
+    achse_aus = ('wand', wand['punkte'], wand['laenge_m']) if wand else ('kanten', 0, 0.0)
+
+    def pruefe(punkte: List[Punkt]) -> dict:
+        drehen, strecken = [], []
+        frei_seite, kreis = math.inf, math.inf
+        ort, blick = (0.0, 0.0), 0.0
+        pruefe_grenzen(punkte, ort)
+        for nummer, ziel in enumerate(punkte, start=1):
+            strecke = math.hypot(ziel[0] - ort[0], ziel[1] - ort[1])
+            if strecke < MIN_ANLAUF_M:
+                raise ValueError(f'Strecke {nummer} wäre nur {strecke:.2f} m lang')
+            richtung = math.atan2(ziel[1] - ort[1], ziel[0] - ort[0])
+            dreh = _winkel(richtung - blick)
+            if abs(dreh) > 10.0:
+                platz = frei_um(hindernisse, ort)
+                if platz < drehkreis_m:
+                    wo = 'am Standplatz' if nummer == 1 else 'am Punkt vor der Tür'
+                    raise ValueError(
+                        f'zum Drehen ist {wo} nicht genug Platz '
+                        f'({platz:.2f} m frei, nötig {drehkreis_m:.2f} m)')
+                if nummer > 1:
+                    for k in range(12):
+                        rand = (ort[0] + drehkreis_m * math.cos(k * math.pi / 6),
+                                ort[1] + drehkreis_m * math.sin(k * math.pi / 6))
+                        if not frei_gesehen(sicht, rand):
+                            raise ValueError(
+                                'den Platz zum Drehen vor der Tür sieht der Laser von '
+                                'hier nicht ganz ein')
+                kreis = min(kreis, platz)
+            frei = freiraum(hindernisse, ziel, start=ort)
+            for seite in ('links', 'rechts'):
+                if frei[f'{seite}_m'] < noetig_m:
+                    raise ValueError(
+                        f'auf Strecke {nummer} sind {seite} nur {frei[f"{seite}_m"]:.2f} m '
+                        f'frei ({frei[f"{seite}_voraus_m"]:.1f} m voraus), '
+                        f'nötig {noetig_m:.2f} m')
+                frei_seite = min(frei_seite, frei[f'{seite}_m'])
+            if not frei_gesehen(sicht, ziel):
+                raise ValueError(
+                    f'Punkt {nummer} sieht der Laser von hier nicht frei ein')
+            drehen.append(dreh)
+            strecken.append(strecke)
+            ort, blick = (float(ziel[0]), float(ziel[1])), richtung
+        return {'punkte': list(punkte), 'drehen_grad': drehen, 'strecken_m': strecken,
+                'frei_m': frei_seite, 'drehkreis_m': kreis,
+                'schraeg_grad': abs(_winkel(blick - achse))}
+
+    wege, gruende = [], []
+    for vor in vor_m:
+        ende = (mx - vor * nx, my - vor * ny)
+        vorpunkt = (mx - (vor + anlauf_m) * nx, my - (vor + anlauf_m) * ny)
+        for punkte in ([ende], [vorpunkt, ende]):
+            # Ohne Vorpunkt nur, wenn er danach fast in Richtung der Tür steht.
+            if len(punkte) == 1 and abs(_winkel(math.atan2(ende[1], ende[0]) - achse)) > 10.0:
+                continue
+            try:
+                weg = pruefe(punkte)
+            except ValueError as grund:
+                text = str(grund)
+                gruende.append(text[10:] if text.startswith('Fahrziel: ') else text)
+                continue
+            weg['vor_m'] = vor
+            weg['achse_aus'] = achse_aus
+            wege.append(weg)
+    if not wege:
+        # Der häufigste Grund sagt am ehesten, was am Standplatz zu ändern ist.
+        grund = max(set(gruende), key=gruende.count) if gruende else 'kein Weg gefunden'
+        raise ValueError(f'Anfahrt: {grund}')
+    return min(wege, key=lambda w: (round(sum(abs(d) for d in w['drehen_grad']), 0),
+                                    len(w['punkte']), w['vor_m']))
+
+
+def anfahrt_im_kartenrahmen(weg: dict, pose: Sequence[float]) -> List[Punkt]:
+    """Die Punkte einer ``anfahrt`` im Kartenrahmen (``pose`` der Antriebsmitte)."""
+    return [im_kartenrahmen(q, pose) for q in weg['punkte']]
+
+
+def anfahrt_text(weg: dict) -> str:
+    """Die Anfahrt in einem Satz, so wie der Roboter sie fährt."""
+    def dreh(grad: float) -> str:
+        return f'{abs(grad):.0f}° nach {"links" if grad > 0 else "rechts"} drehen'
+
+    schritte = []
+    for grad, strecke in zip(weg['drehen_grad'], weg['strecken_m']):
+        if abs(grad) >= 3.0:
+            schritte.append(dreh(grad))
+        schritte.append(f'{strecke:.2f} m fahren')
+    kreis = ('' if not math.isfinite(weg['drehkreis_m'])
+             else f', zum Drehen {min(weg["drehkreis_m"], 9.99):.2f} m '
+                  f'(nötig {DREHKREIS_M:.2f} m)')
+    seite = 'über 2 m' if weg['frei_m'] > 2.0 else f'{weg["frei_m"]:.2f} m'
+    woraus, zahl, laenge = weg.get('achse_aus', ('kanten', 0, 0.0))
+    achse = (f'Türachse aus der Wand neben der Tür ({zahl} Laserpunkte über {laenge:.2f} m)'
+             if woraus == 'wand'
+             else 'Türachse nur aus den zwei Türkanten (neben der Tür keine gerade Wand gesehen)')
+    return ('Anfahrt: ' + ', '.join(schritte)
+            + f'; danach steht er {weg["vor_m"]:.1f} m mittig vor der Tür, Blick zur Tür. '
+            + f'Frei neben dem Weg mindestens {seite} '
+            + f'(nötig {FREI_NEBEN_DER_LINIE_M:.2f} m){kreis}. {achse}')
 
 
 # Der Streifen, in dem der Erkunder anhält (stage_drive: halbe Breite 0,25 m,

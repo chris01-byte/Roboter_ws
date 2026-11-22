@@ -8,8 +8,13 @@ Aufstellung, aber der geplante Weg führte erst schräg zu einem Punkt auf
 der Türachse und damit an die Spitze des offenen Türblatts; der
 Nahbereichs-Halt hielt Amadeus nach 0,35 m an (KI-F2). Der Halt war
 richtig, der Weg war falsch geplant. **Als Nächstes:** Folgeauftrag KI-F3
-([AUFTRAG.md](AUFTRAG.md)) mit der geraden Linie durch die Türmitte, vor dem
-Senden gegen das Laserbild geprüft.
+([AUFTRAG.md](AUFTRAG.md)) in zwei Stufen: erst von vorn auf gerader Linie
+durch die Türmitte, dann von einem Platz im Raum, von dem Amadeus **selbst
+vor die Tür fährt**. Beides wird vor dem Senden gegen das Laserbild geprüft.
+
+**Einwand des Projektinhabers (22.11., spät):** Das Davorstellen von Hand
+ist gegenüber den früheren Durchfahrten ein Rückschritt. Das trifft zu;
+deshalb gibt es jetzt die Anfahrt (Abschnitt unten) und Stufe 2 im Auftrag.
 
 Davor (21.11.): eine Drehung am Roboter mit Blickrunde, aus der die KI in
 4,9 Sekunden die richtige Tür wählte (KI-1). Ein Urteil nach den Kriterien
@@ -31,7 +36,7 @@ fährt mit seiner Schutzkette.
 |---|---|---|---|
 | Erstes Sehen | im Stand Bild und Laser aufnehmen, die KI fragen, die Antwort prüfen | KI-0 | **erledigt** (21.11.) |
 | Blickrunde | sich selbst einmal herumdrehen; aus acht Bildern nennt die KI den Ausgang | KI-1 | **am Roboter gelungen** (21.11., eine Runde im Labor); für die Kriterien fehlen weitere Runden |
-| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1) und Ausrichten (KI-F2); durch die Tür bisher nur in der Simulation; als Nächstes KI-F3 |
+| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1) und Ausrichten (KI-F2); durch die Tür und selbst vor die Tür bisher nur in der Simulation; als Nächstes KI-F3 |
 | Raum für Raum | weiter, bis kein Ausgang mehr offen ist (Laborraum, Flur, Schlafzimmer) | KI-3 | offen |
 | Räume benennen, um Hilfe rufen | Raumnamen als Vorschlag in der App; Hilferuf mit Grund und Bild | KI-4 | offen |
 | Auf Zuruf | „fahr in die Küche“, „such die Tasse“ | KI-5 | offen |
@@ -42,13 +47,17 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 ## Arbeitsliste
 
 **Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-F3
-„Türdurchfahrt auf gerader Linie“** ([AUFTRAG.md](AUFTRAG.md)).
+„durch die Tür: erst von vorn, dann vom Platz im Raum“**
+([AUFTRAG.md](AUFTRAG.md)).
 Auf dem Jetson, mit Christopher; ohne Kamera und ohne KI-Rechner; **ohne
-neuen Build** (derselbe Release wie bei der gelungenen Etappe). Im Stand,
-ohne Motorfreigabe: mittig vor die Tür stellen und messen, bis das Werkzeug
-„Aufstellung passt.“ und „Weg passt.“ meldet. Danach genau eine Fahrt:
-geradeaus durch die Türmitte, 1,2 m vor der Tür die Richtung nachstellen,
-0,45 m dahinter stehen bleiben.
+neuen Build** (derselbe Release wie bei der gelungenen Etappe).
+- **Stufe 1:** Im Stand mittig vor die Tür stellen und messen, bis das
+  Werkzeug „Aufstellung passt.“ und „Weg passt.“ meldet. Dann eine Fahrt:
+  geradeaus durch die Türmitte, 0,45 m dahinter stehen bleiben.
+- **Stufe 2** (nur nach bestandener Stufe 1 und wenn in der Übergabe
+  genannt): Amadeus steht an einem Platz im Raum, seitlich der Tür. Er fährt
+  selbst vor die Tür (erste Mission), misst neu und fährt hindurch (zweite
+  Mission im selben Stacklauf).
 
 **Danach, je nach Ergebnis:**
 - Durchfahrt gelungen: Rundblick, Frage an die KI und Etappenfahrt in einem
@@ -114,6 +123,53 @@ auf dem KI-Rechner in Gebrauch · Sucher · Schalter „nur Rundblick“ im
 Erkunder (21.11., `6956252`) · Bestand der Türdurchfahrten · Etappenfahrt
 gebaut und simuliert (21.11., nachts) · KI-1: erste Drehung und Blickrunde
 am Roboter (21.11., nachts).
+
+## Anfahrt: Amadeus stellt sich selbst vor die Tür (gebaut 22.11.2026, spät)
+
+**Warum:** Der Projektinhaber: „Der Roboter ist aber schon mal durch die Tür
+gefahren, in den Flur hinein. Das ist schon dreimal passiert. […] Warum
+soll er sich auf einmal nur vor die Tür stellen? Das ist ja ein
+Rückschritt.“ Die früheren Durchfahrten fanden den Weg zur Tür selbst, über
+Nav2 (Bestand unten); die Etappenfahrt fährt nur gerade Stücke. Die Anfahrt
+gibt Amadeus das Hinfahren zurück, weiter ohne Nav2.
+
+**Was gebaut ist** (nur Werkzeug der KI-Linie, kein Paket unter `src/`):
+- `lotse/fahrziel.py`, `anfahrt`: vom Standplatz zu einem Vorpunkt auf der
+  Türachse, dort zur Tür drehen, 0,45 m auf sie zu; danach steht er 1,6 bis
+  2,1 m mittig vor der Tür. Unter den möglichen Wegen nimmt er den mit dem
+  wenigsten Drehen; steht er schon auf der Achse, entfällt der Vorpunkt.
+- Geprüft am Laserbild: neben jeder Strecke 0,30 m frei, an jeder
+  Drehstelle ein freier Kreis von 0,45 m, freie Sicht des Lasers auf die
+  Punkte und auf den Drehkreis vor der Tür.
+- `wandrichtung`: Die Türachse steht senkrecht auf der geraden Wand neben
+  der Tür (Linie mit den meisten Laserpunkten, höchstens 3 cm daneben,
+  mindestens 0,40 m lang). Nur ohne solche Wand gilt die Verbindung der
+  Türkanten; das Werkzeug sagt, woraus die Achse stammt.
+- `werkzeuge/fahrziel_senden.py --vor-die-tuer` (mit `--nur-messen` ohne
+  Senden). Danach `--tuer` wie bisher, mit neuer Messung.
+
+**Simulation** (Laborraum mit 85° offenem Türblatt, je ein Stacklauf mit
+zwei Missionen; der zweite Missionsstart ohne Neustart ging jedes Mal):
+
+| Startplatz | Anfahrt | Danach vor der Tür | Durchfahrt |
+|---|---|---|---|
+| rechts schräg (2,05 m vor der Tür, 1,15 m rechts, Tür 62° rechts) | 28° links, 1,01 m, 86° rechts, 0,45 m | 1,60 m, 0,01 m neben der Mitte; „Aufstellung passt“, „Weg passt“ (links 0,32 m, rechts 0,40 m) | im Flur nach 114 s; keine Berührung, engste Stelle 8,4 cm (gepolsterte Kontur) |
+| Raummitte (2,71 m vor der Tür, 0,57 m links) | 29° rechts, 0,88 m, 41° links, 0,45 m | 1,62 m, 0,08 m links; passt (0,32 m / 0,40 m) | im Flur nach 104 s; keine Berührung, 8,4 cm |
+| Seite des Türblatts, nah | keine: Tür 1,33 m breit vermessen, „keine Öffnung ist türbreit vermessen“ | – | – |
+| weit weg (3,30 m vor der Tür, 0,11 m rechts, Tür 12° rechts) | 1,29 m, 18° rechts, 0,45 m | 1,64 m, 0,09 m links; passt (0,33 m / 0,40 m) | im Flur nach 103 s; keine Berührung, 6,1 cm |
+
+**Ein Fehler, den die Simulation gezeigt hat:** Im ersten Lauf stand Amadeus
+nach der Anfahrt 0,17 m neben der Türmitte, und die Durchfahrt wurde zu
+Recht abgelehnt (links nur 0,26 m frei). Ursache: Aus zwei schräg gesehenen
+Türkanten war die Türachse 6° verdreht. Mit der Achse aus der Wand neben
+der Tür: 0,01, 0,08 und 0,09 m.
+
+**Grenzen:** Am Roboter ist nichts davon gelaufen. Von der Seite des
+offenen Türblatts gibt es keine Anfahrt (dort wird die Tür falsch
+vermessen; in der Simulation tritt derselbe Fehler auf, 1,33 m). Neben der
+Fahrlinie bleiben am Türblatt in der Simulation 0,32 m bei nötigen 0,30 m:
+Landet die Anfahrt einige Zentimeter zur Blattseite hin, lehnt die
+Durchfahrt ab. Der Laser sieht nichts unter 0,75 m.
 
 ## KI-F2 – erste Fahrt auf die Tür zu, am Türblatt angehalten (Jetson, 22.11.2026, 16:47 bis 17:23)
 
@@ -573,6 +629,9 @@ KONZEPT §13.
 | 22.11.2026 | **KI-F2** | Jetson, Laborraum, mit Christopher | kein Build; 233 Tests bestanden; Aufstellung beim ersten Messen passend (0,77 m); Ausrichten 9,4° mit 0,8° Rest; Fahrt nach 0,345 m am Nahbereichs-Halt angehalten, nichts berührt; T-2 und T-4 nicht erfüllt |
 | 22.11.2026 | Weg von KI-F2 nachgerechnet und nachgestellt | Maße des Berichts; Simulation mit 85° offenem Blatt | alte Linie 0,245 m neben der Blattspitze, Ecke am Wendepunkt 1,6 cm davor; gerade Linie 0,386 m; Simulation alter Weg: bis 4,7 cm an die Spitze; neuer Weg: im Flur nach 51 s; von der Blattseite: Werkzeug lehnt ab |
 | 22.11.2026 | Tests dieser Linie nach KI-F2 | Entwicklungsumgebung | 232 bestanden, 2 übersprungen (ohne ROS); 242 bestanden (ROS 2 Jazzy, abgeschottet) |
+| 22.11.2026 | Anfahrt und Durchfahrt als zwei Missionen in einem Stacklauf | Simulation, Laborraum mit 85° offenem Blatt, vier Startplätze | drei Plätze: selbst vor die Tür (0,01 bis 0,09 m neben der Mitte), dann im Flur nach 103 bis 114 s, keine Berührung (engste Stelle 6,1 bis 8,4 cm); Blattseite: abgelehnt (Tür 1,33 m vermessen); zweiter Missionsstart ohne Neustart ging jedes Mal |
+| 22.11.2026 | Türachse aus den Türkanten gegen Türachse aus der Wand | Simulation, Start rechts schräg | Kanten: 6° verdreht, nach der Anfahrt 0,17 m neben der Mitte, Durchfahrt abgelehnt; Wand: 0,01 m, Durchfahrt gelungen |
+| 22.11.2026 | Tests dieser Linie mit der Anfahrt | Entwicklungsumgebung | 243 bestanden, 2 übersprungen (ohne ROS); 253 bestanden (ROS 2 Jazzy, abgeschottet) |
 
 **Gemessen an der künstlichen Beispielwelt** (ausgedachtes Zimmer mit
 80-cm-Tür, 90-cm-Glastür zum Balkon, Schränken, Kiste; LiDAR-Rauschen 1 cm):
@@ -624,6 +683,11 @@ Jetson, echte Bilder.
   9,6 cm Abstand der gepolsterten Kontur zum Pfosten).
 - **Die Prüfung des Freiraums und die Zeile zur Kostenkarte** an echten
   Messungen.
+- **Die Anfahrt am Roboter:** Drehen um große Winkel in der Etappenfahrt
+  (am Roboter bisher 9,4°), die Türachse aus der Wand an echten Messungen
+  (Türzarge, Möbel an der Wand), zwei Missionen in einem Stacklauf, und wie
+  genau Amadeus danach vor der Tür steht. In der Simulation bleibt am
+  Türblatt wenig Luft (0,32 m bei nötigen 0,30 m).
 - **Die gespielte KI in der Simulation wählt bisher nur richtig.** Die Fälle
   falsch, langsam, stumm und Unsinn (Konzept, KI-2) stehen aus.
 - **Der Weg von der Antwort der KI zum Fahrziel in einem Zug.** Heute nennt
@@ -642,6 +706,7 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Auftrag KI-F3 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): im Stand aufstellen
-und messen, bis Aufstellung und Weg passen, dann einmal auf gerader Linie
-durch die offene Labortür.
+Auftrag KI-F3 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): Stufe 1 von vorn
+auf gerader Linie durch die offene Labortür; nach bestandener Stufe 1
+Stufe 2, in der Amadeus von einem Platz im Raum selbst vor die Tür fährt
+und dann hindurch.

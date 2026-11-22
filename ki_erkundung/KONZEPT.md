@@ -1,6 +1,6 @@
 # Konzept „KI-Erkundung“ – eine KI übernimmt Ziel- und Suchwahl
 
-**Version 1.9 · 22.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
+**Version 1.10 · 22.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
 nachgeführt nach drei Durchgängen an echten Aufnahmen, der Freigabe der
 Schalter „nur Rundblick“ und „Etappenfahrt“ und der Festlegung „die KI
 bekommt Zeit, kein stiller Rückfall“**
@@ -287,8 +287,21 @@ unverändert im heutigen Erkunder.
 So läuft es:
 
 1. Die KI nennt eine Nummer; die Antwort ist geprüft (Abschnitt 6).
-2. Der Roboter misst die gewählte Öffnung im Stand neu und legt zwei Punkte
-   auf die **gerade Linie von seinem Standplatz durch die Türmitte**: einen
+2. **Anfahrt (seit v1.10):** Steht der Roboter nicht passend vor der
+   gewählten Tür, fährt er selbst dorthin: zu einem Vorpunkt auf der
+   Türachse gut zwei Meter vor der Tür, dreht sich dort zur Tür und fährt
+   0,45 m auf sie zu (`anfahrt`, im Werkzeug `--vor-die-tuer`). Danach steht
+   er 1,6 bis 2,1 m mittig davor, Blick zur Tür. Die Türachse nimmt er dafür
+   aus der **geraden Wand neben der Tür**, nicht aus den zwei Türkanten:
+   Schräg gesehen ist die Verbindung der Kanten verdreht (Simulation: 6°,
+   das sind 17 cm neben der Türmitte). Geprüft wird am Laserbild: neben
+   jeder Strecke 0,30 m frei, an jeder Drehstelle ein freier Kreis von
+   0,45 m, freie Sicht auf die Punkte; was der Laser von dort nicht sieht,
+   gilt nicht als frei. Die Anfahrt ist ein eigenes Fahrziel; die
+   Durchfahrt danach wird neu vermessen.
+3. **Durchfahrt:** Der Roboter misst die Öffnung im Stand neu und legt zwei
+   Punkte auf die **gerade Linie von seinem Standplatz durch die
+   Türmitte**: einen
    1,2 m vor der Türlinie (dort stellt der Erkunder die Richtung nach) und
    einen 0,6 m dahinter (`lotse/fahrziel.py`). Als Tür gilt dabei nur, was
    0,65 bis 0,95 m breit vermessen ist; der Roboter muss passend davor
@@ -298,31 +311,36 @@ So läuft es:
    (Türblatt, Pfosten, alles, was im Weg steht). Sonst wird nichts gesendet
    und das Werkzeug sagt, was zu ändern ist. Ein Umweg über einen Punkt auf
    der Türachse ist verworfen: Er führte in KI-F2 an der Spitze des offenen
-   Türblatts vorbei.
-3. Diese Punkte gehen als **Fahrziel** an den Erkunder
+   Türblatts vorbei. (Die Anfahrt aus Schritt 2 fährt auch über einen
+   Punkt auf der Türachse, aber gut zwei Meter vor der Tür und geprüft am
+   Laserbild; gedreht wird dort, nicht neben dem Türblatt.)
+4. Diese Punkte gehen als **Fahrziel** an den Erkunder
    (`/ki_erkundung/fahrziel_json`, nur auf dem Roboter). Darin steht, wer
    gewählt hat: `ki`, `mensch` oder `test`.
-4. Der Erkunder (Startargument `stage_drive_only`, Vorgabe aus) nimmt genau
-   ein Ziel je Auftrag an, prüft es (Rahmen, Alter, höchstens drei Punkte,
+5. Der Erkunder (Startargument `stage_drive_only`, Vorgabe aus) nimmt genau
+   ein Ziel je Auftrag an (Anfahrt und Durchfahrt sind zwei Aufträge
+   nacheinander im selben Stacklauf), prüft es (Rahmen, Alter, höchstens drei Punkte,
    je Strecke höchstens 2,5 m, zusammen höchstens 4 m) und fährt selbst:
    auf den Punkt ausrichten, gerade Etappen von höchstens 0,5 m bei
    0,05 m/s, nach jeder Etappe bestätigter Halt und neue Lagemessung. Vor
    jeder Etappe muss der Streifen in Fahrzeugbreite im Laser frei und sein
    Ende gesehen sein, mit 15 cm Reserve vor der Vorderkante. Fahrtor,
    Glätter und Kollisionsmonitor bleiben davor.
-5. **Nahbereichs-Halt:** Vor und während jeder Etappe wird die Kostenkarte
+6. **Nahbereichs-Halt:** Vor und während jeder Etappe wird die Kostenkarte
    gelesen, in der auch die Treffer der Nahsensoren (VL53) stehen. Liegt
    25 cm vor der Vorderkante etwas Belegtes im Streifen, hält die Etappe an.
    Grund (Simulation, 21.11.2026): Bei 0,05 m/s bremst der Kollisionsmonitor
    erst wenige Zentimeter vor einem Hindernis; einen niedrigen Mülleimer,
    den der Laser nicht sieht, berührte der Roboter ohne diesen Halt im
    Kriechtempo.
-6. Scheitert ein Schritt, bleibt Amadeus stehen und der Auftrag nennt den
+7. Scheitert ein Schritt, bleibt Amadeus stehen und der Auftrag nennt den
    Grund. Ein zweiter Versuch ist ein neuer Auftrag.
 
-Grenzen, die bekannt sind: Das geht nur, wenn die gerade Linie vom
-Standplatz durch die Tür frei ist; die Etappenfahrt weicht nichts aus, und
-der Roboter muss dafür passend vor der Tür stehen. Niedrige Dinge unter 0,75 m sieht der Laser nicht; vor ihnen schützen
+Grenzen, die bekannt sind: Das geht nur, wenn die geraden Strecken der
+Anfahrt und die gerade Linie durch die Tür frei sind; die Etappenfahrt
+weicht nichts aus. Von einem Platz, von dem die Tür nicht türbreit
+vermessen wird (bisher: von der Seite des offenen Türblatts), gibt es keine
+Anfahrt. Niedrige Dinge unter 0,75 m sieht der Laser nicht; vor ihnen schützen
 die VL53 über den Nahbereichs-Halt und der Kollisionsmonitor, beide erst
 aus der Nähe (die VL53 tragen etwa einen halben Meter weit). Um Möbel herum
 braucht es später einen geplanten Weg; dafür liegt der Türablauf vom
@@ -619,6 +637,15 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   entschieden hat. Der Fahrteil soll aus vorhandenem, real bewährtem Code
   entstehen; Bestand und Vorschlag stehen im STATUS, entschieden ist dazu
   noch nichts.
+- 22.11.2026, v1.10 (Einwand des Projektinhabers: „Der Roboter ist schon
+  dreimal durch die Tür gefahren. Warum soll er sich auf einmal nur vor die
+  Tür stellen? Das ist ja ein Rückschritt.“): Das Davorstellen von Hand war
+  als erste Stufe gedacht, weil die Etappenfahrt nur gerade Stücke fährt und
+  die früheren Durchfahrten alle über Nav2 liefen, das seit dem 15.11. kein
+  Ziel mehr erreicht. Neu in §6a: die **Anfahrt**, mit der sich der Roboter
+  selbst vor die Tür stellt. Dabei gefunden und behoben: Die Türachse aus
+  zwei schräg gesehenen Türkanten ist verdreht; sie kommt jetzt aus der Wand
+  neben der Tür.
 - 22.11.2026, v1.9, nach KI-F2: Die Fahrt hielt 0,35 m nach dem Start am
   Nahbereichs-Halt. Der Weg über einen Vorpunkt auf der Türachse führte
   rechnerisch so nah an die Spitze des 85° offenen Türblatts, dass die

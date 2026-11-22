@@ -2120,6 +2120,39 @@ falsch geplant, nicht der Halt:**
   Lage (A2) hat die Lage vom Vormittag nicht getroffen; die Vermutung zur
   1,25 m breiten Lücke ist weder bestätigt noch widerlegt.
 
+**Nachtrag 22.11.2026 (spät) – Einwand „Rückschritt“; die Anfahrt aus eigener
+Kraft:**
+- **Einwand des Projektinhabers** zum Auftrag KI-F3, der Amadeus von Hand
+  mittig vor die Tür stellen ließ: „Der Roboter ist aber schon mal durch die
+  Tür gefahren, in den Flur hinein. Das ist schon dreimal passiert. […]
+  Warum soll er sich auf einmal nur vor die Tür stellen? Das ist ja ein
+  Rückschritt.“
+- **Einordnung:** Der Einwand trifft zu. Die früheren Durchfahrten (18.08.,
+  11.09., 08.11.) fanden den Weg zur Tür selbst, alle über Nav2. Dieses
+  Fahren erreicht seit dem 15.11. kein Ziel mehr (Ursache nicht
+  eingegrenzt); deshalb entstand am 21.11. der Fahrteil ohne Nav2 aus
+  geraden Etappen, und der kann um nichts herumfahren. Das Davorstellen war
+  als erste Stufe gemeint, stand aber ohne die nächste Stufe im Auftrag.
+- **Entscheidung:** Die nächste Stufe kommt in denselben Auftrag. Neu ist
+  die **Anfahrt**: Amadeus fährt von seinem Platz im Raum zu einem Punkt
+  auf der Türachse gut zwei Meter vor der Tür, dreht sich zur Tür und fährt
+  ein Stück auf sie zu; danach wird neu gemessen und wie gehabt gerade
+  durchgefahren (zwei Missionen in einem Stacklauf). Weiter ohne Nav2 und
+  nur im Werkzeug der KI-Linie, kein Build.
+- **Dabei gefunden (Simulation):** Aus zwei schräg gesehenen Türkanten ist
+  die Türachse verdreht (6°; die ferne Kante liegt an der hinteren Ecke der
+  Laibung oder auf dem Türblatt). Amadeus stand nach der ersten Anfahrt
+  17 cm neben der Türmitte, und die Durchfahrt wurde zu Recht abgelehnt.
+  Die Achse kommt jetzt aus der geraden Wand neben der Tür; damit 1 bis
+  9 cm (drei Startplätze). Dieselbe Verdrehung erklärt möglicherweise einen
+  Teil der schlechten Messungen von der Seite; geprüft ist das nicht.
+- **Regel:** Ein Auftrag, der eine Fähigkeit vorübergehend zurücknimmt,
+  sagt das ausdrücklich und nennt die Stufe, mit der sie zurückkommt.
+- **Offen:** Von der Seite des offenen Türblatts wird die Tür am Roboter
+  weiter falsch vermessen; von dort gibt es keine Anfahrt. Ob der Stand vom
+  08.11. (SH-7) heute noch durch die Tür führe, ist nicht geprüft; das wäre
+  eine Frage an die geparkte Hauptlinie.
+
 **Nachtrag 21.11.2026 – Lotsen-Fenster statt unsichtbarem Dienst
 (Projektinhaber):** Der Lotsen-Dienst lief auf dem KI-Rechner als
 Hintergrundprozess; der Projektinhaber sah dort nichts und wollte ein

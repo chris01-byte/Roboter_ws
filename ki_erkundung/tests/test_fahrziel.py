@@ -9,13 +9,15 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'werkzeuge'))
 
 from fahrziel_senden import (  # noqa: E402
-    lage_text, lies_punkt, protokoll_text, tabelle, waehle_oeffnung, weg_text,
+    anfahrt_zeile, lage_text, lies_punkt, protokoll_text, tabelle, waehle_oeffnung, weg_text,
 )
 
 from lotse.fahrziel import (  # noqa: E402
-    aufstellung, aufstellung_hinweise, botschaft, durch_die_tuer, freiraum,
+    DREHKREIS_M, anfahrt, anfahrt_im_kartenrahmen, anfahrt_text, aufstellung,
+    aufstellung_hinweise, botschaft, durch_die_tuer, frei_gesehen, frei_um, freiraum,
     freiraum_hinweise, gerade_durch_die_tuer, gerade_linie, geradeaus, im_kartenrahmen,
     kostenkarte_text, kostenkarte_voraus, pruefe_grenzen, punkt_relativ, tuer_punkte,
+    wandrichtung,
 )
 from lotse.kandidaten import Oeffnung  # noqa: E402
 
@@ -439,3 +441,187 @@ def test_kostenkarte_ohne_hindernis_und_mit_gedrehtem_roboter():
                               (0.0, 0.0, 0.0))['im_streifen'] is None
     with pytest.raises(ValueError, match='Größe'):
         kostenkarte_voraus([0, 0, 0], 2, 2, 0.01, (0.0, 0.0), (0.0, 0.0, 0.0))
+
+
+# --- Anfahrt: der Roboter stellt sich selbst vor die Tür -------------------
+
+def tuerwand(pose, blatt=False, dazu=()):
+    """Ein Raum mit Tür, gesehen vom Roboter an ``pose`` (x, y, Gier im Raum).
+
+    Raum 4,3 m × 4,3 m; die Tür (0,80 m) liegt in der Wand x = 4,3 zwischen
+    y = 1,6 und 2,4. Rückgabe: Pfosten und Laserpunkte im Standpunktrahmen.
+    """
+    punkte = []
+    for i in range(216):
+        t = 0.02 * i
+        if not 1.6 < t < 2.4:
+            punkte.append((4.3, t))
+        punkte += [(0.0, t), (t, 0.0), (t, 4.3)]
+    if blatt:                                # 85° offen, am Pfosten y = 2,4, 0,85 m lang
+        for i in range(43):
+            t = 0.02 * i
+            punkte.append((4.3 - t * math.cos(math.radians(5)),
+                           2.4 - t * math.sin(math.radians(5))))
+    punkte += list(dazu)
+    x, y, gier = pose
+    c, s_ = math.cos(gier), math.sin(gier)
+
+    def hin(q):
+        return (c * (q[0] - x) + s_ * (q[1] - y), -s_ * (q[0] - x) + c * (q[1] - y))
+
+    return (hin((4.3, 1.6)), hin((4.3, 2.4))), [hin(q) for q in punkte]
+
+
+def im_raum(punkt, pose):
+    return im_kartenrahmen(punkt, pose)
+
+
+def test_anfahrt_aus_der_raummitte_endet_mittig_vor_der_tuer_mit_blick_zur_tuer():
+    pose = (2.0, 2.9, -0.3)                  # 0,9 m neben der Türachse, schräg
+    pfosten, laser = tuerwand(pose, blatt=True)
+    assert aufstellung_hinweise(aufstellung(pfosten))        # von Hand passte das nicht
+    weg = anfahrt(pfosten, laser)
+    assert len(weg['punkte']) == 2
+    vorpunkt, ende = (im_raum(q, pose) for q in weg['punkte'])
+    # beide Punkte auf der Türachse y = 2,0; das Ende 1,6 bis 2,1 m vor der Türlinie
+    assert vorpunkt[1] == pytest.approx(2.0, abs=1e-6) and ende[1] == pytest.approx(2.0, abs=1e-6)
+    assert 4.3 - ende[0] == pytest.approx(weg['vor_m']) and 1.6 <= weg['vor_m'] <= 2.1
+    assert ende[0] - vorpunkt[0] == pytest.approx(0.45)      # das letzte Stück zur Tür hin
+    assert weg['schraeg_grad'] == pytest.approx(0.0, abs=1e-6)
+    # so, wie er danach steht, passt die Aufstellung für die Durchfahrt
+    danach = (ende[0], ende[1], 0.0)
+    assert aufstellung_hinweise(aufstellung(tuerwand(danach)[0])) == []
+    assert pruefe_grenzen(anfahrt_im_kartenrahmen(weg, pose), pose[:2]) < 4.0
+    text = anfahrt_text(weg)
+    assert text.startswith('Anfahrt: ') and 'nach rechts drehen' in text
+    assert 'mittig vor der Tür' in text and 'nötig 0.30 m' in text
+
+
+def test_anfahrt_auf_der_achse_braucht_keinen_vorpunkt():
+    pose = (1.0, 2.0, 0.0)                   # 3,3 m vor der Tür, schon auf der Achse
+    pfosten, laser = tuerwand(pose)
+    weg = anfahrt(pfosten, laser)
+    assert len(weg['punkte']) == 1 and weg['drehen_grad'] == [pytest.approx(0.0, abs=1e-6)]
+    assert weg['strecken_m'][0] == pytest.approx(3.3 - weg['vor_m'])
+    assert 'drehen' not in anfahrt_text(weg).split(';')[0]
+
+
+def test_anfahrt_waehlt_den_weg_mit_dem_wenigsten_drehen():
+    pose = (2.2, 2.0, math.pi / 2)           # auf der Achse, aber quer zur Tür
+    pfosten, laser = tuerwand(pose)
+    weg = anfahrt(pfosten, laser)
+    assert len(weg['punkte']) == 1
+    assert weg['drehen_grad'][0] == pytest.approx(-90.0)
+
+
+def test_anfahrt_lehnt_ab_wenn_neben_dem_weg_etwas_steht():
+    pose = (2.0, 2.9, -0.3)
+    # eine Stange quer zwischen dem Roboter und der Türachse, 0,55 m vor ihm
+    stange = [(1.5 + 0.02 * i, 2.35) for i in range(55)]
+    pfosten, laser = tuerwand(pose, dazu=stange)
+    with pytest.raises(ValueError, match='Anfahrt: auf Strecke 1 sind .* nur 0\\.\\d\\d m frei'):
+        anfahrt(pfosten, laser)
+
+
+def test_anfahrt_lehnt_ab_wenn_vor_der_tuer_kein_platz_zum_drehen_ist():
+    pose = (2.0, 2.9, -0.3)
+    # eine Stange längs neben der Türachse, 0,35 m daneben, vor der ganzen Tür
+    stange = [(1.5 + 0.02 * i, 1.65) for i in range(70)]
+    pfosten, laser = tuerwand(pose, dazu=stange)
+    with pytest.raises(ValueError, match='Anfahrt: zum Drehen ist am Punkt vor der Tür nicht '
+                                         'genug Platz \\(0\\.35 m frei, nötig 0\\.45 m\\)'):
+        anfahrt(pfosten, laser)
+
+
+def test_frei_gesehen_nur_wenn_der_laser_bis_zum_punkt_freie_sicht_hatte():
+    winkel = [math.radians(-179.75 + 0.5 * i) for i in range(720)]
+    profil = [3.0] * 720
+    sicht = {'ursprung': (0.245, 0.0), 'winkel': winkel, 'profil': profil}
+    assert frei_gesehen(sicht, (2.0, 0.0)) and frei_gesehen(sicht, (0.3, 0.0))
+    assert not frei_gesehen(sicht, (3.5, 0.0))               # hinter der Wand
+    assert frei_gesehen(sicht, (3.28, 0.0))                  # 5 cm Spiel an der Wand
+    profil[359] = profil[360] = 1.0                          # etwas steht 1 m voraus
+    assert not frei_gesehen(sicht, (2.0, 0.0))
+    profil[359] = profil[360] = math.nan                     # dorthin nicht gemessen
+    assert not frei_gesehen(sicht, (2.0, 0.0))
+    profil[359] = profil[360] = math.inf                     # kein Echo: nichts im Weg
+    assert frei_gesehen(sicht, (2.0, 0.0))
+    assert frei_gesehen(None, (2.0, 0.0))                    # ohne Profil keine Prüfung
+
+
+def test_anfahrt_lehnt_ab_was_der_laser_von_hier_nicht_einsieht():
+    pose = (2.0, 2.9, -0.3)
+    pfosten, laser = tuerwand(pose)
+    winkel = [math.radians(-179.75 + 0.5 * i) for i in range(720)]
+    # ein Schirm 0,6 m vor dem Laser verdeckt alles voraus und seitlich
+    sicht = {'ursprung': (0.245, 0.0), 'winkel': winkel, 'profil': [0.6] * 720}
+    with pytest.raises(ValueError, match='sieht der Laser von hier nicht'):
+        anfahrt(pfosten, laser, sicht)
+    frei = {'ursprung': (0.245, 0.0), 'winkel': winkel, 'profil': [6.0] * 720}
+    assert len(anfahrt(pfosten, laser, frei)['punkte']) == 2
+
+
+def test_frei_um_nennt_den_naechsten_laserpunkt():
+    assert frei_um([(1.0, 0.0), (0.0, 0.3)], (0.0, 0.0)) == pytest.approx(0.3)
+    assert frei_um([], (0.0, 0.0)) == math.inf
+    assert DREHKREIS_M == pytest.approx(0.45)
+
+
+def test_anfahrt_in_einem_satz_fuer_das_werkzeug():
+    pose = (2.0, 2.9, -0.3)
+    pfosten, laser = tuerwand(pose, blatt=True)
+    o = Oeffnung(1, 0.80, (0.0, 0.0), pfosten, 0.0, 2.4, 1.5, True)
+    text, weg, noetig = anfahrt_zeile(o, laser, None)
+    assert noetig and weg is not None and text.endswith(' – Anfahrt passt.')
+    # steht er schon passend, ist keine Anfahrt nötig
+    pfosten, laser = tuerwand((2.4, 2.0, 0.0))
+    o = Oeffnung(1, 0.80, (0.0, 0.0), pfosten, 0.0, 1.9, 1.5, True)
+    text, weg, noetig = anfahrt_zeile(o, laser, None)
+    assert not noetig and weg is None and 'nicht nötig' in text
+    # passt sie nicht, steht der Grund im Satz
+    stange = [(1.5 + 0.02 * i, 2.35) for i in range(55)]
+    pfosten, laser = tuerwand((2.0, 2.9, -0.3), dazu=stange)
+    o = Oeffnung(1, 0.80, (0.0, 0.0), pfosten, 0.0, 2.4, 1.5, True)
+    text, weg, noetig = anfahrt_zeile(o, laser, None)
+    assert noetig and weg is None and text.startswith('Anfahrt passt nicht: auf Strecke 1')
+    assert lage_text(o, mit_hinweisen=False).endswith('Blickrichtung.')
+
+
+def test_wandrichtung_kommt_aus_der_wand_neben_der_tuer_nicht_aus_den_kanten():
+    pose = (2.2, 1.0, 1.0)                   # schräg von rechts
+    pfosten, laser = tuerwand(pose, blatt=True)
+    # Schräg gesehen liegt die ferne Kante 8 cm tiefer (hintere Ecke der Laibung)
+    c, s_ = math.cos(pose[2]), math.sin(pose[2])
+    fern = (c * (4.38 - pose[0]) + s_ * (2.4 - pose[1]),
+            -s_ * (4.38 - pose[0]) + c * (2.4 - pose[1]))
+    schief = (pfosten[0], fern)
+    wand = wandrichtung(schief, laser)
+    assert wand is not None and wand['punkte'] >= 12 and wand['laenge_m'] >= 0.4
+    # die Wand läuft im Raum entlang y; im Roboterrahmen ist das die Richtung (sin, cos)
+    richtung = (c * 0.0 + s_ * 1.0, -s_ * 0.0 + c * 1.0)
+    assert abs(wand['richtung'][0] * richtung[0] + wand['richtung'][1] * richtung[1]) \
+        == pytest.approx(1.0, abs=1e-3)
+    # Mit der Wand als Bezug endet die Anfahrt auf der wahren Türachse …
+    weg = anfahrt(schief, laser)
+    assert weg['achse_aus'][0] == 'wand'
+    ende = im_raum(weg['punkte'][-1], pose)
+    assert ende[1] == pytest.approx(2.0, abs=0.01)
+    assert 'Türachse aus der Wand neben der Tür' in anfahrt_text(weg)
+    # … nur aus den verdrehten Kanten läge sie über 10 cm daneben.
+    ohne_wand = [q for q in laser if abs(im_raum(q, pose)[0] - 4.3) > 0.01
+                 or 1.5 < im_raum(q, pose)[1] < 2.5]
+    weg = anfahrt(schief, ohne_wand)
+    assert weg['achse_aus'][0] == 'kanten'
+    assert abs(im_raum(weg['punkte'][-1], pose)[1] - 2.0) > 0.10
+    assert 'nur aus den zwei Türkanten' in anfahrt_text(weg)
+
+
+def test_wandrichtung_ohne_wand_oder_mit_querstehendem_blatt():
+    assert wandrichtung(((2.0, -0.4), (2.0, 0.4)), []) is None
+    # nur ein Türblatt quer zur Wand: keine Linie entlang der Türkanten
+    blatt = [(2.0 - 0.02 * i, 0.43) for i in range(40)]
+    assert wandrichtung(((2.0, -0.4), (2.0, 0.4)), blatt) is None
+    # eine Wand auf einer Seite genügt
+    wand = [(2.0, -0.45 - 0.02 * i) for i in range(40)]
+    fund = wandrichtung(((2.0, -0.4), (2.0, 0.4)), wand + blatt)
+    assert fund is not None and abs(fund['richtung'][1]) == pytest.approx(1.0, abs=1e-6)

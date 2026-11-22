@@ -426,13 +426,18 @@ vorwärts, vom Nahbereichs-Halt angehalten; nichts berührt, die Tür nicht
 erreicht. Keine Kamera, kein KI-Rechner. Releases und Umgebungsdateien
 unverändert.
 
-Stand 22.11.2026 (abends), **noch keine weitere Jetson-Wirkung:**
-Folgeauftrag KI-F3 ist erteilt (`ki_erkundung/AUFTRAG.md`). Er baut nichts
-(Release `kif1-20261122_1515`, `kif1.env`) und legt nur Prüfdateien unter
-`kif1-20261122_1515/pruefung/kif3/` an. Er startet den Stack einmal ohne
-Motorfreigabe (aufstellen und messen, wiederholbar) und einmal scharf und
-lässt Amadeus **einmal auf gerader Linie durch die offene Labortür in den
-Flur fahren** (5 cm/s, Etappen bis 0,5 m, ohne Nav2).
+Stand 22.11.2026 (spät), **noch keine weitere Jetson-Wirkung:**
+Folgeauftrag KI-F3 ist erteilt (`ki_erkundung/AUFTRAG.md`), in zwei Stufen.
+Er baut nichts (Release `kif1-20261122_1515`, `kif1.env`) und legt nur
+Prüfdateien unter `kif1-20261122_1515/pruefung/kif3/` an. **Stufe 1:** ein
+Stackstart ohne Motorfreigabe (aufstellen und messen, wiederholbar), einer
+scharf; Amadeus fährt **einmal auf gerader Linie durch die offene Labortür
+in den Flur** (5 cm/s, Etappen bis 0,5 m, ohne Nav2). **Stufe 2** (nur wenn
+in der Übergabe genannt und Stufe 1 bestanden): wieder ein Stackstart ohne
+Motorfreigabe und einer scharf; Amadeus fährt von einem Platz im Laborraum
+**selbst vor die Tür** (Drehen auf der Stelle, gerade Etappen) und danach
+ein zweites Mal durch die Tür. Dafür gibt es in Stufe 2 zwei Missionsstarts
+in einem Stacklauf.
 
 Stand 21.11.2026, zum früheren Auftrag KI-0N: die sieben Aufnahmen neu
 auswerten, auf Wunsch weitere Standbilder mit Kamera und LiDAR; keine
