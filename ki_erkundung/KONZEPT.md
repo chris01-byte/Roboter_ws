@@ -1,6 +1,6 @@
 # Konzept „KI-Erkundung“ – eine KI übernimmt Ziel- und Suchwahl
 
-**Version 1.8 · 22.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
+**Version 1.9 · 22.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
 nachgeführt nach drei Durchgängen an echten Aufnahmen, der Freigabe der
 Schalter „nur Rundblick“ und „Etappenfahrt“ und der Festlegung „die KI
 bekommt Zeit, kein stiller Rückfall“**
@@ -287,15 +287,18 @@ unverändert im heutigen Erkunder.
 So läuft es:
 
 1. Die KI nennt eine Nummer; die Antwort ist geprüft (Abschnitt 6).
-2. Der Roboter misst die gewählte Öffnung im Stand neu und rechnet daraus
-   zwei Punkte auf der Türachse: einen **Vorpunkt** 1,1 m vor der Türlinie
-   und einen **Auslaufpunkt** 0,6 m dahinter (`lotse/fahrziel.py`). Als Tür
-   gilt dabei nur, was 0,65 bis 0,95 m breit vermessen ist, und der Roboter
-   muss passend davor stehen (1,5 bis 2,6 m vor der Türlinie, höchstens
-   0,25 m neben der Türmitte); sonst wird nichts gesendet und das Werkzeug
-   sagt, was zu ändern ist. Der Vorpunkt liegt vor der Spitze eines in den
-   Raum offenen Türblatts, damit sich der Roboter nicht neben dem Blatt
-   ausrichtet.
+2. Der Roboter misst die gewählte Öffnung im Stand neu und legt zwei Punkte
+   auf die **gerade Linie von seinem Standplatz durch die Türmitte**: einen
+   1,2 m vor der Türlinie (dort stellt der Erkunder die Richtung nach) und
+   einen 0,6 m dahinter (`lotse/fahrziel.py`). Als Tür gilt dabei nur, was
+   0,65 bis 0,95 m breit vermessen ist; der Roboter muss passend davor
+   stehen (1,5 bis 2,6 m vor der Türlinie, höchstens 0,25 m neben der
+   Türmitte, die Linie höchstens 10° schräg zur Türachse); und **neben der
+   Fahrlinie müssen am selben Laserbild links und rechts 0,30 m frei sein**
+   (Türblatt, Pfosten, alles, was im Weg steht). Sonst wird nichts gesendet
+   und das Werkzeug sagt, was zu ändern ist. Ein Umweg über einen Punkt auf
+   der Türachse ist verworfen: Er führte in KI-F2 an der Spitze des offenen
+   Türblatts vorbei.
 3. Diese Punkte gehen als **Fahrziel** an den Erkunder
    (`/ki_erkundung/fahrziel_json`, nur auf dem Roboter). Darin steht, wer
    gewählt hat: `ki`, `mensch` oder `test`.
@@ -317,9 +320,9 @@ So läuft es:
 6. Scheitert ein Schritt, bleibt Amadeus stehen und der Auftrag nennt den
    Grund. Ein zweiter Versuch ist ein neuer Auftrag.
 
-Grenzen, die bekannt sind: Das geht nur, wenn der Weg zum Vorpunkt und
-durch die Tür in geraden Stücken frei ist; die Etappenfahrt weicht nichts
-aus. Niedrige Dinge unter 0,75 m sieht der Laser nicht; vor ihnen schützen
+Grenzen, die bekannt sind: Das geht nur, wenn die gerade Linie vom
+Standplatz durch die Tür frei ist; die Etappenfahrt weicht nichts aus, und
+der Roboter muss dafür passend vor der Tür stehen. Niedrige Dinge unter 0,75 m sieht der Laser nicht; vor ihnen schützen
 die VL53 über den Nahbereichs-Halt und der Kollisionsmonitor, beide erst
 aus der Nähe (die VL53 tragen etwa einen halben Meter weit). Um Möbel herum
 braucht es später einen geplanten Weg; dafür liegt der Türablauf vom
@@ -616,6 +619,14 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   entschieden hat. Der Fahrteil soll aus vorhandenem, real bewährtem Code
   entstehen; Bestand und Vorschlag stehen im STATUS, entschieden ist dazu
   noch nichts.
+- 22.11.2026, v1.9, nach KI-F2: Die Fahrt hielt 0,35 m nach dem Start am
+  Nahbereichs-Halt. Der Weg über einen Vorpunkt auf der Türachse führte
+  rechnerisch so nah an die Spitze des 85° offenen Türblatts, dass die
+  vordere Ecke am Wendepunkt 1,6 cm davor gestanden hätte. In §6a
+  ersetzt durch die gerade Linie durch die Türmitte mit Prüfung des
+  Freiraums am Laserbild. Grundsatz, neu festgehalten: **Ein Weg wird vor
+  dem Senden gegen das geprüft, was der Laser sieht, nicht nur aus der
+  gewählten Öffnung gerechnet.**
 - 22.11.2026, v1.8, nach KI-F1: Die gerade Etappe ist am Roboter gelungen
   (0,505 m, keine Abweichung). Die Türdurchfahrt wurde nicht gestartet, weil
   die Tür aus der schrägen Lage 1,25 m breit vermessen wurde. In §6a

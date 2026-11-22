@@ -2087,6 +2087,39 @@ voreilige „Widerlegung“ zurückgenommen:**
   falsch vermessene Lücke gesendet. Der Vorpunkt liegt 1,1 m vor der Tür,
   vor der Spitze eines in den Raum offenen Blatts.
 
+**Nachtrag 22.11.2026 (abends) – KI-F2: am Türblatt angehalten; der Weg war
+falsch geplant, nicht der Halt:**
+- **Ergebnis:** Aufstellen und Messen passten beim ersten Mal (0,77 m,
+  1,90 m, 0,18 m rechts der Türmitte); das Ausrichten gelang am Roboter in
+  einem Durchgang (9,4°, Rest 0,8°). Die Fahrt hielt nach 0,345 m am
+  Nahbereichs-Halt, nichts berührt. Der Projektinhaber: „Der Roboter ist nur
+  gerade aus gefahren und wäre gegen das Türblatt gefahren. Der Roboter hat
+  sich überhaupt nicht der Tür ausgerichtet und nachkorrigiert!“
+- **Ursache, nachgerechnet:** Der Weg führte zuerst schräg zu einem Punkt
+  auf der Türachse 1,1 m vor der Tür und erst dort zur Tür. Mit dem Blatt
+  links, 85° zur Türöffnung, liegt diese Strecke 0,245 m neben der
+  Blattspitze (Gehäuse halb 0,23 m), die vordere linke Ecke am Wendepunkt
+  1,6 cm davor. Die gerade Linie durch die Türmitte hält 0,386 m. Die
+  Beobachtung des Projektinhabers stimmt; der Halt hat getan, wofür er
+  gebaut wurde.
+- **Fehler der Planung:** (1) Ein Weg wurde aus zwei Türkanten gerechnet und
+  nicht gegen das Laserbild geprüft. Regel: **Kein Fahrziel ohne Prüfung des
+  Freiraums an dem, was der Laser sieht.** (2) Der Vorpunkt beruhte auf
+  einer ungeprüften Annahme über das Türblatt (rechter Winkel). (3) Ein
+  Umweg, den der Mensch am Roboter nicht als „zur Tür fahren“ erkennt, ist
+  ein Fehler der Planung, auch wenn er rechnerisch zur Achse führt.
+- **Entscheidung:** Gerade Linie vom Standplatz durch die Türmitte, ein
+  Zwischenpunkt 1,2 m vor der Türlinie zum Nachstellen der Richtung,
+  Endpunkt dahinter; 0,30 m frei links und rechts am Laserbild, sonst kein
+  Senden und ein Hinweis, wohin zu versetzen ist. Nur Werkzeug der
+  KI-Linie, kein Build. Weiter ohne Nav2: Das Fahren selbst (Etappe,
+  Ausrichten, Halt) hat am Roboter jedes Mal getan, was es sollte;
+  gescheitert ist zweimal die Planung davor.
+- **Nicht geklärt:** Der Halt meldete das Hindernis 0,58 m voraus, die
+  Rechnung sieht die Blattspitze bei 0,78 m. Die Messung aus der schrägen
+  Lage (A2) hat die Lage vom Vormittag nicht getroffen; die Vermutung zur
+  1,25 m breiten Lücke ist weder bestätigt noch widerlegt.
+
 **Nachtrag 21.11.2026 – Lotsen-Fenster statt unsichtbarem Dienst
 (Projektinhaber):** Der Lotsen-Dienst lief auf dem KI-Rechner als
 Hintergrundprozess; der Projektinhaber sah dort nichts und wollte ein

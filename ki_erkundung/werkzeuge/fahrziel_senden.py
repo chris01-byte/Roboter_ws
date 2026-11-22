@@ -17,12 +17,15 @@ in kurzen geraden Etappen, mit Fahrtor und Kollisionsmonitor.
     python3 fahrziel_senden.py --tuer --richtung 20 --quelle mensch
 
 Für ``--tuer`` misst das Werkzeug die Öffnungen im Stand neu (zwei Sekunden
-Laser), nimmt die gewählte und legt einen Punkt 1,1 m vor und einen 0,6 m
-hinter die Tür, beide auf der Türachse. Es sendet nichts, wenn es die
-Öffnung nicht eindeutig findet, wenn sie nicht türbreit vermessen ist (0,65
-bis 0,95 m) oder wenn der Roboter nicht passend vor der Tür steht; dann sagt
-es, was an der Aufstellung zu ändern ist. ``--tuer --nur-messen`` zeigt
-dasselbe, ohne zu senden, und dazu das Protokoll der Vermessung.
+Laser), nimmt die gewählte und legt die Fahrpunkte auf die **gerade Linie
+vom Standplatz durch die Türmitte**: einen 1,2 m vor und einen 0,6 m hinter
+der Türlinie. Es sendet nichts, wenn es die Öffnung nicht eindeutig findet,
+wenn sie nicht türbreit vermessen ist (0,65 bis 0,95 m), wenn der Roboter
+nicht passend vor der Tür steht oder wenn neben der Fahrlinie nicht
+beidseits 0,30 m frei sind (gemessen am selben Laserbild: Türblatt,
+Pfosten, alles, was im Weg steht); dann sagt es, was an der Aufstellung zu
+ändern ist. ``--tuer --nur-messen`` zeigt dasselbe, ohne zu senden, und dazu
+das Protokoll der Vermessung.
 
 Ausgegeben werden nur Maße und Meldungen, keine Bilder und keine Koordinaten
 der Wohnung.
@@ -42,9 +45,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lotse.blickrunde import profil_ursprung, scan_als_dict, stand_profil  # noqa: E402
 from lotse.fahrziel import (  # noqa: E402
-    HINTER_DER_TUER_M, TUER_MAX_M, TUER_MIN_M, VOR_DER_TUER_M, aufstellung,
-    aufstellung_hinweise, botschaft, durch_die_tuer, geradeaus, pruefe_grenzen,
-    punkt_relativ,
+    FREI_NEBEN_DER_LINIE_M, HINTER_DER_TUER_M, TUER_MAX_M, TUER_MIN_M, VOR_DER_TUER_M,
+    aufstellung, aufstellung_hinweise, botschaft, freiraum, freiraum_hinweise,
+    gerade_durch_die_tuer, gerade_linie, geradeaus, kostenkarte_text, kostenkarte_voraus,
+    pruefe_grenzen, punkt_relativ,
 )
 from lotse.geometrie import aus_tf  # noqa: E402
 from lotse.kandidaten import TUERBREIT_M, Oeffnung, oeffnungen  # noqa: E402
@@ -122,12 +126,42 @@ def tabelle(liste: Sequence[Oeffnung]) -> str:
 
 
 def vermesse(scans: List[dict], boden_lidar,
-             protokoll: Optional[List[dict]] = None) -> List[Oeffnung]:
-    """Öffnungen aus Scans im Stand, im Standpunktrahmen (Antriebsmitte)."""
+             protokoll: Optional[List[dict]] = None,
+             hindernisse: Optional[List] = None) -> List[Oeffnung]:
+    """Öffnungen aus Scans im Stand, im Standpunktrahmen (Antriebsmitte).
+
+    In ``hindernisse`` legt die Funktion ab, was der Laser sieht: je
+    Richtung ein Punkt im selben Rahmen (für die Prüfung des Freiraums).
+    """
     gier = [0.0] * len(scans)
     winkel, profil = stand_profil(scans, gier, boden_lidar)
-    return oeffnungen(winkel, profil, ursprung=profil_ursprung(gier, boden_lidar),
-                      protokoll=protokoll)
+    ursprung = profil_ursprung(gier, boden_lidar)
+    if hindernisse is not None:
+        for w, r in zip(winkel, profil):
+            if math.isfinite(r):
+                hindernisse.append((float(ursprung[0]) + float(r) * math.cos(float(w)),
+                                    float(ursprung[1]) + float(r) * math.sin(float(w))))
+    return oeffnungen(winkel, profil, ursprung=ursprung, protokoll=protokoll)
+
+
+def weg_text(o: Oeffnung, hindernisse: Sequence, vor_m: float, hinter_m: float):
+    """Die Fahrlinie durch eine Öffnung in einem Satz; dazu, ob sie passt."""
+    try:
+        linie = gerade_linie(o.pfosten, vor_m=vor_m, hinter_m=hinter_m)
+    except ValueError as grund:
+        return f'Fahrlinie: {grund}.', False
+    frei = freiraum(hindernisse, linie[-1])
+    hinweise = freiraum_hinweise(frei)
+
+    def seite(name: str) -> str:
+        wert = frei[f'{name}_m']
+        return f'{name} {"über 2 m" if wert > 2.0 else f"{wert:.2f} m"}'
+
+    text = (f'Fahrlinie: gerade durch die Türmitte, {frei["laenge_m"]:.2f} m; frei neben '
+            f'der Linie {seite("links")}, {seite("rechts")} '
+            f'(nötig {FREI_NEBEN_DER_LINIE_M:.2f} m)')
+    return (text + (' – Weg passt.' if not hinweise
+                    else ' – Weg passt nicht: ' + '; '.join(hinweise) + '.'), not hinweise)
 
 
 def lage_text(o: Oeffnung) -> str:
@@ -190,7 +224,7 @@ def eingabe() -> argparse.ArgumentParser:
                    help='wer gewählt hat; steht später in jeder Meldung des Erkunders')
     e.add_argument('--kennung', default='')
     e.add_argument('--vor', type=float, default=VOR_DER_TUER_M,
-                   help='Vorpunkt vor der Türlinie, m')
+                   help='Zwischenpunkt vor der Türlinie, m')
     e.add_argument('--hinter', type=float, default=HINTER_DER_TUER_M,
                    help='Auslaufpunkt hinter der Türlinie, m')
     e.add_argument('--breite-min', type=float, default=TUER_MIN_M,
@@ -198,7 +232,7 @@ def eingabe() -> argparse.ArgumentParser:
     e.add_argument('--breite-max', type=float, default=TUER_MAX_M,
                    help='so breit darf sie höchstens vermessen sein, m')
     e.add_argument('--aufstellung-egal', action='store_true',
-                   help='auch senden, wenn der Roboter nicht passend vor der Tür steht')
+                   help='auch senden, wenn Aufstellung oder Freiraum nicht passen')
     e.add_argument('--messdauer', type=float, default=2.0,
                    help='so lange Laser sammeln, s (nur --tuer)')
     e.add_argument('--warten', type=float, default=300.0,
@@ -209,6 +243,7 @@ def eingabe() -> argparse.ArgumentParser:
                    help='Öffnungen messen und zeigen, nichts senden')
     e.add_argument('--scan-topic', default='/scan')
     e.add_argument('--status-topic', default='/explore/status_json')
+    e.add_argument('--kostenkarte-topic', default='/global_costmap/costmap')
     e.add_argument('--karten-rahmen', default='map')
     e.add_argument('--basis-rahmen', default='base_link')
     e.add_argument('--basis-hoehe', type=float, default=0.0)
@@ -224,6 +259,7 @@ def main(argv=None) -> int:
     import rclpy
     from rclpy.qos import (QoSDurabilityPolicy, QoSProfile, QoSReliabilityPolicy,
                            qos_profile_sensor_data)
+    from nav_msgs.msg import OccupancyGrid
     from sensor_msgs.msg import LaserScan
     from std_msgs.msg import String
     from tf2_ros import Buffer, TransformListener
@@ -232,7 +268,11 @@ def main(argv=None) -> int:
 
     rclpy.init()
     knoten = rclpy.create_node('ki_fahrziel')
-    stand = {'status': None, 'scans': [], 'rahmen': None, 'sammeln': False}
+    stand = {'status': None, 'scans': [], 'rahmen': None, 'sammeln': False,
+             'kostenkarte': None}
+
+    def auf_kostenkarte(nachricht):
+        stand['kostenkarte'] = nachricht
 
     def auf_status(nachricht):
         try:
@@ -252,6 +292,7 @@ def main(argv=None) -> int:
                          durability=QoSDurabilityPolicy.TRANSIENT_LOCAL)
     knoten.create_subscription(String, wahl.status_topic, auf_status, letzter)
     knoten.create_subscription(LaserScan, wahl.scan_topic, auf_scan, qos_profile_sensor_data)
+    knoten.create_subscription(OccupancyGrid, wahl.kostenkarte_topic, auf_kostenkarte, letzter)
     tf_puffer = Buffer()
     TransformListener(tf_puffer, knoten)
     sender = Fahrzielsender(knoten)
@@ -270,6 +311,26 @@ def main(argv=None) -> int:
         except Exception:                      # noqa: BLE001 (tf2 wirft mehrere Arten)
             return None
         return t.transform
+
+    def lage_in_der_karte():
+        t = tf(wahl.karten_rahmen, wahl.basis_rahmen)
+        if t is None:
+            return None
+        q = t.rotation
+        gier = math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+        return t.translation.x, t.translation.y, gier
+
+    def kostenkarte_zeile() -> str:
+        """Was der Erkunder für seinen Nahbereichs-Halt vor dem Roboter sieht."""
+        karte, pose = stand['kostenkarte'], lage_in_der_karte()
+        if karte is None or pose is None:
+            return 'Kostenkarte vor dem Roboter: nicht empfangen.'
+        try:
+            return kostenkarte_text(kostenkarte_voraus(
+                karte.data, karte.info.width, karte.info.height, karte.info.resolution,
+                (karte.info.origin.position.x, karte.info.origin.position.y), pose))
+        except ValueError as grund:
+            return f'Kostenkarte vor dem Roboter: {grund}.'
 
     def phase() -> Optional[str]:
         return (stand['status'] or {}).get('phase')
@@ -300,7 +361,8 @@ def main(argv=None) -> int:
             v, q = montage.translation, montage.rotation
             boden_lidar = aus_tf([v.x, v.y, v.z], [q.x, q.y, q.z, q.w], wahl.basis_hoehe)
             protokoll: List[dict] = []
-            gefunden = vermesse(stand['scans'], boden_lidar, protokoll)
+            hindernisse: List = []
+            gefunden = vermesse(stand['scans'], boden_lidar, protokoll, hindernisse)
             print(f'{len(stand["scans"])} Scans, {len(gefunden)} Öffnung(en):')
             print(tabelle(gefunden))
             tueren = [o for o in gefunden
@@ -311,9 +373,13 @@ def main(argv=None) -> int:
                           f'{wahl.breite_max:.2f} m):')
                     for o in tueren:
                         print('  ' + lage_text(o))
+                        print('  ' + weg_text(o, hindernisse, wahl.vor, wahl.hinter)[0])
                 else:
                     print(f'Keine Öffnung ist türbreit vermessen ({wahl.breite_min:.2f} '
                           f'bis {wahl.breite_max:.2f} m). So würde nichts gesendet.')
+                # Die Kostenkarte kommt einmal je Sekunde und ist groß.
+                drehe(5.0, lambda: stand['kostenkarte'] is not None)
+                print(kostenkarte_zeile())
                 print(protokoll_text(protokoll))
                 return 0
             try:
@@ -328,25 +394,30 @@ def main(argv=None) -> int:
                          f'{gewaehlt.richtung_grad:+.0f}°, {gewaehlt.entfernung_m:.2f} m')
             print(f'Gewählt: {bemerkung}.')
             print(lage_text(gewaehlt))
-            if aufstellung_hinweise(aufstellung(gewaehlt.pfosten)) and not wahl.aufstellung_egal:
-                print('Nichts gesendet: Die Aufstellung passt nicht.')
-                return 2
+            weg, weg_passt = weg_text(gewaehlt, hindernisse, wahl.vor, wahl.hinter)
+            print(weg)
+            if not wahl.aufstellung_egal:
+                if aufstellung_hinweise(aufstellung(gewaehlt.pfosten)):
+                    print('Nichts gesendet: Die Aufstellung passt nicht.')
+                    return 2
+                if not weg_passt:
+                    print('Nichts gesendet: Neben der Fahrlinie ist nicht genug frei.')
+                    return 2
 
-        lage = tf(wahl.karten_rahmen, wahl.basis_rahmen)
-        if lage is None:
-            drehe(3.0, lambda: tf(wahl.karten_rahmen, wahl.basis_rahmen) is not None)
-            lage = tf(wahl.karten_rahmen, wahl.basis_rahmen)
-        if lage is None:
+        pose = lage_in_der_karte()
+        if pose is None:
+            drehe(3.0, lambda: lage_in_der_karte() is not None)
+            pose = lage_in_der_karte()
+        if pose is None:
             print('Die Lage des Roboters in der Karte fehlt (TF). Nichts gesendet.')
             return 4
-        q = lage.rotation
-        gier = math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z))
-        pose = (lage.translation.x, lage.translation.y, gier)
+        drehe(5.0, lambda: stand['kostenkarte'] is not None)
+        print(kostenkarte_zeile())
 
         try:
             if wahl.tuer:
-                punkte = durch_die_tuer(gewaehlt.pfosten, pose,
-                                        vor_m=wahl.vor, hinter_m=wahl.hinter)
+                punkte = gerade_durch_die_tuer(gewaehlt.pfosten, pose,
+                                               vor_m=wahl.vor, hinter_m=wahl.hinter)
             elif wahl.punkt:
                 punkte = punkt_relativ(*lies_punkt(wahl.punkt), pose)
             else:
@@ -376,6 +447,8 @@ def main(argv=None) -> int:
                 break
         zustand = (stand['status'] or {}).get('state')
         print(f'Ende: Zustand des Erkunders {zustand!r}; {meldung()}')
+        drehe(1.5)                       # die Kostenkarte kommt einmal je Sekunde
+        print(kostenkarte_zeile())
         # Der Erkunder meldet einen gelungenen Auftrag ohne Flächenziel als „partial“.
         return 0 if (zustand in ('partial', 'success')
                      and meldung().startswith('Etappenfahrt abgeschlossen')) else 1

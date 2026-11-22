@@ -9,12 +9,13 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'werkzeuge'))
 
 from fahrziel_senden import (  # noqa: E402
-    lage_text, lies_punkt, protokoll_text, tabelle, waehle_oeffnung,
+    lage_text, lies_punkt, protokoll_text, tabelle, waehle_oeffnung, weg_text,
 )
 
 from lotse.fahrziel import (  # noqa: E402
-    aufstellung, aufstellung_hinweise, botschaft, durch_die_tuer, geradeaus,
-    im_kartenrahmen, pruefe_grenzen, punkt_relativ, tuer_punkte,
+    aufstellung, aufstellung_hinweise, botschaft, durch_die_tuer, freiraum,
+    freiraum_hinweise, gerade_durch_die_tuer, gerade_linie, geradeaus, im_kartenrahmen,
+    kostenkarte_text, kostenkarte_voraus, pruefe_grenzen, punkt_relativ, tuer_punkte,
 )
 from lotse.kandidaten import Oeffnung  # noqa: E402
 
@@ -280,3 +281,161 @@ def test_protokoll_nennt_nur_masse_vom_roboter_aus():
                          '-12.3°/2.10 m  tief 1.60 m (100 %), davor 0 %  Vermerk –')
     assert 'zu_flach' in zeilen[2] and 'Vermerk wand_krumm_0.024' in zeilen[2]
     assert len(zeilen) == 3                              # die 3 m breite Lücke fehlt
+
+
+# ---------------- gerade Linie durch die Türmitte (seit KI-F2) ----------------
+def kif2():
+    """Die Lage vom 22.11.2026 (KI-F2), aus den Maßen des Berichts.
+
+    Türkanten bei -10,0°/1,90 m und +12,7°/1,97 m; das Türblatt steht am
+    linken Pfosten 85° zur Türöffnung in den Raum, 0,85 m lang.
+    """
+    rechts = (1.90 * math.cos(math.radians(-10.0)), 1.90 * math.sin(math.radians(-10.0)))
+    links = (1.97 * math.cos(math.radians(12.7)), 1.97 * math.sin(math.radians(12.7)))
+    breite = math.hypot(links[0] - rechts[0], links[1] - rechts[1])
+    achse = ((links[1] - rechts[1]) / breite, -(links[0] - rechts[0]) / breite)
+    hinein = (-(links[0] - rechts[0]) / breite, -(links[1] - rechts[1]) / breite)
+    w = math.radians(85.0)
+    richtung = (math.cos(w) * hinein[0] - math.sin(w) * achse[0],
+                math.cos(w) * hinein[1] - math.sin(w) * achse[1])
+    blatt = [(links[0] + 0.85 * t / 40 * richtung[0], links[1] + 0.85 * t / 40 * richtung[1])
+             for t in range(41)]
+    wand = ([(rechts[0], rechts[1] - 0.02 * i) for i in range(40)]
+            + [(links[0], links[1] + 0.02 * i) for i in range(40)])
+    return (rechts, links), blatt, wand
+
+
+def test_gerade_linie_geht_vom_standplatz_durch_die_tuermitte():
+    pfosten = ((2.0, -0.425), (2.0, 0.425))
+    assert gerade_linie(pfosten) == [pytest.approx((0.8, 0.0)), pytest.approx((2.6, 0.0))]
+    # seitlich versetzt: alle Punkte liegen auf der Linie durch die Türmitte
+    pfosten = ((2.0, -0.225), (2.0, 0.625))            # Türmitte bei y = 0,2
+    punkte = gerade_linie(pfosten, hinter_m=0.45)
+    for x, y in punkte:
+        assert y == pytest.approx(0.1 * x)             # Steigung 0,2 / 2,0
+    assert punkte[0][0] == pytest.approx(0.8) and punkte[1][0] == pytest.approx(2.45)
+    # nah vor der Tür entfällt der Zwischenpunkt
+    assert gerade_linie(((1.5, -0.425), (1.5, 0.425))) == [pytest.approx((2.1, 0.0))]
+    assert len(gerade_linie(((1.6, -0.425), (1.6, 0.425)))) == 2
+
+
+def test_gerade_linie_lehnt_zu_schraege_und_zu_schmale_durchfahrten_ab():
+    with pytest.raises(ValueError, match='schräg durch die Tür, erlaubt 10°'):
+        gerade_linie(((2.0, 0.1), (2.0, 0.95)))        # Türmitte 0,525 m seitlich: 15°
+    with pytest.raises(ValueError, match='0.40 m breit'):
+        gerade_linie(((2.0, -0.2), (2.0, 0.2)))
+    with pytest.raises(ValueError, match='Türlinie'):
+        gerade_linie(((0.0, -0.4), (0.0, 0.4)))
+
+
+def test_gerade_linie_im_kartenrahmen_und_innerhalb_der_grenzen_des_erkunders():
+    pfosten = ((2.5, -0.425), (2.5, 0.425))
+    punkte = gerade_durch_die_tuer(pfosten, (10.0, 5.0, math.pi / 2), hinter_m=0.45)
+    assert punkte == [pytest.approx((10.0, 6.3)), pytest.approx((10.0, 7.95))]
+    assert pruefe_grenzen(punkte, (10.0, 5.0)) == pytest.approx(2.95)
+
+
+def test_kif2_die_alte_linie_fuehrte_an_der_blattspitze_vorbei_die_gerade_nicht():
+    pfosten, blatt, wand = kif2()
+    # alter Plan: zuerst zum Vorpunkt auf der Türachse, 1,1 m vor der Türlinie
+    vorpunkt, _ = tuer_punkte(pfosten, vor_m=1.1, hinter_m=0.45)
+    peilung = math.degrees(math.atan2(vorpunkt[1], vorpunkt[0]))
+    assert peilung == pytest.approx(8.9, abs=0.3)             # Bericht: +8,6°
+    # Auf dieser Strecke (bis die Vorderkante am Vorpunkt steht) liegt die
+    # Blattspitze 0,245 m neben der Fahrlinie: im Streifen des Nahbereichs-Halts
+    # (0,255 m) und 1,5 cm neben dem Gehäuse (0,23 m)
+    alt = freiraum(blatt, vorpunkt)
+    assert alt['links_m'] == pytest.approx(0.245, abs=0.01)
+    assert alt['links_m'] < 0.255
+    assert alt['links_voraus_m'] == pytest.approx(1.12, abs=0.03)
+    # neue Linie: gerade durch die Türmitte, 38 cm frei auf beiden Seiten
+    linie = gerade_linie(pfosten, hinter_m=0.45)
+    neu = freiraum(blatt + wand, linie[-1])
+    assert neu['links_m'] == pytest.approx(0.38, abs=0.01)
+    assert neu['rechts_m'] == pytest.approx(0.38, abs=0.01)
+    assert freiraum_hinweise(neu) == []
+
+
+def test_freiraum_misst_links_und_rechts_neben_der_linie():
+    frei = freiraum([(1.0, 0.4), (1.5, -0.35), (0.5, 0.9), (3.0, 0.1), (0.1, 0.05)], (2.0, 0.0))
+    assert frei['links_m'] == pytest.approx(0.4) and frei['links_voraus_m'] == pytest.approx(1.0)
+    assert frei['rechts_m'] == pytest.approx(0.35) and frei['laenge_m'] == pytest.approx(2.0)
+    # hinter dem Ziel zählt nur noch, was die Vorderkante erreicht (0,33 m)
+    assert freiraum([(2.3, 0.1)], (2.0, 0.0))['links_m'] == pytest.approx(0.1)
+    assert freiraum([(2.4, 0.1)], (2.0, 0.0))['links_m'] == math.inf
+    # schräge Linie
+    frei = freiraum([(1.0, 1.0 + 0.3 * math.sqrt(2))], (2.0, 2.0))
+    assert frei['links_m'] == pytest.approx(0.3)
+    with pytest.raises(ValueError, match='fallen zusammen'):
+        freiraum([], (0.0, 0.0))
+
+
+def test_hinweise_zum_freiraum_nennen_seite_mass_und_versatz():
+    frei = freiraum([(1.0, 0.22), (2.0, -0.4)], (2.5, 0.0))
+    hinweise = freiraum_hinweise(frei)
+    assert hinweise == ['links neben der Fahrlinie sind nur 0.22 m frei (1.0 m voraus), '
+                        'nötig 0.30 m: bitte etwa 15 cm nach rechts versetzen']
+    # ein Hindernis an der Tür selbst lässt sich durch Versetzen nicht umgehen
+    hinweise = freiraum_hinweise(freiraum([(2.3, -0.2)], (2.5, 0.0)))
+    assert hinweise == ['rechts neben der Fahrlinie sind nur 0.20 m frei (2.3 m voraus), '
+                        'nötig 0.30 m: von hier ist die Durchfahrt zu knapp']
+    assert freiraum_hinweise(freiraum([(1.0, 0.31), (1.0, -0.6)], (2.5, 0.0))) == []
+
+
+def test_weg_in_einem_satz_fuer_die_lage_von_kif2():
+    pfosten, blatt, wand = kif2()
+    o = Oeffnung(1, 0.77, (1.896, 0.052), pfosten, 1.6, 1.90, 1.6, True)
+    text, passt = weg_text(o, blatt + wand, 1.2, 0.45)
+    assert passt is True
+    assert text == ('Fahrlinie: gerade durch die Türmitte, 2.35 m; frei neben der Linie '
+                    'links 0.38 m, rechts 0.38 m (nötig 0.30 m) – Weg passt.')
+    # ragt die Blattspitze 14 cm weiter herein, passt der Weg nicht mehr
+    text, passt = weg_text(o, blatt + wand + [(1.07, 0.25)], 1.2, 0.45)
+    assert passt is False
+    assert ('links neben der Fahrlinie sind nur 0.22 m frei (1.1 m voraus), nötig 0.30 m: '
+            'bitte etwa 15 cm nach rechts versetzen') in text
+    # ist die Tür selbst zu eng vermessen, hilft Versetzen nicht
+    eng = [(x, y - 0.10) for x, y in blatt]
+    text, passt = weg_text(o, eng + wand, 1.2, 0.45)
+    assert passt is False and 'von hier ist die Durchfahrt zu knapp' in text
+
+
+# ----------------------- Kostenkarte vor dem Roboter -----------------------
+def karte(belegt, breite=300, hoehe=300, zelle=0.01, ursprung=(-1.505, -1.505)):
+    """Kostenkarte, deren Zellmitten auf vollen Zentimetern liegen."""
+    import numpy as np
+    daten = np.zeros(breite * hoehe, dtype=np.int8)
+    for x, y in belegt:
+        spalte = int(round((x - ursprung[0]) / zelle - 0.5))
+        zeile = int(round((y - ursprung[1]) / zelle - 0.5))
+        daten[zeile * breite + spalte] = 100
+    return daten, breite, hoehe, zelle, ursprung
+
+
+def test_kostenkarte_nennt_die_naechste_belegte_zelle_im_streifen_und_daneben():
+    sicht = kostenkarte_voraus(*karte([(0.58, 0.24), (0.90, 0.40), (1.20, -0.30)]),
+                               (0.0, 0.0, 0.0))
+    assert sicht['im_streifen'] == pytest.approx((0.58, 0.24), abs=0.001)
+    assert sicht['links_daneben'] == pytest.approx((0.90, 0.40), abs=0.001)
+    assert sicht['rechts_daneben'] == pytest.approx((1.20, -0.30), abs=0.001)
+    text = kostenkarte_text(sicht)
+    assert 'im Fahrstreifen 0.25 m vor der Vorderkante, 0.24 m links der Mitte' in text
+    assert 'so nah hält der Erkunder an' in text
+    assert 'links daneben 0.57 m vor der Vorderkante, 0.40 m links der Mitte' in text
+    assert 'rechts daneben 0.87 m vor der Vorderkante, 0.30 m rechts der Mitte' in text
+
+
+def test_kostenkarte_ohne_hindernis_und_mit_gedrehtem_roboter():
+    leer = kostenkarte_voraus(*karte([]), (0.0, 0.0, 0.0))
+    assert leer['im_streifen'] is None and leer['zellen'] == 0
+    assert 'im Fahrstreifen nichts; links daneben nichts; rechts daneben nichts.' in (
+        kostenkarte_text(leer))
+    # Hindernis bei (0, 0,8): mit Blick nach +y liegt es voraus im Streifen
+    sicht = kostenkarte_voraus(*karte([(0.0, 0.8)]), (0.0, 0.0, math.pi / 2))
+    assert sicht['im_streifen'][0] == pytest.approx(0.80, abs=0.001)
+    assert 'so nah hält' not in kostenkarte_text(sicht)       # 0,47 m vor der Vorderkante
+    # unter dem Roboter und hinter ihm zählt nichts
+    assert kostenkarte_voraus(*karte([(0.1, 0.0), (-0.5, 0.0)]),
+                              (0.0, 0.0, 0.0))['im_streifen'] is None
+    with pytest.raises(ValueError, match='Größe'):
+        kostenkarte_voraus([0, 0, 0], 2, 2, 0.01, (0.0, 0.0), (0.0, 0.0, 0.0))

@@ -1,35 +1,36 @@
-# Aktueller Auftrag der KI-Linie: KI-F2 – Türdurchfahrt (Folgeauftrag zu KI-F1)
+# Aktueller Auftrag der KI-Linie: KI-F3 – Türdurchfahrt auf gerader Linie
 
-**Erteilt am 22.11.2026.** Er wird aktiv, sobald der Projektinhaber ihn
-übergibt. Er läuft auf dem **Jetson**, mit Christopher. Der KI-Rechner wird
-nicht gebraucht; Kamera und KI laufen in diesem Auftrag nicht.
+**Erteilt am 22.11.2026 (abends).** Er wird aktiv, sobald der Projektinhaber
+ihn übergibt. Er läuft auf dem **Jetson**, mit Christopher. Der KI-Rechner
+wird nicht gebraucht; Kamera und KI laufen in diesem Auftrag nicht.
 
-**Warum es ihn gibt:** In KI-F1 ist die gerade Etappe gelungen, die Fahrt
-durch die Labortür aber nicht gestartet worden: Von Amadeus' Platz aus wurde
-die Tür 1,25 m breit vermessen (wahr 0,85 m), und der Auftrag endete dann
-ohne Fahrt. Das ist hier anders: **Im Stand darf so oft neu aufgestellt und
-gemessen werden, bis die Aufstellung passt.** Messen bewegt nichts. Gefahren
-wird danach genau einmal.
+**Warum es ihn gibt:** In KI-F2 hielt Amadeus nach 0,35 m an und kam nicht
+bis zur Tür. Der Halt war richtig; falsch war der geplante Weg: erst schräg
+zu einem Punkt auf der Türachse, dann dort zur Tür drehen. Diese schräge
+Strecke führte rechnerisch 1,5 cm an der Spitze des offenen Türblatts
+vorbei. **Jetzt fährt Amadeus auf einer geraden Linie von seinem Platz durch
+die Türmitte**, und das Werkzeug prüft vorher am Laserbild, dass links und
+rechts dieser Linie 0,30 m frei sind.
 
 Die vorigen Aufträge liegen mit Ergebnis im Archiv:
 [KI-0](archiv/20261121-ki0-erstes-sehen/),
 [KI-0N](archiv/20261121-ki0n-nachmessen/),
 [KI-0R](archiv/20261121-ki0r-nachrechnen/),
 [KI-1](archiv/20261121-ki1-blickrunde/),
-[KI-F1](archiv/20261122-kif1-erste-etappen/).
+[KI-F1](archiv/20261122-kif1-erste-etappen/),
+[KI-F2](archiv/20261122-kif2-tuerdurchfahrt/).
 
 **Frage dieses Auftrags:** Kommt Amadeus, mittig vor die offene Labortür
-gestellt, mit der Etappenfahrt in einem Zug hindurch? Und: Was hat der Laser
-am 22.11. aus der schrägen Lage als 1,25 m breite „Tür“ gemessen?
+gestellt, auf der geraden Linie durch die Türmitte in einem Zug hindurch?
 
 | | |
 |---|---|
 | Konzept | `ki_erkundung/KONZEPT.md`, Abschnitt 6a |
-| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens der Commit, der diesen Auftrag enthält. **Kein neuer Build:** Es läuft der Release `kif1-20261122_1515` mit `~/roboter_worktrees/kif1.env`, mit dem am 22.11. die gerade Etappe gelang. Am Erkunder hat sich seither nichts geändert (Schritt 1 prüft das); neu ist nur das Werkzeug `fahrziel_senden.py`, und das läuft aus der Arbeitskopie |
-| Was neu ist | Keine neue Verhaltensänderung am Roboter: derselbe Schalter `stage_drive_only:=true` wie in KI-F1. Neu ist das Ziel: zwei Punkte auf der Türachse (1,1 m vor und 0,45 m hinter der Türlinie) statt einer geraden Etappe. Das Werkzeug prüft jetzt selbst, ob die Öffnung türbreit vermessen ist und ob Amadeus passend davor steht |
-| Erwartetes Ergebnis | Bericht `~/ki_erkundung_bericht_kif2.md`: die Messungen im Stand wörtlich, die Fahrt mit den Meldungen des Erkunders, die Kriterien und Christophers Antworten wörtlich |
+| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens der Commit, der diesen Auftrag enthält. **Kein neuer Build:** Es läuft der Release `kif1-20261122_1515` mit `~/roboter_worktrees/kif1.env`, wie in KI-F1 und KI-F2. Am Erkunder hat sich nichts geändert (Schritt 1 prüft das); geändert ist nur das Werkzeug `fahrziel_senden.py`, und das läuft aus der Arbeitskopie |
+| Was neu ist | Keine neue Verhaltensänderung am Roboter: derselbe Schalter `stage_drive_only:=true`. Neu ist das Ziel: zwei Punkte auf der geraden Linie vom Standplatz durch die Türmitte (1,2 m vor und 0,45 m hinter der Türlinie), und die Prüfung des Freiraums neben dieser Linie vor dem Senden |
+| Erwartetes Ergebnis | Bericht `~/ki_erkundung_bericht_kif3.md`: die Messungen im Stand wörtlich, die Fahrt mit den Meldungen des Erkunders und des Werkzeugs, die Kriterien und Christophers Antworten wörtlich |
 | Nicht-Ziele | Keine KI, keine Kamera, kein Rundblick, kein Nav2-Ziel; kein Build; keine eigene Code- oder Parameteränderung; keine zweite Fahrt |
-| Rückfall | Es wird nichts angelegt außer Prüfdateien unter `pruefung/kif2/` im vorhandenen Release-Ordner. Ohne das Startargument verhält sich der Stack wie am 19.11. |
+| Rückfall | Es wird nichts angelegt außer Prüfdateien unter `pruefung/kif3/` im vorhandenen Release-Ordner. Ohne das Startargument verhält sich der Stack wie am 19.11. |
 | Bereich und Freigabe | Laborraum und, für die Durchfahrt, der Flur unmittelbar hinter der Labortür: vom Projektinhaber am 21.11.2026 ausdrücklich verlangt und mit der Übergabe dieses Auftrags für diese eine Durchfahrt freigegeben. Christopher ist dabei, die Hand am Not-Aus. 100 ms Anfahrzeit wie seit dem 15.11. |
 
 ## Verboten
@@ -42,15 +43,15 @@ am 22.11. aus der schrägen Lage als 1,25 m breite „Tür“ gemessen?
   `lifecycle set`, `service call`, kein weiteres `topic pub`, keine
   Nav2-Ziele;
 - **kein Missionsstart, wenn `stage_drive_only` nicht nachweislich `True`
-  ist**, und keiner, solange die letzte Messung nicht „Aufstellung passt“
-  meldet;
-- das Werkzeug nie mit `--aufstellung-egal`, `--breite-min` oder
-  `--breite-max` aufrufen;
+  ist**, und keiner, solange die letzte Messung nicht **beides** meldet:
+  „Aufstellung passt.“ und „Weg passt.“;
+- das Werkzeug nie mit `--aufstellung-egal`, `--breite-min`, `--breite-max`
+  oder `--vor` aufrufen;
 - `initial_scan_only` wird nie gesetzt und muss `False` melden;
 - kein Start mit Motorfreigabe (`active_drive:=true`) ohne
   `hwt601_accel_ms:=100`; `operator_stationary_confirmed:=true` nur nach
   Christophers „ja“;
-- **die Fahrt gibt es genau einmal.** Bricht sie ab oder misslingt sie, wird
+- **die Fahrt gibt es genau einmal.** Bricht sie ab oder hält sie an, wird
   sie nicht wiederholt. (Neu aufstellen und messen im Stand ist keine Fahrt
   und darf wiederholt werden.) Einzige Ausnahmen stehen unter „Motorregler
   antworten nicht“ und „Nichts gesendet“;
@@ -59,7 +60,7 @@ am 22.11. aus der schrägen Lage als 1,25 m breite „Tür“ gemessen?
   Auftrag wörtlich als Frage steht;
 - Not-Aus und Nutzerabbruch nie zurücksetzen (LAB-1 §4);
 - nichts in `~/roboter_ws`, nichts an den Umgebungsdateien und an
-  bestehenden Releases (außer neuen Prüfdateien unter `pruefung/kif2/`);
+  bestehenden Releases (außer neuen Prüfdateien unter `pruefung/kif3/`);
 - keine Prozessgruppen-Signale, kein `pkill -f`, kein `killall`, kein `kill -9`;
 - kein eigenes Anzeigeprogramm, nichts im Vollbild;
 - Fragen an Christopher als Text, einzeln, ohne Auswahlfeld; Antworten
@@ -67,33 +68,26 @@ am 22.11. aus der schrägen Lage als 1,25 m breite „Tür“ gemessen?
 - keine Bilder, Scans, Karten, Koordinaten oder Adressen im Chat oder im
   Bericht.
 
-## Vorab festgelegte Kriterien und Erwartungen
+## Vorab festgelegte Kriterien
 
 „Kette“ heißt: `Begin navigating` 0-mal, „Direkter Explore-Befehl verworfen“
 0-mal, „Odometrie kurzzeitig nicht frisch“ 0-mal, „process has died“ 0-mal.
 
 | Kennung | Kriterium |
 |---|---|
-| T-1 Vermessung | Mittig vor der Tür meldet das Werkzeug eine türbreit vermessene Öffnung (0,65 bis 0,95 m; erwartet 0,72 bis 0,80 m) und „Aufstellung passt“ |
+| T-1 Vermessung | Mittig vor der Tür meldet das Werkzeug eine türbreit vermessene Öffnung (0,65 bis 0,95 m; erwartet 0,72 bis 0,80 m), „Aufstellung passt.“ und „Weg passt.“ mit mindestens 0,30 m frei links und rechts der Fahrlinie |
 | T-2 Abschluss | Meldung „Etappenfahrt abgeschlossen: … Quelle mensch; kein Nav2-Ziel“ mit höchstens 10 Etappen |
 | T-3 Ausrichten | je Punkt höchstens drei Zeilen „ausgerichtet um …“; der jeweils letzte „Restfehler“ höchstens 3,5 Grad |
 | T-4 Durch die Tür | Christopher: Amadeus steht ganz im Flur, auch die Hinterkante ist durch; nichts berührt, kein Eingriff |
 | T-5 Abstand | Christopher: an Türpfosten und Türblatt blieb mindestens eine Handbreit |
 | T-6 Kette | wie oben |
 
-**Erwartung zur Messung aus der schrägen Lage (A2), vorab notiert:** Wieder
-eine einzige, 1,15 bis 1,35 m breite Öffnung mit „sprung“; im Protokoll hat
-sie zwei Kanten, von denen eine mindestens 0,5 m näher liegt als die andere
-(die Spitze des offenen Türblatts gegenüber dem Türpfosten); und
-Christopher sagt, dass das Türblatt in den Laborraum hinein offen steht und
-Amadeus auf der Seite des Türblatts stand. Trifft eines davon nicht zu, ist
-die Vermutung „Lücke zwischen Blattspitze und Pfosten“ falsch; dann nur
-berichten.
-
 Keine Erwartung gibt es zu „Robot to slowdown“ und „Robot to approach“ (der
 Kollisionsmonitor darf an Tür und Blatt bremsen). Hält der Erkunder mit
 „Nahbereich vor dem Roboter nicht frei“ oder „Streifen vor dem Roboter nicht
-frei“ an, ist das ein Befund: berichten, nicht wiederholen.
+frei“ an, ist das ein Befund: berichten, nicht wiederholen. Das Werkzeug
+schreibt dann in seine letzte Zeile, was in der Kostenkarte vor dem Roboter
+belegt ist; diese Zeile gehört in den Bericht.
 
 ---
 
@@ -113,7 +107,7 @@ Fehlt der Release oder die Umgebungsdatei: berichten, Ende.
 ```bash
 cd ~/roboter_worktrees/selbstheilung-v2 && git status --short && git pull --ff-only && git rev-parse HEAD
 git diff --stat baa16b7 HEAD -- src/ | tail -3; echo "zeilen=$(git diff --stat baa16b7 HEAD -- src/ | wc -l)"
-source ~/roboter_worktrees/kif1.env; echo "rc=$? $SH_REL"; mkdir -p "$SH_PR/kif2"
+source ~/roboter_worktrees/kif1.env; echo "rc=$? $SH_REL"; mkdir -p "$SH_PR/kif3"
 ```
 
 Erwartet: `zeilen=0` (am Quelltext der Pakete hat sich seit dem Build des
@@ -129,7 +123,7 @@ cd ~/roboter_worktrees/selbstheilung-v2 && ( source /opt/ros/humble/setup.bash; 
   python3 -m pytest -q -p no:cacheprovider ki_erkundung/tests 2>&1 | tail -3 )
 ```
 
-Erwartung: `233 passed`. Bei Fehlschlägen nichts starten, berichten.
+Erwartung: `242 passed`. Bei Fehlschlägen nichts starten, berichten.
 
 ---
 
@@ -139,14 +133,17 @@ Der Stack startet **ohne** `active_drive` und ohne `enable_auto_explore`;
 die Basis wird nicht bestromt (LAB-1 §3). In Teil A wird keine Mission
 gesendet. Christopher darf Amadeus zwischen den Messungen umstellen.
 
-### A1 – Stack ohne Motorfreigabe
+### A1 – Aufstellen und Stack ohne Motorfreigabe
 
-Christopher einmal fragen: „Steht Amadeus im Laborraum still, und bleibt er
+Anweisung: „Bitte stelle Amadeus **mittig vor die offene Labortür, etwa 2 m
+davor, den Blick gerade durch die Tür**. Die Tür steht so weit offen wie
+möglich und ist gesichert. Zwischen Amadeus und der Tür und in der Tür
+liegt und steht nichts.“ Frage: „Steht Amadeus so still, und bleibt er
 während des Starts (etwa eine Minute) unberührt?“ Nur nach „ja“:
 
 ```bash
 source ~/roboter_worktrees/kif1.env
-D="$SH_PR/kif2"; mkdir -p "$D"
+D="$SH_PR/kif3"; mkdir -p "$D"
 python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still || echo "STACK LAEUFT SCHON - abbrechen"
 nohup env --default-signal=INT ros2 launch robot_bringup app_mapping.launch.py \
   self_healing:=true start_web_gui:=false \
@@ -159,7 +156,7 @@ echo $! > "$D/launch_stand.pid"; cat "$D/launch_stand.pid"; date -Iseconds
 Nach etwa 70 s:
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif2"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"
 ros2 param get /explore_node stage_drive_only 2>&1 | tee "$D/schalter_stand.txt"
 ros2 param get /explore_node initial_scan_only 2>&1 | tee -a "$D/schalter_stand.txt"
 grep -c "Traceback" "$D/launch_stand.log"
@@ -167,61 +164,36 @@ grep -c "Traceback" "$D/launch_stand.log"
 
 Erwartet: `True`, `False`, `0`.
 
-### A2 – eine Messung aus der schrägen Lage (für die Ursache, dauert zwei Minuten)
-
-Anweisung: „Bitte stelle Amadeus noch einmal ungefähr so hin wie beim
-Versuch am 22.11.: etwa 1,5 m vor der Tür, die Tür schräg rechts vor ihm.
-Er fährt jetzt nicht, ich messe nur.“ Dann:
+### A2 – messen, bis Aufstellung und Weg passen
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif2"
-python3 "$SH_SRC/ki_erkundung/werkzeuge/fahrziel_senden.py" --tuer --nur-messen 2>&1 | tee "$D/messen_schraeg.txt"
-```
-
-Danach Christopher fragen, je einzeln:
-
-1. In welche Richtung geht das Türblatt der Labortür auf, in den Laborraum
-   oder in den Flur?
-2. Wie weit steht es gerade offen (etwa im rechten Winkel, weiter, ganz an
-   der Wand)?
-3. Von Amadeus aus gesehen, so wie er jetzt steht: Auf welcher Seite der
-   Türöffnung ist das Türblatt, links oder rechts?
-
-Die Ausgabe wird nicht bewertet, nur berichtet.
-
-### A3 – Aufstellung für die Fahrt, messen, bis sie passt
-
-Anweisung: „Bitte stelle Amadeus jetzt **mittig vor die offene Labortür,
-etwa 2 m davor, den Blick gerade durch die Tür**. Die Tür steht so weit
-offen wie möglich und ist gesichert. Zwischen Amadeus und der Tür und in
-der Tür liegt und steht nichts.“ Dann messen:
-
-```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif2"; K=1
-python3 "$SH_SRC/ki_erkundung/werkzeuge/fahrziel_senden.py" --tuer --nur-messen 2>&1 | tee "$D/messen_$K.txt"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"; K=1
+python3 "$SH_SRC/ki_erkundung/werkzeuge/fahrziel_senden.py" --tuer --nur-messen --hinter 0.45 2>&1 | tee "$D/messen_$K.txt"
 ```
 
 Das Werkzeug nennt unter „Türbreit vermessen“ jede passende Öffnung mit
-ihrer Lage und sagt entweder „Aufstellung passt.“ oder was zu ändern ist.
+zwei Zeilen: die Lage („Aufstellung passt.“ oder was zu ändern ist) und die
+Fahrlinie („Weg passt.“ oder was zu ändern ist).
 
-- **„Aufstellung passt nicht: …“:** Christopher den Hinweis wörtlich nennen
-  (zum Beispiel „bitte etwa 30 cm nach rechts versetzen“), er stellt um,
-  dann mit `K=2`, `K=3` … erneut messen.
+- **„Aufstellung passt nicht: …“ oder „Weg passt nicht: …“:** Christopher den
+  Hinweis wörtlich nennen (zum Beispiel „bitte etwa 15 cm nach rechts
+  versetzen“), er stellt um, dann mit `K=2`, `K=3` … erneut messen.
 - **„Keine Öffnung ist türbreit vermessen“:** Christopher sagen: „Von hier
   wird die Tür nicht als Tür gemessen. Bitte stelle ihn genauer mittig vor
   die Tür.“ Dann erneut messen.
 - Höchstens acht Messungen. Passt es dann nicht: Stack beenden, berichten,
   Ende.
 
-Sobald eine Messung „Aufstellung passt.“ meldet, Christopher einmal fragen:
-„Ich messe geradeaus eine Öffnung, **B** m breit und **E** m entfernt. Ist
-das die Labortür?“ (B und E aus der Tabelle.) Bei „nein“: wie „passt
-nicht“ behandeln. Bei „ja“: **Amadeus bleibt ab jetzt genau so stehen.**
+Sobald eine Messung **beides** meldet, „Aufstellung passt.“ und „Weg
+passt.“, Christopher einmal fragen: „Ich messe geradeaus eine Öffnung,
+**B** m breit und **E** m entfernt. Ist das die Labortür?“ (B und E aus der
+Tabelle.) Bei „nein“: wie „passt nicht“ behandeln. Bei „ja“: **Amadeus
+bleibt ab jetzt genau so stehen.**
 
-### A4 – Stack beenden
+### A3 – Stack beenden
 
 ```bash
-source ~/roboter_worktrees/kif1.env; kill -INT "$(cat "$SH_PR/kif2/launch_stand.pid")"; sleep 15
+source ~/roboter_worktrees/kif1.env; kill -INT "$(cat "$SH_PR/kif3/launch_stand.pid")"; sleep 15
 python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still && echo "alles beendet"
 ```
 
@@ -231,17 +203,18 @@ python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still && echo "alles beend
 
 ### B1 – Ansage und scharfer Start
 
-Christopher sagen: „Gleich fährt Amadeus in kurzen Etappen gerade auf die
-Tür zu, richtet sich gut einen Meter davor aus, fährt hindurch und bleibt
-knapp einen halben Meter dahinter im Flur stehen; das dauert etwa zwei
-Minuten. Du stehst seitlich im Laborraum, nicht zwischen Amadeus und der
-Tür, nicht in der Tür und nicht im Flur vor ihm, mit der Hand am Not-Aus.“
-Frage: „Steht Amadeus unverändert, und bleibt er während des Starts (etwa
-eine Minute) unberührt?“ Nur nach „ja“:
+Christopher sagen: „Gleich fährt Amadeus in kurzen Etappen **geradeaus auf
+die Türmitte zu**, ohne Umweg. Gut einen Meter vor der Tür stellt er die
+Richtung nach, wenn nötig, fährt hindurch und bleibt knapp einen halben
+Meter dahinter im Flur stehen; das dauert etwa zwei Minuten. Du stehst
+seitlich im Laborraum auf der Seite ohne Türblatt, nicht zwischen Amadeus
+und der Tür, nicht in der Tür und nicht im Flur vor ihm, mit der Hand am
+Not-Aus.“ Frage: „Steht Amadeus unverändert, und bleibt er während des
+Starts (etwa eine Minute) unberührt?“ Nur nach „ja“:
 
 ```bash
 source ~/roboter_worktrees/kif1.env
-D="$SH_PR/kif2"
+D="$SH_PR/kif3"
 python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still || echo "STACK LAEUFT SCHON - abbrechen"
 nohup env --default-signal=INT ros2 launch robot_bringup app_mapping.launch.py \
   self_healing:=true start_web_gui:=false \
@@ -256,7 +229,7 @@ echo $! > "$D/launch.pid"; cat "$D/launch.pid"; date -Iseconds > "$D/launch_star
 Nach etwa 70 s:
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif2"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"
 grep -n "Anfahrverhalten bestaetigt" "$D/launch.log" | tee "$D/anfahrzeit.txt"
 ros2 param get /explore_node stage_drive_only 2>&1 | tee "$D/schalter.txt"
 ros2 param get /explore_node initial_scan_only 2>&1 | tee -a "$D/schalter.txt"
@@ -266,7 +239,7 @@ python3 "$SH_SRC/tools/kartierung/selbstheilung_stillstand_pruefen.py" --odometr
 
 Erwartet: `Beschleunigen 100 ms, Bremsen 400 ms, Startdrehzahl 5 rpm`;
 `True` (Etappenfahrt) und `False` (Rundblick); Prüfskript Exit 0 wie in
-KI-F1. **Trifft etwas davon nicht zu (nach einer Wiederholung bei
+KI-F2. **Trifft etwas davon nicht zu (nach einer Wiederholung bei
 „erreichbar“, „nicht deklariert“, „Graph unvollständig“): keine Mission,
 Stack geordnet beenden, berichten.**
 
@@ -279,22 +252,23 @@ die Motoren seien frei, ist **genau ein** weiterer scharfer Start erlaubt.
 ### B2 – noch einmal messen (nichts fährt)
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif2"
-python3 "$SH_SRC/ki_erkundung/werkzeuge/fahrziel_senden.py" --tuer --nur-messen 2>&1 | tee "$D/messen_scharf.txt"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"
+python3 "$SH_SRC/ki_erkundung/werkzeuge/fahrziel_senden.py" --tuer --nur-messen --hinter 0.45 2>&1 | tee "$D/messen_scharf.txt"
 ```
 
 Es muss wieder eine türbreit vermessene Öffnung mit „Aufstellung passt.“
-dastehen. Deren Richtung aus der Tabelle (Zahl mit Vorzeichen, ohne
-Gradzeichen) ist `R`. Passt es nicht: keine Mission; weiter wie unter
-„Nichts gesendet“.
+und „Weg passt.“ dastehen. Deren Richtung aus der Tabelle (Zahl mit
+Vorzeichen, ohne Gradzeichen) ist `R`. Passt es nicht: keine Mission;
+weiter wie unter „Nichts gesendet“.
 
 ### B3 – Mission starten und Fahrziel senden
 
 Genau einmal die Mission, dann das Werkzeug; es wartet, bis der Erkunder
-wartet, misst, sendet das Ziel und zeigt dessen Meldungen bis zum Ende:
+wartet, misst, prüft, sendet das Ziel und zeigt dessen Meldungen bis zum
+Ende:
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif2"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"
 ros2 topic pub --once /mission_manager/command_json std_msgs/msg/String "{data: '{\"type\":\"explore\"}'}"
 date -Iseconds > "$D/missionsstart.txt"
 python3 "$SH_SRC/ki_erkundung/werkzeuge/fahrziel_senden.py" --tuer --richtung R --richtung-toleranz 10 --hinter 0.45 --quelle mensch --warten 120 --beobachten 600 2>&1 | tee "$D/werkzeug.txt"; echo "rc=${PIPESTATUS[0]}"
@@ -306,8 +280,8 @@ Hindernis frei sind.)
 **Nichts gesendet (Ausnahme):** Meldet das Werkzeug „Nichts gesendet“ oder
 „Der Erkunder wartet nicht“, hat sich Amadeus nicht bewegt. Dann genau
 einmal den Stopp senden, den Stack geordnet beenden (B5) und berichten, was
-das Werkzeug gesagt hat. **Genau ein** weiterer Durchgang ab Teil A (A1,
-A3, A4, B1 bis B3; ohne A2) ist erlaubt.
+das Werkzeug gesagt hat. **Genau ein** weiterer Durchgang ab Teil A ist
+erlaubt.
 
 ```bash
 ros2 topic pub --once /mission_manager/command_json std_msgs/msg/String "{data: '{\"type\":\"cancel\"}'}"
@@ -316,15 +290,15 @@ ros2 topic pub --once /mission_manager/command_json std_msgs/msg/String "{data: 
 **Christopher drückt den Not-Aus (oder den Stopp in der App), bevor etwas
 berührt wird:** wenn eine Ecke näher als zwei Finger breit an Pfosten,
 Türblatt oder sonst etwas herankommt, wenn Amadeus anders fährt als
-angekündigt (rückwärts, im Bogen, deutlich schneller als eine Handbreit in
-der Sekunde), bei ungewöhnlichem Geräusch oder starkem Schwanken. Kurzes
-Stehenbleiben zwischen den Etappen und langsames Kriechen neben dem
-Türblatt sind gewollt.
+angekündigt (rückwärts, im Bogen, deutlich zur Seite, deutlich schneller als
+eine Handbreit in der Sekunde), bei ungewöhnlichem Geräusch oder starkem
+Schwanken. Kurzes Stehenbleiben zwischen den Etappen, kleines Nachstellen
+der Richtung und langsames Kriechen neben dem Türblatt sind gewollt.
 
 ### B4 – sichern (Amadeus bleibt stehen, der Stack läuft noch)
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif2"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"
 date -Iseconds > "$D/ende.txt"
 grep -n "Etappenfahrt\|Fahrziel" "$D/launch.log" | tee "$D/etappen.txt"
 for m in "Begin navigating" "Direkter Explore-Befehl verworfen" "Explore-Rundblickbefehl verworfen" \
@@ -334,20 +308,20 @@ for m in "Begin navigating" "Direkter Explore-Befehl verworfen" "Explore-Rundbli
 ```
 
 Dazu aus den Sekundenzeilen von `base_hardware` im `launch.log`, wie im
-Bericht zu KI-F1: größtes |v| und größtes |w| zwischen Missionsstart und
+Bericht zu KI-F2: größtes |v| und größtes |w| zwischen Missionsstart und
 Ende. Dann Christopher fragen, je einzeln:
 
 1. Steht Amadeus ganz im Flur, auch mit der Hinterkante?
 2. Wie viel Platz blieb an den Türpfosten und am Türblatt (etwa in cm, je
    Seite)?
 3. Hat er etwas berührt, oder musstest du eingreifen?
-4. Ist er zwischendurch länger stehen geblieben oder sehr langsam gefahren,
-   und wo?
+4. Ist er gerade auf die Tür zugefahren, und hat er die Richtung
+   nachgestellt? Wo?
 
 ### B5 – Stack geordnet beenden
 
 ```bash
-source ~/roboter_worktrees/kif1.env; kill -INT "$(cat "$SH_PR/kif2/launch.pid")"; sleep 15
+source ~/roboter_worktrees/kif1.env; kill -INT "$(cat "$SH_PR/kif3/launch.pid")"; sleep 15
 python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still && echo "alles beendet"
 ```
 
@@ -367,21 +341,20 @@ Danach stellt Christopher Amadeus von Hand zurück.
 
 ## Bericht
 
-Datei `~/ki_erkundung_bericht_kif2.md`, ohne Bilder, Scans, Karten,
+Datei `~/ki_erkundung_bericht_kif3.md`, ohne Bilder, Scans, Karten,
 Koordinaten und Adressen:
 
 1. Stand (HEAD), die Zeile `zeilen=…`, Tests.
-2. Teil A: `schalter_stand.txt`; **der ganze Inhalt von `messen_schraeg.txt`**
-   und Christophers drei Antworten zum Türblatt wörtlich; der ganze Inhalt
-   jeder Datei `messen_K.txt` mit dem Hinweis, den Christopher bekam, und
-   was er geändert hat; seine Antwort auf die Frage nach der Labortür.
+2. Teil A: `schalter_stand.txt`; der ganze Inhalt jeder Datei
+   `messen_K.txt` mit dem Hinweis, den Christopher bekam, und was er
+   geändert hat; seine Antwort auf die Frage nach der Labortür.
 3. Teil B: Antwort zum Start; Anfahrzeit, Schalter, Vorprüfung;
-   `messen_scharf.txt`; der Inhalt von `werkzeug.txt`, `etappen.txt` und
+   `messen_scharf.txt`; **der ganze Inhalt von `werkzeug.txt`** (mit den
+   Zeilen „Fahrlinie …“ und „Kostenkarte …“), `etappen.txt` und
    `zaehler.txt`; größtes |v| und |w| an der Basis; Christophers Antworten
    nach der Fahrt wörtlich.
 4. Die Tabelle T-1 bis T-6 mit dem Gemessenen und „trifft zu“ oder „trifft
-   nicht zu“; dazu die Erwartung zu A2 mit „trifft zu“ oder „trifft nicht
-   zu“ je Teil.
+   nicht zu“.
 5. Alles, was nicht lief oder abwich, mit Meldung. Keine Deutung.
 
 ## Ende

@@ -1,21 +1,20 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 22.11.2026 (nach KI-F1):** Amadeus ist am Roboter zum ersten Mal in
-dieser Linie gefahren: eine gerade Etappe von 0,5 m, alle sechs Kriterien
-erfüllt (0,505 m laut Laser, keine Abweichung zur Seite, nichts berührt).
-**Die Fahrt durch die Labortür wurde nicht gestartet:** Von Amadeus' Platz
-aus wurde die Tür 1,25 m breit vermessen statt 0,85 m, und der Auftrag
-sperrte die Fahrt dann. Die Sperre war richtig; dass es dazu kam, lag an
-einem bekannten, nicht behobenen Messfehler und an einer zu ungenauen
-Aufstellanweisung. **Als Nächstes:** Folgeauftrag KI-F2
-([AUFTRAG.md](AUFTRAG.md)), in dem im Stand so lange neu aufgestellt und
-gemessen wird, bis es passt, und dann einmal gefahren wird.
+**Stand 22.11.2026 (abends, nach KI-F2):** Die gerade Etappe von 0,5 m ist
+am Roboter gelungen (KI-F1). **Durch die Labortür ist Amadeus noch nicht
+gekommen.** Im ersten Anlauf wurde die Tür aus der schrägen Lage falsch
+vermessen und die Fahrt gar nicht gestartet (KI-F1). Im zweiten passte die
+Aufstellung, aber der geplante Weg führte erst schräg zu einem Punkt auf
+der Türachse und damit an die Spitze des offenen Türblatts; der
+Nahbereichs-Halt hielt Amadeus nach 0,35 m an (KI-F2). Der Halt war
+richtig, der Weg war falsch geplant. **Als Nächstes:** Folgeauftrag KI-F3
+([AUFTRAG.md](AUFTRAG.md)) mit der geraden Linie durch die Türmitte, vor dem
+Senden gegen das Laserbild geprüft.
 
 Davor (21.11.): eine Drehung am Roboter mit Blickrunde, aus der die KI in
 4,9 Sekunden die richtige Tür wählte (KI-1). Ein Urteil nach den Kriterien
 K0-1 bis K0-6 gibt es weiter nicht (eine Blickrunde, kein Glas, kein
-Spiegel). Die Vermessung misst Türen von vorn etwas zu schmal und von der
-Seite des offenen Türblatts viel zu breit.
+Spiegel).
 
 Diese Linie ist seit 19.11.2026 (spät) die aktive Arbeit; die Hauptlinie ist
 geparkt. Dies ist der einzige Iststand dieser Linie. Der Stand der
@@ -32,7 +31,7 @@ fährt mit seiner Schutzkette.
 |---|---|---|---|
 | Erstes Sehen | im Stand Bild und Laser aufnehmen, die KI fragen, die Antwort prüfen | KI-0 | **erledigt** (21.11.) |
 | Blickrunde | sich selbst einmal herumdrehen; aus acht Bildern nennt die KI den Ausgang | KI-1 | **am Roboter gelungen** (21.11., eine Runde im Labor); für die Kriterien fehlen weitere Runden |
-| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **als Nächstes:** Fahrteil gebaut (Etappenfahrt ohne Nav2), in der Simulation durch die Tür gefahren; Auftrag KI-F1 bringt ihn in zwei Stufen auf den Roboter |
+| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1) und Ausrichten (KI-F2); durch die Tür bisher nur in der Simulation; als Nächstes KI-F3 |
 | Raum für Raum | weiter, bis kein Ausgang mehr offen ist (Laborraum, Flur, Schlafzimmer) | KI-3 | offen |
 | Räume benennen, um Hilfe rufen | Raumnamen als Vorschlag in der App; Hilferuf mit Grund und Bild | KI-4 | offen |
 | Auf Zuruf | „fahr in die Küche“, „such die Tasse“ | KI-5 | offen |
@@ -42,14 +41,14 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-F2
-„Türdurchfahrt“** ([AUFTRAG.md](AUFTRAG.md)).
+**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-F3
+„Türdurchfahrt auf gerader Linie“** ([AUFTRAG.md](AUFTRAG.md)).
 Auf dem Jetson, mit Christopher; ohne Kamera und ohne KI-Rechner; **ohne
-neuen Build** (derselbe Release wie bei der gelungenen Etappe). Zuerst im
-Stand, ohne Motorfreigabe: eine Messung aus der schrägen Lage vom 22.11.
-(für die Ursache), dann mittig vor die Tür stellen und messen, bis das
-Werkzeug „Aufstellung passt“ meldet. Danach genau eine Fahrt: bis 1,1 m vor
-die Tür, ausrichten, hindurch, 0,45 m dahinter stehen bleiben.
+neuen Build** (derselbe Release wie bei der gelungenen Etappe). Im Stand,
+ohne Motorfreigabe: mittig vor die Tür stellen und messen, bis das Werkzeug
+„Aufstellung passt.“ und „Weg passt.“ meldet. Danach genau eine Fahrt:
+geradeaus durch die Türmitte, 1,2 m vor der Tür die Richtung nachstellen,
+0,45 m dahinter stehen bleiben.
 
 **Danach, je nach Ergebnis:**
 - Durchfahrt gelungen: Rundblick, Frage an die KI und Etappenfahrt in einem
@@ -58,23 +57,27 @@ die Tür, ausrichten, hindurch, 0,45 m dahinter stehen bleiben.
   stummer und unsinniger Antwort (Konzept, KI-2).
 - Durchfahrt angehalten oder misslungen: zuerst die Ursache aus den
   Meldungen des Erkunders eingrenzen; keine neue Funktion darauf setzen.
-- **Die Vermessung von der Seite des Türblatts** nach der Messung in KI-F2
-  richtig stellen. Für eine KI, die Türen von beliebigen Plätzen aus wählt,
-  ist das nötig; bis dahin fährt Amadeus nur aus einer Aufstellung vor der
-  Tür.
+- **Die Vermessung von der Seite des Türblatts** richtig stellen (Ursache
+  weiter offen, siehe unten). Für eine KI, die Türen von beliebigen Plätzen
+  aus wählt, ist das nötig; bis dahin fährt Amadeus nur aus einer
+  Aufstellung vor der Tür.
+- Mit dem nächsten Build des Erkunders prüfen, ob das Nachstellen der
+  Richtung auf dem letzten halben Meter vor dem Zielpunkt entfallen soll
+  (heute ab 0,35 m Restweg; in der Simulation einmal mitten in der Tür).
 - Daneben, unabhängig: dieselbe Drehung im Flur für weitere Blickrunden
   (braucht die Freigabe für diesen Raum).
 
-**Offen an der Vermessung (aus KI-0R, KI-1 und KI-F1):**
+**Offen an der Vermessung (aus KI-0R, KI-1, KI-F1 und KI-F2):**
 - **Tür von der Seite viel zu breit:** in KI-F1 1,23 m und 1,25 m statt
-  0,85 m (Tür 24° und 32° seitlich), in KI-0R 1,30 m. Vermutung, nicht
-  belegt: Das Türblatt steht in den Raum hinein offen, und von seiner Seite
-  aus sieht der Laser die Lücke zwischen Blattspitze und gegenüberliegendem
-  Pfosten (bei 0,85 m Blatt im rechten Winkel 1,20 m). In der Simulation
-  mit einem solchen Blatt erscheint genau diese Lücke (1,20 m, „sprung“,
-  Kanten bei 1,18 m und 2,29 m); dort erkennt die vorhandene Blatt-Regel
-  die Tür trotzdem richtig (0,84 m), am Roboter offenbar nicht. KI-F2 misst
-  nach, mit vorab notierter Erwartung.
+  0,85 m (Tür 24° und 32° seitlich), in KI-0R 1,30 m. Vermutung: Von der
+  Seite des offenen Türblatts sieht der Laser die Lücke zwischen
+  Blattspitze und gegenüberliegendem Pfosten. **Weder bestätigt noch
+  widerlegt:** In KI-F2 stand Amadeus bei der Nachmessung nicht in der Lage
+  vom Vormittag (Tür bei −2° und 2,58 m statt −32° und 1,59 m) und maß
+  0,75 m. Belegt ist seither: Das Blatt geht in den Laborraum auf, steht
+  etwa 85° zur Türöffnung und war von Amadeus aus links. Solange das offen
+  ist, fährt Amadeus nur aus einer Aufstellung vor der Tür, und das
+  Werkzeug nimmt nur 0,65 bis 0,95 m breit vermessene Öffnungen.
 - Nach der Drehung bot die Vermessung hinter dem Roboter ein Regal als
   0,81 m breite Öffnung an (0,77 m frei dahinter). Die KI hat es als „wand“
   eingeordnet und nicht gewählt.
@@ -111,6 +114,50 @@ auf dem KI-Rechner in Gebrauch · Sucher · Schalter „nur Rundblick“ im
 Erkunder (21.11., `6956252`) · Bestand der Türdurchfahrten · Etappenfahrt
 gebaut und simuliert (21.11., nachts) · KI-1: erste Drehung und Blickrunde
 am Roboter (21.11., nachts).
+
+## KI-F2 – erste Fahrt auf die Tür zu, am Türblatt angehalten (Jetson, 22.11.2026, 16:47 bis 17:23)
+
+Zahlen, Nachrechnung und Simulation stehen im
+[Archiv](archiv/20261122-kif2-tuerdurchfahrt/). Kein Build; 233 Tests
+bestanden.
+
+**Was lief:** Aufstellen und Messen passte beim ersten Mal (Tür 0,77 m,
+1,90 m entfernt, Amadeus 0,18 m rechts der Türmitte). Das Ausrichten am
+Roboter gelang in einem Durchgang (9,4° gedreht, Restfehler 0,8°); das war
+am Roboter noch nie gelaufen.
+
+**Was nicht lief:** Die Fahrt hielt in der ersten Etappe nach 0,345 m mit
+„Nahbereich vor dem Roboter nicht frei (0,25 m vor der Vorderkante)“.
+Nichts berührt. Der Projektinhaber: „Der Roboter ist nur gerade aus gefahren
+und wäre gegen das Türblatt gefahren. Der Roboter hat sich überhaupt nicht
+der Tür ausgerichtet und nachkorrigiert!“
+
+**Ursache (nachgerechnet aus den Maßen des Berichts):** Der Weg ging nicht
+zur Tür, sondern zuerst schräg nach links zu einem Punkt auf der Türachse
+1,1 m vor der Tür; erst dort hätte sich Amadeus zur Tür gedreht. Mit dem
+Türblatt links, 85° zur Türöffnung, führt diese Strecke 0,245 m an der
+Blattspitze vorbei (Gehäuse halb 0,23 m, Streifen des Halts 0,255 m), und
+am Wendepunkt hätte die vordere linke Ecke 1,6 cm vor der Spitze gestanden.
+Die gerade Linie vom Standplatz durch die Türmitte hält dort 0,386 m. In
+der Simulation mit einem solchen Blatt kam der alte Weg bis auf 4,7 cm an
+die Spitze heran.
+
+**Fehler der Planung, festgehalten:** (1) Der Weg wurde nur aus den zwei
+Türkanten gerechnet und nicht gegen das geprüft, was der Laser sieht.
+(2) Die Annahme zum Türblatt (rechter Winkel, 0,40 m neben der Achse) war
+ungeprüft. (3) Der Umweg über die Türachse war bei fast mittiger
+Aufstellung unnötig und für den Menschen am Roboter nicht zu verstehen.
+(4) Nicht geklärt: Der Halt meldete das Hindernis 0,58 m voraus, die
+Rechnung sieht die Blattspitze bei 0,78 m.
+
+**Nachgebessert (nur Werkzeug der KI-Linie):** gerade Linie vom Standplatz
+durch die Türmitte; Prüfung, dass am Laserbild links und rechts der Linie
+0,30 m frei sind, mit Hinweis, wohin zu versetzen ist; eine Zeile dazu, was
+in der Kostenkarte vor dem Roboter belegt ist (vor dem Senden und nach
+einem Halt). Simulation mit 85° offenem Blatt: aus der Lage von KI-F2 im
+Flur nach 51 s, keine Berührung; von der Seite des Blatts lehnt das
+Werkzeug ab („links … nur 0,23 m frei …: bitte etwa 15 cm nach rechts
+versetzen“).
 
 ## KI-F1 – die erste Etappe am Roboter (Jetson, 22.11.2026, 15:15 bis 16:15)
 
@@ -523,6 +570,9 @@ KONZEPT §13.
 | 22.11.2026 | **KI-F1** | Jetson, Laborraum, mit Christopher | Release `kif1-20261122_1515` auf `baa16b7`; 345 und 228 Tests bestanden; gerade Etappe 0,5 m: F1-1 bis F1-6 erfüllt (Laser 0,505 m, seitlich 0,000 m, 12,8 s); Tür nicht gefahren, weil 1,25 m breit vermessen |
 | 22.11.2026 | Türblatt nachgestellt | Simulation, Labor mit 90° offenem Blatt | 0,6 m seitlich: Tür 0,84 m über die Blatt-Regel, daneben die Lücke Blattspitze–Pfosten 1,20 m verworfen, Werkzeug meldet „61 cm nach rechts versetzen“; von vorn: Durchfahrt neben dem Blatt gelungen |
 | 22.11.2026 | Tests dieser Linie nach KI-F1 | Entwicklungsumgebung | 223 bestanden, 2 übersprungen (ohne ROS); 233 bestanden (ROS 2 Jazzy, abgeschottet) |
+| 22.11.2026 | **KI-F2** | Jetson, Laborraum, mit Christopher | kein Build; 233 Tests bestanden; Aufstellung beim ersten Messen passend (0,77 m); Ausrichten 9,4° mit 0,8° Rest; Fahrt nach 0,345 m am Nahbereichs-Halt angehalten, nichts berührt; T-2 und T-4 nicht erfüllt |
+| 22.11.2026 | Weg von KI-F2 nachgerechnet und nachgestellt | Maße des Berichts; Simulation mit 85° offenem Blatt | alte Linie 0,245 m neben der Blattspitze, Ecke am Wendepunkt 1,6 cm davor; gerade Linie 0,386 m; Simulation alter Weg: bis 4,7 cm an die Spitze; neuer Weg: im Flur nach 51 s; von der Blattseite: Werkzeug lehnt ab |
+| 22.11.2026 | Tests dieser Linie nach KI-F2 | Entwicklungsumgebung | 232 bestanden, 2 übersprungen (ohne ROS); 242 bestanden (ROS 2 Jazzy, abgeschottet) |
 
 **Gemessen an der künstlichen Beispielwelt** (ausgedachtes Zimmer mit
 80-cm-Tür, 90-cm-Glastür zum Balkon, Schränken, Kiste; LiDAR-Rauschen 1 cm):
@@ -565,13 +615,15 @@ Jetson, echte Bilder.
 
 ## Was nicht geprüft ist
 
-- **Die Etappenfahrt am Roboter über eine gerade Etappe hinaus.** Die
-  gerade Etappe ist am 22.11. gelaufen. Offen: wie genau sich Amadeus auf
-  wenige Grad ausrichten lässt (am Roboter noch nie gelaufen); ob der
-  Nahbereichs-Halt mit den echten VL53 rechtzeitig anspricht und an Tür und
-  Türblatt nicht fälschlich; wie sich der Kollisionsmonitor dort verhält.
-- **Die neue Bewertung der Aufstellung und das Türfenster des Werkzeugs** an
-  echten Messungen.
+- **Die Etappenfahrt am Roboter durch eine Tür.** Am Roboter gelaufen sind
+  die gerade Etappe (KI-F1), ein Ausrichten um 9,4° (KI-F2) und ein Halt am
+  Nahbereich (KI-F2). Offen: die Fahrt an Türblatt und Pfosten vorbei; ob
+  der Nahbereichs-Halt dort bei 13 cm Abstand zum Streifen ruhig bleibt;
+  wie sich der Kollisionsmonitor dort verhält; ein Nachstellen der Richtung
+  kurz vor oder in der Tür (in der Simulation einmal 5,6° in der Tür, dabei
+  9,6 cm Abstand der gepolsterten Kontur zum Pfosten).
+- **Die Prüfung des Freiraums und die Zeile zur Kostenkarte** an echten
+  Messungen.
 - **Die gespielte KI in der Simulation wählt bisher nur richtig.** Die Fälle
   falsch, langsam, stumm und Unsinn (Konzept, KI-2) stehen aus.
 - **Der Weg von der Antwort der KI zum Fahrziel in einem Zug.** Heute nennt
@@ -590,5 +642,6 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Auftrag KI-F2 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): im Stand aufstellen
-und messen, bis es passt, dann einmal durch die offene Labortür.
+Auftrag KI-F3 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): im Stand aufstellen
+und messen, bis Aufstellung und Weg passen, dann einmal auf gerader Linie
+durch die offene Labortür.
