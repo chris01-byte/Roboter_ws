@@ -412,6 +412,53 @@ def test_explore_gate_requires_explicit_opt_in_phase_and_fresh_sensors():
         True, 9.0, 9.8, None, 9.8, 9.8, 10.0, 5.0, 0.8, 0.8)
 
 
+def test_explore_health_without_near_field_only_drops_the_vl53_streams():
+    # Laborprobe ohne Nahsensoren: VL53-Zeiten fehlen, alles andere frisch.
+    assert explore_health_authorized(
+        True, 9.0, 9.8, None, None, 9.8, 10.0, 5.0, 0.8, 0.8,
+        require_near_field=False)
+    # Vorgabe bleibt: ohne VL53 keine Freigabe.
+    assert not explore_health_authorized(
+        True, 9.0, 9.8, None, None, 9.8, 10.0, 5.0, 0.8, 0.8)
+    # LiDAR, Karte, Odometrie und Opt-in bleiben Pflicht.
+    for args in ((True, 9.0, 9.0, None, None, 9.8, 10.0, 5.0, 0.8, 0.8),
+                 (True, 9.0, 9.8, None, None, 9.0, 10.0, 5.0, 0.8, 0.8),
+                 (True, 1.0, 9.8, None, None, 9.8, 10.0, 5.0, 0.8, 0.8),
+                 (False, 9.0, 9.8, None, None, 9.8, 10.0, 5.0, 0.8, 0.8)):
+        assert not explore_health_authorized(*args, require_near_field=False)
+
+
+def test_near_field_waiver_only_for_bounded_explorer_channels():
+    gate = CmdVelMissionGate.__new__(CmdVelMissionGate)
+    gate._explore_sensor_timeout = .8
+    gate._near_clouds = {'left': {}, 'right': {}}
+    gate._near_statuses = {}
+    gate._allow_explore = True
+    now = time.monotonic()
+    gate._explore_map_time = gate._explore_scan_time = gate._odom_time = now
+    gate._explore_left_time = gate._explore_right_time = None
+    gate._explore_map_timeout, gate._explore_odom_timeout = 5.0, .8
+    gate.get_clock = lambda: SimpleNamespace(now=lambda: SimpleNamespace(nanoseconds=0))
+    running = {'state': 'running', 'phase': 'Explore', 'active_command': {'type': 'explore'}}
+    # Vorgabe (Attribut fehlt oder True): ohne VL53 nichts frei
+    for source in ('explore_scan', 'explore_direct', 'nav'):
+        gate._command_source = source
+        assert not gate._mission_authorized(running, now)
+    gate._require_near_field = True
+    gate._command_source = 'explore_direct'
+    assert not gate._mission_authorized(running, now)
+    # Laborprobe: nur Dreh- und Direktkanal des Explorers
+    gate._require_near_field = False
+    for source, frei in (('explore_scan', True), ('explore_direct', True),
+                         ('nav', False), ('none', False)):
+        gate._command_source = source
+        assert gate._mission_authorized(running, now) is frei, source
+    # Raumfahrten verlangen die VL53 weiterhin
+    room = {'state': 'running', 'phase': 'Explore', 'active_command': {'type': 'go_to_room'}}
+    gate._command_source = 'explore_direct'
+    assert not gate._mission_authorized(room, now)
+
+
 def test_gate_requires_fresh_matching_frame_health_not_full_target_coverage():
     gate = CmdVelMissionGate.__new__(CmdVelMissionGate)
     gate._explore_sensor_timeout = .8
@@ -645,3 +692,16 @@ def test_back_off_contour_node_starts_only_with_self_healing():
             "                condition=IfCondition(self_healing)),") in source
     setup = (PACKAGE_ROOT/'setup.py').read_text()
     assert "'rueckfahr_kontur = '" in setup
+
+
+def test_near_field_switch_defaults_on_and_reaches_gate_vl53_and_monitor():
+    source = (PACKAGE_ROOT/'launch'/'nav_mapping.launch.py').read_text(encoding='utf-8')
+    assert "'nahsensoren', default_value='true'," in source
+    assert "'require_near_field': ParameterValue(nahsensoren, value_type=bool)," in source
+    assert "'start_vl53': nahsensoren," in source
+    assert "'collision_monitor_ohne_nahsensoren.yaml'" in source
+    assert ("\"' == 'false' else '\", mapping_collision_params, \"'\"]),") in source
+    app = (PACKAGE_ROOT.parent/'robot_bringup'/'launch'/'app_mapping.launch.py').read_text(
+        encoding='utf-8')
+    assert "'nahsensoren', default_value='true'," in app
+    assert "'nahsensoren': LaunchConfiguration('nahsensoren')," in app

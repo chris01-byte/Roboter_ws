@@ -481,5 +481,19 @@ sendet dort nie.
   nennt, wer es gewählt hat. Entscheidung des Projektinhabers dazu: erst
   ohne Nav2, vom Einfachen zum Schwierigen; Nav2 kommt nur dazu, wenn das
   nicht reicht.
+- **Dritte Anschlussstelle, Laborschalter (22.11.2026, vom Projektinhaber
+  verlangt):** Startargument `nahsensoren` (`app_mapping.launch.py`,
+  `nav_mapping.launch.py`; Vorgabe `true` = unverändert). Mit `false` startet
+  der VL53-Knoten nicht, der Kollisionsmonitor hat keine Quelle mehr (er
+  sieht nichts und reicht die Befehle nur durch), und das Fahrtor gibt ohne
+  VL53 **nur** die begrenzten Dreh- und Direktbefehle des Erkunders frei
+  (`require_near_field`); Nav2- und Raumfahrten bleiben ohne VL53
+  gesperrt. Anlass: „Die Nahbereichssensoren machen gerade Probleme. […]
+  Wir wollen jetzt einmal das Konzept überprüfen, ohne die
+  Nahbereichssensoren zu nutzen.“ Gilt nur für Laborproben der KI-Linie mit
+  Christopher am Not-Aus und vorher freigeräumtem Weg; niedrige Hindernisse
+  unter der LiDAR-Höhe erkennt in diesem Betrieb nichts. Sicherheitsbereich
+  (AGENTS §2.7): eigener Commit, eigene Tests und Simulation. Rückfall:
+  Argument nicht setzen.
 - **Rückfall der ganzen Linie:** `ki_erkundung/` und die Verweise darauf
   entfernen. Sonst ändert sich nichts.

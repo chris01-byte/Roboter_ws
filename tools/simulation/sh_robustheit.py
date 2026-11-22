@@ -324,6 +324,7 @@ def main(argv=None):
     explorer_bt = REPO/'src/explore/behavior_trees/navigate_to_pose_self_healing.xml'
     explorer_extra = []
     zusatz_knoten = []
+    nahsensoren = True
     if args.experiment is not None:
         experiment = yaml.safe_load(args.experiment.read_text(encoding='utf-8'))
         # Nur für Experimente: anderer Nav2-Baum des Explorers (Pfad relativ zur Datei).
@@ -335,6 +336,15 @@ def main(argv=None):
             explorer_extra += ['-p', f'{name}:={wert}']
         # Nur für Experimente: zusätzliche Knoten (z. B. eine zweite Kontur).
         zusatz_knoten = list(treiber.get('zusatz_knoten') or [])
+        # Nur für Experimente: Laborprobe ohne Nahsensoren wie nahsensoren:=false
+        # am Roboter (Entscheidung Projektinhaber 22.11.2026): keine VL53-Daten,
+        # collision_monitor ohne VL53-Quellen, Fahrtor mit require_near_field
+        # false (nur Dreh- und Direktkanal des Explorers).
+        nahsensoren = treiber.get('nahsensoren', True) is not False
+        if not nahsensoren:
+            tief_mischen(parameter, yaml.safe_load((
+                REPO/'src/vl53_near_field/config/collision_monitor_ohne_nahsensoren.yaml'
+            ).read_text(encoding='utf-8')))
         jazzy_kompatibel(tief_mischen(parameter, experiment))
         experiment['sh_treiber'] = treiber
     params_file.write_text(yaml.safe_dump(parameter))
@@ -382,7 +392,8 @@ def main(argv=None):
     sensor = manifest['sensor']
     latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
                          durability=DurabilityPolicy.TRANSIENT_LOCAL)
-    zustand = dict(vl53_pause_bis=0.0, lidar_pause_bis=0.0, cmd=(0.0, 0.0), cmd_zeit=0.0)
+    zustand = dict(vl53_pause_bis=0.0 if nahsensoren else math.inf, lidar_pause_bis=0.0,
+                   cmd=(0.0, 0.0), cmd_zeit=0.0)
     # DR-1: Verlauf der letzten Sekunden, beim ersten Kontakt eingefroren.
     from collections import deque
     from ap06_world import chassis_clearance
@@ -696,7 +707,8 @@ def main(argv=None):
         gate = ['--ros-args', '-p', 'require_localization:=false', '-p', 'require_hwt601_fusion:=false',
                 '-p', 'hwt601_active_drive:=true', '-p', 'hwt_development_contract:=false',
                 '-p', 'allow_localization_search:=false', '-p', 'allow_explore_mission:=true',
-                '-p', 'allow_stage3_motion_diagnostic:=false']
+                '-p', 'allow_stage3_motion_diagnostic:=false',
+                '-p', f'require_near_field:={"true" if nahsensoren else "false"}']
         starte('fahrtor', [exe('robot_navigation', 'cmd_vel_mission_gate'), *gate])
         # Rückfahrkontur für BackUp (08.11.2026), wie nav_mapping mit self_healing:=true.
         starte('rueckfahr_kontur', [exe('robot_navigation', 'rueckfahr_kontur')])

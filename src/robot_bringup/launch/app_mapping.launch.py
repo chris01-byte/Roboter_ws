@@ -88,6 +88,10 @@ def generate_launch_description():
             description='true = Etappenfahrt ohne Nav2 zu einem Fahrziel '
                         '(nav_mapping.launch.py); Vorgabe aus.'),
         DeclareLaunchArgument(
+            'nahsensoren', default_value='true',
+            description='false = Laborprobe ohne Nahsensoren '
+                        '(nav_mapping.launch.py nahsensoren); Vorgabe true.'),
+        DeclareLaunchArgument(
             'self_healing', default_value='false',
             description='true = selbstheilender Erkundungsbetrieb '
                         '(nav_mapping.launch.py self_healing); false = bisher.'),
@@ -118,6 +122,7 @@ def generate_launch_description():
                 'self_healing': self_healing,
                 'initial_scan_only': LaunchConfiguration('initial_scan_only'),
                 'stage_drive_only': LaunchConfiguration('stage_drive_only'),
+                'nahsensoren': LaunchConfiguration('nahsensoren'),
             }.items()),
 
         # Beide Manager sind reine Beobachter/Persistenzschichten. Sie senden

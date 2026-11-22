@@ -60,6 +60,15 @@ def generate_launch_description():
     self_healing_collision_overlay = os.path.join(
         get_package_share_directory('vl53_near_field'), 'config',
         'collision_monitor_self_healing_overlay.yaml')
+    # Laborprobe ohne Nahsensoren (Entscheidung Projektinhaber 22.11.2026):
+    # nahsensoren:=false startet den VL53-Knoten nicht, schaltet die beiden
+    # VL53-Quellen des collision_monitor ab und laesst das Fahrtor nur die
+    # begrenzten Dreh- und Direktbefehle des Explorers ohne VL53 durch.
+    # Vorgabe true = unveraendert.
+    nahsensoren = LaunchConfiguration('nahsensoren')
+    ohne_nahsensoren_collision = os.path.join(
+        get_package_share_directory('vl53_near_field'), 'config',
+        'collision_monitor_ohne_nahsensoren.yaml')
     # Strengere Ringschluss-Schwellen nur im Selbstheilungsbetrieb
     # (Entscheidung 22.10.2026); sonst die Basisdatei erneut = wirkungslos.
     slam_base_params = os.path.join(
@@ -105,6 +114,7 @@ def generate_launch_description():
                         enable_auto_explore, value_type=bool),
                     'allow_stage3_motion_diagnostic': ParameterValue(
                         enable_stage3_motion_diagnostic, value_type=bool),
+                    'require_near_field': ParameterValue(nahsensoren, value_type=bool),
                 }],
             ),
             Node(
@@ -231,6 +241,13 @@ def generate_launch_description():
                         'Etappen an; ohne Ziel bewegt sich nichts. Zweite '
                         'Anschlussstelle fuer ki_erkundung, Vorgabe aus.'),
         DeclareLaunchArgument(
+            'nahsensoren', default_value='true',
+            description='false = Laborprobe ohne Nahsensoren: VL53-Knoten '
+                        'startet nicht, collision_monitor ohne VL53-Quellen '
+                        '(sieht dann nichts), Fahrtor gibt nur Dreh- und '
+                        'Direktbefehle des Explorers ohne VL53 frei. Vorgabe '
+                        'true. Entscheidung Projektinhaber 22.11.2026.'),
+        DeclareLaunchArgument(
             'self_healing', default_value='false',
             description='true = selbstheilender Erkundungsbetrieb: Explorer-'
                         'Profil self_healing, Planung durch Unbekanntes, '
@@ -239,6 +256,11 @@ def generate_launch_description():
 
         LogInfo(msg='Automatische Kartierung: OAK bleibt deaktiviert; '
                     'Hinderniskette ist dual-VL53 plus collision_monitor.'),
+        LogInfo(msg='TESTBETRIEB OHNE NAHSENSOREN (nahsensoren:=false): kein '
+                    'VL53, collision_monitor ohne Quellen, nur Dreh- und '
+                    'Direktbefehle des Explorers frei. Niedrige Hindernisse '
+                    'unter der LiDAR-Hoehe werden nicht erkannt.',
+                condition=UnlessCondition(nahsensoren)),
 
         # Einziger Besitzer von Basis, LiDAR, /map und map->odom.
         IncludeLaunchDescription(
@@ -276,6 +298,10 @@ def generate_launch_description():
                 'collision_params_file': mapping_collision_params,
                 'collision_params_overlay': when_self_healing(
                     self_healing_collision_overlay, mapping_collision_params),
+                'collision_params_extra': PythonExpression([
+                    "'", ohne_nahsensoren_collision, "' if '", nahsensoren,
+                    "' == 'false' else '", mapping_collision_params, "'"]),
+                'start_vl53': nahsensoren,
             }.items()),
 
         # Software-BT-Sicht; der hardwired Not-Aus bleibt primaer.

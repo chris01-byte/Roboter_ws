@@ -95,24 +95,37 @@ def explore_motion_authorized(status, enabled):
 def explore_health_authorized(
         enabled, map_at, scan_at, left_at, right_at, odom_at, now,
         map_timeout_s, sensor_timeout_s, odom_timeout_s,
-        allow_stale_map_for_scan=False):
-    """Require fresh mapping, LiDAR, both VL53 streams and odometry."""
-    values = (
-        map_at, scan_at, left_at, right_at, odom_at, now,
-        map_timeout_s, sensor_timeout_s, odom_timeout_s)
+        allow_stale_map_for_scan=False, require_near_field=True):
+    """Require fresh mapping, LiDAR, both VL53 streams and odometry.
+
+    ``require_near_field=False`` drops only the two VL53 streams; it is set
+    solely by the owner-approved lab test without near-field sensors and
+    only for the explorer's bounded scan/direct channels.
+    """
+    values = [map_at, scan_at, odom_at, now,
+              map_timeout_s, sensor_timeout_s, odom_timeout_s]
+    if require_near_field is not False:
+        values += [left_at, right_at]
     if enabled is not True or not all(
             value is not None and math.isfinite(value) for value in values):
         return False
     if map_timeout_s <= 0.0 or sensor_timeout_s <= 0.0 or odom_timeout_s <= 0.0:
         return False
+    near_field_fresh = require_near_field is False or (
+        0.0 <= now - left_at <= sensor_timeout_s
+        and 0.0 <= now - right_at <= sensor_timeout_s)
     return (
         (allow_stale_map_for_scan or 0.0 <= now - map_at <= map_timeout_s)
         and now >= map_at
         and 0.0 <= now - scan_at <= sensor_timeout_s
-        and 0.0 <= now - left_at <= sensor_timeout_s
-        and 0.0 <= now - right_at <= sensor_timeout_s
+        and near_field_fresh
         and 0.0 <= now - odom_at <= odom_timeout_s
     )
+
+
+# Kanaele des Explorers mit festen Grenzen (Drehen bis 0,15 rad/s,
+# Geradeaus bis 0,08 m/s). Nur fuer sie gilt der Testbetrieb ohne VL53.
+NEAR_FIELD_WAIVABLE_SOURCES = ('explore_scan', 'explore_direct')
 
 
 def explore_scan_values_valid(values, max_angular_speed):
@@ -320,6 +333,12 @@ class CmdVelMissionGate(Node):
             'explore_vl53_right_topic', '/near_field/right/points')
         self.declare_parameter(
             'near_field_status_topic', '/near_field/status')
+        # Laborprobe ohne Nahsensoren (Entscheidung Projektinhaber 22.11.2026):
+        # false nur zusammen mit nahsensoren:=false im Startfile. Dann gibt das
+        # Tor ausschliesslich die begrenzten Dreh- und Direktbefehle des
+        # Explorers ohne VL53-Daten frei; Nav2- und Raumfahrten verlangen die
+        # VL53 weiterhin. Vorgabe true = unveraendert.
+        self.declare_parameter('require_near_field', True)
         self.declare_parameter('explore_map_timeout_s', 5.0)
         self.declare_parameter('explore_sensor_timeout_s', 0.8)
         self.declare_parameter('explore_odom_timeout_s', 0.8)
@@ -408,6 +427,14 @@ class CmdVelMissionGate(Node):
         self._global_frame = str(self.get_parameter('global_frame').value)
         self._odom_frame = str(self.get_parameter('odom_frame').value)
         self._base_frame = str(self.get_parameter('base_frame').value)
+        self._require_near_field = self.get_parameter('require_near_field').value
+        if not isinstance(self._require_near_field, bool):
+            raise ValueError('require_near_field muss true oder false sein')
+        if not self._require_near_field:
+            self.get_logger().warn(
+                'TESTBETRIEB OHNE NAHSENSOREN: Dreh- und Direktbefehle des '
+                'Explorers werden ohne VL53-Daten freigegeben; Nav2- und '
+                'Raumfahrten bleiben ohne VL53 gesperrt.')
         if (
                 self._status_timeout <= 0.0
                 or self._command_timeout <= 0.0
@@ -884,20 +911,28 @@ class CmdVelMissionGate(Node):
                 return True
         return False
 
+    def _near_field_waived(self):
+        """Laborprobe ohne VL53: nur fuer die begrenzten Kanaele des Explorers."""
+        return (getattr(self, '_require_near_field', True) is False
+                and self._command_source in NEAR_FIELD_WAIVABLE_SOURCES)
+
     def _explore_health_authorized(self, now):
-        return self._near_quality_authorized(now) and explore_health_authorized(
-            self._allow_explore,
-            self._explore_map_time,
-            self._explore_scan_time,
-            self._explore_left_time,
-            self._explore_right_time,
-            self._odom_time,
-            now,
-            self._explore_map_timeout,
-            self._explore_sensor_timeout,
-            self._explore_odom_timeout,
-            allow_stale_map_for_scan=(
-                self._command_source == 'explore_scan'))
+        waived = self._near_field_waived()
+        return ((waived or self._near_quality_authorized(now))
+                and explore_health_authorized(
+                    self._allow_explore,
+                    self._explore_map_time,
+                    self._explore_scan_time,
+                    self._explore_left_time,
+                    self._explore_right_time,
+                    self._odom_time,
+                    now,
+                    self._explore_map_timeout,
+                    self._explore_sensor_timeout,
+                    self._explore_odom_timeout,
+                    allow_stale_map_for_scan=(
+                        self._command_source == 'explore_scan'),
+                    require_near_field=not waived))
 
     def _stage3_diagnostic_health_authorized(self, now):
         return self._near_quality_authorized(now) and explore_health_authorized(

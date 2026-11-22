@@ -66,6 +66,16 @@ Ziel bewegt sich nichts. Zweite Anschlussstelle für die KI-Linie, vom
 Projektinhaber freigegeben; ohne das Argument unverändert. Nur in Tests und
 Simulation gelaufen, am Roboter nicht.
 
+**Softwaredelta 22.11.2026 / Fahrtor, Startdateien, Kollisionsmonitor:**
+Laborschalter `nahsensoren` (`app_mapping.launch.py`, `nav_mapping.launch.py`;
+Vorgabe `true`). Mit `false`: VL53-Knoten startet nicht
+(`vl53_near_field.launch.py start_vl53`), neues Profil
+`collision_monitor_ohne_nahsensoren.yaml` schaltet beide VL53-Quellen des
+Kollisionsmonitors ab, Fahrtorparameter `require_near_field` false gibt nur
+die Dreh- und Direktbefehle des Erkunders ohne VL53 frei. Dritte
+Anschlussstelle für die KI-Linie, vom Projektinhaber verlangt; ohne das
+Argument unverändert. Nur in Tests und Simulation gelaufen.
+
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 

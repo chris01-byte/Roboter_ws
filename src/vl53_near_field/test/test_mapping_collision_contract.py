@@ -49,9 +49,35 @@ def test_vl53_launch_defaults_to_normal_profile_but_accepts_override():
 
     assert "'collision_params_file'" in source
     assert "'collision_monitor_params.yaml'" in source
-    assert 'parameters=[collision_params, collision_overlay]' in source
+    assert 'parameters=[collision_params, collision_overlay, collision_extra]' in source
     # Without an explicit overlay the same file is loaded again (no change).
     assert "'collision_params_overlay', default_value=collision_params," in source
+    assert "'collision_params_extra', default_value=collision_params," in source
+
+
+def test_vl53_node_starts_by_default_and_only_the_owner_switch_skips_it():
+    source = (
+        PACKAGE_ROOT / 'launch' / 'vl53_near_field.launch.py'
+    ).read_text(encoding='utf-8')
+    assert "'start_vl53', default_value='true'," in source
+    knoten = source[source.index("executable='vl53_near_field'"):]
+    knoten = knoten[:knoten.index(')\n')]
+    assert 'condition=IfCondition(start_vl53)' in knoten
+    # TF und collision_monitor haengen nicht am Schalter: der collision_monitor
+    # liegt im Fahrbefehlspfad cmd_vel_smoothed -> cmd_vel.
+    monitor = source[source.index("executable='collision_monitor'"):]
+    monitor = monitor[:monitor.index(')\n')]
+    assert 'condition' not in monitor
+
+
+def test_overlay_without_near_field_only_disables_both_vl53_sources():
+    overlay = yaml.safe_load((PACKAGE_ROOT / 'config' /
+                              'collision_monitor_ohne_nahsensoren.yaml').read_text())
+    assert overlay == {'collision_monitor': {'ros__parameters': {
+        'vl53_left': {'enabled': False}, 'vl53_right': {'enabled': False}}}}
+    # Die Polygone und alle anderen Werte bleiben, wie sie sind.
+    mapping = _parameters('collision_monitor_mapping_params.yaml')
+    assert mapping['observation_sources'] == ['vl53_left', 'vl53_right']
 
 
 def test_self_healing_overlay_only_lowers_vl53_height_below_any_valid_point():

@@ -31,6 +31,14 @@ def generate_launch_description():
     # Optionales zweites Profil, das nach dem ersten geladen wird. Default ist
     # dieselbe Datei erneut, also wirkungsgleich zum bisherigen Stand.
     collision_overlay = LaunchConfiguration('collision_params_overlay')
+    # Drittes Profil, zuletzt geladen; Vorgabe wieder die Basisdatei
+    # (wirkungslos). Die Laborprobe ohne Nahsensoren schaltet hier die
+    # VL53-Quellen ab (collision_monitor_ohne_nahsensoren.yaml).
+    collision_extra = LaunchConfiguration('collision_params_extra')
+    # Laborprobe ohne Nahsensoren (Entscheidung Projektinhaber 22.11.2026):
+    # false startet den VL53-Knoten nicht. TF und collision_monitor laufen
+    # weiter; der collision_monitor liegt im Fahrbefehlspfad.
+    start_vl53 = LaunchConfiguration('start_vl53')
 
     # 1) VL53-Node
     vl53_node = Node(
@@ -39,6 +47,7 @@ def generate_launch_description():
         name='vl53_near_field',
         output='screen',
         parameters=[vl53_params],
+        condition=IfCondition(start_vl53),
     )
 
     # 2) Statische Transforms base_link -> vl53_*_link
@@ -73,7 +82,7 @@ def generate_launch_description():
     collision_monitor = Node(
         package='nav2_collision_monitor', executable='collision_monitor',
         name='collision_monitor', output='screen',
-        parameters=[collision_params, collision_overlay],
+        parameters=[collision_params, collision_overlay, collision_extra],
     )
 
     # 4) Lifecycle-Manager aktiviert den collision_monitor automatisch
@@ -98,4 +107,13 @@ def generate_launch_description():
             'collision_params_overlay', default_value=collision_params,
             description='Optionales Overlay nach collision_params_file. '
                         'Default: dieselbe Datei erneut (keine Aenderung).'),
+        DeclareLaunchArgument(
+            'collision_params_extra', default_value=collision_params,
+            description='Optionales drittes Profil, zuletzt geladen. '
+                        'Default: dieselbe Datei erneut (keine Aenderung).'),
+        DeclareLaunchArgument(
+            'start_vl53', default_value='true',
+            description='false = VL53-Knoten nicht starten (Laborprobe ohne '
+                        'Nahsensoren, Entscheidung Projektinhaber 22.11.2026). '
+                        'Vorgabe true.'),
         vl53_node, tf_left, tf_right, collision_monitor, lifecycle_mgr])
