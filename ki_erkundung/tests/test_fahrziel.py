@@ -625,3 +625,123 @@ def test_wandrichtung_ohne_wand_oder_mit_querstehendem_blatt():
     wand = [(2.0, -0.45 - 0.02 * i) for i in range(40)]
     fund = wandrichtung(((2.0, -0.4), (2.0, 0.4)), wand + blatt)
     assert fund is not None and abs(fund['richtung'][1]) == pytest.approx(1.0, abs=1e-6)
+
+
+# --- Kostenkarte auf dem ganzen Weg und Herkunft einer belegten Stelle --------
+
+from lotse.fahrziel import (  # noqa: E402
+    NAHHALT_BIS_M, belegt_auf_dem_weg, herkunft, herkunft_text, in_den_boden, nah_text,
+    weg_belegt_text, wolke_xyz, zellen_im_streifen,
+)
+from lotse.geometrie import aus_tf  # noqa: E402
+
+
+def raster(belegt, breite=400, hoehe=200, zelle=0.01, ursprung=(-0.5, -1.0)):
+    """Kostenkarte im Kartenrahmen; ``belegt`` sind Orte (x, y) in Metern."""
+    daten = [0] * (breite * hoehe)
+    for x, y in belegt:
+        i = int((x - ursprung[0]) / zelle)
+        j = int((y - ursprung[1]) / zelle)
+        daten[j * breite + i] = 100
+    return daten, breite, hoehe, zelle, ursprung
+
+
+def test_der_nahbereichs_halt_reicht_so_weit_wie_im_erkunder():
+    assert NAHHALT_BIS_M == pytest.approx(0.58)
+
+
+def test_streifen_entlang_einer_richtung():
+    daten, b, h, z, u = raster([(1.0, 0.1), (1.0, 0.4), (0.2, 0.0), (2.5, 0.0)])
+    zellen = zellen_im_streifen(daten, b, h, z, u, (0.0, 0.0), 0.0, von_m=0.33, bis_m=2.0)
+    assert len(zellen) == 1 and zellen[0] == pytest.approx((1.005, 0.105), abs=1e-6)
+    # dieselbe Zelle in einem um 90° gedrehten Streifen liegt seitlich daneben
+    assert len(zellen_im_streifen(daten, b, h, z, u, (0.0, 0.0), math.pi / 2,
+                                  von_m=0.33, bis_m=2.0)) == 0
+
+
+def test_kif3b_die_stelle_vor_der_tuer_lag_jenseits_der_alten_15_m():
+    # Start 1,87 m vor der Türlinie; belegt 0,26 m vor der Türlinie, 6 cm links
+    daten, b, h, z, u = raster([(1.61, 0.06)])
+    pose = (0.0, 0.0, 0.0)
+    punkte = [(0.67, 0.0), (2.32, 0.0)]
+    befund = belegt_auf_dem_weg(daten, b, h, z, u, pose, punkte)
+    assert befund is not None and befund['strecke'] == 2      # erste Strecke reicht bis 1,25 m
+    assert befund['ab_start_m'] == pytest.approx(1.615, abs=0.01)
+    assert befund['seitlich_m'] == pytest.approx(0.065, abs=0.01)
+    assert befund['ort'] == pytest.approx((1.615, 0.065), abs=0.01)
+    assert weg_belegt_text(befund, 2.32) == (
+        'Kostenkarte auf dem Weg: belegt 1.62 m voraus (Strecke 2), 0.06 m links der Linie '
+        '– Kostenkarte passt nicht: dort hielte der Erkunder an.')
+    # frei, wenn die Stelle neben dem Streifen oder hinter dem letzten Nahbereich liegt
+    for ort in ((1.61, 0.30), (2.32 + 0.60, 0.0), (0.20, 0.0)):
+        daten, b, h, z, u = raster([ort])
+        assert belegt_auf_dem_weg(daten, b, h, z, u, pose, punkte) is None
+    assert weg_belegt_text(None, 2.32).endswith('frei – Kostenkarte passt.')
+
+
+def test_der_weg_knickt_an_der_anfahrt():
+    # erst 1 m nach links (y), dann 1 m geradeaus (x): Stelle auf der zweiten Strecke
+    daten, b, h, z, u = raster([(0.6, 0.98)])
+    befund = belegt_auf_dem_weg(daten, b, h, z, u, (0.0, 0.0, 0.0), [(0.0, 1.0), (1.0, 1.0)])
+    assert befund['strecke'] == 2
+    assert befund['ab_start_m'] == pytest.approx(1.0 + 0.605, abs=0.01)
+
+
+def wolke_bytes(punkte, schritt=16):
+    import struct
+    roh = b''
+    for x, y, zz in punkte:
+        roh += struct.pack('<fff', x, y, zz) + b'\0' * (schritt - 12)
+    return roh
+
+
+def test_punktwolke_lesen_ohne_ungueltige_punkte():
+    felder = {'x': (0, 7), 'y': (4, 7), 'z': (8, 7)}
+    roh = wolke_bytes([(0.3, 0.1, -0.05), (float('nan'), 0.0, 0.0), (0.5, -0.2, 0.0)])
+    punkte = wolke_xyz(roh, felder, 16, 3)
+    assert punkte.shape == (2, 3)
+    assert punkte[0] == pytest.approx((0.3, 0.1, -0.05), abs=1e-6)
+    assert wolke_xyz(b'', felder, 16, 0).shape == (0, 3)
+    with pytest.raises(ValueError, match='zu wenige Daten'):
+        wolke_xyz(roh[:20], felder, 16, 3)
+    with pytest.raises(ValueError, match='Feld oder Datentyp fehlt'):
+        wolke_xyz(roh, {'x': (0, 7), 'y': (4, 7)}, 16, 3)
+
+
+def test_nahsensor_punkte_in_den_bodenrahmen():
+    # Sensor 0,29 m voraus, 0,095 m links, 0,215 m über base_link, waagerecht
+    boden = aus_tf([0.29, 0.095, 0.215], [0.0, 0.0, 0.0, 1.0], 0.09)
+    punkte = in_den_boden([(0.30, 0.0, -0.10)], boden)
+    assert punkte[0] == pytest.approx((0.59, 0.095, 0.205), abs=1e-6)
+    assert in_den_boden([], boden).shape == (0, 3)
+
+
+def test_herkunft_nennt_die_quelle_mit_hoehe():
+    stelle = (0.58, 0.09)
+    nah = {'links': [(0.585, 0.08, 0.20), (0.59, 0.10, 0.23), (0.40, -0.2, 0.1)],
+           'rechts': []}
+    befund = herkunft(stelle, karte=[(1.5, 0.0)], nah=nah, laser=[(2.0, 0.4)])
+    assert befund['karte'] == 0 and befund['laser'] == 0
+    assert befund['nah']['links'][0] == 2 and befund['nah']['rechts'][0] == 0
+    text = herkunft_text(befund)
+    assert text.startswith('Herkunft der Stelle 0.25 m vor der Vorderkante (31 cm vor dem '
+                           'Gehäuse), 0.09 m links der Mitte: Karte (SLAM) frei; Nahsensor '
+                           'links 2 Punkt(e), 20 bis 23 cm')
+    assert 'Nahsensor rechts sieht dort nichts; Laser sieht dort nichts.' in text
+    assert 'ältere Markierung' not in text
+    # sieht keine Quelle etwas, ist es eine ältere Markierung
+    leer = herkunft_text(herkunft(stelle, karte=[], nah={'links': [], 'rechts': []}, laser=[]))
+    assert 'keine Quelle sieht dort jetzt etwas' in leer and 'ab 0,45 m' in leer
+    # Karte belegt
+    karte = herkunft_text(herkunft(stelle, karte=[(0.59, 0.09)], nah=None, laser=None))
+    assert 'Karte (SLAM) belegt' in karte and 'Laser nicht empfangen' in karte
+
+
+def test_nahsensoren_im_fahrstreifen_in_einem_satz():
+    text = nah_text({'links': [(0.60, 0.09, 0.21), (0.62, 0.10, 0.25), (0.60, 0.40, 0.3)],
+                     'rechts': None})
+    assert text == ('Nahsensoren im Fahrstreifen: links 2 Punkt(e), der nächste 0.27 m vor der '
+                    'Vorderkante (33 cm vor dem Gehäuse), 0.09 m links der Mitte, Höhe 21 bis 25 '
+                    'cm über dem Boden; rechts nicht empfangen.')
+    assert nah_text(None) == 'Nahsensoren im Fahrstreifen: nicht empfangen.'
+    assert nah_text({'links': [], 'rechts': []}).endswith('links nichts; rechts nichts.')

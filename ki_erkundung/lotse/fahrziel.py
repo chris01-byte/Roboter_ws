@@ -600,6 +600,225 @@ def kostenkarte_text(sicht: dict) -> str:
             + f'; rechts daneben {stelle(sicht["rechts_daneben"])}.')
 
 
+# So weit voraus hält der Erkunder an: Vorderkante und Nahbereich.
+NAHHALT_BIS_M = VORDERKANTE_M + NAHBEREICH_M
+# base_link liegt so hoch über dem Boden (nav2_params_real.yaml, OAK-Quelle).
+BASIS_UEBER_BODEN_M = 0.09
+# Das Gehäuse selbst endet so weit vor der Antriebsmitte; die „Vorderkante“
+# der Meldungen (VORDERKANTE_M) liegt 6 cm weiter, mit Polster. Für ein
+# Maßband vom Gehäuse aus.
+GEHAEUSE_VORN_M = 0.27
+
+
+def _vor_dem_gehaeuse(voraus_m: float) -> str:
+    return f'{100 * (voraus_m - GEHAEUSE_VORN_M):.0f} cm vor dem Gehäuse'
+
+
+def zellen_im_streifen(daten, breite: int, hoehe: int, zelle_m: float,
+                       ursprung_xy: Sequence[float], start: Sequence[float],
+                       richtung_rad: float, *, von_m: float, bis_m: float,
+                       halb_m: float = STREIFEN_HALB_M, belegt: int = 100) -> np.ndarray:
+    """Belegte Zellen eines Rasters in einem Streifen entlang einer Richtung.
+
+    Rückgabe ``N x 2``: je Zelle (Meter voraus ab ``start``, Meter seitlich,
+    links positiv), nach „voraus“ geordnet. Gilt für die Kostenkarte
+    (belegt = 100) und für die Karte des SLAM (belegt = 100).
+    """
+    feld = np.asarray(daten, dtype=np.int16)
+    if feld.size != breite * hoehe or zelle_m <= 0.0:
+        raise ValueError('Raster: Größe passt nicht')
+    index = np.flatnonzero(feld >= belegt)
+    if index.size == 0:
+        return np.zeros((0, 2))
+    x = float(ursprung_xy[0]) + (index % breite + 0.5) * zelle_m - float(start[0])
+    y = float(ursprung_xy[1]) + (index // breite + 0.5) * zelle_m - float(start[1])
+    c, s = math.cos(richtung_rad), math.sin(richtung_rad)
+    voraus, seitlich = c * x + s * y, -s * x + c * y
+    rand = 0.5 * zelle_m
+    drin = ((voraus >= von_m - rand) & (voraus <= bis_m + rand)
+            & (np.abs(seitlich) <= halb_m))
+    zellen = np.column_stack([voraus[drin], seitlich[drin]])
+    return zellen[np.argsort(zellen[:, 0], kind='stable')]
+
+
+def belegt_auf_dem_weg(daten, breite: int, hoehe: int, zelle_m: float,
+                       ursprung_xy: Sequence[float], pose: Sequence[float],
+                       punkte: Sequence[Sequence[float]], *, belegt: int = 100) -> Optional[dict]:
+    """Die erste Stelle der Kostenkarte, an der der Erkunder auf diesem Weg anhielte.
+
+    ``pose`` und ``punkte`` im Kartenrahmen. Je Strecke wird der Streifen
+    geprüft, den der Nahbereichs-Halt sieht: in Fahrzeugbreite von der
+    Vorderkante bis 0,25 m davor, über die ganze Strecke und am Ende noch
+    so weit voraus. Rückgabe ``None``, wenn der Weg frei ist, sonst Strecke,
+    Lage zur Linie (voraus ab Streckenbeginn, seitlich), Meter ab dem Start
+    und der Ort im Kartenrahmen.
+    """
+    vorher = (float(pose[0]), float(pose[1]))
+    zurueck = 0.0
+    for nummer, ziel in enumerate(punkte, start=1):
+        dx, dy = float(ziel[0]) - vorher[0], float(ziel[1]) - vorher[1]
+        laenge = math.hypot(dx, dy)
+        if laenge < 1e-6:
+            continue
+        richtung = math.atan2(dy, dx)
+        zellen = zellen_im_streifen(daten, breite, hoehe, zelle_m, ursprung_xy, vorher,
+                                    richtung, von_m=VORDERKANTE_M,
+                                    bis_m=laenge + NAHHALT_BIS_M, belegt=belegt)
+        if zellen.size:
+            voraus, seitlich = (float(v) for v in zellen[0])
+            c, s = math.cos(richtung), math.sin(richtung)
+            return {'strecke': nummer, 'voraus_m': voraus, 'seitlich_m': seitlich,
+                    'ab_start_m': zurueck + voraus,
+                    'ort': (vorher[0] + c * voraus - s * seitlich,
+                            vorher[1] + s * voraus + c * seitlich)}
+        zurueck += laenge
+        vorher = (float(ziel[0]), float(ziel[1]))
+    return None
+
+
+def wolke_xyz(daten, felder: dict, punkt_schritt: int, anzahl: int,
+              grossendian: bool = False) -> np.ndarray:
+    """Punkte einer PointCloud2 als ``N x 3`` (x, y, z), ohne ungültige.
+
+    ``felder``: Name -> (Versatz, Datentyp) mit den Datentypen von
+    PointCloud2 (7 = float32, 8 = float64).
+    """
+    typen = {7: 'f4', 8: 'f8'}
+    try:
+        formate = [('>' if grossendian else '<') + typen[felder[n][1]] for n in 'xyz']
+    except KeyError as fehler:
+        raise ValueError(f'Punktwolke: Feld oder Datentyp fehlt ({fehler})') from fehler
+    roh = bytes(daten)
+    if anzahl <= 0 or punkt_schritt <= 0:
+        return np.zeros((0, 3))
+    if len(roh) < anzahl * punkt_schritt:
+        raise ValueError('Punktwolke: zu wenige Daten')
+    art = np.dtype({'names': ['x', 'y', 'z'], 'formats': formate,
+                    'offsets': [int(felder[n][0]) for n in 'xyz'],
+                    'itemsize': int(punkt_schritt)})
+    feld = np.frombuffer(roh, dtype=art, count=anzahl)
+    punkte = np.column_stack([feld['x'], feld['y'], feld['z']]).astype(float)
+    return punkte[np.all(np.isfinite(punkte), axis=1)]
+
+
+def in_den_boden(punkte: np.ndarray, boden_von_sensor: np.ndarray) -> np.ndarray:
+    """Punkte aus dem Sensorrahmen in den Bodenrahmen unter base_link.
+
+    ``boden_von_sensor``: 4 x 4 aus ``geometrie.aus_tf`` (TF base_link ->
+    Sensor, base_link ``BASIS_UEBER_BODEN_M`` über dem Boden). Ergebnis:
+    (voraus, seitlich, Höhe über dem Boden).
+    """
+    punkte = np.asarray(punkte, dtype=float).reshape(-1, 3)
+    if punkte.size == 0:
+        return np.zeros((0, 3))
+    homogen = np.column_stack([punkte, np.ones(len(punkte))])
+    return (homogen @ np.asarray(boden_von_sensor, dtype=float).T)[:, :3]
+
+
+def nahe_punkte(punkte, stelle: Sequence[float], radius_m: float) -> np.ndarray:
+    """Die Punkte (erste zwei Spalten: voraus, seitlich) nahe einer Stelle."""
+    feld = np.asarray(punkte, dtype=float)
+    if feld.size == 0:
+        return feld.reshape(0, feld.shape[1] if feld.ndim == 2 else 2)
+    abstand = np.hypot(feld[:, 0] - float(stelle[0]), feld[:, 1] - float(stelle[1]))
+    return feld[abstand <= radius_m]
+
+
+def herkunft(stelle: Sequence[float], *, karte=None, nah=None, laser=None,
+             radius_m: float = 0.07) -> dict:
+    """Welche Quelle an einer Stelle vor dem Roboter etwas sieht.
+
+    Alles im Rahmen des Roboters (voraus, seitlich ab der Antriebsmitte):
+    ``karte`` belegte Zellen der SLAM-Karte (N x 2), ``nah`` je Seite die
+    Punkte der Nahsensoren (N x 3, dritte Spalte Höhe über dem Boden),
+    ``laser`` Punkte des Lasers (N x 2). ``None`` heißt: nicht empfangen.
+    Der Radius deckt die Rasterung der Kostenkarte und die Breite einer
+    Messzone der Nahsensoren ab.
+    """
+    befund = {'stelle': (float(stelle[0]), float(stelle[1]))}
+    befund['karte'] = None if karte is None else int(len(nahe_punkte(karte, stelle, radius_m)))
+    befund['laser'] = None if laser is None else int(len(nahe_punkte(laser, stelle, radius_m)))
+    befund['nah'] = {}
+    for seite, punkte in (nah or {}).items():
+        if punkte is None:
+            befund['nah'][seite] = None
+            continue
+        treffer = nahe_punkte(punkte, stelle, radius_m)
+        befund['nah'][seite] = (int(len(treffer)),
+                                float(treffer[:, 2].min()) if len(treffer) else None,
+                                float(treffer[:, 2].max()) if len(treffer) else None)
+    return befund
+
+
+def herkunft_text(befund: dict) -> str:
+    """Der Befund aus ``herkunft`` in einem Satz."""
+    voraus, seitlich = befund['stelle']
+    teile = []
+    if befund['karte'] is None:
+        teile.append('Karte (SLAM) nicht empfangen')
+    else:
+        teile.append(f'Karte (SLAM) {"belegt" if befund["karte"] else "frei"}')
+    for seite in ('links', 'rechts'):
+        wert = befund['nah'].get(seite, None) if befund['nah'] else None
+        if wert is None:
+            teile.append(f'Nahsensor {seite} nicht empfangen')
+        elif wert[0] == 0:
+            teile.append(f'Nahsensor {seite} sieht dort nichts')
+        else:
+            teile.append(f'Nahsensor {seite} {wert[0]} Punkt(e), {100 * wert[1]:.0f} bis '
+                         f'{100 * wert[2]:.0f} cm über dem Boden')
+    if befund['laser'] is None:
+        teile.append('Laser nicht empfangen')
+    else:
+        teile.append(f'Laser {"sieht dort etwas" if befund["laser"] else "sieht dort nichts"}')
+    keiner = (not befund['karte'] and not befund['laser']
+              and not any(w and w[0] for w in (befund['nah'] or {}).values()))
+    text = (f'Herkunft der Stelle {voraus - VORDERKANTE_M:.2f} m vor der Vorderkante '
+            f'({_vor_dem_gehaeuse(voraus)}), '
+            f'{abs(seitlich):.2f} m {"links" if seitlich >= 0 else "rechts"} der Mitte: '
+            + '; '.join(teile))
+    if keiner:
+        text += (' – keine Quelle sieht dort jetzt etwas: eine ältere Markierung, '
+                 'vermutlich der Nahsensoren (die räumen erst ab 0,45 m)')
+    return text + '.'
+
+
+def nah_text(nah: Optional[dict], *, bis_m: float = 1.0, halb_m: float = STREIFEN_HALB_M) -> str:
+    """Was die Nahsensoren gerade im Fahrstreifen sehen, in einem Satz."""
+    if not nah:
+        return 'Nahsensoren im Fahrstreifen: nicht empfangen.'
+    teile = []
+    for seite in ('links', 'rechts'):
+        punkte = nah.get(seite)
+        if punkte is None:
+            teile.append(f'{seite} nicht empfangen')
+            continue
+        feld = np.asarray(punkte, dtype=float).reshape(-1, 3)
+        drin = feld[(feld[:, 0] >= VORDERKANTE_M - 0.05) & (feld[:, 0] <= bis_m)
+                    & (np.abs(feld[:, 1]) <= halb_m)]
+        if not len(drin):
+            teile.append(f'{seite} nichts')
+            continue
+        naechster = drin[int(np.argmin(drin[:, 0]))]
+        teile.append(
+            f'{seite} {len(drin)} Punkt(e), der nächste {naechster[0] - VORDERKANTE_M:.2f} m '
+            f'vor der Vorderkante ({_vor_dem_gehaeuse(naechster[0])}), {abs(naechster[1]):.2f} m '
+            f'{"links" if naechster[1] >= 0 else "rechts"} der Mitte, Höhe '
+            f'{100 * drin[:, 2].min():.0f} bis {100 * drin[:, 2].max():.0f} cm über dem Boden')
+    return 'Nahsensoren im Fahrstreifen: ' + '; '.join(teile) + '.'
+
+
+def weg_belegt_text(befund: Optional[dict], laenge_m: float) -> str:
+    """Ob die Kostenkarte auf dem ganzen Weg frei ist, in einem Satz."""
+    if befund is None:
+        return (f'Kostenkarte auf dem ganzen Weg ({laenge_m:.2f} m und den Nahbereich '
+                'dahinter): frei – Kostenkarte passt.')
+    return (f'Kostenkarte auf dem Weg: belegt {befund["ab_start_m"]:.2f} m voraus '
+            f'(Strecke {befund["strecke"]}), {abs(befund["seitlich_m"]):.2f} m '
+            f'{"links" if befund["seitlich_m"] >= 0 else "rechts"} der Linie – '
+            'Kostenkarte passt nicht: dort hielte der Erkunder an.')
+
+
 def durch_die_tuer(pfosten: Sequence[Sequence[float]], pose: Sequence[float], *,
                    vor_m: float = 1.10, hinter_m: float = HINTER_DER_TUER_M,
                    vorpunkt_ab_m: float = 0.15) -> List[Punkt]:

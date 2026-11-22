@@ -2120,6 +2120,32 @@ falsch geplant, nicht der Halt:**
   Lage (A2) hat die Lage vom Vormittag nicht getroffen; die Vermutung zur
   1,25 m breiten Lücke ist weder bestätigt noch widerlegt.
 
+**Nachtrag 22.11.2026 (nachts, später) – KI-F3b: bis kurz vor die Tür, dann
+Halt an einer Stelle unbekannter Herkunft:**
+- **Ergebnis:** Drei Etappen geradeaus, 1,03 m, nie mehr als 5 mm neben der
+  Linie; Halt 0,26 m vor der Türlinie am Nahbereichs-Halt. Die belegte
+  Zelle lag mitten im Durchgang (9 cm links der Mitte), nicht am Türblatt.
+  Nichts berührt.
+- **Einordnung:** In die globale Kostenkarte schreiben nur die Karte des
+  SLAM und die Nahsensoren; der Laser sah den Weg frei. Ob ein Gegenstand,
+  eine Fehlmessung der Nahsensoren oder ein Eintrag der Karte, ist offen.
+  Dieselbe offene Frage steht in der Hauptlinie („Herkunft der tödlichen
+  Zellen … in der globalen Kostenkarte“, Mitte November). Markierungen der
+  Nahsensoren näher als 0,45 m am Sensor räumt nichts mehr (X9, gewollt);
+  auch eine einzelne Fehlmessung bliebe so liegen.
+- **Fehler der Planung:** Die Prüfung der Kostenkarte vor dem Senden reichte
+  1,5 m weit, die Fahrt 2,3 m; die Stelle lag bei 1,61 m. Und das Werkzeug
+  konnte die Quelle einer belegten Stelle nicht nennen. Regeln: **Eine
+  Prüfung vor der Fahrt deckt den ganzen Weg ab, nicht eine feste Weite.**
+  **Ein Halt muss seine Ursache benennen können.**
+- **Entscheidung:** Das Werkzeug prüft die Kostenkarte auf dem ganzen Weg
+  und nennt die Quelle (Karte, Nahsensor mit Höhe, Laser). Folgeauftrag
+  KI-F4 misst zuerst im Stand an der Haltestelle und lässt Christopher
+  nachsehen; meldet ein Nahsensor dort etwas, das nicht da ist, fährt
+  Amadeus nicht. Am Nahbereichs-Halt, an den Nahsensoren und an der
+  Kostenkarte wird nichts geändert (Sicherheitsbereich, AGENTS §2.7), bevor
+  die Quelle gemessen ist.
+
 **Nachtrag 22.11.2026 (nachts) – KI-F3 fuhr nicht: Radsensor beim Start
 gesperrt; die Selbstheilung kann das nicht lösen:**
 - **Ergebnis:** Aufstellen und Messen passten sofort; im scharfen Stack war

@@ -36,6 +36,14 @@ ihr; danach steht er so, wie ``--tuer`` es verlangt. Auch dieser Weg wird am
 Laserbild geprüft (frei neben jeder Strecke, Platz zum Drehen, freie Sicht
 auf die Punkte); passt er nicht, wird nichts gesendet.
 
+Vor dem Senden prüft es außerdem die Kostenkarte auf dem **ganzen Weg** so,
+wie der Nahbereichs-Halt des Erkunders sie liest: Liegt im Streifen vor der
+Vorderkante irgendwo auf der Strecke etwas Belegtes, würde der Erkunder dort
+anhalten; dann wird nichts gesendet. Für eine belegte Stelle (vor dem Senden
+und nach einem Halt) sagt es, welche Quelle dort etwas sieht: die Karte des
+SLAM (Laser), einer der beiden Nahsensoren (mit Höhe über dem Boden) oder
+der Laser gerade jetzt.
+
 Ausgegeben werden nur Maße und Meldungen, keine Bilder und keine Koordinaten
 der Wohnung.
 """
@@ -54,10 +62,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lotse.blickrunde import profil_ursprung, scan_als_dict, stand_profil  # noqa: E402
 from lotse.fahrziel import (  # noqa: E402
-    FREI_NEBEN_DER_LINIE_M, HINTER_DER_TUER_M, TUER_MAX_M, TUER_MIN_M, VOR_DER_TUER_M,
-    anfahrt, anfahrt_im_kartenrahmen, anfahrt_text, aufstellung, aufstellung_hinweise,
-    botschaft, freiraum, freiraum_hinweise, gerade_durch_die_tuer, gerade_linie, geradeaus,
-    kostenkarte_text, kostenkarte_voraus, pruefe_grenzen, punkt_relativ,
+    BASIS_UEBER_BODEN_M, FREI_NEBEN_DER_LINIE_M, HINTER_DER_TUER_M, TUER_MAX_M, TUER_MIN_M,
+    VOR_DER_TUER_M, anfahrt, anfahrt_im_kartenrahmen, anfahrt_text, aufstellung,
+    aufstellung_hinweise, belegt_auf_dem_weg, botschaft, freiraum, freiraum_hinweise,
+    gerade_durch_die_tuer, gerade_linie, geradeaus, herkunft, herkunft_text, in_den_boden,
+    kostenkarte_text, kostenkarte_voraus, nah_text, pruefe_grenzen, punkt_relativ,
+    weg_belegt_text, wolke_xyz, zellen_im_streifen,
 )
 from lotse.geometrie import aus_tf  # noqa: E402
 from lotse.kandidaten import TUERBREIT_M, Oeffnung, oeffnungen  # noqa: E402
@@ -280,6 +290,8 @@ def eingabe() -> argparse.ArgumentParser:
     e.add_argument('--scan-topic', default='/scan')
     e.add_argument('--status-topic', default='/explore/status_json')
     e.add_argument('--kostenkarte-topic', default='/global_costmap/costmap')
+    e.add_argument('--karten-topic', default='/map',
+                   help='Karte des SLAM (Quelle der festen Einträge der Kostenkarte)')
     e.add_argument('--karten-rahmen', default='map')
     e.add_argument('--basis-rahmen', default='base_link')
     e.add_argument('--basis-hoehe', type=float, default=0.0)
@@ -295,8 +307,9 @@ def main(argv=None) -> int:
     import rclpy
     from rclpy.qos import (QoSDurabilityPolicy, QoSProfile, QoSReliabilityPolicy,
                            qos_profile_sensor_data)
+    import numpy as np
     from nav_msgs.msg import OccupancyGrid
-    from sensor_msgs.msg import LaserScan
+    from sensor_msgs.msg import LaserScan, PointCloud2
     from std_msgs.msg import String
     from tf2_ros import Buffer, TransformListener
 
@@ -305,10 +318,20 @@ def main(argv=None) -> int:
     rclpy.init()
     knoten = rclpy.create_node('ki_fahrziel')
     stand = {'status': None, 'scans': [], 'rahmen': None, 'sammeln': False,
-             'kostenkarte': None}
+             'kostenkarte': None, 'karte': None, 'nah': {'links': [], 'rechts': []}}
 
     def auf_kostenkarte(nachricht):
         stand['kostenkarte'] = nachricht
+
+    def auf_karte(nachricht):
+        stand['karte'] = nachricht
+
+    def auf_wolke(seite):
+        def merke(nachricht):
+            liste = stand['nah'][seite]
+            liste.append((time.monotonic(), nachricht))
+            del liste[:-5]
+        return merke
 
     def auf_status(nachricht):
         try:
@@ -329,6 +352,10 @@ def main(argv=None) -> int:
     knoten.create_subscription(String, wahl.status_topic, auf_status, letzter)
     knoten.create_subscription(LaserScan, wahl.scan_topic, auf_scan, qos_profile_sensor_data)
     knoten.create_subscription(OccupancyGrid, wahl.kostenkarte_topic, auf_kostenkarte, letzter)
+    knoten.create_subscription(OccupancyGrid, wahl.karten_topic, auf_karte, letzter)
+    for seite, name in (('links', 'left'), ('rechts', 'right')):
+        knoten.create_subscription(PointCloud2, f'/near_field/{name}/points', auf_wolke(seite),
+                                   qos_profile_sensor_data)
     tf_puffer = Buffer()
     TransformListener(tf_puffer, knoten)
     sender = Fahrzielsender(knoten)
@@ -368,6 +395,102 @@ def main(argv=None) -> int:
         except ValueError as grund:
             return f'Kostenkarte vor dem Roboter: {grund}.'
 
+    def laserbild(dauer: float):
+        """Scans im Stand sammeln; Rückgabe (Scans, Lage des LiDAR) oder (None, None)."""
+        stand['scans'] = []
+        stand['sammeln'] = True
+        drehe(dauer)
+        stand['sammeln'] = False
+        montage = tf(wahl.basis_rahmen, stand['rahmen']) if stand['rahmen'] else None
+        if not stand['scans'] or montage is None:
+            return None, None
+        v, q = montage.translation, montage.rotation
+        return list(stand['scans']), aus_tf([v.x, v.y, v.z], [q.x, q.y, q.z, q.w],
+                                            wahl.basis_hoehe)
+
+    def nah_jetzt(alter_s: float = 1.5):
+        """Die frischen Punkte beider Nahsensoren: voraus, seitlich, Höhe über dem Boden."""
+        ergebnis = {}
+        for seite in ('links', 'rechts'):
+            frisch = [n for t, n in stand['nah'][seite] if time.monotonic() - t <= alter_s]
+            teile = []
+            for wolke in frisch:
+                lage = tf(wahl.basis_rahmen, wolke.header.frame_id)
+                if lage is None:
+                    continue
+                v, q = lage.translation, lage.rotation
+                try:
+                    roh = wolke_xyz(wolke.data, {f.name: (f.offset, f.datatype)
+                                                 for f in wolke.fields},
+                                    wolke.point_step, wolke.width * wolke.height,
+                                    wolke.is_bigendian)
+                except ValueError:
+                    continue
+                teile.append(in_den_boden(roh, aus_tf([v.x, v.y, v.z], [q.x, q.y, q.z, q.w],
+                                                      BASIS_UEBER_BODEN_M)))
+            ergebnis[seite] = np.vstack(teile) if teile else None
+        return ergebnis
+
+    def karte_vor_dem_roboter(pose):
+        """Belegte Zellen der SLAM-Karte vor dem Roboter (voraus, seitlich) oder None."""
+        karte = stand['karte']
+        if karte is None or pose is None:
+            return None
+        try:
+            return zellen_im_streifen(
+                karte.data, karte.info.width, karte.info.height, karte.info.resolution,
+                (karte.info.origin.position.x, karte.info.origin.position.y),
+                pose[:2], pose[2], von_m=0.0, bis_m=4.0, halb_m=0.70)
+        except ValueError:
+            return None
+
+    def herkunft_zeile(stelle, pose, laser=None) -> str:
+        """Woher eine belegte Stelle (im Rahmen des Roboters) stammt, in einem Satz."""
+        if laser is None:
+            scans, boden_lidar = laserbild(1.0)
+            if scans is not None:
+                laser = []
+                vermesse(scans, boden_lidar, None, laser)
+        return herkunft_text(herkunft(
+            stelle, karte=karte_vor_dem_roboter(pose), nah=nah_jetzt(),
+            laser=None if laser is None else np.asarray(laser, dtype=float).reshape(-1, 2)))
+
+    def naechste_stelle(pose):
+        """Die nächste belegte Zelle im Fahrstreifen bis 1,5 m (Rahmen des Roboters) oder None."""
+        karte = stand['kostenkarte']
+        if karte is None or pose is None:
+            return None
+        try:
+            return kostenkarte_voraus(
+                karte.data, karte.info.width, karte.info.height, karte.info.resolution,
+                (karte.info.origin.position.x, karte.info.origin.position.y),
+                pose)['im_streifen']
+        except ValueError:
+            return None
+
+    def im_roboterrahmen(ort, pose):
+        dx, dy = float(ort[0]) - pose[0], float(ort[1]) - pose[1]
+        c, s = math.cos(pose[2]), math.sin(pose[2])
+        return c * dx + s * dy, -s * dx + c * dy
+
+    def weg_in_der_kostenkarte(punkte, pose, laser=None):
+        """Zeilen zur Kostenkarte auf dem ganzen Weg; dazu, ob sie frei ist."""
+        karte = stand['kostenkarte']
+        if karte is None or pose is None:
+            return ['Kostenkarte auf dem Weg: nicht empfangen – Kostenkarte passt nicht.'], False
+        laenge = sum(math.hypot(b[0] - a[0], b[1] - a[1])
+                     for a, b in zip([pose[:2], *punkte[:-1]], punkte))
+        try:
+            befund = belegt_auf_dem_weg(
+                karte.data, karte.info.width, karte.info.height, karte.info.resolution,
+                (karte.info.origin.position.x, karte.info.origin.position.y), pose, punkte)
+        except ValueError as grund:
+            return [f'Kostenkarte auf dem Weg: {grund} – Kostenkarte passt nicht.'], False
+        zeilen = [weg_belegt_text(befund, laenge)]
+        if befund is not None:
+            zeilen.append(herkunft_zeile(im_roboterrahmen(befund['ort'], pose), pose, laser))
+        return zeilen, befund is None
+
     def phase() -> Optional[str]:
         return (stand['status'] or {}).get('phase')
 
@@ -388,40 +511,57 @@ def main(argv=None) -> int:
         bemerkung = None
         weg_anfahrt = None
         if wahl.tuer or wahl.vor_die_tuer:
-            stand['sammeln'] = True
-            drehe(wahl.messdauer)
-            stand['sammeln'] = False
-            montage = tf(wahl.basis_rahmen, stand['rahmen']) if stand['rahmen'] else None
-            if not stand['scans'] or montage is None:
+            scans, boden_lidar = laserbild(wahl.messdauer)
+            if scans is None:
                 print('Kein Scan oder keine Montage des LiDAR (TF). Nichts gesendet.')
                 return 4
-            v, q = montage.translation, montage.rotation
-            boden_lidar = aus_tf([v.x, v.y, v.z], [q.x, q.y, q.z, q.w], wahl.basis_hoehe)
             protokoll: List[dict] = []
             hindernisse: List = []
             sicht: dict = {}
-            gefunden = vermesse(stand['scans'], boden_lidar, protokoll, hindernisse, sicht)
-            print(f'{len(stand["scans"])} Scans, {len(gefunden)} Öffnung(en):')
+            gefunden = vermesse(scans, boden_lidar, protokoll, hindernisse, sicht)
+            print(f'{len(scans)} Scans, {len(gefunden)} Öffnung(en):')
             print(tabelle(gefunden))
             tueren = [o for o in gefunden
                       if o.befahrbar and wahl.breite_min <= o.breite_m <= wahl.breite_max]
             if wahl.nur_messen:
+                # Die Kostenkarte kommt einmal je Sekunde und ist groß.
+                drehe(5.0, lambda: stand['kostenkarte'] is not None)
+                pose_jetzt = lage_in_der_karte()
                 if tueren:
                     print(f'Türbreit vermessen ({wahl.breite_min:.2f} bis '
                           f'{wahl.breite_max:.2f} m):')
                     for o in tueren:
                         if wahl.vor_die_tuer:
                             print('  ' + lage_text(o, mit_hinweisen=False))
-                            print('  ' + anfahrt_zeile(o, hindernisse, sicht)[0])
+                            zeile, weg_a, _ = anfahrt_zeile(o, hindernisse, sicht)
+                            print('  ' + zeile)
+                            if weg_a is not None and pose_jetzt is not None:
+                                for z in weg_in_der_kostenkarte(
+                                        anfahrt_im_kartenrahmen(weg_a, pose_jetzt), pose_jetzt,
+                                        hindernisse)[0]:
+                                    print('  ' + z)
                             continue
                         print('  ' + lage_text(o))
                         print('  ' + weg_text(o, hindernisse, wahl.vor, wahl.hinter)[0])
+                        if pose_jetzt is None:
+                            print('  Kostenkarte auf dem Weg: Lage in der Karte fehlt (TF) – '
+                                  'Kostenkarte passt nicht.')
+                            continue
+                        try:
+                            linie = gerade_durch_die_tuer(o.pfosten, pose_jetzt,
+                                                          vor_m=wahl.vor, hinter_m=wahl.hinter)
+                        except ValueError:
+                            continue
+                        for z in weg_in_der_kostenkarte(linie, pose_jetzt, hindernisse)[0]:
+                            print('  ' + z)
                 else:
                     print(f'Keine Öffnung ist türbreit vermessen ({wahl.breite_min:.2f} '
                           f'bis {wahl.breite_max:.2f} m). So würde nichts gesendet.')
-                # Die Kostenkarte kommt einmal je Sekunde und ist groß.
-                drehe(5.0, lambda: stand['kostenkarte'] is not None)
                 print(kostenkarte_zeile())
+                stelle = naechste_stelle(pose_jetzt)
+                if stelle is not None:
+                    print(herkunft_zeile(stelle, pose_jetzt, hindernisse))
+                print(nah_text(nah_jetzt()))
                 print(protokoll_text(protokoll))
                 return 0
             try:
@@ -481,6 +621,14 @@ def main(argv=None) -> int:
         except ValueError as grund:
             print(f'Nichts gesendet: {grund}.')
             return 2
+        zeilen, frei = weg_in_der_kostenkarte(
+            punkte, pose, hindernisse if (wahl.tuer or wahl.vor_die_tuer) else None)
+        for zeile in zeilen:
+            print(zeile)
+        if not frei and not wahl.aufstellung_egal:
+            print('Nichts gesendet: Auf dem Weg ist die Kostenkarte belegt; dort hielte der '
+                  'Erkunder an.')
+            return 2
 
         art_name = ('anfahrt' if wahl.vor_die_tuer else 'tuer' if wahl.tuer
                     else 'punkt' if wahl.punkt else 'gerade')
@@ -505,6 +653,12 @@ def main(argv=None) -> int:
         print(f'Ende: Zustand des Erkunders {zustand!r}; {meldung()}')
         drehe(1.5)                       # die Kostenkarte kommt einmal je Sekunde
         print(kostenkarte_zeile())
+        # Nach einem Halt: woher stammt die nächste belegte Stelle vor dem Roboter?
+        pose_ende = lage_in_der_karte()
+        stelle = naechste_stelle(pose_ende)
+        if stelle is not None:
+            print(herkunft_zeile(stelle, pose_ende))
+        print(nah_text(nah_jetzt()))
         # Der Erkunder meldet einen gelungenen Auftrag ohne Flächenziel als „partial“.
         return 0 if (zustand in ('partial', 'success')
                      and meldung().startswith('Etappenfahrt abgeschlossen')) else 1

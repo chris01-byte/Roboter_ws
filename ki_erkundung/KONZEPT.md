@@ -1,6 +1,6 @@
 # Konzept „KI-Erkundung“ – eine KI übernimmt Ziel- und Suchwahl
 
-**Version 1.10 · 22.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
+**Version 1.11 · 22.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
 nachgeführt nach drei Durchgängen an echten Aufnahmen, der Freigabe der
 Schalter „nur Rundblick“ und „Etappenfahrt“ und der Festlegung „die KI
 bekommt Zeit, kein stiller Rückfall“**
@@ -314,6 +314,11 @@ So läuft es:
    Türblatts vorbei. (Die Anfahrt aus Schritt 2 fährt auch über einen
    Punkt auf der Türachse, aber gut zwei Meter vor der Tür und geprüft am
    Laserbild; gedreht wird dort, nicht neben dem Türblatt.)
+   **Seit v1.11** prüft das Werkzeug vor dem Senden außerdem die
+   Kostenkarte auf dem **ganzen Weg** so, wie der Nahbereichs-Halt sie liest
+   (Streifen in Fahrzeugbreite, von der Vorderkante bis 0,25 m davor, über
+   jede Strecke bis zu ihrem Ende). Ist sie dort belegt, hielte der Erkunder
+   an; dann wird nichts gesendet.
 4. Diese Punkte gehen als **Fahrziel** an den Erkunder
    (`/ki_erkundung/fahrziel_json`, nur auf dem Roboter). Darin steht, wer
    gewählt hat: `ki`, `mensch` oder `test`.
@@ -332,7 +337,12 @@ So läuft es:
    Grund (Simulation, 21.11.2026): Bei 0,05 m/s bremst der Kollisionsmonitor
    erst wenige Zentimeter vor einem Hindernis; einen niedrigen Mülleimer,
    den der Laser nicht sieht, berührte der Roboter ohne diesen Halt im
-   Kriechtempo.
+   Kriechtempo. Für jede belegte Stelle, an der er anhält oder anhalten
+   würde, nennt das Werkzeug die Quelle (Karte des SLAM, Nahsensor links
+   oder rechts mit Höhe über dem Boden, Laser). Bekannte Eigenschaft:
+   Markierungen der Nahsensoren näher als 0,45 m am Sensor werden nicht
+   wieder geräumt; das hält niedrige Dinge fest, die der Sensor aus der
+   Nähe nicht mehr sieht, und hielte ebenso eine Fehlmessung fest.
 7. Scheitert ein Schritt, bleibt Amadeus stehen und der Auftrag nennt den
    Grund. Ein zweiter Versuch ist ein neuer Auftrag.
 
@@ -637,6 +647,13 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   entschieden hat. Der Fahrteil soll aus vorhandenem, real bewährtem Code
   entstehen; Bestand und Vorschlag stehen im STATUS, entschieden ist dazu
   noch nichts.
+- 22.11.2026, v1.11, nach KI-F3b: Amadeus fuhr drei Etappen genau auf der
+  Linie und hielt 0,26 m vor der Türlinie an einer belegten Stelle mitten
+  im Durchgang; woher sie stammte, ließ sich nicht feststellen. In §6a
+  nachgezogen: Prüfung der Kostenkarte auf dem ganzen Weg vor dem Senden
+  und die Herkunft jeder belegten Stelle. Grundsatz, neu festgehalten:
+  **Ein Halt muss seine Ursache benennen können**, sonst lässt sich aus
+  ihm nichts lernen.
 - 22.11.2026, v1.10 (Einwand des Projektinhabers: „Der Roboter ist schon
   dreimal durch die Tür gefahren. Warum soll er sich auf einmal nur vor die
   Tür stellen? Das ist ja ein Rückschritt.“): Das Davorstellen von Hand war

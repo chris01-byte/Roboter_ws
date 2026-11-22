@@ -1,11 +1,13 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 22.11.2026 (spät, nach dem ersten Anlauf von KI-F3):** Der erste
-Anlauf von KI-F3 fuhr nicht: Aufstellen und Messen passten sofort (0,77 m,
-links und rechts der Fahrlinie 0,38 und 0,39 m frei), aber im scharfen
-Stack hatte sich der Radsensor beim Hochfahren selbst gesperrt. Die
-Vorprüfung fiel durch, es gab keine Mission. Der Auftrag kannte für diesen
-bekannten Fall keinen Neustart; das ist nachgetragen (KI-F3b, unten).
+**Stand 22.11.2026 (nachts, nach KI-F3b):** Amadeus ist zum ersten Mal in
+dieser Linie geradeaus auf die Tür zugefahren: drei Etappen, 1,03 m, nie mehr
+als 5 mm neben der Linie. **0,26 m vor der Türlinie hielt er an**, weil in
+der Kostenkarte mitten im Durchgang etwas belegt war (0,25 m vor seiner
+Vorderkante, 9 cm links der Mitte). Das Türblatt war es nicht. Welche
+Quelle die Stelle meldete, war nicht festzustellen; das Werkzeug kann das
+jetzt (unten). Im ersten Anlauf am selben Abend hatte sich der Radsensor
+beim Start gesperrt (KI-F3).
 
 Die gerade Etappe von 0,5 m ist
 am Roboter gelungen (KI-F1). **Durch die Labortür ist Amadeus noch nicht
@@ -14,8 +16,9 @@ vermessen und die Fahrt gar nicht gestartet (KI-F1). Im zweiten passte die
 Aufstellung, aber der geplante Weg führte erst schräg zu einem Punkt auf
 der Türachse und damit an die Spitze des offenen Türblatts; der
 Nahbereichs-Halt hielt Amadeus nach 0,35 m an (KI-F2). Der Halt war
-richtig, der Weg war falsch geplant. **Als Nächstes:** zweiter Anlauf
-KI-F3b ([AUFTRAG.md](AUFTRAG.md)) in zwei Stufen: erst von vorn auf gerader Linie
+richtig, der Weg war falsch geplant. **Als Nächstes:** Auftrag KI-F4
+([AUFTRAG.md](AUFTRAG.md)): zuerst an der Haltestelle messen, dann in zwei
+Stufen fahren: erst von vorn auf gerader Linie
 durch die Türmitte, dann von einem Platz im Raum, von dem Amadeus **selbst
 vor die Tür fährt**. Beides wird vor dem Senden gegen das Laserbild geprüft.
 
@@ -43,7 +46,7 @@ fährt mit seiner Schutzkette.
 |---|---|---|---|
 | Erstes Sehen | im Stand Bild und Laser aufnehmen, die KI fragen, die Antwort prüfen | KI-0 | **erledigt** (21.11.) |
 | Blickrunde | sich selbst einmal herumdrehen; aus acht Bildern nennt die KI den Ausgang | KI-1 | **am Roboter gelungen** (21.11., eine Runde im Labor); für die Kriterien fehlen weitere Runden |
-| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1) und Ausrichten (KI-F2); durch die Tür und selbst vor die Tür bisher nur in der Simulation; als Nächstes KI-F3 |
+| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1), Ausrichten (KI-F2), drei Etappen genau auf der Linie bis kurz vor die Tür (KI-F3b); durch die Tür und selbst vor die Tür bisher nur in der Simulation; als Nächstes KI-F4 |
 | Raum für Raum | weiter, bis kein Ausgang mehr offen ist (Laborraum, Flur, Schlafzimmer) | KI-3 | offen |
 | Räume benennen, um Hilfe rufen | Raumnamen als Vorschlag in der App; Hilferuf mit Grund und Bild | KI-4 | offen |
 | Auf Zuruf | „fahr in die Küche“, „such die Tasse“ | KI-5 | offen |
@@ -53,20 +56,19 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-F3,
-zweiter Anlauf KI-F3b, „durch die Tür: erst von vorn, dann vom Platz im
-Raum“** ([AUFTRAG.md](AUFTRAG.md)). Neu gegenüber dem ersten Anlauf: Sperrt
-sich der Radsensor beim Hochfahren, wird gesichert, was die Zeitwache
-meldet, und genau einmal neu gestartet.
+**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-F4
+„was hält vor der Tür? Erst messen, dann fahren“** ([AUFTRAG.md](AUFTRAG.md)).
 Auf dem Jetson, mit Christopher; ohne Kamera und ohne KI-Rechner; **ohne
-neuen Build** (derselbe Release wie bei der gelungenen Etappe).
-- **Stufe 1:** Im Stand mittig vor die Tür stellen und messen, bis das
-  Werkzeug „Aufstellung passt.“ und „Weg passt.“ meldet. Dann eine Fahrt:
-  geradeaus durch die Türmitte, 0,45 m dahinter stehen bleiben.
+neuen Build**.
+- **Teil M:** Amadeus im Stand dorthin stellen, wo er in KI-F3b anhielt
+  (Gehäuse 55 bis 60 cm vor der Türlinie), messen, welche Quelle dort etwas
+  sieht, und Christopher an genau dieser Stelle nachsehen lassen. Meldet
+  ein Nahsensor etwas, das nicht da ist: keine Fahrt.
+- **Stufe 1:** wie in KI-F3b, jetzt mit „Kostenkarte passt.“ als dritter
+  Bedingung und mit der Herkunft jeder Stelle, an der der Erkunder anhält.
 - **Stufe 2** (nur nach bestandener Stufe 1 und wenn in der Übergabe
-  genannt): Amadeus steht an einem Platz im Raum, seitlich der Tür. Er fährt
-  selbst vor die Tür (erste Mission), misst neu und fährt hindurch (zweite
-  Mission im selben Stacklauf).
+  genannt): Amadeus fährt von einem Platz im Raum selbst vor die Tür und
+  dann hindurch.
 
 **Danach, je nach Ergebnis:**
 - Durchfahrt gelungen: Rundblick, Frage an die KI und Etappenfahrt in einem
@@ -132,6 +134,60 @@ auf dem KI-Rechner in Gebrauch · Sucher · Schalter „nur Rundblick“ im
 Erkunder (21.11., `6956252`) · Bestand der Türdurchfahrten · Etappenfahrt
 gebaut und simuliert (21.11., nachts) · KI-1: erste Drehung und Blickrunde
 am Roboter (21.11., nachts).
+
+## KI-F3b – drei Etappen auf der Linie, Halt kurz vor der Tür (Jetson, 22.11.2026, 22:25 bis 22:37)
+
+Zahlen, Nachrechnung und Simulation stehen im
+[Archiv](archiv/20261122-kif3-tuer-gerade/). Kein Build; 256 Tests
+bestanden. Der Bericht liegt nicht im Repository.
+
+**Was lief:** Messen beim ersten Mal passend (0,77 m, 1,87 m, 0,07 m rechts
+der Türmitte, frei 0,38 / 0,39 m); Vorprüfung im scharfen Stack beim ersten
+Mal bestanden (Radsensor nicht gesperrt). Drei Etappen geradeaus, LiDAR
+0,350 + 0,280 + 0,400 m, seitlich höchstens 5 mm, Richtung höchstens 0,3°
+daneben; nachgestellt werden musste nichts. So gerade ist Amadeus in dieser
+Linie noch nie gefahren.
+
+**Was nicht lief:** Zu Beginn der vierten Etappe, nach 7 mm, hielt der
+Nahbereichs-Halt an. Das Werkzeug danach: belegt „im Fahrstreifen 0.25 m vor
+der Vorderkante, 0.09 m links der Mitte“. Christopher: „nein er hat vor der
+tür gestoppt“, nichts berührt, „keine nachstellung beobachtet“.
+
+**Nachgerechnet:** Die Stelle lag 0,26 m vor der Türlinie, etwa 6 cm links
+der Türmitte, mitten im Durchgang. Das Türblatt liegt in der Kostenkarte
+0,37 bis 0,44 m links der Mitte, also daneben. In diese Kostenkarte
+schreiben nur die Karte des SLAM (Laser, 0,75 m hoch) und die beiden
+Nahsensoren (ab etwa 8 cm über dem Boden). Der Laser sah den Weg frei.
+Offen bleibt: ein Gegenstand mindestens 8 cm hoch, eine Fehlmessung der
+Nahsensoren oder ein Eintrag der Karte. Markierungen der Nahsensoren
+näher als 0,45 m am Sensor werden nie geräumt; eine einzelne Fehlmessung
+bliebe liegen.
+
+**Fehler im Werkzeug:** Die Zeile zur Kostenkarte vor dem Senden reichte nur
+1,5 m voraus, die Stelle lag 1,61 m voraus. Ob sie schon vor der Fahrt da
+war, ist unbekannt. Woher eine belegte Stelle stammt, konnte das Werkzeug
+nicht sagen.
+
+**Nachgebessert (nur Werkzeug der KI-Linie):** Die Kostenkarte wird vor dem
+Senden auf dem **ganzen Weg** so geprüft, wie der Nahbereichs-Halt sie
+liest („Kostenkarte passt.“ ist nötig, sonst wird nichts gesendet). Für
+eine belegte Stelle nennt das Werkzeug vor dem Senden, im reinen Messen und
+nach einem Halt die Quelle: Karte des SLAM, Nahsensor links oder rechts mit
+Höhe über dem Boden, Laser. Dazu eine Zeile, was die Nahsensoren gerade im
+Fahrstreifen sehen, mit dem Abstand vom Gehäuse für ein Maßband.
+
+**Simulation** (Laborraum mit 85° offenem Türblatt, Aufstellung wie
+KI-F3b):
+
+| Fall | Ergebnis |
+|---|---|
+| 20 cm hoher Gegenstand 0,26 m vor der Türlinie, 6 cm links | Halt nach 0,96 m (am Roboter 1,03 m), Stelle 0,25 m vor der Vorderkante, 0,12 m links (am Roboter 0,09 m); Herkunft: „Karte (SLAM) frei; Nahsensor links 12 Punkt(e), 16 bis 20 cm über dem Boden; Nahsensor rechts 6 Punkt(e), 13 bis 18 cm“ |
+| Messung im Stand an der Haltestelle, mit Gegenstand | „Kostenkarte passt nicht“, Herkunft: beide Nahsensoren, 14 bis 20 cm; Laser sieht dort nichts |
+| Messung im Stand an der Haltestelle, ohne Gegenstand | „Kostenkarte passt“, Nahsensoren sehen nichts; keine Fehlalarme von Türblatt oder Pfosten |
+| ohne Gegenstand, ganze Fahrt mit dem neuen Werkzeug | „Kostenkarte passt“, durch die Tür, im Flur nach 53 s; die nächste belegte Stelle danach (Flurwand) richtig als „Karte (SLAM) belegt; Laser sieht dort etwas“ benannt |
+
+Das Muster am Roboter gleicht dem mit Gegenstand. Ob dort wirklich etwas
+stand, belegt das nicht; eine Fehlmessung sähe genauso aus.
 
 ## KI-F3, erster Anlauf – nicht gefahren, Radsensor beim Start gesperrt (Jetson, 22.11.2026, 22:03 bis 22:12)
 
@@ -694,6 +750,10 @@ KONZEPT §13.
 | 22.11.2026 | Tests dieser Linie mit der Anfahrt | Entwicklungsumgebung | 243 bestanden, 2 übersprungen (ohne ROS); 253 bestanden (ROS 2 Jazzy, abgeschottet) |
 | 22.11.2026 | **KI-F3, erster Anlauf** | Jetson, Laborraum, mit Christopher | kein Build; 253 Tests bestanden; T-1 erfüllt (0,77 m, frei 0,38 / 0,39 m, beim ersten Messen); Vorprüfung im scharfen Stack nicht bestanden (Encoder-Zeitwache `fault_latched`, `encoder_timing_continuity_unproven`); keine Mission, keine Bewegung; Stufe 2 nicht gelaufen |
 | 22.11.2026 | Werkzeug zum Zustand des Radsensors | Entwicklungsumgebung | 3 Tests; KI-Linie 246 bestanden, 2 übersprungen (ohne ROS); 256 bestanden (ROS 2 Jazzy, abgeschottet) |
+| 22.11.2026 | **KI-F3b** | Jetson, Laborraum, mit Christopher | kein Build; 256 Tests bestanden; T-1 erfüllt; Vorprüfung bestanden; drei Etappen 1,03 m (seitlich ≤ 5 mm, ≤ 0,3°); Halt am Nahbereich 0,26 m vor der Türlinie, Stelle 0,25 m vor der Vorderkante, 0,09 m links; nichts berührt; T-2 und T-4 nicht erfüllt |
+| 22.11.2026 | Halt von KI-F3b nachgestellt | Simulation, 20 cm hoher Gegenstand an der Stelle | Halt nach 0,96 m, Stelle 0,25 m / 0,12 m links; Herkunft „Nahsensor links und rechts, 13 bis 20 cm“, Karte frei |
+| 22.11.2026 | Messung an der Haltestelle im Stand | Simulation, mit und ohne Gegenstand | mit: Quelle beide Nahsensoren, 14 bis 20 cm, Laser nichts; ohne: Kostenkarte frei, keine Punkte |
+| 22.11.2026 | Tests dieser Linie mit Herkunftsprüfung | Entwicklungsumgebung | 254 bestanden, 2 übersprungen (ohne ROS); 264 bestanden (ROS 2 Jazzy, abgeschottet) |
 
 **Gemessen an der künstlichen Beispielwelt** (ausgedachtes Zimmer mit
 80-cm-Tür, 90-cm-Glastür zum Balkon, Schränken, Kiste; LiDAR-Rauschen 1 cm):
@@ -745,6 +805,11 @@ Jetson, echte Bilder.
   9,6 cm Abstand der gepolsterten Kontur zum Pfosten).
 - **Die Prüfung des Freiraums und die Zeile zur Kostenkarte** an echten
   Messungen.
+- **Was in KI-F3b vor der Tür stand:** Quelle und Gegenstand sind nicht
+  festgestellt (Teil M von KI-F4).
+- **Die Herkunftsprüfung des Werkzeugs am Roboter:** Lesen der echten
+  Nahsensor-Wolken, der Karte und der Höhenangaben; bisher nur in der
+  Simulation und mit Tests.
 - **Warum sich der Radsensor beim Hochfahren sperrt:** Größe und Zeitpunkt
   der Lücke sind am 22.11. nicht gemessen; das Werkzeug dafür kommt mit
   KI-F3b zum ersten Mal zum Einsatz. Ob ein Neustart verlässlich hilft, ist
@@ -772,8 +837,7 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Zweiter Anlauf KI-F3b auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): Stufe 1 von
-vorn auf gerader Linie durch die offene Labortür; sperrt sich der
-Radsensor beim Hochfahren, einmal sichern und einmal neu starten; nach
-bestandener Stufe 1 Stufe 2, in der Amadeus selbst vor die Tür fährt und
-dann hindurch.
+Auftrag KI-F4 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): zuerst im Stand an
+der Haltestelle messen und Christopher nachsehen lassen; dann Stufe 1 von
+vorn auf gerader Linie durch die offene Labortür; nach bestandener Stufe 1
+Stufe 2, in der Amadeus selbst vor die Tür fährt und dann hindurch.
