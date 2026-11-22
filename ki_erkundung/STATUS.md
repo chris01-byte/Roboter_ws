@@ -753,6 +753,7 @@ KONZEPT §13.
 | 22.11.2026 | **KI-F3b** | Jetson, Laborraum, mit Christopher | kein Build; 256 Tests bestanden; T-1 erfüllt; Vorprüfung bestanden; drei Etappen 1,03 m (seitlich ≤ 5 mm, ≤ 0,3°); Halt am Nahbereich 0,26 m vor der Türlinie, Stelle 0,25 m vor der Vorderkante, 0,09 m links; nichts berührt; T-2 und T-4 nicht erfüllt |
 | 22.11.2026 | Halt von KI-F3b nachgestellt | Simulation, 20 cm hoher Gegenstand an der Stelle | Halt nach 0,96 m, Stelle 0,25 m / 0,12 m links; Herkunft „Nahsensor links und rechts, 13 bis 20 cm“, Karte frei |
 | 22.11.2026 | Messung an der Haltestelle im Stand | Simulation, mit und ohne Gegenstand | mit: Quelle beide Nahsensoren, 14 bis 20 cm, Laser nichts; ohne: Kostenkarte frei, keine Punkte |
+| 22.11.2026 | Ganze Fahrten mit der Prüfung der Kostenkarte auf dem ganzen Weg | Simulation, 85° offenes Blatt | von vorn (Aufstellung KI-F3b): „Kostenkarte passt“, im Flur nach 53 s, keine Berührung, engste Stelle 11 cm; Anfahrt von rechts schräg und Durchfahrt: beide Wege „Kostenkarte passt“, im Flur nach 117 s, keine Berührung, 7,1 cm; keine falsche Ablehnung |
 | 22.11.2026 | Tests dieser Linie mit Herkunftsprüfung | Entwicklungsumgebung | 254 bestanden, 2 übersprungen (ohne ROS); 264 bestanden (ROS 2 Jazzy, abgeschottet) |
 
 **Gemessen an der künstlichen Beispielwelt** (ausgedachtes Zimmer mit
