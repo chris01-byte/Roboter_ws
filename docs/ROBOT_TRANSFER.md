@@ -443,8 +443,22 @@ Nahbereichs-Halt 0,26 m vor der Türlinie, die Tür nicht erreicht; nichts
 berührt. Keine Kamera, kein KI-Rechner. Releases und Umgebungsdateien
 unverändert.
 
-Stand 22.11.2026 (nachts), **noch keine weitere Jetson-Wirkung:** Auftrag
-KI-F4 ist erteilt (`ki_erkundung/AUFTRAG.md`). Er baut nichts (Release
+Stand 22.11.2026 (nachts, später), **noch keine weitere Jetson-Wirkung:**
+Auftrag KI-F4 wurde nicht übergeben; ersetzt durch **KI-F5**
+(`ki_erkundung/AUFTRAG.md`). KI-F5 baut einen neuen Release
+`kif5-<STAMP>` mit eigener Umgebungsdatei `~/roboter_worktrees/kif5.env`
+(Kopie von `kif1.env`, nur `SH_REL` geändert); Prüfdateien unter
+`kif5-<STAMP>/pruefung/`. Neu gegenüber `kif1-20261122_1515`: der
+Laborschalter `nahsensoren` in den Startdateien, `require_near_field` im
+Fahrtor und das Profil `collision_monitor_ohne_nahsensoren.yaml`. **Jeder
+Stackstart von KI-F5 läuft mit `nahsensoren:=false`:** kein VL53-Knoten,
+Kollisionsmonitor ohne Quelle, nur die Dreh- und Direktbefehle des
+Erkunders frei. Fahrten wie bisher: je Stufe eine Durchfahrt durch die
+Labortür in den Flur, 5 cm/s, ohne Nav2. Rückfall: `kif5.env` und den
+Release-Ordner löschen; `kif1-20261122_1515` und `kif1.env` bleiben.
+
+Davor, Stand 22.11.2026 (nachts), **ohne Jetson-Wirkung:** Auftrag
+KI-F4 war erteilt. Er baut nichts (Release
 `kif1-20261122_1515`, `kif1.env`) und legt nur Prüfdateien unter
 `kif1-20261122_1515/pruefung/kif4/` an. Teil M: ein Stackstart ohne
 Motorfreigabe, Amadeus von Hand an die Haltestelle vor der Tür gestellt,
@@ -452,15 +466,9 @@ nur messen. Danach wie KI-F3b: ein Stackstart ohne Motorfreigabe, einer
 scharf, eine Fahrt auf gerader Linie durch die offene Labortür (5 cm/s,
 ohne Nav2); Stufe 2 nur nach bestandener Stufe 1. Sperrt sich der
 Radsensor beim Hochfahren, ist je Stufe genau ein weiterer scharfer Start
-erlaubt. **Stufe 1:** ein
-Stackstart ohne Motorfreigabe (aufstellen und messen, wiederholbar), einer
-scharf; Amadeus fährt **einmal auf gerader Linie durch die offene Labortür
-in den Flur** (5 cm/s, Etappen bis 0,5 m, ohne Nav2). **Stufe 2** (nur wenn
-in der Übergabe genannt und Stufe 1 bestanden): wieder ein Stackstart ohne
-Motorfreigabe und einer scharf; Amadeus fährt von einem Platz im Laborraum
-**selbst vor die Tür** (Drehen auf der Stelle, gerade Etappen) und danach
-ein zweites Mal durch die Tür. Dafür gibt es in Stufe 2 zwei Missionsstarts
-in einem Stacklauf.
+erlaubt. (Der Rest dieses Absatzes beschrieb bis 22.11. versehentlich noch
+den Plan von KI-F3; dessen tatsächliche Wirkung steht in den Nachträgen
+oben.)
 
 Stand 21.11.2026, zum früheren Auftrag KI-0N: die sieben Aufnahmen neu
 auswerten, auf Wunsch weitere Standbilder mit Kamera und LiDAR; keine

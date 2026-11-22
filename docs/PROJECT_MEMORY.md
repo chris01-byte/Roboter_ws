@@ -2120,6 +2120,33 @@ falsch geplant, nicht der Halt:**
   Lage (A2) hat die Lage vom Vormittag nicht getroffen; die Vermutung zur
   1,25 m breiten Lücke ist weder bestätigt noch widerlegt.
 
+**Nachtrag 22.11.2026 (nachts) – Entscheidung des Projektinhabers: Laborprobe
+ohne Nahsensoren:**
+- **Wortlaut:** „Die Nahbereichssensoren machen gerade Probleme. Deswegen
+  schreibe jetzt einen Testlauf, wo diese komplett deaktiviert werden. Wir
+  wollen jetzt einmal das Konzept überprüfen, ohne die Nahbereichssensoren
+  zu nutzen. Diese machen immer wieder Probleme.“
+- **Befund vor dem Bau:** Die VL53 sind tiefer eingebunden als ein
+  Startschalter: Der Kollisionsmonitor hat im Kartierbetrieb nur sie als
+  Quelle, und das Fahrtor sperrt ohne frische, gesunde VL53 jede Bewegung
+  des Erkunders (fail-closed). „Komplett aus“ heißt deshalb: der
+  Kollisionsmonitor sieht nichts, und das Fahrtor braucht eine
+  ausdrückliche, eng begrenzte Ausnahme.
+- **Umsetzung (dritte Anschlussstelle, MASTERPLAN §10.3):** Startargument
+  `nahsensoren` (Vorgabe `true`). Mit `false`: kein VL53-Knoten, beide
+  VL53-Quellen des Kollisionsmonitors abgeschaltet, Fahrtor gibt ohne VL53
+  **nur** die Dreh- und Direktbefehle des Erkunders frei; Nav2- und
+  Raumfahrten bleiben gesperrt. Eigener Commit, eigene Tests, Simulation
+  (AGENTS §2.7).
+- **Folge, ausdrücklich festgehalten:** Ohne Nahsensoren erkennt nichts
+  niedrige Dinge unter der LiDAR-Höhe. In der Simulation fuhr Amadeus mit
+  5 cm/s ungebremst gegen einen 20 cm hohen Gegenstand, vor dem er mit
+  Nahsensoren anhielt. Ausgleich im Auftrag: Christopher räumt vor jeder
+  Fahrt den Weg frei und bestätigt das; Hand am Not-Aus; nur Laborraum und
+  der Flur direkt hinter der Tür. **Kein Betrieb für die Wohnung.**
+- **Offen bleibt:** woher die Stelle in KI-F3b kam; die Messung dazu (KI-F4)
+  entfällt mit dieser Entscheidung.
+
 **Nachtrag 22.11.2026 (nachts, später) – KI-F3b: bis kurz vor die Tür, dann
 Halt an einer Stelle unbekannter Herkunft:**
 - **Ergebnis:** Drei Etappen geradeaus, 1,03 m, nie mehr als 5 mm neben der

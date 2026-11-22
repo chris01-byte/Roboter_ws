@@ -1,6 +1,6 @@
 # Konzept „KI-Erkundung“ – eine KI übernimmt Ziel- und Suchwahl
 
-**Version 1.11 · 22.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
+**Version 1.12 · 22.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
 nachgeführt nach drei Durchgängen an echten Aufnahmen, der Freigabe der
 Schalter „nur Rundblick“ und „Etappenfahrt“ und der Festlegung „die KI
 bekommt Zeit, kein stiller Rückfall“**
@@ -346,6 +346,16 @@ So läuft es:
 7. Scheitert ein Schritt, bleibt Amadeus stehen und der Auftrag nennt den
    Grund. Ein zweiter Versuch ist ein neuer Auftrag.
 
+**Laborprobe ohne Nahsensoren (seit v1.12, Entscheidung des
+Projektinhabers vom 22.11.2026):** Mit dem Startargument `nahsensoren:=false`
+läuft dieselbe Etappenfahrt ohne die beiden VL53. Der Nahbereichs-Halt sieht
+dann nur noch die Karte des Lasers, der Kollisionsmonitor sieht nichts, und
+das Fahrtor gibt nur die Dreh- und Direktbefehle des Erkunders frei.
+Niedrige Dinge unter der LiDAR-Höhe erkennt in diesem Betrieb nichts;
+Christopher räumt den Weg vorher frei und hat die Hand am Not-Aus. Zweck:
+das Konzept (vermessen, gerade Linie, Etappen) ohne die Störungen der
+Nahsensoren prüfen. Das ist kein Betrieb für die Wohnung.
+
 Grenzen, die bekannt sind: Das geht nur, wenn die geraden Strecken der
 Anfahrt und die gerade Linie durch die Tür frei sind; die Etappenfahrt
 weicht nichts aus. Von einem Platz, von dem die Tür nicht türbreit
@@ -647,6 +657,11 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   entschieden hat. Der Fahrteil soll aus vorhandenem, real bewährtem Code
   entstehen; Bestand und Vorschlag stehen im STATUS, entschieden ist dazu
   noch nichts.
+- 22.11.2026, v1.12 (Entscheidung des Projektinhabers: „Die
+  Nahbereichssensoren machen gerade Probleme. Deswegen schreibe jetzt einen
+  Testlauf, wo diese komplett deaktiviert werden.“): Laborprobe ohne
+  Nahsensoren in §6a; dazu ein Laborschalter in Startdateien, Fahrtor und
+  Kollisionsmonitor (MASTERPLAN §10.3, dritte Anschlussstelle).
 - 22.11.2026, v1.11, nach KI-F3b: Amadeus fuhr drei Etappen genau auf der
   Linie und hielt 0,26 m vor der Türlinie an einer belegten Stelle mitten
   im Durchgang; woher sie stammte, ließ sich nicht feststellen. In §6a

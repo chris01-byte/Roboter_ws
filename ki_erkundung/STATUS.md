@@ -1,6 +1,15 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 22.11.2026 (nachts, nach KI-F3b):** Amadeus ist zum ersten Mal in
+**Stand 22.11.2026 (nachts, Laborprobe ohne Nahsensoren):** Der
+Projektinhaber hat entschieden, das Konzept einmal **ohne die beiden
+Nahsensoren** zu prüfen: „Die Nahbereichssensoren machen gerade Probleme.
+Deswegen schreibe jetzt einen Testlauf, wo diese komplett deaktiviert
+werden.“ Dafür gibt es den Laborschalter `nahsensoren:=false` und den Auftrag
+KI-F5 (mit neuem Build). Ohne Nahsensoren erkennt nichts niedrige Dinge
+unter etwa 75 cm, und der Kollisionsmonitor sieht nichts; Christopher räumt
+den Weg vorher frei. KI-F4 (Messung an der Haltestelle) entfällt.
+
+**Davor (KI-F3b):** Amadeus ist zum ersten Mal in
 dieser Linie geradeaus auf die Tür zugefahren: drei Etappen, 1,03 m, nie mehr
 als 5 mm neben der Linie. **0,26 m vor der Türlinie hielt er an**, weil in
 der Kostenkarte mitten im Durchgang etwas belegt war (0,25 m vor seiner
@@ -16,9 +25,8 @@ vermessen und die Fahrt gar nicht gestartet (KI-F1). Im zweiten passte die
 Aufstellung, aber der geplante Weg führte erst schräg zu einem Punkt auf
 der Türachse und damit an die Spitze des offenen Türblatts; der
 Nahbereichs-Halt hielt Amadeus nach 0,35 m an (KI-F2). Der Halt war
-richtig, der Weg war falsch geplant. **Als Nächstes:** Auftrag KI-F4
-([AUFTRAG.md](AUFTRAG.md)): zuerst an der Haltestelle messen, dann in zwei
-Stufen fahren: erst von vorn auf gerader Linie
+richtig, der Weg war falsch geplant. **Als Nächstes:** Auftrag KI-F5
+([AUFTRAG.md](AUFTRAG.md)) ohne Nahsensoren, in zwei Stufen: erst von vorn auf gerader Linie
 durch die Türmitte, dann von einem Platz im Raum, von dem Amadeus **selbst
 vor die Tür fährt**. Beides wird vor dem Senden gegen das Laserbild geprüft.
 
@@ -46,7 +54,7 @@ fährt mit seiner Schutzkette.
 |---|---|---|---|
 | Erstes Sehen | im Stand Bild und Laser aufnehmen, die KI fragen, die Antwort prüfen | KI-0 | **erledigt** (21.11.) |
 | Blickrunde | sich selbst einmal herumdrehen; aus acht Bildern nennt die KI den Ausgang | KI-1 | **am Roboter gelungen** (21.11., eine Runde im Labor); für die Kriterien fehlen weitere Runden |
-| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1), Ausrichten (KI-F2), drei Etappen genau auf der Linie bis kurz vor die Tür (KI-F3b); durch die Tür und selbst vor die Tür bisher nur in der Simulation; als Nächstes KI-F4 |
+| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1), Ausrichten (KI-F2), drei Etappen genau auf der Linie bis kurz vor die Tür (KI-F3b); durch die Tür und selbst vor die Tür bisher nur in der Simulation; als Nächstes KI-F5 ohne Nahsensoren |
 | Raum für Raum | weiter, bis kein Ausgang mehr offen ist (Laborraum, Flur, Schlafzimmer) | KI-3 | offen |
 | Räume benennen, um Hilfe rufen | Raumnamen als Vorschlag in der App; Hilferuf mit Grund und Bild | KI-4 | offen |
 | Auf Zuruf | „fahr in die Küche“, „such die Tasse“ | KI-5 | offen |
@@ -56,16 +64,13 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-F4
-„was hält vor der Tür? Erst messen, dann fahren“** ([AUFTRAG.md](AUFTRAG.md)).
-Auf dem Jetson, mit Christopher; ohne Kamera und ohne KI-Rechner; **ohne
-neuen Build**.
-- **Teil M:** Amadeus im Stand dorthin stellen, wo er in KI-F3b anhielt
-  (Gehäuse 55 bis 60 cm vor der Türlinie), messen, welche Quelle dort etwas
-  sieht, und Christopher an genau dieser Stelle nachsehen lassen. Meldet
-  ein Nahsensor etwas, das nicht da ist: keine Fahrt.
-- **Stufe 1:** wie in KI-F3b, jetzt mit „Kostenkarte passt.“ als dritter
-  Bedingung und mit der Herkunft jeder Stelle, an der der Erkunder anhält.
+**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-F5
+„Türdurchfahrt ohne Nahsensoren (Laborprobe)“** ([AUFTRAG.md](AUFTRAG.md)).
+Auf dem Jetson, mit Christopher; ohne Kamera und ohne KI-Rechner; **mit
+neuem Build** (Release `kif5-<STAMP>`), jeder Start mit
+`nahsensoren:=false`.
+- **Stufe 1:** wie in KI-F3b von vorn auf gerader Linie durch die Tür;
+  vor der Fahrt fragt der Agent, ob der Weg frei von niedrigen Dingen ist.
 - **Stufe 2** (nur nach bestandener Stufe 1 und wenn in der Übergabe
   genannt): Amadeus fährt von einem Platz im Raum selbst vor die Tür und
   dann hindurch.
@@ -239,6 +244,51 @@ nur lesend sichern, was die Zeitwache meldet (neues Werkzeug
 `werkzeuge/radsensor_zustand.py`: Größe und Zeitpunkt der ersten Lücke,
 Dauer der Lesepaare), dazu die Last; dann genau ein neuer scharfer Start.
 Am Motortreiber wird nichts geändert (Motorsteuerung, AGENTS §2.7).
+
+## Laborprobe ohne Nahsensoren (Entscheidung des Projektinhabers, gebaut 22.11.2026, nachts)
+
+**Entscheidung:** „Die Nahbereichssensoren machen gerade Probleme.
+Deswegen schreibe jetzt einen Testlauf, wo diese komplett deaktiviert
+werden. Wir wollen jetzt einmal das Konzept überprüfen, ohne die
+Nahbereichssensoren zu nutzen. Diese machen immer wieder Probleme.“
+
+**Was dafür nötig war (gemessen am Code, nicht vermutet):** Die Nahsensoren
+hängen an drei Stellen. (1) Der VL53-Knoten speist beide Kostenkarten.
+(2) Der **Kollisionsmonitor** hat im Kartierbetrieb **nur** die beiden VL53
+als Quelle. (3) Das **Fahrtor** gibt im Erkundungsbetrieb nur Befehle frei,
+wenn beide VL53 frisch und gesund melden; ohne sie sperrt es jede Bewegung.
+Abschalten allein hätte Amadeus also stillgelegt.
+
+**Was gebaut ist** (dritte Anschlussstelle, MASTERPLAN §10.3; Vorgabe
+überall unverändert):
+- `app_mapping.launch.py` und `nav_mapping.launch.py`: Startargument
+  `nahsensoren` (Vorgabe `true`).
+- `vl53_near_field.launch.py`: `start_vl53` (Vorgabe `true`); mit `false`
+  startet der VL53-Knoten nicht. TF und Kollisionsmonitor laufen weiter (er
+  liegt im Fahrbefehlspfad).
+- `collision_monitor_ohne_nahsensoren.yaml`: schaltet beide VL53-Quellen
+  ab, damit eine Quelle ohne Daten keinen Halt erzwingt. Der
+  Kollisionsmonitor sieht dann nichts und reicht die Befehle durch.
+- Fahrtor `require_near_field` (Vorgabe `true`): mit `false` gilt die
+  Ausnahme **nur** für die beiden begrenzten Kanäle des Erkunders (Drehen
+  bis 0,15 rad/s, geradeaus bis 0,08 m/s). Nav2- und Raumfahrten bleiben
+  ohne VL53 gesperrt; LiDAR, Karte, Odometrie und Not-Aus bleiben Pflicht.
+- Simulation: Experiment `etappenfahrt_ohne_nahsensoren.yaml`.
+
+**Was in diesem Betrieb fehlt:** Niedrige Dinge unter der LiDAR-Höhe sieht
+nichts; der Kollisionsmonitor bremst und hält nicht. Es bleiben: die
+Prüfungen des Werkzeugs (Laserbild, Kostenkarte aus der Laserkarte), der
+Streifen vor jeder Etappe (Laser), der Nahbereichs-Halt auf der Laserkarte,
+5 cm/s, der Not-Aus und Christopher, der den Weg vorher freiräumt.
+
+**Simulation** (Laborraum, 85° offenes Blatt, Aufstellung wie KI-F3b):
+
+| Fall | Ergebnis |
+|---|---|
+| ohne Nahsensoren, ohne Gegenstand | „Kostenkarte passt“, durch die Tür, im Flur nach 50 s, keine Berührung, engste Stelle 10,2 cm; das Werkzeug meldet „Nahsensoren … nicht empfangen“ |
+| ohne Nahsensoren, 20 cm hoher Gegenstand 0,26 m vor der Türlinie | **Berührung** bei 42 s mit vollen 0,05 m/s, ohne Bremsen (mit Nahsensoren hielt Amadeus davor an) |
+| ohne Nahsensoren, Anfahrt von rechts schräg und Durchfahrt | beide Wege „Kostenkarte passt“, selbst vor die Tür und hindurch, im Flur nach 117 s, keine Berührung, engste Stelle 8,2 cm |
+| Gegenprobe **mit** Nahsensoren (Vorgabe), derselbe Stand | wie vorher: durch die Tür, im Flur nach 53 s, keine Berührung; Fahrtor im Normalbetrieb („beide VL53 müssen fortlaufend frisch bleiben“) |
 
 ## Anfahrt: Amadeus stellt sich selbst vor die Tür (gebaut 22.11.2026, spät)
 
@@ -755,6 +805,8 @@ KONZEPT §13.
 | 22.11.2026 | Messung an der Haltestelle im Stand | Simulation, mit und ohne Gegenstand | mit: Quelle beide Nahsensoren, 14 bis 20 cm, Laser nichts; ohne: Kostenkarte frei, keine Punkte |
 | 22.11.2026 | Ganze Fahrten mit der Prüfung der Kostenkarte auf dem ganzen Weg | Simulation, 85° offenes Blatt | von vorn (Aufstellung KI-F3b): „Kostenkarte passt“, im Flur nach 53 s, keine Berührung, engste Stelle 11 cm; Anfahrt von rechts schräg und Durchfahrt: beide Wege „Kostenkarte passt“, im Flur nach 117 s, keine Berührung, 7,1 cm; keine falsche Ablehnung |
 | 22.11.2026 | Tests dieser Linie mit Herkunftsprüfung | Entwicklungsumgebung | 254 bestanden, 2 übersprungen (ohne ROS); 264 bestanden (ROS 2 Jazzy, abgeschottet) |
+| 22.11.2026 | Laborschalter ohne Nahsensoren | Entwicklungsumgebung (ROS 2 Jazzy) | Fahrtor und Startdateien: 55 Tests der betroffenen Dateien, Paket `robot_navigation` mit Erkunderprüfungen 254 bestanden; neu: ohne Schalter ohne VL53 keine Freigabe, mit Schalter nur Dreh- und Direktkanal, Nav2 und Raumfahrt gesperrt |
+| 22.11.2026 | Fahrten ohne Nahsensoren | Simulation | siehe Abschnitt „Laborprobe ohne Nahsensoren“: Durchfahrt gelungen; gegen einen 20 cm hohen Gegenstand ungebremst gefahren |
 
 **Gemessen an der künstlichen Beispielwelt** (ausgedachtes Zimmer mit
 80-cm-Tür, 90-cm-Glastür zum Balkon, Schränken, Kiste; LiDAR-Rauschen 1 cm):
@@ -807,7 +859,12 @@ Jetson, echte Bilder.
 - **Die Prüfung des Freiraums und die Zeile zur Kostenkarte** an echten
   Messungen.
 - **Was in KI-F3b vor der Tür stand:** Quelle und Gegenstand sind nicht
-  festgestellt (Teil M von KI-F4).
+  festgestellt; die Messung dazu (KI-F4) entfiel mit der Entscheidung für
+  die Laborprobe ohne Nahsensoren.
+- **Der Laborschalter am Roboter:** ob der Kollisionsmonitor der
+  Humble-Version das Abschalten einzelner Quellen kennt (ohne VL53-Daten
+  sieht er so oder so nichts), und ob das Fahrtor ohne VL53 wie in der
+  Simulation nur die beiden Kanäle des Erkunders freigibt.
 - **Die Herkunftsprüfung des Werkzeugs am Roboter:** Lesen der echten
   Nahsensor-Wolken, der Karte und der Höhenangaben; bisher nur in der
   Simulation und mit Tests.
@@ -838,7 +895,7 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Auftrag KI-F4 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): zuerst im Stand an
-der Haltestelle messen und Christopher nachsehen lassen; dann Stufe 1 von
-vorn auf gerader Linie durch die offene Labortür; nach bestandener Stufe 1
+Auftrag KI-F5 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): neuer Build mit dem
+Laborschalter, dann ohne Nahsensoren von vorn auf gerader Linie durch die
+offene Labortür, vorher den Weg freiräumen; nach bestandener Stufe 1
 Stufe 2, in der Amadeus selbst vor die Tür fährt und dann hindurch.
