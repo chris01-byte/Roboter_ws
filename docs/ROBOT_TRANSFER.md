@@ -426,10 +426,20 @@ vorwärts, vom Nahbereichs-Halt angehalten; nichts berührt, die Tür nicht
 erreicht. Keine Kamera, kein KI-Rechner. Releases und Umgebungsdateien
 unverändert.
 
-Stand 22.11.2026 (spät), **noch keine weitere Jetson-Wirkung:**
-Folgeauftrag KI-F3 ist erteilt (`ki_erkundung/AUFTRAG.md`), in zwei Stufen.
+Nachtrag 22.11.2026 (nachts), tatsächliche Wirkung von KI-F3, erster
+Anlauf (Bericht des Jetson-Agenten, 22:03 bis 22:12): Arbeitskopie auf
+`6f7d496`, kein Build. Neu nur Prüfdateien unter
+`kif1-20261122_1515/pruefung/kif3/`. Zwei Stackstarts: einer ohne
+Motorfreigabe (aufstellen und messen), einer scharf. **Keine Bewegung:**
+Die Vorprüfung im scharfen Stack fiel durch (Encoder-Zeitwache
+`fault_latched`), keine Mission. Releases und Umgebungsdateien unverändert.
+
+Stand 22.11.2026 (nachts), **noch keine weitere Jetson-Wirkung:** zweiter
+Anlauf KI-F3b ist erteilt (`ki_erkundung/AUFTRAG.md`), in zwei Stufen.
 Er baut nichts (Release `kif1-20261122_1515`, `kif1.env`) und legt nur
-Prüfdateien unter `kif1-20261122_1515/pruefung/kif3/` an. **Stufe 1:** ein
+Prüfdateien unter `kif1-20261122_1515/pruefung/kif3b/` an. Sperrt sich der
+Radsensor beim Hochfahren, ist je Stufe genau ein weiterer scharfer Start
+erlaubt. **Stufe 1:** ein
 Stackstart ohne Motorfreigabe (aufstellen und messen, wiederholbar), einer
 scharf; Amadeus fährt **einmal auf gerader Linie durch die offene Labortür
 in den Flur** (5 cm/s, Etappen bis 0,5 m, ohne Nav2). **Stufe 2** (nur wenn

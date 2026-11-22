@@ -1,8 +1,19 @@
 # Aktueller Auftrag der KI-Linie: KI-F3 – durch die Tür: erst von vorn, dann vom Platz im Raum
 
-**Erteilt am 22.11.2026 (abends).** Er wird aktiv, sobald der Projektinhaber
-ihn übergibt. Er läuft auf dem **Jetson**, mit Christopher. Der KI-Rechner
-wird nicht gebraucht; Kamera und KI laufen in diesem Auftrag nicht.
+**Erteilt am 22.11.2026 (abends); zweiter Anlauf „KI-F3b“ seit 22.11.2026
+(spät).** Er wird aktiv, sobald der Projektinhaber ihn übergibt. Er läuft
+auf dem **Jetson**, mit Christopher. Der KI-Rechner wird nicht gebraucht;
+Kamera und KI laufen in diesem Auftrag nicht.
+
+**Erster Anlauf (22.11., 22:03 bis 22:12):** Aufstellen und Messen passten
+beim ersten Mal. Im scharfen Stack hatte sich der Radsensor beim Hochfahren
+selbst gesperrt (Encoder-Zeitwache `fault_latched`,
+`encoder_timing_continuity_unproven`); die Vorprüfung fiel durch, es gab
+keine Mission und keine Bewegung. Für diesen bekannten Fall (zuerst SH-4,
+04.11.) kannte der Auftrag keinen Weg. Neu ist die Ausnahme „Radsensor beim
+Start gesperrt“ unter B1: einmal sichern, was die Zeitwache meldet, dann
+genau ein neuer scharfer Start. Prüfdateien jetzt unter `pruefung/kif3b/`,
+Bericht `~/ki_erkundung_bericht_kif3b.md`.
 
 **Warum es ihn gibt:** In KI-F2 hielt Amadeus nach 0,35 m an und kam nicht
 bis zur Tür. Der Halt war richtig; falsch war der geplante Weg: erst schräg
@@ -37,9 +48,9 @@ dann ohne Hilfe hindurch?
 | Konzept | `ki_erkundung/KONZEPT.md`, Abschnitt 6a |
 | Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens der Commit, der diesen Auftrag enthält. **Kein neuer Build:** Es läuft der Release `kif1-20261122_1515` mit `~/roboter_worktrees/kif1.env`, wie in KI-F1 und KI-F2. Am Erkunder hat sich nichts geändert (Schritt 1 prüft das); geändert ist nur das Werkzeug `fahrziel_senden.py`, und das läuft aus der Arbeitskopie |
 | Was neu ist | Keine neue Verhaltensänderung am Roboter: derselbe Schalter `stage_drive_only:=true`. Neu in Stufe 1 ist das Ziel: zwei Punkte auf der geraden Linie vom Standplatz durch die Türmitte (1,2 m vor und 0,45 m hinter der Türlinie), und die Prüfung des Freiraums neben dieser Linie vor dem Senden. Neu in Stufe 2: die **Anfahrt** (`--vor-die-tuer`): zu einem Punkt auf der Türachse, dort zur Tür drehen, ein Stück auf sie zu; danach neu messen und wie in Stufe 1 hindurch. Dafür gibt es in Stufe 2 zum ersten Mal **zwei Missionsstarts in einem Stacklauf** |
-| Erwartetes Ergebnis | Bericht `~/ki_erkundung_bericht_kif3.md`: die Messungen im Stand wörtlich, die Fahrt mit den Meldungen des Erkunders und des Werkzeugs, die Kriterien und Christophers Antworten wörtlich |
+| Erwartetes Ergebnis | Bericht `~/ki_erkundung_bericht_kif3b.md`: die Messungen im Stand wörtlich, die Fahrt mit den Meldungen des Erkunders und des Werkzeugs, die Kriterien und Christophers Antworten wörtlich |
 | Nicht-Ziele | Keine KI, keine Kamera, kein Rundblick, kein Nav2-Ziel; kein Build; keine eigene Code- oder Parameteränderung; je Stufe keine Wiederholung der Fahrt |
-| Rückfall | Es wird nichts angelegt außer Prüfdateien unter `pruefung/kif3/` im vorhandenen Release-Ordner. Ohne das Startargument verhält sich der Stack wie am 19.11. |
+| Rückfall | Es wird nichts angelegt außer Prüfdateien unter `pruefung/kif3b/` im vorhandenen Release-Ordner. Ohne das Startargument verhält sich der Stack wie am 19.11. |
 | Bereich und Freigabe | Laborraum und, für die Durchfahrt, der Flur unmittelbar hinter der Labortür: vom Projektinhaber am 21.11.2026 ausdrücklich verlangt und mit der Übergabe dieses Auftrags für die Durchfahrten dieses Auftrags freigegeben (eine je Stufe). Christopher ist dabei, die Hand am Not-Aus. 100 ms Anfahrzeit wie seit dem 15.11. |
 | Stufe 2 | Läuft nur, wenn der Projektinhaber sie in der Übergabe nennt **und** Stufe 1 die Kriterien T-1 bis T-6 erfüllt hat |
 
@@ -67,14 +78,14 @@ dann ohne Hilfe hindurch?
   die Anfahrt und die Durchfahrt). Bricht eine ab oder hält sie an, wird
   sie nicht wiederholt, und es folgt keine weitere Fahrt. (Neu aufstellen
   und messen im Stand ist keine Fahrt und darf wiederholt werden.) Einzige
-  Ausnahmen stehen unter „Motorregler antworten nicht“ und „Nichts
-  gesendet“;
+  Ausnahmen stehen unter „Motorregler antworten nicht“, „Radsensor beim
+  Start gesperrt“ und „Nichts gesendet“;
 - keine Frage vorab, ob die Motoren frei sind, und keine Fragerunde zu
   unveränderten Laborbedingungen (LAB-1). Gefragt wird nur, was in diesem
   Auftrag wörtlich als Frage steht;
 - Not-Aus und Nutzerabbruch nie zurücksetzen (LAB-1 §4);
 - nichts in `~/roboter_ws`, nichts an den Umgebungsdateien und an
-  bestehenden Releases (außer neuen Prüfdateien unter `pruefung/kif3/`);
+  bestehenden Releases (außer neuen Prüfdateien unter `pruefung/kif3b/`);
 - Amadeus wird nur von Hand umgestellt, wenn kein Stack mit Motorfreigabe
   läuft;
 - keine Prozessgruppen-Signale, kein `pkill -f`, kein `killall`, kein `kill -9`;
@@ -134,7 +145,7 @@ Fehlt der Release oder die Umgebungsdatei: berichten, Ende.
 ```bash
 cd ~/roboter_worktrees/selbstheilung-v2 && git status --short && git pull --ff-only && git rev-parse HEAD
 git diff --stat baa16b7 HEAD -- src/ | tail -3; echo "zeilen=$(git diff --stat baa16b7 HEAD -- src/ | wc -l)"
-source ~/roboter_worktrees/kif1.env; echo "rc=$? $SH_REL"; mkdir -p "$SH_PR/kif3"
+source ~/roboter_worktrees/kif1.env; echo "rc=$? $SH_REL"; mkdir -p "$SH_PR/kif3b"
 ```
 
 Erwartet: `zeilen=0` (am Quelltext der Pakete hat sich seit dem Build des
@@ -150,7 +161,7 @@ cd ~/roboter_worktrees/selbstheilung-v2 && ( source /opt/ros/humble/setup.bash; 
   python3 -m pytest -q -p no:cacheprovider ki_erkundung/tests 2>&1 | tail -3 )
 ```
 
-Erwartung: `253 passed`. Bei Fehlschlägen nichts starten, berichten.
+Erwartung: `256 passed`. Bei Fehlschlägen nichts starten, berichten.
 
 ---
 
@@ -172,7 +183,7 @@ während des Starts (etwa eine Minute) unberührt?“ Nur nach „ja“:
 
 ```bash
 source ~/roboter_worktrees/kif1.env
-D="$SH_PR/kif3"; mkdir -p "$D"
+D="$SH_PR/kif3b"; mkdir -p "$D"
 python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still || echo "STACK LAEUFT SCHON - abbrechen"
 nohup env --default-signal=INT ros2 launch robot_bringup app_mapping.launch.py \
   self_healing:=true start_web_gui:=false \
@@ -185,7 +196,7 @@ echo $! > "$D/launch_stand.pid"; cat "$D/launch_stand.pid"; date -Iseconds
 Nach etwa 70 s:
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3b"
 ros2 param get /explore_node stage_drive_only 2>&1 | tee "$D/schalter_stand.txt"
 ros2 param get /explore_node initial_scan_only 2>&1 | tee -a "$D/schalter_stand.txt"
 grep -c "Traceback" "$D/launch_stand.log"
@@ -196,7 +207,7 @@ Erwartet: `True`, `False`, `0`.
 ### A2 – messen, bis Aufstellung und Weg passen
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"; K=1
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3b"; K=1
 python3 "$SH_SRC/ki_erkundung/werkzeuge/fahrziel_senden.py" --tuer --nur-messen --hinter 0.45 2>&1 | tee "$D/messen_$K.txt"
 ```
 
@@ -222,7 +233,7 @@ bleibt ab jetzt genau so stehen.**
 ### A3 – Stack beenden
 
 ```bash
-source ~/roboter_worktrees/kif1.env; kill -INT "$(cat "$SH_PR/kif3/launch_stand.pid")"; sleep 15
+source ~/roboter_worktrees/kif1.env; kill -INT "$(cat "$SH_PR/kif3b/launch_stand.pid")"; sleep 15
 python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still && echo "alles beendet"
 ```
 
@@ -243,7 +254,7 @@ Starts (etwa eine Minute) unberührt?“ Nur nach „ja“:
 
 ```bash
 source ~/roboter_worktrees/kif1.env
-D="$SH_PR/kif3"
+D="$SH_PR/kif3b"
 python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still || echo "STACK LAEUFT SCHON - abbrechen"
 nohup env --default-signal=INT ros2 launch robot_bringup app_mapping.launch.py \
   self_healing:=true start_web_gui:=false \
@@ -258,7 +269,7 @@ echo $! > "$D/launch.pid"; cat "$D/launch.pid"; date -Iseconds > "$D/launch_star
 Nach etwa 70 s:
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3b"
 grep -n "Anfahrverhalten bestaetigt" "$D/launch.log" | tee "$D/anfahrzeit.txt"
 ros2 param get /explore_node stage_drive_only 2>&1 | tee "$D/schalter.txt"
 ros2 param get /explore_node initial_scan_only 2>&1 | tee -a "$D/schalter.txt"
@@ -278,10 +289,48 @@ geordnet beenden und Christopher den Befund in einem Satz melden: „Die
 Motorregler antworten nicht; so kann ich nicht starten.“ Sagt er daraufhin,
 die Motoren seien frei, ist **genau ein** weiterer scharfer Start erlaubt.
 
+**Radsensor beim Start gesperrt (Ausnahme):** Die Zeile zur Anfahrzeit ist
+da, „Modbus-Fehler“ steht 0-mal im `launch.log`, und die Vorprüfung fällt
+**nur** im Bereich „D Quellen“ durch: „Encoder liefern frisch“ und
+„Encoder-Zeitwache bereit“ mit `state='fault_latched'`, dazu
+gegebenenfalls „HWT-Fusion Quellen bereit“. Dann hat sich der Radsensor
+beim Hochfahren selbst gesperrt. Er gibt sich erst bei einem neuen Start
+frei; die Selbstheilung löst das nicht (SH-4, 04.11.: 690 s Mission, nie
+gefahren). Amadeus hat sich nicht bewegt.
+
+1. Nur lesend sichern, was die Zeitwache meldet, und die Last:
+
+   ```bash
+   source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3b"
+   uptime | tee "$D/last_bei_sperre_1.txt"
+   python3 "$SH_SRC/ki_erkundung/werkzeuge/radsensor_zustand.py" 2>&1 | tee "$D/radsensor_1.txt"
+   ```
+
+2. Stack geordnet beenden (wie B5) und Christopher in einem Satz sagen: „Der
+   Radsensor hat sich beim Hochfahren selbst gesperrt; ich starte den Stack
+   einmal neu, Amadeus fährt dabei nicht.“
+3. Die Dateien des ersten Starts beiseitelegen, damit B1 bis B5 mit
+   denselben Befehlen weiterlaufen:
+
+   ```bash
+   source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3b"
+   for f in launch.log launch.pid launch_start.txt anfahrzeit.txt schalter.txt vorpruefung.json vorpruefung.txt; do \
+     [ -e "$D/$f" ] && mv "$D/$f" "$D/erster_start_$f"; done; ls "$D"
+   ```
+
+4. Mindestens 30 s nach „alles beendet“: **genau ein** weiterer scharfer
+   Start, B1 von der Frage an, mit den Befehlen, wie sie dort stehen.
+5. Sperrt sich der Radsensor auch beim zweiten Start: Schritt 1 mit
+   `_2` statt `_1` in den Dateinamen, Stack beenden, berichten, Ende. Das
+   ist dann ein Befund für die Motorsteuerung, nichts für diesen Auftrag.
+
+Stimmt eine der Bedingungen nicht (zum Beispiel „Modbus-Fehler“ im Log oder
+eine FEHL-Zeile außerhalb von „D Quellen“), gilt die Ausnahme nicht.
+
 ### B2 – noch einmal messen (nichts fährt)
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3b"
 python3 "$SH_SRC/ki_erkundung/werkzeuge/fahrziel_senden.py" --tuer --nur-messen --hinter 0.45 2>&1 | tee "$D/messen_scharf.txt"
 ```
 
@@ -297,7 +346,7 @@ wartet, misst, prüft, sendet das Ziel und zeigt dessen Meldungen bis zum
 Ende:
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3b"
 ros2 topic pub --once /mission_manager/command_json std_msgs/msg/String "{data: '{\"type\":\"explore\"}'}"
 date -Iseconds > "$D/missionsstart.txt"
 python3 "$SH_SRC/ki_erkundung/werkzeuge/fahrziel_senden.py" --tuer --richtung R --richtung-toleranz 10 --hinter 0.45 --quelle mensch --warten 120 --beobachten 600 2>&1 | tee "$D/werkzeug.txt"; echo "rc=${PIPESTATUS[0]}"
@@ -327,7 +376,7 @@ der Richtung und langsames Kriechen neben dem Türblatt sind gewollt.
 ### B4 – sichern (Amadeus bleibt stehen, der Stack läuft noch)
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3b"
 date -Iseconds > "$D/ende.txt"
 grep -n "Etappenfahrt\|Fahrziel" "$D/launch.log" | tee "$D/etappen.txt"
 for m in "Begin navigating" "Direkter Explore-Befehl verworfen" "Explore-Rundblickbefehl verworfen" \
@@ -350,7 +399,7 @@ Ende. Dann Christopher fragen, je einzeln:
 ### B5 – Stack geordnet beenden
 
 ```bash
-source ~/roboter_worktrees/kif1.env; kill -INT "$(cat "$SH_PR/kif3/launch.pid")"; sleep 15
+source ~/roboter_worktrees/kif1.env; kill -INT "$(cat "$SH_PR/kif3b/launch.pid")"; sleep 15
 python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still && echo "alles beendet"
 ```
 
@@ -388,7 +437,7 @@ Minute) unberührt?“ Nur nach „ja“:
 
 ```bash
 source ~/roboter_worktrees/kif1.env
-D="$SH_PR/kif3"
+D="$SH_PR/kif3b"
 python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still || echo "STACK LAEUFT SCHON - abbrechen"
 nohup env --default-signal=INT ros2 launch robot_bringup app_mapping.launch.py \
   self_healing:=true start_web_gui:=false \
@@ -401,7 +450,7 @@ echo $! > "$D/launch_stand2.pid"; cat "$D/launch_stand2.pid"; date -Iseconds
 Nach etwa 70 s:
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3b"
 ros2 param get /explore_node stage_drive_only 2>&1 | tee "$D/schalter_stand2.txt"
 ros2 param get /explore_node initial_scan_only 2>&1 | tee -a "$D/schalter_stand2.txt"
 grep -c "Traceback" "$D/launch_stand2.log"
@@ -412,7 +461,7 @@ Erwartet: `True`, `False`, `0`.
 ### C2 – messen, bis die Anfahrt passt
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"; K=1
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3b"; K=1
 python3 "$SH_SRC/ki_erkundung/werkzeuge/fahrziel_senden.py" --vor-die-tuer --nur-messen 2>&1 | tee "$D/anfahrt_messen_$K.txt"
 ```
 
@@ -441,7 +490,7 @@ behandeln. Bei „ja“: **Amadeus bleibt ab jetzt genau so stehen.**
 ### C3 – Stack beenden
 
 ```bash
-source ~/roboter_worktrees/kif1.env; kill -INT "$(cat "$SH_PR/kif3/launch_stand2.pid")"; sleep 15
+source ~/roboter_worktrees/kif1.env; kill -INT "$(cat "$SH_PR/kif3b/launch_stand2.pid")"; sleep 15
 python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still && echo "alles beendet"
 ```
 
@@ -460,7 +509,7 @@ Minute) unberührt?“ Nur nach „ja“:
 
 ```bash
 source ~/roboter_worktrees/kif1.env
-D="$SH_PR/kif3"
+D="$SH_PR/kif3b"
 python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still || echo "STACK LAEUFT SCHON - abbrechen"
 nohup env --default-signal=INT ros2 launch robot_bringup app_mapping.launch.py \
   self_healing:=true start_web_gui:=false \
@@ -475,7 +524,7 @@ echo $! > "$D/launch2.pid"; cat "$D/launch2.pid"; date -Iseconds > "$D/launch2_s
 Nach etwa 70 s:
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3b"
 grep -n "Anfahrverhalten bestaetigt" "$D/launch2.log" | tee "$D/anfahrzeit2.txt"
 ros2 param get /explore_node stage_drive_only 2>&1 | tee "$D/schalter2.txt"
 ros2 param get /explore_node initial_scan_only 2>&1 | tee -a "$D/schalter2.txt"
@@ -483,12 +532,23 @@ python3 "$SH_SRC/tools/kartierung/selbstheilung_stillstand_pruefen.py" --odometr
   --eigenecho-s 10 --json "$D/vorpruefung2.json" > "$D/vorpruefung2.txt" 2>&1; echo "exit=$?"; tail -40 "$D/vorpruefung2.txt"
 ```
 
-Erwartungen und die Ausnahme „Motorregler antworten nicht“ wie in B1.
+Erwartungen und die Ausnahmen „Motorregler antworten nicht“ und
+„Radsensor beim Start gesperrt“ wie in B1; die Ausnahme gilt hier noch
+einmal, unabhängig von Stufe 1. Dabei in Schritt 1 `_3` (beim zweiten Mal
+`_4`) in den Dateinamen und in Schritt 3 statt der dortigen Zeile:
+
+```bash
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3b"
+for f in launch2.log launch2.pid launch2_start.txt anfahrzeit2.txt schalter2.txt vorpruefung2.json vorpruefung2.txt; do \
+  [ -e "$D/$f" ] && mv "$D/$f" "$D/erster_start_$f"; done; ls "$D"
+```
+
+Zum Beenden D7 statt B5; der neue Start ist D1 von der Frage an.
 
 ### D2 – Anfahrt noch einmal messen (nichts fährt)
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3b"
 python3 "$SH_SRC/ki_erkundung/werkzeuge/fahrziel_senden.py" --vor-die-tuer --nur-messen 2>&1 | tee "$D/anfahrt_messen_scharf.txt"
 ```
 
@@ -499,7 +559,7 @@ keine Mission; Stack geordnet beenden (D7), berichten.
 ### D3 – erste Mission: die Anfahrt
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3b"
 ros2 topic pub --once /mission_manager/command_json std_msgs/msg/String "{data: '{\"type\":\"explore\"}'}"
 date -Iseconds > "$D/missionsstart_anfahrt.txt"
 python3 "$SH_SRC/ki_erkundung/werkzeuge/fahrziel_senden.py" --vor-die-tuer --richtung R --richtung-toleranz 10 --quelle mensch --warten 120 --beobachten 600 2>&1 | tee "$D/anfahrt.txt"; echo "rc=${PIPESTATUS[0]}"
@@ -517,7 +577,7 @@ um große Winkel und kurzes Stehen zwischen den Schritten sind gewollt.
 ### D4 – Durchfahrt messen (nichts fährt, niemand fasst Amadeus an)
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3b"
 python3 "$SH_SRC/ki_erkundung/werkzeuge/fahrziel_senden.py" --tuer --nur-messen --hinter 0.45 2>&1 | tee "$D/durchfahrt_messen.txt"
 ```
 
@@ -529,7 +589,7 @@ nach rechts versetzen“); das ist der Befund zu S-3. Weiter bei D6.
 ### D5 – zweite Mission: die Durchfahrt
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3b"
 ros2 topic pub --once /mission_manager/command_json std_msgs/msg/String "{data: '{\"type\":\"explore\"}'}"
 date -Iseconds > "$D/missionsstart_durchfahrt.txt"
 python3 "$SH_SRC/ki_erkundung/werkzeuge/fahrziel_senden.py" --tuer --richtung R2 --richtung-toleranz 10 --hinter 0.45 --quelle mensch --warten 120 --beobachten 600 2>&1 | tee "$D/werkzeug2.txt"; echo "rc=${PIPESTATUS[0]}"
@@ -542,7 +602,7 @@ Stopp senden wie in B3, weiter bei D6. Das ist ein Befund.
 ### D6 – sichern (Amadeus bleibt stehen, der Stack läuft noch)
 
 ```bash
-source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3"
+source ~/roboter_worktrees/kif1.env; D="$SH_PR/kif3b"
 date -Iseconds > "$D/ende2.txt"
 grep -n "Etappenfahrt\|Fahrziel\|Mission beendet" "$D/launch2.log" | tee "$D/etappen2.txt"
 for m in "Begin navigating" "Direkter Explore-Befehl verworfen" "Explore-Rundblickbefehl verworfen" \
@@ -564,7 +624,7 @@ fragen, je einzeln:
 ### D7 – Stack geordnet beenden
 
 ```bash
-source ~/roboter_worktrees/kif1.env; kill -INT "$(cat "$SH_PR/kif3/launch2.pid")"; sleep 15
+source ~/roboter_worktrees/kif1.env; kill -INT "$(cat "$SH_PR/kif3b/launch2.pid")"; sleep 15
 python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still && echo "alles beendet"
 ```
 
@@ -586,14 +646,17 @@ Danach stellt Christopher Amadeus von Hand zurück.
 
 ## Bericht
 
-Datei `~/ki_erkundung_bericht_kif3.md`, ohne Bilder, Scans, Karten,
+Datei `~/ki_erkundung_bericht_kif3b.md`, ohne Bilder, Scans, Karten,
 Koordinaten und Adressen:
 
 1. Stand (HEAD), die Zeile `zeilen=…`, Tests.
 2. Teil A: `schalter_stand.txt`; der ganze Inhalt jeder Datei
    `messen_K.txt` mit dem Hinweis, den Christopher bekam, und was er
    geändert hat; seine Antwort auf die Frage nach der Labortür.
-3. Teil B: Antwort zum Start; Anfahrzeit, Schalter, Vorprüfung;
+3. Teil B: Antwort zum Start; Anfahrzeit, Schalter, Vorprüfung; bei der
+   Ausnahme „Radsensor beim Start gesperrt“ der ganze Inhalt von
+   `radsensor_K.txt` und `last_bei_sperre_K.txt` und was der zweite Start
+   ergab;
    `messen_scharf.txt`; **der ganze Inhalt von `werkzeug.txt`** (mit den
    Zeilen „Fahrlinie …“ und „Kostenkarte …“), `etappen.txt` und
    `zaehler.txt`; größtes |v| und |w| an der Basis; Christophers Antworten

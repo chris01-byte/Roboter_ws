@@ -1,14 +1,21 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 22.11.2026 (abends, nach KI-F2):** Die gerade Etappe von 0,5 m ist
+**Stand 22.11.2026 (spät, nach dem ersten Anlauf von KI-F3):** Der erste
+Anlauf von KI-F3 fuhr nicht: Aufstellen und Messen passten sofort (0,77 m,
+links und rechts der Fahrlinie 0,38 und 0,39 m frei), aber im scharfen
+Stack hatte sich der Radsensor beim Hochfahren selbst gesperrt. Die
+Vorprüfung fiel durch, es gab keine Mission. Der Auftrag kannte für diesen
+bekannten Fall keinen Neustart; das ist nachgetragen (KI-F3b, unten).
+
+Die gerade Etappe von 0,5 m ist
 am Roboter gelungen (KI-F1). **Durch die Labortür ist Amadeus noch nicht
 gekommen.** Im ersten Anlauf wurde die Tür aus der schrägen Lage falsch
 vermessen und die Fahrt gar nicht gestartet (KI-F1). Im zweiten passte die
 Aufstellung, aber der geplante Weg führte erst schräg zu einem Punkt auf
 der Türachse und damit an die Spitze des offenen Türblatts; der
 Nahbereichs-Halt hielt Amadeus nach 0,35 m an (KI-F2). Der Halt war
-richtig, der Weg war falsch geplant. **Als Nächstes:** Folgeauftrag KI-F3
-([AUFTRAG.md](AUFTRAG.md)) in zwei Stufen: erst von vorn auf gerader Linie
+richtig, der Weg war falsch geplant. **Als Nächstes:** zweiter Anlauf
+KI-F3b ([AUFTRAG.md](AUFTRAG.md)) in zwei Stufen: erst von vorn auf gerader Linie
 durch die Türmitte, dann von einem Platz im Raum, von dem Amadeus **selbst
 vor die Tür fährt**. Beides wird vor dem Senden gegen das Laserbild geprüft.
 
@@ -46,9 +53,11 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-F3
-„durch die Tür: erst von vorn, dann vom Platz im Raum“**
-([AUFTRAG.md](AUFTRAG.md)).
+**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-F3,
+zweiter Anlauf KI-F3b, „durch die Tür: erst von vorn, dann vom Platz im
+Raum“** ([AUFTRAG.md](AUFTRAG.md)). Neu gegenüber dem ersten Anlauf: Sperrt
+sich der Radsensor beim Hochfahren, wird gesichert, was die Zeitwache
+meldet, und genau einmal neu gestartet.
 Auf dem Jetson, mit Christopher; ohne Kamera und ohne KI-Rechner; **ohne
 neuen Build** (derselbe Release wie bei der gelungenen Etappe).
 - **Stufe 1:** Im Stand mittig vor die Tür stellen und messen, bis das
@@ -123,6 +132,57 @@ auf dem KI-Rechner in Gebrauch · Sucher · Schalter „nur Rundblick“ im
 Erkunder (21.11., `6956252`) · Bestand der Türdurchfahrten · Etappenfahrt
 gebaut und simuliert (21.11., nachts) · KI-1: erste Drehung und Blickrunde
 am Roboter (21.11., nachts).
+
+## KI-F3, erster Anlauf – nicht gefahren, Radsensor beim Start gesperrt (Jetson, 22.11.2026, 22:03 bis 22:12)
+
+Kein Build; 253 Tests bestanden. Nur Stufe 1 begonnen; Stufe 2 nicht, weil
+Stufe 1 nicht bestanden war. Der Bericht liegt nicht im Repository.
+
+**Was lief:** Aufstellen und Messen passten bei der ersten Messung: Öffnung
+0,77 m, 1,87 m entfernt, 0,07 m rechts der Türmitte; „Aufstellung passt“
+und „Weg passt“ mit 0,38 m links und 0,39 m rechts neben der Fahrlinie.
+Christopher bestätigte die Labortür. Die Messung im scharfen Stack ergab
+dasselbe.
+
+**Was nicht lief:** Die Vorprüfung im scharfen Stack fiel durch, nur im
+Bereich „D Quellen“: Encoder nicht frisch (letzte Messung 73 s alt),
+Encoder-Zeitwache `fault_latched` mit Grund
+`encoder_timing_continuity_unproven`, HWT-Fusion nicht bereit
+(`wheel_missing_stale_or_invalid`). Motorregler antworteten
+(Anfahrzeit bestätigt, „Modbus-Fehler“ 0). Keine Mission, keine Bewegung.
+
+**Was das bedeutet:** Der Motortreiber liest die Radstellungen etwa alle
+50 ms. Lagen zwischen zwei gültigen Lesungen mehr als 0,18 s, kann er nicht
+belegen, dass sich die Räder in der Lücke nicht gedreht haben. Er versucht
+zwei Sekunden lang, die Lücke zu überbrücken, und sperrt die Radmessung
+sonst bis zum nächsten Start. Ohne Radmessung lässt die Schutzkette keine
+Fahrt zu. Nach den Zeitangaben geschah das etwa 30 s nach dem Start des
+Stacks, während der Jetson noch alles hochfuhr. Gemessen ist die Lücke
+nicht; der Bericht enthält dazu keine Zahlen.
+
+**Die Selbstheilung** war eingeschaltet (`self_healing:=true`), konnte hier
+aber nichts tun: Sie wirkt erst in einer laufenden Mission, und die
+Mission wurde nach der durchgefallenen Vorprüfung zu Recht nicht gestartet.
+Auch in einer Mission löst sie diese Sperre nicht; das ist so gebaut
+(Encodervertrag in `docs/wohnungserkundung/STATUS.md`: keine Rücksetzung
+durch die Selbstheilung). Belegt am 04.11. (SH-4, Fahrt 3, erster Versuch):
+derselbe Startfehler, 690 s Mission, sieben Heilungen, **nie gefahren**; die
+Wiederholung nach einem Neustart fuhr normal.
+
+**Wie oft:** In dieser Linie einer von fünf scharfen Starts mit freien
+Motoren (KI-1: 1, KI-F1: 2, KI-F2: 1 ohne Sperre). In der Hauptlinie
+dokumentiert seit Oktober (AP06-Vorlauf, SH-4).
+
+**Fehler im Auftrag:** Der Fall war bekannt und steht in der Hauptlinie;
+der Auftrag kannte nur die Ausnahme „Motorregler antworten nicht“. Der
+Agent hat richtig gehandelt (keine Mission, nicht eigenmächtig neu
+gestartet, berichtet).
+
+**Nachgebessert:** Ausnahme „Radsensor beim Start gesperrt“ im Auftrag:
+nur lesend sichern, was die Zeitwache meldet (neues Werkzeug
+`werkzeuge/radsensor_zustand.py`: Größe und Zeitpunkt der ersten Lücke,
+Dauer der Lesepaare), dazu die Last; dann genau ein neuer scharfer Start.
+Am Motortreiber wird nichts geändert (Motorsteuerung, AGENTS §2.7).
 
 ## Anfahrt: Amadeus stellt sich selbst vor die Tür (gebaut 22.11.2026, spät)
 
@@ -632,6 +692,8 @@ KONZEPT §13.
 | 22.11.2026 | Anfahrt und Durchfahrt als zwei Missionen in einem Stacklauf | Simulation, Laborraum mit 85° offenem Blatt, vier Startplätze | drei Plätze: selbst vor die Tür (0,01 bis 0,09 m neben der Mitte), dann im Flur nach 103 bis 114 s, keine Berührung (engste Stelle 6,1 bis 8,4 cm); Blattseite: abgelehnt (Tür 1,33 m vermessen); zweiter Missionsstart ohne Neustart ging jedes Mal |
 | 22.11.2026 | Türachse aus den Türkanten gegen Türachse aus der Wand | Simulation, Start rechts schräg | Kanten: 6° verdreht, nach der Anfahrt 0,17 m neben der Mitte, Durchfahrt abgelehnt; Wand: 0,01 m, Durchfahrt gelungen |
 | 22.11.2026 | Tests dieser Linie mit der Anfahrt | Entwicklungsumgebung | 243 bestanden, 2 übersprungen (ohne ROS); 253 bestanden (ROS 2 Jazzy, abgeschottet) |
+| 22.11.2026 | **KI-F3, erster Anlauf** | Jetson, Laborraum, mit Christopher | kein Build; 253 Tests bestanden; T-1 erfüllt (0,77 m, frei 0,38 / 0,39 m, beim ersten Messen); Vorprüfung im scharfen Stack nicht bestanden (Encoder-Zeitwache `fault_latched`, `encoder_timing_continuity_unproven`); keine Mission, keine Bewegung; Stufe 2 nicht gelaufen |
+| 22.11.2026 | Werkzeug zum Zustand des Radsensors | Entwicklungsumgebung | 3 Tests; KI-Linie 246 bestanden, 2 übersprungen (ohne ROS); 256 bestanden (ROS 2 Jazzy, abgeschottet) |
 
 **Gemessen an der künstlichen Beispielwelt** (ausgedachtes Zimmer mit
 80-cm-Tür, 90-cm-Glastür zum Balkon, Schränken, Kiste; LiDAR-Rauschen 1 cm):
@@ -683,6 +745,10 @@ Jetson, echte Bilder.
   9,6 cm Abstand der gepolsterten Kontur zum Pfosten).
 - **Die Prüfung des Freiraums und die Zeile zur Kostenkarte** an echten
   Messungen.
+- **Warum sich der Radsensor beim Hochfahren sperrt:** Größe und Zeitpunkt
+  der Lücke sind am 22.11. nicht gemessen; das Werkzeug dafür kommt mit
+  KI-F3b zum ersten Mal zum Einsatz. Ob ein Neustart verlässlich hilft, ist
+  nur aus SH-4 (einmal) belegt.
 - **Die Anfahrt am Roboter:** Drehen um große Winkel in der Etappenfahrt
   (am Roboter bisher 9,4°), die Türachse aus der Wand an echten Messungen
   (Türzarge, Möbel an der Wand), zwei Missionen in einem Stacklauf, und wie
@@ -706,7 +772,8 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Auftrag KI-F3 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): Stufe 1 von vorn
-auf gerader Linie durch die offene Labortür; nach bestandener Stufe 1
-Stufe 2, in der Amadeus von einem Platz im Raum selbst vor die Tür fährt
-und dann hindurch.
+Zweiter Anlauf KI-F3b auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): Stufe 1 von
+vorn auf gerader Linie durch die offene Labortür; sperrt sich der
+Radsensor beim Hochfahren, einmal sichern und einmal neu starten; nach
+bestandener Stufe 1 Stufe 2, in der Amadeus selbst vor die Tür fährt und
+dann hindurch.

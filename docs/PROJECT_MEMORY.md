@@ -2120,6 +2120,28 @@ falsch geplant, nicht der Halt:**
   Lage (A2) hat die Lage vom Vormittag nicht getroffen; die Vermutung zur
   1,25 m breiten Lücke ist weder bestätigt noch widerlegt.
 
+**Nachtrag 22.11.2026 (nachts) – KI-F3 fuhr nicht: Radsensor beim Start
+gesperrt; die Selbstheilung kann das nicht lösen:**
+- **Ergebnis:** Aufstellen und Messen passten sofort; im scharfen Stack war
+  die Encoder-Zeitwache `fault_latched`
+  (`encoder_timing_continuity_unproven`), die Vorprüfung fiel durch, keine
+  Mission. Der Projektinhaber fragte, ob die Selbstheilung nicht aktiv war.
+- **Einordnung:** Sie war eingeschaltet. Sie wirkt erst in einer Mission,
+  und auch dort löst sie diese Sperre nicht; das ist im Encodervertrag so
+  festgelegt (eine Lücke über 0,18 s zwischen zwei Radlesungen bleibt bis
+  zum nächsten Start des Treibers unbewiesen). SH-4 (04.11.) zeigt es:
+  derselbe Startfehler, 690 s Mission mit sieben Heilungen, nie gefahren;
+  nach einem Neustart normal.
+- **Fehler der Planung:** Der Fall stand in den Unterlagen der Hauptlinie,
+  der Auftrag hatte keinen Weg dafür. Die Regel „vor einem Auftrag die
+  Liste ‚offen‘ gegen den Ablauf halten“ gilt auch für bekannte Fehler der
+  Hauptlinie, die denselben Stack benutzen.
+- **Entscheidung:** Kein Eingriff in den Motortreiber (AGENTS §2.7). Der
+  Auftrag erlaubt bei genau diesem Befund, nach dem Sichern der Angaben der
+  Zeitwache, einen neuen scharfen Start; sperrt sich der Sensor erneut, ist
+  das ein Befund für die Motorsteuerung. Erst messen (Lücke, Last), dann
+  über eine Abhilfe reden.
+
 **Nachtrag 22.11.2026 (spät) – Einwand „Rückschritt“; die Anfahrt aus eigener
 Kraft:**
 - **Einwand des Projektinhabers** zum Auftrag KI-F3, der Amadeus von Hand
