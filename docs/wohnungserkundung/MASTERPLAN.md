@@ -481,6 +481,11 @@ sendet dort nie.
   nennt, wer es gewählt hat. Entscheidung des Projektinhabers dazu: erst
   ohne Nav2, vom Einfachen zum Schwierigen; Nav2 kommt nur dazu, wenn das
   nicht reicht.
+  *Nachtrag 23.11.2026 (KI-F6):* In der Etappenfahrt liest die gerade
+  Laser-Etappe Odometrie und Scan vor der Uhr (`snapshot_before_clock`), wie
+  das Drehen seit `f746b1c`; sonst konnte ein frischer Wert als Wert „aus der
+  Zukunft“ gelten und die Etappe mit `odom_stale` beenden. Ohne den Schalter
+  ist der Baustein unverändert; Fristen und Sperren gleich.
 - **Dritte Anschlussstelle, Laborschalter (22.11.2026, vom Projektinhaber
   verlangt):** Startargument `nahsensoren` (`app_mapping.launch.py`,
   `nav_mapping.launch.py`; Vorgabe `true` = unverändert). Mit `false` startet

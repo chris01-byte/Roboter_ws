@@ -664,6 +664,11 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   entschieden hat. Der Fahrteil soll aus vorhandenem, real bewährtem Code
   entstehen; Bestand und Vorschlag stehen im STATUS, entschieden ist dazu
   noch nichts.
+- 23.11.2026, Nachtrag zu v1.13, nach KI-F6: keine Änderung am Konzept. Die
+  Selbst-Anfahrt gelang am Roboter; die Durchfahrt brach an zwei
+  Programmfehlern des Erkunders ab (Lesereihenfolge Uhr/Odometrie in der
+  geraden Etappe, Schlussmeldung). Behoben nur für die Etappenfahrt; siehe
+  STATUS und MASTERPLAN §10.3.
 - 23.11.2026, v1.13, nach KI-F5 (Projektinhaber: „der roboter muss die tür
   finden, sich selber ausrichten und hindurch fahren“): Amadeus stand mittig,
   das Werkzeug meldete fünfmal „30 cm daneben“, weil es die Türrichtung aus

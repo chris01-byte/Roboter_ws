@@ -1,17 +1,29 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 23.11.2026 (mittags): Konzept des Fahrteils wird überdacht.**
+**Stand 23.11.2026 (nach KI-F6): Amadeus hat sich zum ersten Mal selbst
+vor die Tür gestellt.** Eine Messung, kein Umstellen: Das Werkzeug fand die
+Labortür und entschied „Anfahrt“; Amadeus drehte sich, fuhr 1,42 m, drehte
+sich zur Tür, und danach passten Aufstellung, Weg und Kostenkarte, ohne
+dass ihn jemand anfasste. Christopher: „ja er hat die Tür gefunden ist zu
+ihr gefahren und hat sich ausgerichtet“. **Die Durchfahrt brach nach 0,67 m
+ab, wegen zweier Programmfehler im Erkunder, nicht wegen der Räder:** Die
+gerade Etappe las erst die Uhr, dann die Odometrie (ein Wert dazwischen
+galt als „aus der Zukunft“ → `odom_stale`; für das Drehen seit 29.09.
+behoben, für die gerade Etappe nicht), und die Schlussmeldung warf beim
+Wechsel von Erfolg zu Fehler einen ROS-Fehler. Beides ist behoben, mit Tests
+und Simulation. **Als Nächstes:** Auftrag KI-F7, derselbe Ablauf mit neuem
+Build. Christopher hat mit der Übergabe von KI-F6 entschieden, zuerst ohne
+Nav2 weiterzumachen ([Bewertung](BEWERTUNG_TUERDURCHFAHRT.md), Nachtrag).
+
+**Davor, 23.11.2026 (mittags): Konzept des Fahrteils überdacht.**
 Christopher nach KI-F5: „So kommen wir nicht weiter. […] Ich glaube, ohne
 NAV2 schafft er das nicht. Bitte überdenke unser Konzept“. Rückblick,
 Möglichkeiten und Empfehlung stehen in
 [BEWERTUNG_TUERDURCHFAHRT.md](BEWERTUNG_TUERDURCHFAHRT.md). Kern: Kein
-Fehlschlag lag an der Fahrgenauigkeit; dreimal Vermessung und Planung des
-Werkzeugs, einmal Radsensor, einmal ein wohl berechtigter Halt. Alle realen
-Durchfahrten fuhr Nav2, aber Nav2 erreicht seit 15./19.11. kaum ein Ziel,
-und ohne Nahsensoren sperrt das Fahrtor Nav2 ganz. Empfohlen ist als
-Zielbild der Hybrid (Nav2 grob vor die Tür, Laser-Etappen mit frischer
-Messung hindurch). **KI-F6 ist erteilt, aber nicht übergeben; zuerst
-entscheidet der Projektinhaber den Weg.**
+Fehlschlag lag an der Fahrgenauigkeit. Alle realen Durchfahrten fuhr Nav2,
+aber Nav2 erreicht seit 15./19.11. kaum ein Ziel, und ohne Nahsensoren
+sperrt das Fahrtor Nav2 ganz. Zielbild: der Hybrid (Nav2 grob vor die Tür,
+Laser-Etappen mit frischer Messung hindurch).
 
 **Davor, 23.11.2026 (nach KI-F5):** KI-F5 fuhr nicht. Amadeus stand mittig
 vor der Tür, aber das Werkzeug meldete fünfmal „30 cm nach links
@@ -82,7 +94,7 @@ fährt mit seiner Schutzkette.
 |---|---|---|---|
 | Erstes Sehen | im Stand Bild und Laser aufnehmen, die KI fragen, die Antwort prüfen | KI-0 | **erledigt** (21.11.) |
 | Blickrunde | sich selbst einmal herumdrehen; aus acht Bildern nennt die KI den Ausgang | KI-1 | **am Roboter gelungen** (21.11., eine Runde im Labor); für die Kriterien fehlen weitere Runden |
-| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1), Ausrichten (KI-F2), drei Etappen genau auf der Linie bis kurz vor die Tür (KI-F3b); durch die Tür und selbst ausrichten bisher nur in der Simulation; als Nächstes KI-F6 |
+| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1), Ausrichten (KI-F2), drei Etappen genau auf der Linie bis kurz vor die Tür (KI-F3b); selbst vor die Tür gestellt (KI-F6); durch die Tür bisher nur in der Simulation; als Nächstes KI-F7 |
 | Raum für Raum | weiter, bis kein Ausgang mehr offen ist (Laborraum, Flur, Schlafzimmer) | KI-3 | offen |
 | Räume benennen, um Hilfe rufen | Raumnamen als Vorschlag in der App; Hilferuf mit Grund und Bild | KI-4 | offen |
 | Auf Zuruf | „fahr in die Küche“, „such die Tasse“ | KI-5 | offen |
@@ -92,20 +104,14 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Zuerst: Entscheidung des Projektinhabers zum Fahrweg** nach der
-[Bewertung](BEWERTUNG_TUERDURCHFAHRT.md): KI-F6 noch einmal als letzten
-Versuch ohne Nav2 (grob hinstellen) und parallel den Nav2-Weg vorbereiten,
-oder sofort auf den Nav2-Weg (Nahsensoren wieder an, zuerst den Stand vom
-08.11. nachfahren). Bis dahin wird nichts gefahren und nichts gebaut.
-
-**Erteilt, wartet auf diese Entscheidung und die Übergabe: Auftrag KI-F6
-„Amadeus richtet sich selbst aus und fährt durch die Tür“**
-([AUFTRAG.md](AUFTRAG.md)). Auf dem Jetson, mit Christopher; ohne Kamera und
-ohne KI-Rechner; **kein Build** (Release `kif5-20261123_0950`), jeder Start
-mit `nahsensoren:=false`. Christopher stellt Amadeus irgendwo 1,5 bis 3 m
-vor die Tür, ohne genau auszurichten; eine Messung, eine Ja/Nein-Frage zur
-Tür. Dann entscheidet Amadeus selbst: Durchfahrt, oder erst Anfahrt vor die
-Tür und dann Durchfahrt (zwei Missionen in einem Stacklauf).
+**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-F7
+„noch einmal selbst ausrichten und durch die Tür“** ([AUFTRAG.md](AUFTRAG.md)).
+Auf dem Jetson, mit Christopher; ohne Kamera und ohne KI-Rechner; **neuer
+Build** (Release `kif7-<STAMP>`, nur `explore_node.py` geändert), jeder
+Start mit `stage_drive_only:=true nahsensoren:=false`. Ablauf wie KI-F6:
+Christopher stellt Amadeus 1,5 bis 3 m vor die Tür, ohne genau
+auszurichten; eine Messung, eine Ja/Nein-Frage zur Tür; dann entscheidet
+Amadeus selbst: Durchfahrt, oder erst Anfahrt und dann Durchfahrt.
 
 **Danach, je nach Ergebnis:**
 - Durchfahrt gelungen: Rundblick, Frage an die KI und Etappenfahrt in einem
@@ -276,6 +282,66 @@ nur lesend sichern, was die Zeitwache meldet (neues Werkzeug
 `werkzeuge/radsensor_zustand.py`: Größe und Zeitpunkt der ersten Lücke,
 Dauer der Lesepaare), dazu die Last; dann genau ein neuer scharfer Start.
 Am Motortreiber wird nichts geändert (Motorsteuerung, AGENTS §2.7).
+
+## KI-F6 – Anfahrt gelungen, Durchfahrt an zwei Programmfehlern abgebrochen (Jetson, 23.11.2026, 11:07 bis 11:21)
+
+Kein Build (Release `kif5-20261123_0950`), Stand `8717fd9`, 268 Tests
+bestanden, ohne Nahsensoren wie verlangt. Archiv mit Auftrag:
+[archiv/20261123-kif6-anfahrt-gelungen/](archiv/20261123-kif6-anfahrt-gelungen/).
+
+**Was lief:** eine Messung, kein Umstellen. Amadeus 2,33 m vor der Türlinie,
+1,01 m rechts der Türmitte; Labortür 0,88 m, 2,54 m, 18° links, Türachse aus
+der Wand; Entscheidung „Anfahrt“, Christopher bestätigte die Tür. **Anfahrt
+(erste Mission) gelungen:** 69,8° gedreht (Rest −0,4°), drei Etappen, 82,2°
+gedreht (Rest +0,7°), eine Etappe; 1,42 m, seitlich höchstens 5 mm, Winkel
+höchstens 0,3° daneben; „Anfahrt abgeschlossen.“ Danach ohne Anfassen:
+„0.06 m rechts, Tür 8° links – Aufstellung passt“, „Weg passt“ (je 0,38 m
+frei), „Kostenkarte passt“. Durchfahrt (zweite Mission): 10,4° gedreht,
+Etappe 1 mit 0,365 m bestanden.
+
+**Was nicht lief:** In Etappe 2 nach 0,305 m „Encoder-Odometrie kurzzeitig
+nicht frisch“, Etappe `odom_stale`, dann „Logger severity cannot be changed
+between calls.“ (Mission `FAILURE`). 0,67 m von 2,38 m, nichts berührt, kein
+Eingriff. Christopher: „Warum ist er jetzt im letzten Schritt nicht hindurch
+gefahren“.
+
+| Kennung | Ergebnis |
+|---|---|
+| N-1 ohne Nahsensoren | trifft zu |
+| T-1 Vermessung | trifft zu (0,88 m; nicht umgestellt) |
+| A-1 selbst ausgerichtet | **trifft zu** |
+| T-2 Abschluss | trifft nicht zu |
+| T-3 Ausrichten | trifft zu (Rest höchstens 0,7°) |
+| T-4 durch die Tür | trifft nicht zu |
+| T-5 Abstand | ohne Urteil |
+| T-6 Kette | trifft nicht zu („Odometrie kurzzeitig nicht frisch“ 1) |
+| H-1 Herkunft | trifft nicht zu (kein Halt an einer belegten Stelle; die Zeile entfiel) |
+
+**Ursache, zwei Programmfehler im Erkunder:**
+1. `_drive_forward_lidar` las erst die Uhr, dann die Odometrie. Der
+   Odometrie-Rückruf läuft in einem anderen Faden; kommt er dazwischen, ist
+   das „Alter“ negativ, und die Prüfung wertet das als Zeitfehler: sofort
+   `odom_stale`. Für `_rotate_in_place` war genau das seit `f746b1c`
+   (29.09.2026) behoben. Indizien: 1,27 s zwischen Warnung und Ende der
+   Etappe (die Frist für echte Ausfälle ist 5 s), danach bestätigte dieselbe
+   Odometrie den Stillstand, das Fahrtor meldete keinen Ausfall. Der innere
+   Alterswert ist nicht protokolliert; sehr wahrscheinlich, nicht bewiesen.
+2. `ende()` rief dieselbe Programmstelle erst mit `info`, dann mit `error`
+   auf; rclpy wirft dann. Nur im zweiten Auftrag eines Stacklaufs nach einem
+   gelungenen; in den Simulationen gelangen immer beide.
+
+**Behoben (nur Etappenfahrt):** `_drive_forward_lidar(...,
+snapshot_before_clock=True)` liest Odometrie und Scan vor der Uhr (Vorgabe
+aus, für die Hauptlinie unverändert); die Schlussmeldung in zwei Aufrufen.
+Sechs neue Tests stellen beide Fehler am alten Stand nach (`odom_stale`,
+ValueError) und bestehen am neuen; Erkunder-Tests sonst unverändert
+(dieselben 26 Tests mit echtem ROS-Knoten scheitern hier vorher wie
+nachher). Simulation ohne Nahsensoren, schräger Start 1,01 m rechts:
+Anfahrt 1,41 m, Durchfahrt 1,97 m, „Durchfahrt abgeschlossen.“, im Flur nach
+116 s, keine Berührung, engste Stelle 7,3 cm.
+
+Für die geparkte Hauptlinie festgehalten: `_drive_forward_localized` und
+`_drive_forward_supervised` lesen ebenfalls erst die Uhr.
 
 ## KI-F5 – nicht gefahren: Amadeus stand mittig, das Werkzeug kippte die Tür (Jetson, 23.11.2026, 09:50 bis 10:18)
 
@@ -979,7 +1045,7 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Der Projektinhaber entscheidet nach der
-[Bewertung](BEWERTUNG_TUERDURCHFAHRT.md) den Fahrweg: KI-F6 als letzter
-Versuch ohne Nav2 (parallel den Nav2-Weg vorbereiten) oder sofort der
-Nav2-Weg. Bis dahin wird nichts gefahren und nichts gebaut.
+Auftrag KI-F7 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): neuer Build mit der
+Korrektur im Erkunder, dann wie KI-F6: Amadeus 1,5 bis 3 m vor die Tür,
+einmal messen, die Tür bestätigen; er stellt sich selbst vor die Tür und
+fährt ohne Nahsensoren hindurch.

@@ -2156,6 +2156,28 @@ stehenden Roboter fünfmal umstellen ließ:**
 - **Richtiggestellt:** Das Archiv von KI-F4 hieß zuerst „nicht übergeben und
   nicht ausgeführt“; KI-F4 lief am 22.11. bis Teil M3.
 
+**Nachtrag 23.11.2026 – Bewertung des Fahrteils und KI-F6:**
+- **Bewertung** (`ki_erkundung/BEWERTUNG_TUERDURCHFAHRT.md`) nach dem Einwand
+  des Projektinhabers „ohne NAV2 schafft er das nicht“: Kein Fehlschlag der
+  KI-F-Fahrten lag an der Fahrgenauigkeit; alle realen Durchfahrten fuhr
+  Nav2, aber Nav2 erreicht seit 15./19.11. kaum ein Ziel, und ohne
+  Nahsensoren sperrt das Fahrtor Nav2. Zielbild Hybrid (Nav2 grob vor die
+  Tür, Laser-Etappen hindurch). Der Projektinhaber übergab daraufhin KI-F6:
+  zuerst ohne Nav2 weiter.
+- **KI-F6:** Die Selbst-Anfahrt gelang beim ersten Mal ohne Umstellen; die
+  Durchfahrt brach nach 0,67 m an zwei Programmfehlern im Erkunder ab:
+  `_drive_forward_lidar` las die Uhr vor der Odometrie (dieselbe
+  Wettlaufbedingung, die `f746b1c` am 29.09. nur für das Drehen behoben
+  hatte), und `ende()` wechselte an derselben Aufrufstelle die Logstufe
+  (rclpy wirft). Behoben nur für die Etappenfahrt
+  (`snapshot_before_clock=True`, Vorgabe aus) mit Tests, die den Fehler am
+  alten Stand nachstellen. Regel: **Eine Korrektur an einem gemeinsamen
+  Baustein gilt für alle Stellen mit demselben Muster** – beim Beheben nach
+  Geschwistern suchen; `_drive_forward_localized` und
+  `_drive_forward_supervised` (Hauptlinie, geparkt) haben dasselbe Muster
+  noch.
+- **Nächster Schritt:** KI-F7 mit neuem Build, sonst wie KI-F6.
+
 **Nachtrag 22.11.2026 (nachts) – Entscheidung des Projektinhabers: Laborprobe
 ohne Nahsensoren:**
 - **Wortlaut:** „Die Nahbereichssensoren machen gerade Probleme. Deswegen

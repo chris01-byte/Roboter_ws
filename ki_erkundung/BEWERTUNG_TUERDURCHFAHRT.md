@@ -185,3 +185,15 @@ gemessen).
 KI-F6 noch einmal als letzten Versuch ohne Nav2 (grob hinstellen) und
 parallel den Nav2-Weg vorbereiten, oder sofort auf den Nav2-Weg wechseln
 (Nahsensoren wieder an, zuerst den Stand vom 08.11. nachfahren).
+
+## Nachtrag (23.11.2026, nachmittags): KI-F6
+
+Der Projektinhaber hat KI-F6 übergeben und damit entschieden, zuerst ohne
+Nav2 weiterzumachen. Ergebnis: **Die Selbst-Anfahrt gelang** beim ersten
+Mal, ohne Umstellen (A-1 trifft zu). Die Durchfahrt brach nach 0,67 m an
+zwei Programmfehlern im Erkunder ab (Lesereihenfolge Uhr/Odometrie in der
+geraden Etappe; Schlussmeldung), nicht an Vermessung, Platz oder Rädern.
+Die Ausstiegsbedingung aus Abschnitt 3 („scheitert KI-F6 an Platz oder
+Vermessung“) ist damit nicht erfüllt. Beide Fehler sind behoben; Folgeauftrag
+KI-F7 mit neuem Build. Der Nav2-Weg bleibt das Zielbild für Wege um Möbel
+herum (Abschnitt 3).
