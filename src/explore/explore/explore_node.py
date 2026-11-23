@@ -78,7 +78,7 @@ from explore.lidar_motion import (
     scan_points_in_base,
 )
 from explore.stage_drive import (
-    StageLimits, next_stage, obstacle_ahead_m, parse_stage_target,
+    StageEnd, StageLimits, next_stage, obstacle_ahead_m, parse_stage_message,
 )
 from explore.portal_planning import (
     CorridorCheck,
@@ -765,6 +765,14 @@ class ExploreNode(MetricFrontierRuntime, SelfHealingRuntime, Node):
             'stage_drive_near_stop_m', 0.25).value)
         self._stage_costmap_timeout = float(self.declare_parameter(
             'stage_drive_costmap_timeout_s', 3.0).value)
+        # Folgeziel in derselben Mission (Entscheidung des Projektinhabers vom
+        # 23.11.2026: „ein Ablauf statt zwei Aufträge“): Traegt ein Fahrziel
+        # ``weiter``, wartet der Erkunder danach stehend so lange auf das
+        # naechste; ohne die Angabe endet die Mission wie bisher.
+        self._stage_followup_wait = float(self.declare_parameter(
+            'stage_drive_followup_wait_s', 120.0).value)
+        self._stage_max_targets = int(self.declare_parameter(
+            'stage_drive_max_targets', 3).value)
         self._stage_limits = StageLimits(
             max_points=int(self.declare_parameter(
                 'stage_drive_max_points', 3).value),
@@ -790,7 +798,9 @@ class ExploreNode(MetricFrontierRuntime, SelfHealingRuntime, Node):
                 or not 1 <= self._stage_max_stages <= 40
                 or not 0.0 <= self._stage_front_reserve <= 0.5
                 or not 0.10 <= self._stage_near_stop <= 0.6
-                or not 0.5 <= self._stage_costmap_timeout <= 10.0):
+                or not 0.5 <= self._stage_costmap_timeout <= 10.0
+                or not 10.0 <= self._stage_followup_wait <= 600.0
+                or not 1 <= self._stage_max_targets <= 5):
             raise ValueError('Etappenfahrt: Parameter ausserhalb der Grenzen')
         self._stage_target_lock = threading.Lock()
         self._stage_target_raw = None
@@ -7563,59 +7573,12 @@ class ExploreNode(MetricFrontierRuntime, SelfHealingRuntime, Node):
             self.get_logger().info(
                 f'Etappenfahrt: Rundblick vollstaendig, {math.degrees(gedreht):.1f} Grad.')
 
-        # ---- Auf genau ein Fahrziel warten; ohne Ziel bewegt sich nichts ----
-        self._stage_listen(True)
-        warte_seit = time.monotonic()
-        target = None
-        verworfen = 0
-        letzte_meldung = -1
-        while target is None:
-            if not rclpy.ok():
-                return ende(False, 'Etappenfahrt: ROS beendet; nichts gefahren')
-            if goal_handle.is_cancel_requested:
-                return ende(
-                    False, 'Etappenfahrt abgebrochen beim Warten auf das '
-                    'Fahrziel; nichts gefahren', abgebrochen=True)
-            gewartet = time.monotonic() - warte_seit
-            if gewartet >= self._stage_target_wait or overall_expired():
-                return ende(
-                    False, 'Etappenfahrt: kein gueltiges Fahrziel erhalten nach '
-                    f'{gewartet:.0f} s ({verworfen} verworfen); nichts gefahren')
-            rest = int(self._stage_target_wait - gewartet)
-            if rest // 5 != letzte_meldung:
-                letzte_meldung = rest // 5
-                self._status_phase = 'stage_drive_wait_target'
-                self._status_message = (
-                    'Etappenfahrt: warte auf das Fahrziel der KI-Linie; '
-                    f'noch {rest} s. Der Roboter steht.')
-                self._publish_status('running')
-            roh = self._take_stage_target()
-            if roh is None:
-                time.sleep(0.1)
-                continue
-            pose = self._robot_pose()
-            if pose is None:
-                verworfen += 1
-                self.get_logger().warn(
-                    'Fahrziel verworfen: Roboterpose fehlt.')
-                continue
-            try:
-                target = parse_stage_target(
-                    roh, frame=self._global_frame, now_s=time.time(),
-                    start_xy=pose[:2], limits=self._stage_limits)
-            except ValueError as grund:
-                verworfen += 1
-                self.get_logger().warn(f'Fahrziel verworfen: {grund}.')
-        self._stage_listen(False)
-        self.get_logger().info(
-            f'Fahrziel angenommen: Quelle={target.quelle}, '
-            f'Kennung={target.kennung}, {len(target.punkte)} Punkt(e), '
-            f'{target.laenge_m:.2f} m; gefahren wird ohne Nav2.')
-
-        # ---- Punkt für Punkt: ausrichten, gerade Etappe, neu messen ----
+        # ---- Auf ein Fahrziel warten; ohne Ziel bewegt sich nichts ----
         etappen = 0
         gefahren = 0.0
         ausgerichtet = 0.0
+        ziele = 0
+        target = None
 
         def bilanz():
             return (
@@ -7623,150 +7586,245 @@ class ExploreNode(MetricFrontierRuntime, SelfHealingRuntime, Node):
                 f'{math.degrees(ausgerichtet):.0f} Grad ausgerichtet; '
                 f'Quelle {target.quelle}; kein Nav2-Ziel')
 
-        for nummer, punkt in enumerate(target.punkte, start=1):
-            ausrichtungen = 0
-            pose = self._robot_pose()
+        def warte(frist_s: float, folge: bool):
+            """Stehend auf ein Fahrziel oder das Ende warten.
+
+            Rückgabe ``(art, nachricht, verworfen, gewartet_s)`` mit ``art``
+            ``'ziel'``, ``'ende'``, ``'zeit'``, ``'abbruch'`` oder ``'ros'``.
+            """
+            self._stage_listen(True)
+            warte_seit = time.monotonic()
+            verworfen = 0
+            letzte_meldung = -1
             while True:
+                if not rclpy.ok():
+                    return 'ros', None, verworfen, 0.0
                 if goal_handle.is_cancel_requested:
-                    return ende(
-                        False, f'Etappenfahrt abgebrochen; {bilanz()}',
-                        abgebrochen=True)
-                if overall_expired():
-                    return ende(False, f'Etappenfahrt: Zeitlimit; {bilanz()}')
-                if pose is None:
-                    return ende(
-                        False, f'Etappenfahrt: Roboterpose fehlt; {bilanz()}')
-                schritt, wert = next_stage(
-                    pose, punkt,
-                    arrive_tolerance_m=self._stage_arrive_tolerance,
-                    aim_min_distance_m=self._stage_aim_min_distance,
-                    align_tolerance_rad=self._stage_align_tolerance,
-                    stage_max_m=self._stage_max_m)
-                if schritt == 'arrived':
-                    self.get_logger().info(
-                        f'Etappenfahrt: Punkt {nummer}/{len(target.punkte)} '
-                        f'erreicht, Rest {wert:.2f} m.')
-                    break
-                if schritt == 'align':
-                    if ausrichtungen >= self._stage_max_aligns:
-                        return ende(
-                            False, 'Etappenfahrt: Ausrichtung auf Punkt '
-                            f'{nummer} gelingt nicht (Rest '
-                            f'{math.degrees(wert):+.1f} Grad); {bilanz()}')
-                    ausrichtungen += 1
-                    self._status_phase = 'stage_drive_align'
+                    return 'abbruch', None, verworfen, 0.0
+                gewartet = time.monotonic() - warte_seit
+                if gewartet >= frist_s or overall_expired():
+                    return 'zeit', None, verworfen, gewartet
+                rest = int(frist_s - gewartet)
+                if rest // 5 != letzte_meldung:
+                    letzte_meldung = rest // 5
+                    self._status_phase = 'stage_drive_wait_target'
                     self._status_message = (
-                        f'Etappenfahrt: richte auf Punkt {nummer} aus, '
-                        f'{math.degrees(wert):+.1f} Grad.')
+                        f'Etappenfahrt: Fahrziel {ziele} erreicht ({bilanz()}); '
+                        f'warte auf das Folgeziel; noch {rest} s. Der Roboter steht.'
+                        if folge else
+                        'Etappenfahrt: warte auf das Fahrziel der KI-Linie; '
+                        f'noch {rest} s. Der Roboter steht.')
                     self._publish_status('running')
-                    winkel = math.copysign(
-                        max(abs(wert) - self._stage_align_stop_margin,
-                            0.5 * self._stage_align_stop_margin), wert)
-                    turn_status, achieved = self._rotate_in_place(
-                        winkel, self._stage_turn_speed, self._stage_turn_timeout,
-                        stop_requested=stop_requested,
-                        rate_check_after_s=self._prealign_rate_check_after,
-                        min_average_rate_radps=self._prealign_min_average_rate)
-                    ausgerichtet += achieved
-                    if turn_status != 'success':
-                        if goal_handle.is_cancel_requested:
-                            return ende(
-                                False, f'Etappenfahrt abgebrochen; {bilanz()}',
-                                abgebrochen=True)
-                        return ende(
-                            False, 'Etappenfahrt: Ausrichtung fehlgeschlagen: '
-                            f'{turn_status}; {bilanz()}')
-                    pose = self._stage_settled_pose(stop_requested)
-                    if pose is not None:
-                        rest = normalize_angle(math.atan2(
-                            punkt[1] - pose[1], punkt[0] - pose[0]) - pose[2])
-                        self.get_logger().info(
-                            f'Etappenfahrt: ausgerichtet um '
-                            f'{math.degrees(achieved):.1f} Grad, Restfehler '
-                            f'{math.degrees(rest):+.1f} Grad.')
+                roh = self._take_stage_target()
+                if roh is None:
+                    time.sleep(0.1)
                     continue
-
-                # schritt == 'drive'
-                if etappen >= self._stage_max_stages:
-                    return ende(
-                        False, f'Etappenfahrt: zu viele Etappen; {bilanz()}')
-                corridor_status, nearest = self._stage_corridor(wert)
-                if corridor_status != 'success':
-                    noetig = (
-                        wert + self._stage_front_reserve
-                        + self._portal_front_overhang)
-                    return ende(
-                        False, 'Etappenfahrt: Streifen vor dem Roboter nicht '
-                        f'frei oder nicht gesehen ({corridor_status}, '
-                        f'naechstes Hindernis {nearest:.2f} m, noetig '
-                        f'{noetig:.2f} m); {bilanz()}')
-                nah = {'status': 'clear', 'abstand': None}
-
-                def nahbereich_haelt_an():
-                    status, abstand = self._stage_near_field()
-                    if status != 'clear':
-                        nah.update(status=status, abstand=abstand)
-                        return True
-                    return False
-
-                if nahbereich_haelt_an():
-                    return ende(
-                        False, 'Etappenfahrt: Nahbereich vor dem Roboter nicht '
-                        f'frei ({nah["status"]}'
-                        + ('' if nah['abstand'] is None
-                           else f', {nah["abstand"]:.2f} m vor der Vorderkante')
-                        + f'); {bilanz()}')
-                self._status_phase = 'stage_drive'
-                self._status_message = (
-                    f'Etappenfahrt: Etappe {etappen + 1} zu Punkt {nummer}, '
-                    f'{wert:.2f} m geradeaus.')
-                self._publish_status('running')
-                halt, fertig = threading.Event(), threading.Event()
-                waechter = threading.Thread(
-                    target=self._stage_watch_near_field,
-                    args=(halt, fertig, nah), daemon=True,
-                    name='stage_near_field')
-                waechter.start()
+                pose = self._robot_pose()
+                if pose is None:
+                    verworfen += 1
+                    self.get_logger().warn(
+                        'Fahrziel verworfen: Roboterpose fehlt.')
+                    continue
                 try:
-                    (stage_status, progress, encoder_progress, lateral,
-                     heading_error, match_cost, match_support, rejected) = (
-                        self._drive_forward_lidar(
-                            wert, 1.5 * wert + 0.15, self._stage_speed,
-                            max(30.0, 4.0 * wert / self._stage_speed + 10.0),
-                            stop_requested=lambda: (
-                                stop_requested() or halt.is_set()),
-                            snapshot_before_clock=True))
-                finally:
-                    fertig.set()
-                    waechter.join(timeout=2.0)
-                etappen += 1
-                gefahren += progress
-                self.get_logger().info(
-                    f'Etappenfahrt: Etappe {etappen} beendet: '
-                    f'Status={stage_status}, Soll {wert:.3f} m, realer '
-                    f'LiDAR-Weg={progress:.3f} m, Encoder-Radweg='
-                    f'{encoder_progress:.3f} m, seitlich={lateral:+.3f} m, '
-                    f'Winkelfehler={math.degrees(heading_error):+.1f} Grad, '
-                    f'Matchkosten={match_cost:.3f} m, Stuetzung='
-                    f'{100.0 * match_support:.1f} %, Verwerfungen={rejected}.')
-                if stage_status != 'success':
+                    nachricht = parse_stage_message(
+                        roh, frame=self._global_frame, now_s=time.time(),
+                        start_xy=pose[:2], limits=self._stage_limits)
+                except ValueError as grund:
+                    verworfen += 1
+                    self.get_logger().warn(f'Fahrziel verworfen: {grund}.')
+                    continue
+                self._stage_listen(False)
+                if isinstance(nachricht, StageEnd):
+                    return 'ende', nachricht, verworfen, gewartet
+                return 'ziel', nachricht, verworfen, gewartet
+
+        while True:
+            folge = ziele > 0
+            art, nachricht, verworfen, gewartet = warte(
+                self._stage_followup_wait if folge else self._stage_target_wait, folge)
+            if art == 'ros':
+                return ende(False, 'Etappenfahrt: ROS beendet; '
+                            + (bilanz() if folge else 'nichts gefahren'))
+            if art == 'abbruch':
+                return ende(
+                    False,
+                    f'Etappenfahrt abgebrochen beim Warten auf das Folgeziel; {bilanz()}'
+                    if folge else
+                    'Etappenfahrt abgebrochen beim Warten auf das Fahrziel; nichts gefahren',
+                    abgebrochen=True)
+            if art == 'zeit':
+                if folge:
+                    return ende(True, f'Etappenfahrt abgeschlossen: {bilanz()}; kein '
+                                f'Folgeziel nach {gewartet:.0f} s')
+                return ende(
+                    False, 'Etappenfahrt: kein gueltiges Fahrziel erhalten nach '
+                    f'{gewartet:.0f} s ({verworfen} verworfen); nichts gefahren')
+            if art == 'ende':
+                if folge:
+                    return ende(True, f'Etappenfahrt abgeschlossen: {bilanz()}; '
+                                f'kein Folgeziel (Ende von Quelle {nachricht.quelle})')
+                return ende(False, 'Etappenfahrt: beendet ohne Fahrziel (Quelle '
+                            f'{nachricht.quelle}); nichts gefahren')
+            target = nachricht
+            self.get_logger().info(
+                f'Fahrziel angenommen: Quelle={target.quelle}, '
+                f'Kennung={target.kennung}, {len(target.punkte)} Punkt(e), '
+                f'{target.laenge_m:.2f} m; gefahren wird ohne Nav2'
+                + ('; danach wird ein Folgeziel erwartet.' if target.weiter else '.'))
+
+            # ---- Punkt für Punkt: ausrichten, gerade Etappe, neu messen ----
+            for nummer, punkt in enumerate(target.punkte, start=1):
+                ausrichtungen = 0
+                pose = self._robot_pose()
+                while True:
                     if goal_handle.is_cancel_requested:
                         return ende(
                             False, f'Etappenfahrt abgebrochen; {bilanz()}',
                             abgebrochen=True)
-                    if nah['status'] != 'clear':
+                    if overall_expired():
+                        return ende(False, f'Etappenfahrt: Zeitlimit; {bilanz()}')
+                    if pose is None:
                         return ende(
-                            False, 'Etappenfahrt: angehalten, Nahbereich vor '
-                            f'dem Roboter nicht frei ({nah["status"]}'
+                            False, f'Etappenfahrt: Roboterpose fehlt; {bilanz()}')
+                    schritt, wert = next_stage(
+                        pose, punkt,
+                        arrive_tolerance_m=self._stage_arrive_tolerance,
+                        aim_min_distance_m=self._stage_aim_min_distance,
+                        align_tolerance_rad=self._stage_align_tolerance,
+                        stage_max_m=self._stage_max_m)
+                    if schritt == 'arrived':
+                        self.get_logger().info(
+                            f'Etappenfahrt: Punkt {nummer}/{len(target.punkte)} '
+                            f'erreicht, Rest {wert:.2f} m.')
+                        break
+                    if schritt == 'align':
+                        if ausrichtungen >= self._stage_max_aligns:
+                            return ende(
+                                False, 'Etappenfahrt: Ausrichtung auf Punkt '
+                                f'{nummer} gelingt nicht (Rest '
+                                f'{math.degrees(wert):+.1f} Grad); {bilanz()}')
+                        ausrichtungen += 1
+                        self._status_phase = 'stage_drive_align'
+                        self._status_message = (
+                            f'Etappenfahrt: richte auf Punkt {nummer} aus, '
+                            f'{math.degrees(wert):+.1f} Grad.')
+                        self._publish_status('running')
+                        winkel = math.copysign(
+                            max(abs(wert) - self._stage_align_stop_margin,
+                                0.5 * self._stage_align_stop_margin), wert)
+                        turn_status, achieved = self._rotate_in_place(
+                            winkel, self._stage_turn_speed, self._stage_turn_timeout,
+                            stop_requested=stop_requested,
+                            rate_check_after_s=self._prealign_rate_check_after,
+                            min_average_rate_radps=self._prealign_min_average_rate)
+                        ausgerichtet += achieved
+                        if turn_status != 'success':
+                            if goal_handle.is_cancel_requested:
+                                return ende(
+                                    False, f'Etappenfahrt abgebrochen; {bilanz()}',
+                                    abgebrochen=True)
+                            return ende(
+                                False, 'Etappenfahrt: Ausrichtung fehlgeschlagen: '
+                                f'{turn_status}; {bilanz()}')
+                        pose = self._stage_settled_pose(stop_requested)
+                        if pose is not None:
+                            rest = normalize_angle(math.atan2(
+                                punkt[1] - pose[1], punkt[0] - pose[0]) - pose[2])
+                            self.get_logger().info(
+                                f'Etappenfahrt: ausgerichtet um '
+                                f'{math.degrees(achieved):.1f} Grad, Restfehler '
+                                f'{math.degrees(rest):+.1f} Grad.')
+                        continue
+
+                    # schritt == 'drive'
+                    if etappen >= self._stage_max_stages:
+                        return ende(
+                            False, f'Etappenfahrt: zu viele Etappen; {bilanz()}')
+                    corridor_status, nearest = self._stage_corridor(wert)
+                    if corridor_status != 'success':
+                        noetig = (
+                            wert + self._stage_front_reserve
+                            + self._portal_front_overhang)
+                        return ende(
+                            False, 'Etappenfahrt: Streifen vor dem Roboter nicht '
+                            f'frei oder nicht gesehen ({corridor_status}, '
+                            f'naechstes Hindernis {nearest:.2f} m, noetig '
+                            f'{noetig:.2f} m); {bilanz()}')
+                    nah = {'status': 'clear', 'abstand': None}
+
+                    def nahbereich_haelt_an():
+                        status, abstand = self._stage_near_field()
+                        if status != 'clear':
+                            nah.update(status=status, abstand=abstand)
+                            return True
+                        return False
+
+                    if nahbereich_haelt_an():
+                        return ende(
+                            False, 'Etappenfahrt: Nahbereich vor dem Roboter nicht '
+                            f'frei ({nah["status"]}'
                             + ('' if nah['abstand'] is None
                                else f', {nah["abstand"]:.2f} m vor der Vorderkante')
                             + f'); {bilanz()}')
-                    return ende(
-                        False, 'Etappenfahrt: Etappe fehlgeschlagen: '
-                        f'{stage_status}; {bilanz()}')
-                pose = self._stage_settled_pose(stop_requested)
+                    self._status_phase = 'stage_drive'
+                    self._status_message = (
+                        f'Etappenfahrt: Etappe {etappen + 1} zu Punkt {nummer}, '
+                        f'{wert:.2f} m geradeaus.')
+                    self._publish_status('running')
+                    halt, fertig = threading.Event(), threading.Event()
+                    waechter = threading.Thread(
+                        target=self._stage_watch_near_field,
+                        args=(halt, fertig, nah), daemon=True,
+                        name='stage_near_field')
+                    waechter.start()
+                    try:
+                        (stage_status, progress, encoder_progress, lateral,
+                         heading_error, match_cost, match_support, rejected) = (
+                            self._drive_forward_lidar(
+                                wert, 1.5 * wert + 0.15, self._stage_speed,
+                                max(30.0, 4.0 * wert / self._stage_speed + 10.0),
+                                stop_requested=lambda: (
+                                    stop_requested() or halt.is_set()),
+                                snapshot_before_clock=True))
+                    finally:
+                        fertig.set()
+                        waechter.join(timeout=2.0)
+                    etappen += 1
+                    gefahren += progress
+                    self.get_logger().info(
+                        f'Etappenfahrt: Etappe {etappen} beendet: '
+                        f'Status={stage_status}, Soll {wert:.3f} m, realer '
+                        f'LiDAR-Weg={progress:.3f} m, Encoder-Radweg='
+                        f'{encoder_progress:.3f} m, seitlich={lateral:+.3f} m, '
+                        f'Winkelfehler={math.degrees(heading_error):+.1f} Grad, '
+                        f'Matchkosten={match_cost:.3f} m, Stuetzung='
+                        f'{100.0 * match_support:.1f} %, Verwerfungen={rejected}.')
+                    if stage_status != 'success':
+                        if goal_handle.is_cancel_requested:
+                            return ende(
+                                False, f'Etappenfahrt abgebrochen; {bilanz()}',
+                                abgebrochen=True)
+                        if nah['status'] != 'clear':
+                            return ende(
+                                False, 'Etappenfahrt: angehalten, Nahbereich vor '
+                                f'dem Roboter nicht frei ({nah["status"]}'
+                                + ('' if nah['abstand'] is None
+                                   else f', {nah["abstand"]:.2f} m vor der Vorderkante')
+                                + f'); {bilanz()}')
+                        return ende(
+                            False, 'Etappenfahrt: Etappe fehlgeschlagen: '
+                            f'{stage_status}; {bilanz()}')
+                    pose = self._stage_settled_pose(stop_requested)
 
-        return ende(True, f'Etappenfahrt abgeschlossen: {bilanz()}')
+            ziele += 1
+            if not target.weiter:
+                return ende(True, f'Etappenfahrt abgeschlossen: {bilanz()}')
+            if ziele >= self._stage_max_targets:
+                return ende(True, f'Etappenfahrt abgeschlossen: {bilanz()}; '
+                            f'hoechstens {self._stage_max_targets} Fahrziele je Auftrag')
+            self.get_logger().info(
+                f'Etappenfahrt: Fahrziel {ziele} erreicht ({bilanz()}); '
+                'warte auf das Folgeziel.')
 
     def _execute_reserved(self, goal_handle):
         req = goal_handle.request

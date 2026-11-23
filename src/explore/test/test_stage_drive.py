@@ -23,7 +23,8 @@ sys.path.insert(0, str(PACKAGE_ROOT))
 import explore.explore_node as explore_node_module  # noqa: E402
 from explore.explore_node import ExploreNode  # noqa: E402
 from explore.stage_drive import (  # noqa: E402
-    StageLimits, next_stage, obstacle_ahead_m, parse_stage_target,
+    StageEnd, StageLimits, next_stage, obstacle_ahead_m, parse_stage_message,
+    parse_stage_target,
 )
 
 JETZT = 1_800_000_000.0
@@ -205,6 +206,8 @@ def knoten(etappenfahrt=True, rundblick=False):
     node._replan_period_s = 0.0
     node._global_frame = 'map'
     node._stage_target_wait = 420.0
+    node._stage_followup_wait = 120.0
+    node._stage_max_targets = 3
     node._stage_max_m = 0.50
     node._stage_speed = 0.05
     node._stage_turn_speed = 0.08
@@ -944,3 +947,125 @@ def test_echte_zeitfehler_bleiben_gesperrt(uhr, alter_s, erwartet):
     status = ExploreNode._drive_forward_lidar(
         node, 0.3, 0.6, 0.05, 30.0, snapshot_before_clock=True)[0]
     assert status == erwartet
+
+
+# ------------------------------------------- Folgeziel in derselben Mission (KI-F8)
+
+def ende_text(*, quelle='test', frame='map', zeit_s=JETZT, kennung='e1', **mehr):
+    return json.dumps({'ende': True, 'kennung': kennung, 'quelle': quelle,
+                       'frame': frame, 'zeit_s': zeit_s, **mehr})
+
+
+def test_weiter_wird_gelesen_und_ist_sonst_aus():
+    assert pruefe(ziel([[0.5, 0.0]])).weiter is False
+    assert pruefe(ziel([[0.5, 0.0]], weiter=True)).weiter is True
+    with pytest.raises(ValueError, match='target_continue_invalid'):
+        pruefe(ziel([[0.5, 0.0]], weiter='ja'))
+
+
+@pytest.mark.parametrize('text, grund', [
+    (ende_text(zeit_s=JETZT - 60.0), 'target_stale'),
+    (ende_text(frame='odom'), 'target_frame_mismatch'),
+    (ende_text(quelle='jemand'), 'target_source_invalid'),
+    (ende_text(punkte=[[0.5, 0.0]]), 'end_invalid'),
+    (json.dumps({'ende': 'ja', 'kennung': 'e1', 'quelle': 'test', 'frame': 'map',
+                 'zeit_s': JETZT}), 'end_invalid'),
+])
+def test_mangelhaftes_ende_wird_verworfen(text, grund):
+    with pytest.raises(ValueError, match=grund):
+        parse_stage_message(text, frame='map', now_s=JETZT, start_xy=(0.0, 0.0),
+                            limits=GRENZEN)
+
+
+def test_ende_und_fahrziel_werden_unterschieden():
+    ende = parse_stage_message(ende_text(), frame='map', now_s=JETZT,
+                               start_xy=(0.0, 0.0), limits=GRENZEN)
+    assert ende == StageEnd('e1', 'test')
+    ziel_ = parse_stage_message(ziel([[0.5, 0.0]]), frame='map', now_s=JETZT,
+                                start_xy=(0.0, 0.0), limits=GRENZEN)
+    assert ziel_.punkte == ((0.5, 0.0),) and ziel_.weiter is False
+
+
+def test_anfahrt_dann_durchfahrt_in_einer_mission(uhr):
+    node, handle = knoten(), Handle()
+    sende_beim_warten(uhr, node, ziel([[0.0, 1.0]], kennung='anfahrt', weiter=True),
+                      ziel([[0.0, 2.0]], kennung='tuer'))
+    result = node._execute_reserved(handle)
+    assert result.success is True and handle.calls == ['succeed']
+    # je Ziel 1 m in zwei Etappen; ausgerichtet wird nur vor dem ersten
+    assert [b[0] for b in node.bewegungen] == ['drehen'] + ['fahren'] * 4
+    assert result.message.startswith('Etappenfahrt abgeschlossen: 4 Etappe(n)')
+    assert result.message.endswith('Quelle test; kein Nav2-Ziel')
+    zwischen = [s for s in node.statuses if s[1] == 'stage_drive_wait_target'
+                and 'Fahrziel 1 erreicht' in s[2]]
+    assert zwischen and zwischen[0][2].startswith(
+        'Etappenfahrt: Fahrziel 1 erreicht (2 Etappe(n)')
+    assert any('danach wird ein Folgeziel erwartet' in z for z in node.logs)
+    assert any('Fahrziel 1 erreicht' in z for z in node.logs)
+
+
+def test_nach_dem_ende_schliesst_die_mission_erfolgreich(uhr):
+    node, handle = knoten(), Handle()
+    sende_beim_warten(uhr, node, ziel([[0.5, 0.0]], weiter=True), ende_text())
+    result = node._execute_reserved(handle)
+    assert result.success is True and handle.calls == ['succeed']
+    assert [b[0] for b in node.bewegungen] == ['fahren']
+    assert result.message.endswith('kein Folgeziel (Ende von Quelle test)')
+
+
+def test_ohne_folgeziel_endet_die_mission_nach_der_frist(uhr):
+    node, handle = knoten(), Handle()
+    sende_beim_warten(uhr, node, ziel([[0.5, 0.0]], weiter=True))
+    result = node._execute_reserved(handle)
+    assert result.success is True
+    assert result.message.endswith('kein Folgeziel nach 120 s')
+    assert [b[0] for b in node.bewegungen] == ['fahren']
+
+
+def test_ende_statt_erstem_ziel_bewegt_nichts(uhr):
+    node, handle = knoten(), Handle()
+    sende_beim_warten(uhr, node, ende_text())
+    result = node._execute_reserved(handle)
+    assert result.success is False and handle.calls == ['abort']
+    assert node.bewegungen == []
+    assert result.message == ('Etappenfahrt: beendet ohne Fahrziel (Quelle test); '
+                              'nichts gefahren')
+
+
+def test_hoechstens_drei_fahrziele_je_mission(uhr):
+    node, handle = knoten(), Handle()
+    sende_beim_warten(uhr, node, *(ziel([[0.0, 0.5 * (i + 1)]], kennung=f'z{i}', weiter=True)
+                                   for i in range(4)))
+    result = node._execute_reserved(handle)
+    assert result.success is True
+    assert result.message.endswith('hoechstens 3 Fahrziele je Auftrag')
+    assert [b[0] for b in node.bewegungen].count('fahren') == 3
+
+
+def test_abbruch_beim_warten_auf_das_folgeziel(uhr):
+    node, handle = knoten(), Handle()
+    sende_beim_warten(uhr, node, ziel([[0.5, 0.0]], weiter=True))
+
+    def abbrechen():
+        if node.bewegungen and node._stage_target_listening:
+            handle.is_cancel_requested = True
+
+    uhr.bei_schlaf.append(abbrechen)
+    result = node._execute_reserved(handle)
+    assert handle.calls == ['canceled']
+    assert result.message.startswith('Etappenfahrt abgebrochen beim Warten auf das Folgeziel')
+
+
+def test_ein_waehrend_der_fahrt_gesendetes_ziel_wird_kein_folgeziel(uhr):
+    node, handle = knoten(), Handle()
+    sende_beim_warten(uhr, node, ziel([[1.0, 0.0]], weiter=True))
+    echte_fahrt = node._drive_forward_lidar
+
+    def fahrt_mit_funk(*args, **kwargs):
+        node._on_stage_target(SimpleNamespace(data=ziel([[2.0, 0.0]], kennung='zu_frueh')))
+        return echte_fahrt(*args, **kwargs)
+
+    node._drive_forward_lidar = fahrt_mit_funk
+    result = node._execute_reserved(handle)
+    assert result.message.endswith('kein Folgeziel nach 120 s')
+    assert [b[0] for b in node.bewegungen] == ['fahren', 'fahren']

@@ -43,12 +43,26 @@ class StageLimits:
 
 @dataclass(frozen=True)
 class StageTarget:
-    """Ein geprüftes Fahrziel: wer es gewählt hat und die Punkte im Kartenframe."""
+    """Ein geprüftes Fahrziel: wer es gewählt hat und die Punkte im Kartenframe.
+
+    ``weiter``: Nach diesem Ziel folgt in derselben Mission ein Folgeziel
+    (zum Beispiel erst die Anfahrt vor die Tür, dann die Durchfahrt). Ohne
+    die Angabe endet die Mission nach dem Ziel wie bisher.
+    """
 
     kennung: str
     quelle: str
     punkte: Tuple[Tuple[float, float], ...]
     laenge_m: float
+    weiter: bool = False
+
+
+@dataclass(frozen=True)
+class StageEnd:
+    """Die KI-Linie beendet das Warten: Es kommt kein (weiteres) Fahrziel."""
+
+    kennung: str
+    quelle: str
 
 
 QUELLEN = ('ki', 'mensch', 'test')
@@ -98,6 +112,10 @@ def parse_stage_target(
     if alter > limits.max_age_s:
         raise ValueError('target_stale')
 
+    weiter = daten.get('weiter', False)
+    if not isinstance(weiter, bool):
+        raise ValueError('target_continue_invalid')
+
     roh = daten.get('punkte')
     if not isinstance(roh, list) or not 1 <= len(roh) <= limits.max_points:
         raise ValueError('target_point_count_invalid')
@@ -123,7 +141,46 @@ def parse_stage_target(
         raise ValueError('target_total_too_long')
     if gesamt < limits.min_leg_m:
         raise ValueError('target_total_too_short')
-    return StageTarget(kennung, quelle, tuple(punkte), gesamt)
+    return StageTarget(kennung, quelle, tuple(punkte), gesamt, weiter)
+
+
+def parse_stage_message(
+        text: str, *, frame: str, now_s: float,
+        start_xy: Tuple[float, float], limits: StageLimits):
+    """Ein Fahrziel (``StageTarget``) oder das Ende des Wartens (``StageEnd``).
+
+    Das Ende ist ein JSON-Objekt mit ``"ende": true``, ``kennung``,
+    ``quelle``, ``frame`` und ``zeit_s`` wie beim Fahrziel, ohne Punkte. Es
+    wird genauso streng auf Herkunft und Alter geprüft.
+    """
+    try:
+        daten = json.loads(text)
+    except (TypeError, ValueError) as fehler:
+        raise ValueError('target_not_json') from fehler
+    if not isinstance(daten, dict):
+        raise ValueError('target_not_object')
+    if 'ende' not in daten:
+        return parse_stage_target(
+            text, frame=frame, now_s=now_s, start_xy=start_xy, limits=limits)
+    if daten.get('ende') is not True or 'punkte' in daten:
+        raise ValueError('end_invalid')
+    kennung = daten.get('kennung')
+    if not isinstance(kennung, str) or not 1 <= len(kennung) <= 80:
+        raise ValueError('target_id_invalid')
+    quelle = daten.get('quelle')
+    if quelle not in QUELLEN:
+        raise ValueError('target_source_invalid')
+    if daten.get('frame') != frame:
+        raise ValueError('target_frame_mismatch')
+    zeit = daten.get('zeit_s')
+    if isinstance(zeit, bool) or not isinstance(zeit, (int, float)):
+        raise ValueError('target_time_invalid')
+    alter = float(now_s) - float(zeit)
+    if not math.isfinite(alter) or alter < -2.0:
+        raise ValueError('target_time_invalid')
+    if alter > limits.max_age_s:
+        raise ValueError('target_stale')
+    return StageEnd(kennung, quelle)
 
 
 def normalize_angle(winkel: float) -> float:
