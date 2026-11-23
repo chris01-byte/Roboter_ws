@@ -28,16 +28,19 @@ vom Standplatz durch die Türmitte**: einen 1,2 m vor und einen 0,6 m hinter
 der Türlinie. Es sendet nichts, wenn es die Öffnung nicht eindeutig findet,
 wenn sie nicht türbreit vermessen ist (0,65 bis 0,95 m), wenn der Roboter
 nicht passend vor der Tür steht oder wenn neben der Fahrlinie nicht
-beidseits 0,30 m frei sind (gemessen am selben Laserbild: Türblatt,
+beidseits 0,26 m frei sind (gemessen am selben Laserbild: Türblatt,
 Pfosten, alles, was im Weg steht); dann sagt es, was an der Aufstellung zu
 ändern ist. ``--tuer --nur-messen`` zeigt dasselbe, ohne zu senden, und dazu
 das Protokoll der Vermessung.
 
 ``--zur-tuer`` entscheidet selbst: Passen Aufstellung, Weg und Kostenkarte,
-sendet es die Durchfahrt; sonst die Anfahrt vor die Tür (danach eine zweite
-Mission und ``--tuer``). Niemand muss den Roboter dafür umstellen. Die
-Türachse kommt in allen Betrieben aus der geraden Wand neben der Tür, nicht
-nur aus den zwei Kanten.
+sendet es die Durchfahrt; sonst die Anfahrt vor die Tür. **Alles in einem
+Aufruf und einer Mission:** Die Anfahrt trägt den Vermerk „es folgt ein
+Folgeziel“; danach misst das Werkzeug im Stand neu, findet die gemerkte
+Tür wieder und sendet die Durchfahrt. Sieht der Laser von dort die Wand
+neben der Tür nicht lang genug, nimmt es die Türachse aus der ersten
+Messung. Niemand muss den Roboter dafür umstellen. Passt etwas nicht,
+schickt es dem Erkunder ein „Ende“; die Mission schließt dann sofort.
 
 ``--vor-die-tuer`` ist die **Anfahrt**: Steht der Roboter irgendwo im Raum,
 fährt er über einen Punkt auf der Türachse vor die Tür und dreht sich zu
@@ -72,11 +75,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lotse.blickrunde import profil_ursprung, scan_als_dict, stand_profil  # noqa: E402
 from lotse.fahrziel import (  # noqa: E402
     BASIS_UEBER_BODEN_M, FREI_NEBEN_DER_LINIE_M, HINTER_DER_TUER_M, TUER_MAX_M, TUER_MIN_M,
-    VOR_DER_TUER_M, achse_text, anfahrt, anfahrt_im_kartenrahmen, anfahrt_text, aufstellung,
-    aufstellung_hinweise, belegt_auf_dem_weg, botschaft, freiraum, freiraum_hinweise,
-    gerade_durch_die_tuer, gerade_linie, geradeaus, herkunft, herkunft_text, in_den_boden,
-    kostenkarte_text, kostenkarte_voraus, nah_text, pruefe_grenzen, punkt_relativ,
-    tuerachse, weg_belegt_text, wolke_xyz, zellen_im_streifen,
+    VOR_DER_TUER_M, achse_aus_karte, achse_text, anfahrt, anfahrt_im_kartenrahmen, anfahrt_text,
+    aufstellung, aufstellung_hinweise, belegt_auf_dem_weg, botschaft, ende_botschaft, freiraum,
+    freiraum_hinweise, gerade_durch_die_tuer, gerade_linie, geradeaus, herkunft, herkunft_text,
+    in_den_boden, kostenkarte_text, kostenkarte_voraus, nah_text, pruefe_grenzen, punkt_relativ,
+    tuer_merken, tuerachse, weg_belegt_text, wiederfinden, wolke_xyz, zellen_im_streifen,
 )
 from lotse.geometrie import aus_tf  # noqa: E402
 from lotse.kandidaten import TUERBREIT_M, Oeffnung, oeffnungen  # noqa: E402
@@ -251,7 +254,7 @@ def entscheidung(lage_passt: bool, weg_passt: bool, anfahrt_moeglich: bool) -> s
 ENTSCHEIDUNG_TEXT = {
     'durchfahrt': 'Entscheidung: Durchfahrt – er steht passend, gerade durch die Türmitte.',
     'anfahrt': ('Entscheidung: Anfahrt – er stellt sich zuerst selbst vor die Tür; danach '
-                'eine zweite Mission und die Durchfahrt mit --tuer.'),
+                'misst er neu und fährt in derselben Mission hindurch.'),
     'nichts': 'Entscheidung: keine Fahrt – weder Durchfahrt noch Anfahrt passen.',
 }
 
@@ -570,6 +573,124 @@ def main(argv=None) -> int:
     def meldung() -> str:
         return str((stand['status'] or {}).get('message', ''))
 
+    def nichts_gesendet(grund: str, code: int = 2) -> int:
+        """Nichts senden, aber dem wartenden Erkunder das Ende sagen."""
+        print(f'Nichts gesendet: {grund}.')
+        if not wahl.nur_messen and sender.empfaenger() > 0:
+            sender.sende(ende_botschaft(kennung=f'ende-{int(time.time())}',
+                                        quelle=wahl.quelle, zeit_s=time.time(),
+                                        frame=wahl.karten_rahmen))
+            drehe(10.0, lambda: (stand['status'] or {}).get('state') not in ('running', None))
+            zustand = (stand['status'] or {}).get('state')
+            print(f'Ende an den Erkunder gesendet; Zustand {zustand!r}; {meldung()}')
+        return code
+
+    def senden_und_beobachten(punkte, art_name: str, bemerkung, gesamt: float,
+                              weiter: bool = False):
+        """Fahrziel senden und die Meldungen zeigen, bis es erreicht oder vorbei ist.
+
+        Rückgabe ``(zustand, angekommen)``: ``angekommen`` heißt, der Erkunder
+        hat ein Ziel mit Folgeziel erreicht und wartet stehend auf das nächste.
+        """
+        kennung = (f'{wahl.kennung}-{art_name}' if wahl.kennung
+                   else f'{art_name}-{int(time.time())}')
+        text = botschaft(punkte, kennung=kennung, quelle=wahl.quelle, zeit_s=time.time(),
+                         frame=wahl.karten_rahmen, bemerkung=bemerkung, weiter=weiter)
+        sender.sende(text)
+        print(f'Fahrziel gesendet: {len(punkte)} Punkt(e), zusammen {gesamt:.2f} m, '
+              f'Quelle {wahl.quelle}, Kennung {kennung}'
+              + ('; danach folgt die Durchfahrt in derselben Mission.' if weiter else '.'),
+              flush=True)
+        letzte = None
+        ende = time.monotonic() + wahl.beobachten
+        while rclpy.ok() and time.monotonic() < ende:
+            rclpy.spin_once(knoten, timeout_sec=0.2)
+            jetzt = (phase(), meldung())
+            if jetzt != letzte and jetzt[0] != WARTEPHASE:
+                letzte = jetzt
+                print(f'  Erkunder: {jetzt[1]}', flush=True)
+            if (weiter and jetzt[0] == WARTEPHASE
+                    and jetzt[1].startswith('Etappenfahrt: Fahrziel ')
+                    and ' erreicht (' in jetzt[1]):
+                print(f'  Erkunder: {jetzt[1]}', flush=True)
+                return (stand['status'] or {}).get('state'), True
+            if (stand['status'] or {}).get('state') not in ('running', None):
+                break
+        return (stand['status'] or {}).get('state'), False
+
+    def schluss(zustand, art_name: str) -> int:
+        """Ende der Fahrt: Zustand, Kostenkarte, nach einem Halt die Herkunft."""
+        print(f'Ende: Zustand des Erkunders {zustand!r}; {meldung()}')
+        drehe(1.5)                       # die Kostenkarte kommt einmal je Sekunde
+        print(kostenkarte_zeile())
+        # Nach einem Halt: woher stammt die nächste belegte Stelle vor dem Roboter?
+        pose_ende = lage_in_der_karte()
+        stelle = naechste_stelle(pose_ende)
+        if stelle is not None:
+            print(herkunft_zeile(stelle, pose_ende))
+        print(nah_text(nah_jetzt()))
+        # Der Erkunder meldet einen gelungenen Auftrag ohne Flächenziel als „partial“.
+        gelungen = (zustand in ('partial', 'success')
+                    and meldung().startswith('Etappenfahrt abgeschlossen'))
+        if gelungen and art_name == 'anfahrt':
+            print('Anfahrt abgeschlossen.')
+        elif gelungen and art_name == 'tuer':
+            print('Durchfahrt abgeschlossen.')
+        return 0 if gelungen else 1
+
+    def durchfahrt_nach_anfahrt(gemerkt: dict) -> int:
+        """Nach der Anfahrt: neu messen, die Tür wiederfinden, gerade hindurch."""
+        drehe(1.0)
+        scans, boden_lidar = laserbild(wahl.messdauer)
+        if scans is None:
+            return nichts_gesendet('Kein Scan oder keine Montage des LiDAR (TF) nach der '
+                                   'Anfahrt', 4)
+        hindernisse2: List = []
+        sicht2: dict = {}
+        gefunden2 = vermesse(scans, boden_lidar, [], hindernisse2, sicht2)
+        print(f'Neu gemessen nach der Anfahrt: {len(scans)} Scans, {len(gefunden2)} '
+              f'Öffnung(en):')
+        print(tabelle(gefunden2))
+        pose2 = lage_in_der_karte()
+        if pose2 is None:
+            return nichts_gesendet('Die Lage des Roboters in der Karte fehlt (TF)', 4)
+        tueren2 = [o for o in gefunden2
+                   if o.befahrbar and wahl.breite_min <= o.breite_m <= wahl.breite_max]
+        o = wiederfinden(tueren2, gemerkt, pose2)
+        if o is None:
+            return nichts_gesendet('Die Tür von vorhin ist nach der Anfahrt nicht '
+                                   'wiederzufinden')
+        print(f'Wiedergefunden: Öffnung {o.nr}, {o.breite_m:.2f} m breit, '
+              f'{o.richtung_grad:+.0f}°, {o.entfernung_m:.2f} m.')
+        achse2 = tuerachse(o.pfosten, hindernisse2)
+        if achse2['quelle'] != 'wand' and gemerkt['quelle'] == 'wand':
+            achse2 = achse_aus_karte(gemerkt, pose2)
+        print(lage_text(o, achse=achse2))
+        print(achse_text(achse2))
+        weg2, weg_passt = weg_text(o, hindernisse2, wahl.vor, wahl.hinter, achse2)
+        print(weg2)
+        if aufstellung_hinweise(aufstellung(o.pfosten, achse=achse2['normal'])):
+            return nichts_gesendet('Die Aufstellung nach der Anfahrt passt nicht')
+        if not weg_passt:
+            return nichts_gesendet('Neben der Fahrlinie ist nicht genug frei')
+        drehe(2.0)
+        try:
+            punkte2 = gerade_durch_die_tuer(o.pfosten, pose2, vor_m=wahl.vor,
+                                            hinter_m=wahl.hinter, achse=achse2['normal'])
+            gesamt2 = pruefe_grenzen(punkte2, pose2[:2])
+        except ValueError as grund:
+            return nichts_gesendet(str(grund))
+        zeilen2, frei2 = weg_in_der_kostenkarte(punkte2, pose2, hindernisse2)
+        for zeile in zeilen2:
+            print(zeile)
+        if not frei2:
+            return nichts_gesendet('Auf dem Weg ist die Kostenkarte belegt; dort hielte der '
+                                   'Erkunder an')
+        bemerkung2 = (f'Öffnung {o.nr}, {o.breite_m:.2f} m breit, {o.richtung_grad:+.0f}°, '
+                      f'{o.entfernung_m:.2f} m (nach der Anfahrt)')
+        zustand2, _ = senden_und_beobachten(punkte2, 'tuer', bemerkung2, gesamt2)
+        return schluss(zustand2, 'tuer')
+
     try:
         if not wahl.nur_messen:
             print(f'Warte, bis der Erkunder auf ein Fahrziel wartet (höchstens '
@@ -588,8 +709,7 @@ def main(argv=None) -> int:
         if wahl.tuer or wahl.vor_die_tuer or zur_tuer:
             scans, boden_lidar = laserbild(wahl.messdauer)
             if scans is None:
-                print('Kein Scan oder keine Montage des LiDAR (TF). Nichts gesendet.')
-                return 4
+                return nichts_gesendet('Kein Scan oder keine Montage des LiDAR (TF)', 4)
             protokoll: List[dict] = []
             hindernisse: List = []
             sicht: dict = {}
@@ -659,8 +779,7 @@ def main(argv=None) -> int:
                     toleranz_grad=wahl.richtung_toleranz,
                     breite_von_m=wahl.breite_min, breite_bis_m=wahl.breite_max)
             except ValueError as grund:
-                print(f'Nichts gesendet: {grund}.')
-                return 2
+                return nichts_gesendet(str(grund))
             bemerkung = (f'Öffnung {gewaehlt.nr}, {gewaehlt.breite_m:.2f} m breit, '
                          f'{gewaehlt.richtung_grad:+.0f}°, {gewaehlt.entfernung_m:.2f} m')
             print(f'Gewählt: {bemerkung}.')
@@ -673,18 +792,15 @@ def main(argv=None) -> int:
                 for z in zeilen_plan:
                     print(z)
                 if plan == 'nichts':
-                    print('Nichts gesendet: Weder Durchfahrt noch Anfahrt passen.')
-                    return 2
+                    return nichts_gesendet('Weder Durchfahrt noch Anfahrt passen')
             if wahl.vor_die_tuer:
                 print(lage_text(gewaehlt, mit_hinweisen=False))
                 zeile, weg_anfahrt, noetig = anfahrt_zeile(gewaehlt, hindernisse, sicht, achse)
                 print(zeile)
                 if not noetig:
-                    print('Nichts gesendet: Er steht schon passend vor der Tür.')
-                    return 2
+                    return nichts_gesendet('Er steht schon passend vor der Tür')
                 if weg_anfahrt is None:
-                    print('Nichts gesendet: Die Anfahrt passt nicht.')
-                    return 2
+                    return nichts_gesendet('Die Anfahrt passt nicht')
         if wahl.tuer:
             print(lage_text(gewaehlt, achse=achse))
             print(achse_text(achse))
@@ -692,19 +808,16 @@ def main(argv=None) -> int:
             print(weg)
             if not wahl.aufstellung_egal:
                 if aufstellung_hinweise(aufstellung(gewaehlt.pfosten, achse=achse['normal'])):
-                    print('Nichts gesendet: Die Aufstellung passt nicht.')
-                    return 2
+                    return nichts_gesendet('Die Aufstellung passt nicht')
                 if not weg_passt:
-                    print('Nichts gesendet: Neben der Fahrlinie ist nicht genug frei.')
-                    return 2
+                    return nichts_gesendet('Neben der Fahrlinie ist nicht genug frei')
 
         pose = lage_in_der_karte()
         if pose is None:
             drehe(3.0, lambda: lage_in_der_karte() is not None)
             pose = lage_in_der_karte()
         if pose is None:
-            print('Die Lage des Roboters in der Karte fehlt (TF). Nichts gesendet.')
-            return 4
+            return nichts_gesendet('Die Lage des Roboters in der Karte fehlt (TF)', 4)
         drehe(5.0, lambda: stand['kostenkarte'] is not None)
         print(kostenkarte_zeile())
 
@@ -721,58 +834,29 @@ def main(argv=None) -> int:
                 punkte = geradeaus(wahl.geradeaus, pose)
             gesamt = pruefe_grenzen(punkte, pose[:2])
         except ValueError as grund:
-            print(f'Nichts gesendet: {grund}.')
-            return 2
+            return nichts_gesendet(str(grund))
         zeilen, frei = weg_in_der_kostenkarte(
             punkte, pose, hindernisse if (wahl.tuer or wahl.vor_die_tuer or zur_tuer) else None)
         # Bei --zur-tuer stehen dieselben Zeilen schon in der Entscheidung.
         for zeile in ([] if zur_tuer and frei else zeilen):
             print(zeile)
         if not frei and not wahl.aufstellung_egal:
-            print('Nichts gesendet: Auf dem Weg ist die Kostenkarte belegt; dort hielte der '
-                  'Erkunder an.')
-            return 2
+            return nichts_gesendet('Auf dem Weg ist die Kostenkarte belegt; dort hielte der '
+                                   'Erkunder an')
 
         art_name = ('anfahrt' if wahl.vor_die_tuer or plan == 'anfahrt'
                     else 'tuer' if wahl.tuer or plan == 'durchfahrt'
                     else 'punkt' if wahl.punkt else 'gerade')
-        kennung = wahl.kennung or f'{art_name}-{int(time.time())}'
-        text = botschaft(punkte, kennung=kennung, quelle=wahl.quelle, zeit_s=time.time(),
-                         frame=wahl.karten_rahmen, bemerkung=bemerkung)
-        sender.sende(text)
-        print(f'Fahrziel gesendet: {len(punkte)} Punkt(e), zusammen {gesamt:.2f} m, '
-              f'Quelle {wahl.quelle}, Kennung {kennung}.', flush=True)
-
-        letzte = None
-        ende = time.monotonic() + wahl.beobachten
-        while rclpy.ok() and time.monotonic() < ende:
-            rclpy.spin_once(knoten, timeout_sec=0.2)
-            jetzt = (phase(), meldung())
-            if jetzt != letzte and jetzt[0] != WARTEPHASE:
-                letzte = jetzt
-                print(f'  Erkunder: {jetzt[1]}', flush=True)
-            if (stand['status'] or {}).get('state') not in ('running', None):
-                break
-        zustand = (stand['status'] or {}).get('state')
-        print(f'Ende: Zustand des Erkunders {zustand!r}; {meldung()}')
-        drehe(1.5)                       # die Kostenkarte kommt einmal je Sekunde
-        print(kostenkarte_zeile())
-        # Nach einem Halt: woher stammt die nächste belegte Stelle vor dem Roboter?
-        pose_ende = lage_in_der_karte()
-        stelle = naechste_stelle(pose_ende)
-        if stelle is not None:
-            print(herkunft_zeile(stelle, pose_ende))
-        print(nah_text(nah_jetzt()))
-        # Der Erkunder meldet einen gelungenen Auftrag ohne Flächenziel als „partial“.
-        gelungen = (zustand in ('partial', 'success')
-                    and meldung().startswith('Etappenfahrt abgeschlossen'))
-        if gelungen and art_name == 'anfahrt':
-            print('Anfahrt abgeschlossen. Als Nächstes die Durchfahrt: zweite Mission, dann '
-                  'fahrziel_senden.py --tuer --richtung 0.')
-        elif gelungen and art_name == 'tuer':
-            # auch für --tuer, die zweite Mission nach der Anfahrt
-            print('Durchfahrt abgeschlossen.')
-        return 0 if gelungen else 1
+        # --zur-tuer: Anfahrt und Durchfahrt in einer Mission
+        weiter = zur_tuer and plan == 'anfahrt'
+        gemerkt = tuer_merken(gewaehlt.pfosten, achse, pose) if weiter else None
+        zustand, angekommen = senden_und_beobachten(punkte, art_name, bemerkung, gesamt,
+                                                    weiter=weiter)
+        if weiter and angekommen:
+            print('Anfahrt abgeschlossen. Jetzt misst er neu und fährt in derselben Mission '
+                  'hindurch.', flush=True)
+            return durchfahrt_nach_anfahrt(gemerkt)
+        return schluss(zustand, art_name)
     finally:
         knoten.destroy_node()
         rclpy.try_shutdown()

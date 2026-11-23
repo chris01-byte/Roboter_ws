@@ -1,6 +1,14 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 23.11.2026 (nach KI-F7): Amadeus ist zum ersten Mal in dieser Linie
+**Stand 23.11.2026 (abends): Auftrag KI-F8 erteilt, wartet auf die
+Übergabe.** Entscheidungen des Projektinhabers nach der ersten Durchfahrt:
+Grenzen des Werkzeugs 0,26 m neben der Fahrlinie und 0,37 m zum Drehen
+(vorher 0,30 und 0,45 m); **ein Ablauf statt zwei Aufträge** (Anfahrt und
+Durchfahrt in einer Mission); dreimal wiederholen; im Auftrag nur noch
+**eine** Frage vorab. Gebaut, getestet und simuliert (unten); danach soll
+die KI die Tür wählen, zuerst mit Christophers Einspruchsmöglichkeit.
+
+**Davor, 23.11.2026 (nach KI-F7): Amadeus ist zum ersten Mal in dieser Linie
 selbst durch die Tür gefahren.** Er stellte sich selbst vor die Labortür
 (1,65 m, zwei Drehungen), richtete sich aus und fuhr gerade hindurch in den
 Flur (1,90 m, fünf Etappen), ohne Nav2, ohne Nahsensoren, nichts berührt.
@@ -114,10 +122,20 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Kein offener Auftrag.** KI-F7 ist ausgeführt (erste Türdurchfahrt). Vor
-dem nächsten Auftrag bespricht der Projektinhaber das Vorgehen; offen sind
-die seitlichen Abstandsgrenzen des Werkzeugs, Wiederholbarkeit, eine
-Fahrt in einem Zug statt zwei Missionen und die Übergabe der KI-Wahl.
+**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-F8
+„dreimal selbst durch die Tür, in einem Ablauf“** ([AUFTRAG.md](AUFTRAG.md)).
+Auf dem Jetson, mit Christopher; ohne Kamera und ohne KI-Rechner; **neuer
+Build** (Release `kif8-<STAMP>`), jeder Start mit `stage_drive_only:=true
+nahsensoren:=false`. Eine Frage vorab („ist alles aufgebaut?“), dann ein
+Vorlauf ohne Motorfreigabe und drei Läufe von drei Plätzen, je ein Stack,
+eine Mission und ein Aufruf des Werkzeugs; nach jedem Lauf eine kurze
+Nachricht an Christopher. Ziel: drei von drei.
+
+**Danach (vorgesehen):** Die KI wählt die Tür (Rundblick, Frage, Übergabe
+der gewählten Öffnung an das Werkzeug); zuerst sieht Christopher die Wahl
+vor der Fahrt und kann sie stoppen, später nicht mehr. Davor in der
+Simulation eine gespielte KI mit falscher, langsamer, stummer und
+unsinniger Antwort.
 
 **Danach, je nach Ergebnis:**
 - Durchfahrt gelungen: Rundblick, Frage an die KI und Etappenfahrt in einem
@@ -288,6 +306,37 @@ nur lesend sichern, was die Zeitwache meldet (neues Werkzeug
 `werkzeuge/radsensor_zustand.py`: Größe und Zeitpunkt der ersten Lücke,
 Dauer der Lesepaare), dazu die Last; dann genau ein neuer scharfer Start.
 Am Motortreiber wird nichts geändert (Motorsteuerung, AGENTS §2.7).
+
+## Ein Ablauf und neue Grenzen (gebaut 23.11.2026, abends)
+
+Entscheidungen des Projektinhabers nach KI-F7: „Wir nehmen 0,25 Meter neben
+der Fahrlinie und 0,35 Meter zum Drehen“, nach der Rechnung übernommen als
+**0,26 m** (der Erkunder prüft selbst 0,25 m; sonst könnte er mitten in der
+Tür halten) und **0,37 m** (die Gehäuseecken kreisen 0,355 m um die
+Antriebsmitte; bei 0,35 m streiften sie eine Wand); „Diesmal aber ein
+Ablauf statt zwei Aufträge“; „noch dreimal“; im Auftrag nur eine Frage
+vorab.
+
+**Gebaut:**
+- Erkunder (nur mit `stage_drive_only`, sonst unverändert): Fahrziel mit
+  `weiter` → danach stehend bis zu 120 s auf das Folgeziel warten, höchstens
+  drei Ziele je Mission; Nachricht `ende` → Mission schließt sofort (nach
+  einem Ziel erfolgreich, ohne Ziel „beendet ohne Fahrziel“). 14 neue Tests
+  (98 in `test_stage_drive.py`).
+- Werkzeug: `--zur-tuer` in einem Aufruf: Anfahrt mit `weiter`, nach
+  „Fahrziel 1 erreicht“ im Stand neu messen, die gemerkte Tür in der Karte
+  wiederfinden (höchstens 0,35 m daneben), Türachse aus der ersten Messung,
+  wenn der Laser die Wand jetzt nicht lang genug sieht, dann die
+  Durchfahrt. Passt etwas nicht, sendet es `ende`. Grenzen 0,26 m und
+  0,37 m. KI-Linie 261 Tests ohne ROS, 271 mit.
+
+**Simulation** (ohne Nahsensoren, ein Aufruf, eine Mission):
+
+| Fall | Ergebnis |
+|---|---|
+| schräger Start, 1,01 m rechts, Tür 58° rechts | Anfahrt 1,42 m, „Fahrziel 1 erreicht“, neu gemessen, wiedergefunden (0,01 m rechts, Achse aus der Wand), Durchfahrt; „Durchfahrt abgeschlossen.“, 9 Etappen, 3,37 m; im Flur nach 117 s, keine Berührung, engste Stelle 8,0 cm |
+| mittig vor der Tür, Stange vor dem rechten Rahmen | Entscheidung Durchfahrt, ein Ziel ohne Folgeziel, 6 Etappen, 2,18 m, „Durchfahrt abgeschlossen.“; im Flur nach 50 s, keine Berührung, engste Stelle 7,5 cm |
+| keine passende Öffnung (künstlich: nur 0,95 bis 0,99 m zugelassen) | „Nichts gesendet“, Werkzeug schickt `ende`; Erkunder sofort „beendet ohne Fahrziel; nichts gefahren“, keine Bewegung |
 
 ## KI-F7 – erste Türdurchfahrt der KI-Linie (Jetson, 23.11.2026, 12:58 bis 14:54)
 
@@ -1076,6 +1125,6 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Besprechung mit dem Projektinhaber, bevor der nächste Auftrag erteilt wird
-(Abstandsgrenzen, Wiederholbarkeit, eine Fahrt in einem Zug, Übergabe der
-KI-Wahl).
+Auftrag KI-F8 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): neuer Build, eine
+Frage vorab, dann dreimal von drei Plätzen selbst vor die Tür und hindurch,
+jedes Mal in einem Ablauf.

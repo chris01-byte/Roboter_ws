@@ -486,6 +486,12 @@ sendet dort nie.
   das Drehen seit `f746b1c`; sonst konnte ein frischer Wert als Wert „aus der
   Zukunft“ gelten und die Etappe mit `odom_stale` beenden. Ohne den Schalter
   ist der Baustein unverändert; Fristen und Sperren gleich.
+  *Nachtrag 23.11.2026 (nach KI-F7, Entscheidung des Projektinhabers „ein
+  Ablauf statt zwei Aufträge“):* Ein Fahrziel kann den Vermerk `weiter`
+  tragen; dann wartet der Erkunder danach in derselben Mission stehend bis
+  zu 120 s auf ein Folgeziel (höchstens drei je Mission), und eine Nachricht
+  `ende` schließt die Mission sofort. Ohne den Vermerk endet die Mission
+  nach einem Ziel wie bisher; ohne `stage_drive_only` ändert sich nichts.
 - **Dritte Anschlussstelle, Laborschalter (22.11.2026, vom Projektinhaber
   verlangt):** Startargument `nahsensoren` (`app_mapping.launch.py`,
   `nav_mapping.launch.py`; Vorgabe `true` = unverändert). Mit `false` startet

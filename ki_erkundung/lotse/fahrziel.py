@@ -45,9 +45,11 @@ VOR_DER_TUER_M = 1.20
 HINTER_DER_TUER_M = 0.60
 MIN_BREITE_M = 0.60
 # So viel muss links und rechts der Fahrlinie frei sein, gemessen am Laser:
-# halbe Gehäusebreite und 7 cm. Der Erkunder hält an, wenn in seinem
-# Streifen von 0,255 m etwas liegt; dazu bleiben 4,5 cm Abstand.
-FREI_NEBEN_DER_LINIE_M = 0.30
+# halbe Gehäusebreite (0,23 m) und 3 cm. Der Erkunder prüft während der
+# Fahrt selbst einen Streifen von 0,25 m je Seite und hält an, wenn dort
+# etwas liegt; 1 cm Abstand dazu, damit er nicht mitten in der Tür hält.
+# Festgelegt vom Projektinhaber am 23.11.2026 nach KI-F7 (vorher 0,30 m).
+FREI_NEBEN_DER_LINIE_M = 0.26
 VORDERKANTE_M = 0.33
 # So schräg zur Türachse darf die Fahrlinie höchstens durch die Tür gehen.
 MAX_SCHRAEG_GRAD = 10.0
@@ -301,9 +303,12 @@ ANFAHRT_VOR_M = (1.6, 1.7, 1.8, 1.9, 2.0, 2.1)
 # Der Vorpunkt liegt so viel weiter von der Tür weg. Mehr als 0,35 m, damit
 # der Erkunder sich dort zur Tür ausrichtet.
 ANFAHRT_ANLAUF_M = 0.45
-# Zum Drehen auf der Stelle: Die vorderen Ecken kreisen 0,40 m um die
-# Antriebsmitte (0,33 m voraus, 0,23 m seitlich); dazu 5 cm.
-DREHKREIS_M = 0.45
+# Zum Drehen auf der Stelle: Die vorderen Gehäuseecken kreisen 0,355 m um
+# die Antriebsmitte (0,27 m voraus, 0,23 m seitlich, gemessen am
+# 18.08.2026); dazu 1,5 cm. Der Arm steht dabei in Transportstellung.
+# Festgelegt vom Projektinhaber am 23.11.2026 nach KI-F7 (vorher 0,45 m mit
+# dem gepolsterten Umriss).
+DREHKREIS_M = 0.37
 MIN_ANLAUF_M = 0.40
 
 
@@ -440,7 +445,63 @@ def achse_text(achse: dict) -> str:
     if achse.get('quelle') == 'wand':
         return (f'Türachse aus der Wand neben der Tür ({achse["punkte"]} Laserpunkte über '
                 f'{achse["laenge_m"]:.2f} m).')
+    if achse.get('quelle') == 'karte':
+        return (f'Türachse aus der Wand neben der Tür, gemessen vor der Anfahrt '
+                f'({achse["punkte"]} Laserpunkte über {achse["laenge_m"]:.2f} m); von hier '
+                'sieht der Laser die Wand nicht lang genug.')
     return 'Türachse nur aus den zwei Türkanten (neben der Tür keine gerade Wand gesehen).'
+
+
+def tuer_merken(pfosten: Sequence[Sequence[float]], achse: dict,
+                pose: Sequence[float]) -> dict:
+    """Die Tür im Kartenrahmen merken, um sie nach der Anfahrt wiederzufinden.
+
+    ``pfosten`` und ``achse`` sind im Standpunktrahmen gemessen, ``pose`` ist
+    die Lage des Roboters in der Karte dabei. Rückgabe: ``mitte`` und
+    ``normal`` im Kartenrahmen, dazu Quelle und Umfang der Achse.
+    """
+    x, y, gier = float(pose[0]), float(pose[1]), float(pose[2])
+    c, s = math.cos(gier), math.sin(gier)
+    mx = 0.5 * (float(pfosten[0][0]) + float(pfosten[1][0]))
+    my = 0.5 * (float(pfosten[0][1]) + float(pfosten[1][1]))
+    nx, ny = achse['normal']
+    return {'mitte': (x + c * mx - s * my, y + s * mx + c * my),
+            'normal': (c * nx - s * ny, s * nx + c * ny),
+            'quelle': achse.get('quelle'), 'punkte': achse.get('punkte', 0),
+            'laenge_m': achse.get('laenge_m', 0.0)}
+
+
+def im_standpunktrahmen(ort: Sequence[float], pose: Sequence[float]) -> Tuple[float, float]:
+    """Ein Ort der Karte vom Roboter aus (x voraus, y links)."""
+    dx, dy = float(ort[0]) - float(pose[0]), float(ort[1]) - float(pose[1])
+    c, s = math.cos(float(pose[2])), math.sin(float(pose[2]))
+    return c * dx + s * dy, -s * dx + c * dy
+
+
+def wiederfinden(tueren: Sequence, gemerkt: dict, pose: Sequence[float],
+                 max_abstand_m: float = 0.35):
+    """Unter den neu vermessenen türbreiten Öffnungen die gemerkte Tür.
+
+    Gewählt wird die, deren Mitte der gemerkten am nächsten liegt, höchstens
+    ``max_abstand_m`` davon entfernt; sonst ``None``.
+    """
+    ziel = im_standpunktrahmen(gemerkt['mitte'], pose)
+    beste, abstand = None, max_abstand_m
+    for o in tueren:
+        mx = 0.5 * (o.pfosten[0][0] + o.pfosten[1][0])
+        my = 0.5 * (o.pfosten[0][1] + o.pfosten[1][1])
+        d = math.hypot(mx - ziel[0], my - ziel[1])
+        if d <= abstand:
+            beste, abstand = o, d
+    return beste
+
+
+def achse_aus_karte(gemerkt: dict, pose: Sequence[float]) -> dict:
+    """Die gemerkte Türachse vom jetzigen Standplatz aus (Quelle ``'karte'``)."""
+    nx, ny = gemerkt['normal']
+    c, s = math.cos(float(pose[2])), math.sin(float(pose[2]))
+    return {'normal': (c * nx + s * ny, -s * nx + c * ny), 'quelle': 'karte',
+            'punkte': gemerkt['punkte'], 'laenge_m': gemerkt['laenge_m']}
 
 
 def anfahrt(pfosten: Sequence[Sequence[float]], hindernisse: Sequence[Sequence[float]],
@@ -920,12 +981,13 @@ def pruefe_grenzen(punkte: Sequence[Sequence[float]], start: Sequence[float]) ->
 
 def botschaft(punkte: Sequence[Sequence[float]], *, kennung: str, quelle: str,
               zeit_s: float, frame: str = 'map',
-              bemerkung: Optional[str] = None) -> str:
+              bemerkung: Optional[str] = None, weiter: bool = False) -> str:
     """Das Fahrziel als Text für den Erkunder.
 
     ``quelle`` sagt, wer gewählt hat: ``ki``, ``mensch`` oder ``test``. Der
     Erkunder schreibt sie in seine Meldungen, damit jede Fahrt zeigt, wer
-    entschieden hat.
+    entschieden hat. ``weiter``: Nach diesem Ziel folgt in derselben Mission
+    ein Folgeziel (Anfahrt, dann Durchfahrt).
     """
     if quelle not in QUELLEN:
         raise ValueError(f'Fahrziel: Quelle {quelle!r} unbekannt')
@@ -936,4 +998,20 @@ def botschaft(punkte: Sequence[Sequence[float]], *, kennung: str, quelle: str,
              'punkte': [[round(float(p[0]), 3), round(float(p[1]), 3)] for p in punkte]}
     if bemerkung:
         daten['bemerkung'] = str(bemerkung)[:200]
+    if weiter:
+        daten['weiter'] = True
     return json.dumps(daten, ensure_ascii=False)
+
+
+def ende_botschaft(*, kennung: str, quelle: str, zeit_s: float, frame: str = 'map') -> str:
+    """Das Ende des Wartens als Text: Es kommt kein (weiteres) Fahrziel.
+
+    Der Erkunder schließt die Mission dann sofort ab, statt bis zum Ablauf
+    seiner Wartefrist stehen zu bleiben.
+    """
+    if quelle not in QUELLEN:
+        raise ValueError(f'Ende: Quelle {quelle!r} unbekannt')
+    if not kennung or len(kennung) > 80:
+        raise ValueError('Ende: Kennung fehlt oder ist zu lang')
+    return json.dumps({'ende': True, 'kennung': kennung, 'quelle': quelle, 'frame': frame,
+                       'zeit_s': float(zeit_s)}, ensure_ascii=False)

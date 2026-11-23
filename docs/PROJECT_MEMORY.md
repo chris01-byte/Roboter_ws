@@ -2187,6 +2187,23 @@ stehenden Roboter fünfmal umstellen ließ:**
 - Befund, wiederkehrend: Der Radsensor sperrte sich beim Hochfahren
   (zweimal in der KI-Linie); ein Neustart löst es.
 
+**Nachtrag 23.11.2026 (abends) – Entscheidungen nach KI-F7:**
+- **Grenzen:** neben der Fahrlinie 0,26 m, zum Drehen 0,37 m. Der
+  Projektinhaber nannte 0,25 und 0,35 m; übernommen nach der Rechnung: Der
+  Erkunder prüft selbst 0,25 m (gleicher Wert im Werkzeug ließe ihn
+  mitten in der Tür halten), die Gehäuseecken kreisen 0,355 m (bei 0,35 m
+  streiften sie). Regel: **Eine vom Menschen genannte Grenze wird gegen die
+  Geometrie und die Grenzen der Schutzkette gerechnet, bevor sie gilt.**
+- **Ein Ablauf statt zwei Aufträge:** Folgeziel und „Ende“ im Erkunder (nur
+  Etappenfahrt), `--zur-tuer` in einem Aufruf; die Türachse wird nach der
+  Anfahrt aus der ersten Messung übernommen.
+- **Aufträge mit genau einer Vorabfrage** („ist alles aufgebaut?“) und einer
+  kurzen Nachricht nach jedem Lauf; Bestätigungen des Stillstands stecken in
+  diesen Antworten. Grund des Projektinhabers: Fragerunden vorab sind im
+  Labormodus nervig und bringen nichts.
+- **Danach:** Die KI wählt die Tür, zuerst mit Einspruchsmöglichkeit des
+  Menschen vor der Fahrt.
+
 **Nachtrag 22.11.2026 (nachts) – Entscheidung des Projektinhabers: Laborprobe
 ohne Nahsensoren:**
 - **Wortlaut:** „Die Nahbereichssensoren machen gerade Probleme. Deswegen

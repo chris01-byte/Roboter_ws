@@ -1,6 +1,6 @@
 # Konzept „KI-Erkundung“ – eine KI übernimmt Ziel- und Suchwahl
 
-**Version 1.13 · 23.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
+**Version 1.14 · 23.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
 nachgeführt nach drei Durchgängen an echten Aufnahmen, der Freigabe der
 Schalter „nur Rundblick“ und „Etappenfahrt“ und der Festlegung „die KI
 bekommt Zeit, kein stiller Rückfall“**
@@ -299,6 +299,14 @@ So läuft es:
    0,45 m, freie Sicht auf die Punkte; was der Laser von dort nicht sieht,
    gilt nicht als frei. Die Anfahrt ist ein eigenes Fahrziel; die
    Durchfahrt danach wird neu vermessen.
+   **Seit v1.14 in einem Ablauf** (Entscheidung des Projektinhabers vom
+   23.11.2026): Die Anfahrt trägt den Vermerk „es folgt ein Folgeziel“; der
+   Erkunder wartet danach in derselben Mission stehend auf die Durchfahrt
+   (höchstens 120 s, höchstens drei Ziele je Mission). Das Werkzeug misst
+   im Stand neu, findet die gemerkte Tür in der Karte wieder und nimmt die
+   Türachse aus der ersten Messung, wenn der Laser die Wand neben der Tür
+   von dort nicht lang genug sieht. Passt etwas nicht, schickt es „Ende“,
+   und die Mission schließt sofort.
    **Seit v1.13 entscheidet der Roboter selbst** (`--zur-tuer`): Steht er
    passend und ist die gerade Linie frei, fährt er gleich hindurch; sonst
    stellt er sich zuerst mit der Anfahrt vor die Tür. Ein Mensch stellt ihn
@@ -314,7 +322,9 @@ So läuft es:
    0,65 bis 0,95 m breit vermessen ist; der Roboter muss passend davor
    stehen (1,5 bis 2,6 m vor der Türlinie, höchstens 0,25 m neben der
    Türmitte, die Linie höchstens 10° schräg zur Türachse); und **neben der
-   Fahrlinie müssen am selben Laserbild links und rechts 0,30 m frei sein**
+   Fahrlinie müssen am selben Laserbild links und rechts 0,26 m frei sein**
+   (seit v1.14; Gehäuse 0,23 m je Seite, der Erkunder prüft selbst 0,25 m;
+   zum Drehen 0,37 m, die Gehäuseecken kreisen 0,355 m)
    (Türblatt, Pfosten, alles, was im Weg steht). Sonst wird nichts gesendet
    und das Werkzeug sagt, was zu ändern ist. Ein Umweg über einen Punkt auf
    der Türachse ist verworfen: Er führte in KI-F2 an der Spitze des offenen
@@ -664,6 +674,12 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   entschieden hat. Der Fahrteil soll aus vorhandenem, real bewährtem Code
   entstehen; Bestand und Vorschlag stehen im STATUS, entschieden ist dazu
   noch nichts.
+- 23.11.2026, v1.14, nach KI-F7 (erste Türdurchfahrt; Entscheidungen des
+  Projektinhabers): Anfahrt und Durchfahrt in einem Ablauf und einer Mission
+  (Folgeziel und „Ende“ im Erkunder, nur mit `stage_drive_only`); Grenzen
+  des Werkzeugs 0,26 m neben der Fahrlinie (vorher 0,30 m) und 0,37 m zum
+  Drehen (vorher 0,45 m); die Türachse wird nach der Anfahrt aus der ersten
+  Messung übernommen. Aufträge am Roboter mit genau einer Vorabfrage.
 - 23.11.2026, Nachtrag zu v1.13, nach KI-F6: keine Änderung am Konzept. Die
   Selbst-Anfahrt gelang am Roboter; die Durchfahrt brach an zwei
   Programmfehlern des Erkunders ab (Lesereihenfolge Uhr/Odometrie in der

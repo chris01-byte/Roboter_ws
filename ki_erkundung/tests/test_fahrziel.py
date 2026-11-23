@@ -19,6 +19,9 @@ from lotse.fahrziel import (  # noqa: E402
     kostenkarte_text, kostenkarte_voraus, pruefe_grenzen, punkt_relativ, tuer_punkte,
     wandrichtung,
 )
+from lotse.fahrziel import (  # noqa: E402
+    FREI_NEBEN_DER_LINIE_M, achse_aus_karte, ende_botschaft, tuer_merken, wiederfinden,
+)
 from lotse.kandidaten import Oeffnung  # noqa: E402
 
 
@@ -376,11 +379,11 @@ def test_hinweise_zum_freiraum_nennen_seite_mass_und_versatz():
     frei = freiraum([(1.0, 0.22), (2.0, -0.4)], (2.5, 0.0))
     hinweise = freiraum_hinweise(frei)
     assert hinweise == ['links neben der Fahrlinie sind nur 0.22 m frei (1.0 m voraus), '
-                        'nötig 0.30 m: bitte etwa 15 cm nach rechts versetzen']
+                        'nötig 0.26 m: bitte etwa 10 cm nach rechts versetzen']
     # ein Hindernis an der Tür selbst lässt sich durch Versetzen nicht umgehen
     hinweise = freiraum_hinweise(freiraum([(2.3, -0.2)], (2.5, 0.0)))
     assert hinweise == ['rechts neben der Fahrlinie sind nur 0.20 m frei (2.3 m voraus), '
-                        'nötig 0.30 m: von hier ist die Durchfahrt zu knapp']
+                        'nötig 0.26 m: von hier ist die Durchfahrt zu knapp']
     assert freiraum_hinweise(freiraum([(1.0, 0.31), (1.0, -0.6)], (2.5, 0.0))) == []
 
 
@@ -390,14 +393,15 @@ def test_weg_in_einem_satz_fuer_die_lage_von_kif2():
     text, passt = weg_text(o, blatt + wand, 1.2, 0.45)
     assert passt is True
     assert text == ('Fahrlinie: gerade durch die Türmitte, 2.35 m; frei neben der Linie '
-                    'links 0.38 m, rechts 0.38 m (nötig 0.30 m) – Weg passt.')
+                    'links 0.38 m, rechts 0.38 m (nötig 0.26 m) – Weg passt.')
     # ragt die Blattspitze 14 cm weiter herein, passt der Weg nicht mehr
     text, passt = weg_text(o, blatt + wand + [(1.07, 0.25)], 1.2, 0.45)
     assert passt is False
-    assert ('links neben der Fahrlinie sind nur 0.22 m frei (1.1 m voraus), nötig 0.30 m: '
-            'bitte etwa 15 cm nach rechts versetzen') in text
-    # ist die Tür selbst zu eng vermessen, hilft Versetzen nicht
-    eng = [(x, y - 0.10) for x, y in blatt]
+    assert ('links neben der Fahrlinie sind nur 0.22 m frei (1.1 m voraus), nötig 0.26 m: '
+            'bitte etwa 10 cm nach rechts versetzen') in text
+    # ist die Tür selbst zu eng vermessen, hilft Versetzen nicht (mit 0,26 m je
+    # Seite braucht es mindestens 0,52 m; das Blatt ragt hier 25 cm herein)
+    eng = [(x, y - 0.25) for x, y in blatt]
     text, passt = weg_text(o, eng + wand, 1.2, 0.45)
     assert passt is False and 'von hier ist die Durchfahrt zu knapp' in text
 
@@ -494,7 +498,7 @@ def test_anfahrt_aus_der_raummitte_endet_mittig_vor_der_tuer_mit_blick_zur_tuer(
     assert pruefe_grenzen(anfahrt_im_kartenrahmen(weg, pose), pose[:2]) < 4.0
     text = anfahrt_text(weg)
     assert text.startswith('Anfahrt: ') and 'nach rechts drehen' in text
-    assert 'mittig vor der Tür' in text and 'nötig 0.30 m' in text
+    assert 'mittig vor der Tür' in text and 'nötig 0.26 m' in text
 
 
 def test_anfahrt_auf_der_achse_braucht_keinen_vorpunkt():
@@ -529,7 +533,7 @@ def test_anfahrt_lehnt_ab_wenn_vor_der_tuer_kein_platz_zum_drehen_ist():
     stange = [(1.5 + 0.02 * i, 1.65) for i in range(70)]
     pfosten, laser = tuerwand(pose, dazu=stange)
     with pytest.raises(ValueError, match='Anfahrt: zum Drehen ist am Punkt vor der Tür nicht '
-                                         'genug Platz \\(0\\.35 m frei, nötig 0\\.45 m\\)'):
+                                         'genug Platz \\(0\\.35 m frei, nötig 0\\.37 m\\)'):
         anfahrt(pfosten, laser)
 
 
@@ -564,7 +568,7 @@ def test_anfahrt_lehnt_ab_was_der_laser_von_hier_nicht_einsieht():
 def test_frei_um_nennt_den_naechsten_laserpunkt():
     assert frei_um([(1.0, 0.0), (0.0, 0.3)], (0.0, 0.0)) == pytest.approx(0.3)
     assert frei_um([], (0.0, 0.0)) == math.inf
-    assert DREHKREIS_M == pytest.approx(0.45)
+    assert DREHKREIS_M == pytest.approx(0.37)       # Gehäuseecken 0,355 m
 
 
 def test_anfahrt_in_einem_satz_fuer_das_werkzeug():
@@ -811,3 +815,59 @@ def test_vorschlag_ist_die_tiefste_tuerbreite_oeffnung():
     luecke = Oeffnung(2, 0.82, (1.0, -1.0), ((0.6, -1.0), (1.4, -0.9)), -43.0, 1.43, 0.67, True)
     assert vorschlag([luecke, tuer]) is tuer
     assert vorschlag([]) is None
+
+
+# ------------------------------- Ein Ablauf: Anfahrt und Durchfahrt (KI-F8) -------------
+
+def test_grenzen_vom_23_11():
+    """Projektinhaber nach KI-F7: Gehäuse 0,23 m je Seite plus 3 cm; Drehen 0,355 m plus 1,5 cm."""
+    assert FREI_NEBEN_DER_LINIE_M == pytest.approx(0.26)
+    assert DREHKREIS_M == pytest.approx(0.37)
+    assert math.hypot(0.27, 0.23) < DREHKREIS_M
+
+
+def test_fahrziel_mit_folgeziel_und_ende():
+    mit = json.loads(botschaft([(1.0, 0.0)], kennung='a', quelle='mensch', zeit_s=5.0,
+                               weiter=True))
+    assert mit['weiter'] is True
+    ohne = json.loads(botschaft([(1.0, 0.0)], kennung='a', quelle='mensch', zeit_s=5.0))
+    assert 'weiter' not in ohne
+    ende = json.loads(ende_botschaft(kennung='e', quelle='mensch', zeit_s=7.0))
+    assert ende == {'ende': True, 'kennung': 'e', 'quelle': 'mensch', 'frame': 'map',
+                    'zeit_s': 7.0}
+    with pytest.raises(ValueError):
+        ende_botschaft(kennung='e', quelle='regel', zeit_s=7.0)
+
+
+def test_die_tuer_wird_nach_der_anfahrt_wiedergefunden_und_die_achse_mitgenommen():
+    # erste Messung: Tür 2,5 m voraus, 1 m rechts, Achse aus der Wand (schräg 10°)
+    pose1 = (1.0, 2.0, 0.3)
+    pfosten1 = ((2.5, -1.4), (2.5, -0.6))
+    n = (math.cos(math.radians(10)), math.sin(math.radians(10)))
+    gemerkt = tuer_merken(pfosten1, {'normal': n, 'quelle': 'wand', 'punkte': 30,
+                                     'laenge_m': 1.2}, pose1)
+    # Mitte in der Karte
+    c, s = math.cos(0.3), math.sin(0.3)
+    assert gemerkt['mitte'] == pytest.approx((1.0 + c * 2.5 - s * -1.0, 2.0 + s * 2.5 + c * -1.0))
+
+    # nach der Anfahrt steht er woanders und anders gedreht
+    pose2 = (2.2, 1.0, -0.4)
+    mitte2 = (lambda dx, dy: (math.cos(-0.4) * dx + math.sin(-0.4) * dy,
+                              -math.sin(-0.4) * dx + math.cos(-0.4) * dy))(
+        gemerkt['mitte'][0] - pose2[0], gemerkt['mitte'][1] - pose2[1])
+    tuer = Oeffnung(3, 0.78, mitte2, ((mitte2[0], mitte2[1] - 0.39),
+                                      (mitte2[0], mitte2[1] + 0.39)), 1.5, 1.6, 1.5, True)
+    andere = Oeffnung(4, 0.80, (mitte2[0], mitte2[1] + 1.5),
+                      ((mitte2[0], mitte2[1] + 1.1), (mitte2[0], mitte2[1] + 1.9)),
+                      1.5, 1.6, 1.5, True)
+    assert wiederfinden([andere, tuer], gemerkt, pose2) is tuer
+    assert wiederfinden([andere], gemerkt, pose2) is None
+
+    # die Achse zeigt in der Karte weiter in dieselbe Richtung
+    achse = achse_aus_karte(gemerkt, pose2)
+    assert achse['quelle'] == 'karte'
+    winkel_karte = math.atan2(gemerkt['normal'][1], gemerkt['normal'][0])
+    assert math.atan2(achse['normal'][1], achse['normal'][0]) == pytest.approx(
+        winkel_karte - pose2[2])
+    assert winkel_karte == pytest.approx(math.radians(10) + 0.3)
+    assert 'gemessen vor der Anfahrt (30 Laserpunkte über 1.20 m)' in achse_text(achse)
