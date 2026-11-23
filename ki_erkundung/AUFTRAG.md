@@ -256,7 +256,9 @@ env -u CYCLONEDDS_URI ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 python3 -m pytest -
 ```
 
 Erwartung: `370 passed` (die 356 aus KI-F7 und 14 neue zum Folgeziel) und
-für die KI-Linie `271 passed`. Bei Fehlschlägen nichts starten, berichten.
+für die KI-Linie `285 passed` (271 und 14 neue zur Seite des Türblatts; der
+Stand vor dieser Ergänzung hatte 271). Bei Fehlschlägen nichts starten,
+berichten.
 
 ## Schritt 5 – die eine Frage (F0)
 
@@ -385,6 +387,12 @@ python3 "$SH_SRC/ki_erkundung/werkzeuge/fahrziel_senden.py" --zur-tuer --nur-mes
 - **Genau eine türbreite Öffnung mit „Entscheidung: Durchfahrt …“ oder
   „Entscheidung: Anfahrt …“:** ihre Richtung aus der Tabelle (Zahl mit
   Vorzeichen) ist `R`. Weiter mit 4, **ohne Frage**.
+- **Keine passende türbreite Öffnung, aber „Tür hinter dem Türblatt
+  geschätzt: Nr. …, Richtung … (für --richtung)“** mit „Entscheidung:
+  Anfahrt …“ darunter: Amadeus steht auf der Seite, zu der das Blatt
+  aufgeht. `R` ist diese Richtung. Weiter mit 4, **ohne Frage**; das
+  Werkzeug fährt zuerst frontal vor die Tür, misst neu und fährt erst dann
+  hindurch.
 - **Mehrere türbreite Öffnungen (Ausnahme):** Christopher einmal fragen:
   „Ich messe mehrere türbreite Öffnungen: … (je Breite, Entfernung,
   Richtung). Welche ist die Labortür?“ Seine Antwort bestimmt `R`.

@@ -81,6 +81,7 @@ from lotse.fahrziel import (  # noqa: E402
     in_den_boden, kostenkarte_text, kostenkarte_voraus, nah_text, pruefe_grenzen, punkt_relativ,
     tuer_merken, tuerachse, weg_belegt_text, wiederfinden, wolke_xyz, zellen_im_streifen,
 )
+from lotse.fahrziel import blatt_text, tuer_hinter_blatt  # noqa: E402
 from lotse.geometrie import aus_tf  # noqa: E402
 from lotse.kandidaten import TUERBREIT_M, Oeffnung, oeffnungen  # noqa: E402
 
@@ -263,6 +264,32 @@ def vorschlag(tueren: Sequence[Oeffnung]) -> Optional[Oeffnung]:
     """Die türbreite Öffnung mit dem meisten freien Raum dahinter (eine Tür
     führt in einen Raum, eine Lücke zwischen Möbeln nicht)."""
     return max(tueren, key=lambda o: o.tiefe_m, default=None)
+
+
+def tuer_aus_blatt(hindernisse: Sequence, nr: int):
+    """Die hinter dem offenen Türblatt geschätzte Tür als Öffnung, mit Achse.
+
+    Rückgabe ``(oeffnung, achse, fund)`` oder ``None``. Die Achse kommt aus
+    der Wand neben dem Scharnier. Gefahren wird zu dieser Schätzung nur die
+    Anfahrt; durch die Tür erst nach neuer Messung von vorn.
+    """
+    fund = tuer_hinter_blatt(hindernisse)
+    if fund is None:
+        return None
+    (ax, ay), (bx, by) = fund['pfosten']
+    mx, my = 0.5 * (ax + bx), 0.5 * (ay + by)
+    o = Oeffnung(nr, math.hypot(bx - ax, by - ay), (mx, my), fund['pfosten'],
+                 math.degrees(math.atan2(my, mx)), math.hypot(mx, my), 0.0, True,
+                 'blatt_geschaetzt')
+    achse = {'normal': fund['normal'], 'quelle': 'wand', 'punkte': fund['wand_punkte'],
+             'laenge_m': fund['wand_laenge_m']}
+    return o, achse, fund
+
+
+def richtung_passt(o: Oeffnung, richtung_grad: Optional[float], toleranz_grad: float) -> bool:
+    if richtung_grad is None:
+        return True
+    return abs((o.richtung_grad - richtung_grad + 180.0) % 360.0 - 180.0) <= toleranz_grad
 
 
 def protokoll_text(protokoll: Sequence[dict], max_breite_m: float = 1.6,
@@ -723,13 +750,16 @@ def main(argv=None) -> int:
                 # Die Kostenkarte kommt einmal je Sekunde und ist groß.
                 drehe(5.0, lambda: stand['kostenkarte'] is not None)
                 pose_jetzt = lage_in_der_karte()
+                plaene = []
                 if tueren:
                     print(f'Türbreit vermessen ({wahl.breite_min:.2f} bis '
                           f'{wahl.breite_max:.2f} m):')
                     for o in tueren:
                         if zur_tuer:
-                            for z in plan_zeilen(o, achsen[o.nr], hindernisse, sicht,
-                                                 pose_jetzt)[0]:
+                            zeilen_o, plan_o, _ = plan_zeilen(o, achsen[o.nr], hindernisse,
+                                                              sicht, pose_jetzt)
+                            plaene.append(plan_o)
+                            for z in zeilen_o:
                                 print('  ' + z)
                             continue
                         if wahl.vor_die_tuer:
@@ -766,6 +796,18 @@ def main(argv=None) -> int:
                 else:
                     print(f'Keine Öffnung ist türbreit vermessen ({wahl.breite_min:.2f} '
                           f'bis {wahl.breite_max:.2f} m). So würde nichts gesendet.')
+                if zur_tuer and all(plan_o == 'nichts' for plan_o in plaene):
+                    ersatz = tuer_aus_blatt(hindernisse, 1 + max((o.nr for o in gefunden),
+                                                                 default=0))
+                    if ersatz is not None:
+                        o_e, achse_e, fund_e = ersatz
+                        print(blatt_text(fund_e))
+                        print(f'Tür hinter dem Türblatt geschätzt: Nr. {o_e.nr}, Richtung '
+                              f'{o_e.richtung_grad:+.1f}° (für --richtung).')
+                        zeilen_e, plan_e, _ = plan_zeilen(o_e, achse_e, hindernisse, sicht,
+                                                          pose_jetzt)
+                        for z in zeilen_e:
+                            print('  ' + z)
                 print(kostenkarte_zeile())
                 stelle = naechste_stelle(pose_jetzt)
                 if stelle is not None:
@@ -773,26 +815,49 @@ def main(argv=None) -> int:
                 print(nah_text(nah_jetzt()))
                 print(protokoll_text(protokoll))
                 return 0
+            ersatz = None
+            if zur_tuer:
+                ersatz = tuer_aus_blatt(hindernisse, 1 + max((o.nr for o in gefunden),
+                                                             default=0))
+                if ersatz is not None and not richtung_passt(ersatz[0], wahl.richtung,
+                                                             wahl.richtung_toleranz):
+                    ersatz = None
             try:
                 gewaehlt = waehle_oeffnung(
                     gefunden, nummer=wahl.nummer, richtung_grad=wahl.richtung,
                     toleranz_grad=wahl.richtung_toleranz,
                     breite_von_m=wahl.breite_min, breite_bis_m=wahl.breite_max)
+                achse = achsen.get(gewaehlt.nr) or tuerachse(gewaehlt.pfosten, hindernisse)
             except ValueError as grund:
-                return nichts_gesendet(str(grund))
-            bemerkung = (f'Öffnung {gewaehlt.nr}, {gewaehlt.breite_m:.2f} m breit, '
-                         f'{gewaehlt.richtung_grad:+.0f}°, {gewaehlt.entfernung_m:.2f} m')
-            print(f'Gewählt: {bemerkung}.')
-            achse = achsen.get(gewaehlt.nr) or tuerachse(gewaehlt.pfosten, hindernisse)
+                if ersatz is None:
+                    return nichts_gesendet(str(grund))
+                print(f'Keine passende Öffnung vermessen ({grund}).')
+                gewaehlt, achse = ersatz[0], ersatz[1]
             if zur_tuer:
                 pose_jetzt = lage_in_der_karte()
                 drehe(5.0, lambda: stand['kostenkarte'] is not None)
                 zeilen_plan, plan, weg_anfahrt = plan_zeilen(gewaehlt, achse, hindernisse, sicht,
                                                              pose_jetzt)
+                if plan == 'nichts' and ersatz is not None and gewaehlt is not ersatz[0]:
+                    for z in zeilen_plan:
+                        print(z)
+                    gewaehlt, achse = ersatz[0], ersatz[1]
+                    zeilen_plan, plan, weg_anfahrt = plan_zeilen(gewaehlt, achse, hindernisse,
+                                                                 sicht, pose_jetzt)
+                if ersatz is not None and gewaehlt is ersatz[0]:
+                    print(blatt_text(ersatz[2]))
+                    if plan == 'durchfahrt':
+                        # Durch eine nur geschätzte Tür wird nicht gefahren.
+                        plan = 'nichts'
                 for z in zeilen_plan:
                     print(z)
                 if plan == 'nichts':
                     return nichts_gesendet('Weder Durchfahrt noch Anfahrt passen')
+            bemerkung = (f'Öffnung {gewaehlt.nr}, {gewaehlt.breite_m:.2f} m breit, '
+                         f'{gewaehlt.richtung_grad:+.0f}°, {gewaehlt.entfernung_m:.2f} m'
+                         + (' (hinter dem Türblatt geschätzt)'
+                            if gewaehlt.schluss == 'blatt_geschaetzt' else ''))
+            print(f'Gewählt: {bemerkung}.')
             if wahl.vor_die_tuer:
                 print(lage_text(gewaehlt, mit_hinweisen=False))
                 zeile, weg_anfahrt, noetig = anfahrt_zeile(gewaehlt, hindernisse, sicht, achse)

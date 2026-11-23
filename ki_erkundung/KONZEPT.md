@@ -1,6 +1,6 @@
 # Konzept „KI-Erkundung“ – eine KI übernimmt Ziel- und Suchwahl
 
-**Version 1.14 · 23.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
+**Version 1.15 · 23.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
 nachgeführt nach drei Durchgängen an echten Aufnahmen, der Freigabe der
 Schalter „nur Rundblick“ und „Etappenfahrt“ und der Festlegung „die KI
 bekommt Zeit, kein stiller Rückfall“**
@@ -299,6 +299,15 @@ So läuft es:
    0,45 m, freie Sicht auf die Punkte; was der Laser von dort nicht sieht,
    gilt nicht als frei. Die Anfahrt ist ein eigenes Fahrziel; die
    Durchfahrt danach wird neu vermessen.
+   **Seit v1.15 auch von der Seite des Türblatts:** Verdeckt das offene
+   Blatt die Öffnung, schätzt das Werkzeug die Tür aus dem Blatt (gerades
+   Stück von 0,60 bis 0,95 m, das an der Wand ansetzt und mit freier Spitze
+   in den Raum ragt) und der Wand daneben: Scharnier, wo das Blatt die Wand
+   trifft, Tür auf der anderen Seite des Blatts, so breit wie das Blatt
+   lang. Zu dieser Schätzung fährt es nur die Anfahrt; die Durchfahrt kommt
+   erst nach neuer Messung von vorn. Ein Möbel derselben Tiefe an der Wand
+   kann gleich aussehen; dann endet der Ablauf nach der Anfahrt ohne
+   Durchfahrt.
    **Seit v1.14 in einem Ablauf** (Entscheidung des Projektinhabers vom
    23.11.2026): Die Anfahrt trägt den Vermerk „es folgt ein Folgeziel“; der
    Erkunder wartet danach in derselben Mission stehend auf die Durchfahrt
@@ -674,6 +683,9 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   entschieden hat. Der Fahrteil soll aus vorhandenem, real bewährtem Code
   entstehen; Bestand und Vorschlag stehen im STATUS, entschieden ist dazu
   noch nichts.
+- 23.11.2026, v1.15 (Frage des Projektinhabers aus KI-F8: „Was passiert in
+  solchen Fällen?“): Tür von der Seite des Türblatts aus Blatt und Wand
+  geschätzt; nur Anfahrt, Durchfahrt nach neuer Messung von vorn.
 - 23.11.2026, v1.14, nach KI-F7 (erste Türdurchfahrt; Entscheidungen des
   Projektinhabers): Anfahrt und Durchfahrt in einem Ablauf und einer Mission
   (Folgeziel und „Ende“ im Erkunder, nur mit `stage_drive_only`); Grenzen

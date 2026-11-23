@@ -2204,6 +2204,18 @@ stehenden Roboter fünfmal umstellen ließ:**
 - **Danach:** Die KI wählt die Tür, zuerst mit Einspruchsmöglichkeit des
   Menschen vor der Fahrt.
 
+**Nachtrag 23.11.2026 (spät) – Tür von der Seite des Türblatts:**
+- Anlass: In KI-F8 stand Amadeus auf der Seite, zu der das Blatt aufgeht;
+  der Laser sah die Öffnung nicht. Auftrag des Projektinhabers: „ja baue und
+  teste“.
+- Entscheidung: Das Werkzeug schätzt die Tür aus dem sichtbaren Blatt und
+  der Wand daneben, aber nur als Ersatz und nur für die Anfahrt; durch die
+  Tür erst nach neuer Messung von vorn. Regel: **Eine geschätzte Lage darf
+  einen Roboter näher heranführen, aber nie allein eine Durchfahrt
+  begründen.**
+- Bekannte Grenze: Ein Möbel von Türblatttiefe an einer Wand sieht von der
+  Seite gleich aus; der Ablauf endet dann nach der Anfahrt ohne Durchfahrt.
+
 **Nachtrag 22.11.2026 (nachts) – Entscheidung des Projektinhabers: Laborprobe
 ohne Nahsensoren:**
 - **Wortlaut:** „Die Nahbereichssensoren machen gerade Probleme. Deswegen

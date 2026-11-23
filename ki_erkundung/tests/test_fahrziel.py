@@ -871,3 +871,120 @@ def test_die_tuer_wird_nach_der_anfahrt_wiedergefunden_und_die_achse_mitgenommen
         winkel_karte - pose2[2])
     assert winkel_karte == pytest.approx(math.radians(10) + 0.3)
     assert 'gemessen vor der Anfahrt (30 Laserpunkte über 1.20 m)' in achse_text(achse)
+
+
+# ------------------- Tür hinter dem offenen Türblatt (Blattseite, 23.11.2026) ----------
+
+from fahrziel_senden import richtung_passt, tuer_aus_blatt  # noqa: E402
+from lotse.fahrziel import blatt_text, gerade_stuecke, tuer_hinter_blatt  # noqa: E402
+
+
+def _kasten(x0, x1, y0, y1):
+    return [((x0, y0), (x1, y0)), ((x1, y0), (x1, y1)), ((x1, y1), (x0, y1)),
+            ((x0, y1), (x0, y0))]
+
+
+def _laborwelt(blatt=True):
+    """Laborraum der Simulation: Tür in der Wand x = 4,3 bei y = 1,6 bis 2,4,
+    Scharnier oben, Blatt 0,90 m lang und 85° offen in den Raum, dazu Möbel."""
+    s = [((0, 0), (4.3, 0)), ((0, 4.3), (4.3, 4.3)), ((0, 0), (0, 4.3)),
+         ((4.3, 0), (4.3, 1.6)), ((4.3, 2.4), (4.3, 4.3)),
+         ((5.85, 0), (5.85, 4.3)), ((4.3, 0.2), (5.85, 0.2)), ((4.3, 4.2), (5.85, 4.2))]
+    s += _kasten(0, 0.4, 0.6, 2.2) + _kasten(1.3, 3.0, 3.65, 4.3) + _kasten(3.3, 4.3, 0, 0.45)
+    if blatt:
+        w = math.radians(85)
+        d = (-math.sin(w), -math.cos(w))
+        a = (4.3, 2.416)
+        b = (a[0] + 0.9 * d[0], a[1] + 0.9 * d[1])
+        n = (-d[1] * 0.02, d[0] * 0.02)
+        s += [((a[0] + n[0], a[1] + n[1]), (b[0] + n[0], b[1] + n[1])),
+              ((a[0] - n[0], a[1] - n[1]), (b[0] - n[0], b[1] - n[1])),
+              ((b[0] + n[0], b[1] + n[1]), (b[0] - n[0], b[1] - n[1]))]
+    return s
+
+
+def _laserbild(segmente, pose, schritt_grad=0.5, rauschen_m=0.01, saat=1):
+    """Was der Laser vom Standplatz ``pose`` sieht: Punkte im Standpunktrahmen."""
+    import numpy as np
+    zufall = np.random.default_rng(saat)
+    x, y, gier = pose
+    punkte = []
+    for k in range(int(360 / schritt_grad)):
+        w = math.radians(-180 + k * schritt_grad)
+        dx, dy = math.cos(gier + w), math.sin(gier + w)
+        naechste = math.inf
+        for (ax, ay), (bx, by) in segmente:
+            ex, ey = bx - ax, by - ay
+            nenner = dx * ey - dy * ex
+            if abs(nenner) < 1e-12:
+                continue
+            t = ((ax - x) * ey - (ay - y) * ex) / nenner
+            u = ((ax - x) * dy - (ay - y) * dx) / nenner
+            if t > 0.05 and 0.0 <= u <= 1.0:
+                naechste = min(naechste, t)
+        if naechste < 12.0:
+            r = naechste + zufall.normal(0.0, rauschen_m)
+            punkte.append((r * math.cos(w), r * math.sin(w)))
+    return punkte
+
+
+def _in_der_welt(q, pose):
+    x, y, gier = pose
+    c, s = math.cos(gier), math.sin(gier)
+    return (x + c * q[0] - s * q[1], y + s * q[0] + c * q[1])
+
+
+def test_gerade_stuecke_teilen_an_ecken_und_nicht_am_rauschen():
+    # eine Ecke: 1 m Wand, dann 0,8 m senkrecht dazu, 1 cm Rauschen
+    import numpy as np
+    zufall = np.random.default_rng(3)
+    wand = [(2.0, -0.5 + 0.02 * i) for i in range(50)]
+    blatt = [(2.0 - 0.02 * i, 0.5) for i in range(1, 41)]
+    punkte = [(px + zufall.normal(0, 0.01), py + zufall.normal(0, 0.01))
+              for px, py in wand + blatt]
+    stuecke = [s for s in gerade_stuecke(punkte) if s['laenge_m'] > 0.3]
+    assert [round(s['laenge_m'], 1) for s in stuecke] == [1.0, 0.8]
+
+
+@pytest.mark.parametrize('pose', [(2.6, 3.1, -0.9), (3.0, 3.3, -0.3), (2.2, 2.9, -0.5),
+                                  (3.6, 3.4, -1.4), (1.0, 3.0, -0.5)])
+def test_von_der_blattseite_wird_die_tuer_aus_blatt_und_wand_geschaetzt(pose):
+    fund = tuer_hinter_blatt(_laserbild(_laborwelt(), pose))
+    assert fund is not None
+    scharnier, fern = (_in_der_welt(q, pose) for q in fund['pfosten'])
+    assert scharnier == pytest.approx((4.3, 2.44), abs=0.03)
+    assert fern[0] == pytest.approx(4.3, abs=0.03)
+    mitte_y = 0.5 * (scharnier[1] + fern[1])
+    assert mitte_y == pytest.approx(2.0, abs=0.06)          # echte Mitte der Tür
+    assert fund['winkel_grad'] == pytest.approx(85, abs=3)
+    assert 'die Öffnung dahinter verdeckt es' in blatt_text(fund)
+
+
+@pytest.mark.parametrize('pose', [(2.2, 1.0, 1.0), (2.45, 2.0, 0.0), (3.0, 1.2, 0.5),
+                                  (1.5, 2.0, 0.0), (2.0, 0.9, 0.3), (3.5, 1.0, 0.8)])
+def test_ohne_blick_auf_die_blattrueckseite_wird_nichts_geschaetzt(pose):
+    """Von vorn oder von der anderen Seite: kein Fund (Schrank, Werkbank und
+    Raumecken gelten nicht als Blatt)."""
+    assert tuer_hinter_blatt(_laserbild(_laborwelt(), pose)) is None
+
+
+def test_ohne_tuerblatt_wird_nichts_geschaetzt():
+    for pose in [(2.6, 3.1, -0.9), (3.6, 3.4, -1.4)]:
+        assert tuer_hinter_blatt(_laserbild(_laborwelt(blatt=False), pose)) is None
+
+
+def test_die_geschaetzte_tuer_wird_eine_oeffnung_mit_achse_aus_der_wand():
+    pose = (2.6, 3.1, -0.9)
+    o, achse, _ = tuer_aus_blatt(_laserbild(_laborwelt(), pose), 7)
+    assert o.nr == 7 and o.schluss == 'blatt_geschaetzt' and o.befahrbar
+    assert 0.80 <= o.breite_m <= 0.95
+    assert achse['quelle'] == 'wand'
+    # die Achse steht senkrecht auf der Wand x = 4,3 (in der Welt: entlang x)
+    nx, ny = achse['normal']
+    c, s = math.cos(pose[2]), math.sin(pose[2])
+    assert abs(c * nx - s * ny) == pytest.approx(1.0, abs=0.01)
+    assert richtung_passt(o, o.richtung_grad + 8, 10) and not richtung_passt(o, 60.0, 10)
+    # die Anfahrt vor diese Tür ist am Laserbild geprüft möglich
+    weg = anfahrt(o.pfosten, _laserbild(_laborwelt(), pose))
+    ende = _in_der_welt(weg['punkte'][-1], pose)
+    assert ende[1] == pytest.approx(2.0, abs=0.08) and 2.1 <= ende[0] <= 2.8

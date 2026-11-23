@@ -307,6 +307,51 @@ nur lesend sichern, was die Zeitwache meldet (neues Werkzeug
 Dauer der Lesepaare), dazu die Last; dann genau ein neuer scharfer Start.
 Am Motortreiber wird nichts geändert (Motorsteuerung, AGENTS §2.7).
 
+## Von der Seite des Türblatts (gebaut 23.11.2026, spät)
+
+Anlass: In KI-F8 stellte Christopher Amadeus seitlich vor die Tür, auf die
+Seite, zu der das Türblatt aufgeht. Der Laser sah die Öffnung nicht richtig,
+weil das Blatt sie verdeckt. Christopher: „Was passiert in solchen Fällen?“
+Bisher: keine türbreite Öffnung, keine Fahrt, ein Mensch stellt um. Das
+reicht nicht, sobald die KI Türen von beliebigen Plätzen wählt.
+
+**Gebaut (nur Werkzeug, kein Build):**
+- `gerade_stuecke`: gerade Stücke im Laserbild, robust gegen Rauschen (teilt
+  erst ab 4 cm Abweichung, fügt gleich gerichtete Nachbarn wieder
+  zusammen), Laserbild als geschlossener Kreis; je Ende, ob der Laser dort
+  weiter sieht („frei“) oder etwas Näheres das Stück verdeckt.
+- `tuer_hinter_blatt`: Ein 0,60 bis 0,95 m langes gerades Stück, das an
+  einer geraden Wand ansetzt, 55 bis 125° zu ihr steht, mit freier Spitze
+  in den Raum ragt, und die Wand auf der Seite des Roboters: das Blatt. Das
+  Scharnier liegt, wo es die Wand trifft; die Tür in der Wand auf der
+  anderen Seite des Blatts, so breit wie das Blatt lang ist.
+- Im Werkzeug nur als Ersatz: wenn keine türbreite Öffnung in der
+  gewünschten Richtung liegt oder ihre Entscheidung „keine Fahrt“ wäre.
+  Zur geschätzten Tür wird **nur die Anfahrt** gesendet, nie gleich die
+  Durchfahrt. Danach misst der Ablauf von vorn neu und findet die Tür
+  wieder; sonst „Ende“.
+
+**Nachgerechnet** an nachgebildeten Laserbildern des Laborraums der
+Simulation (1 cm Rauschen): von fünf Plätzen auf der Blattseite jedes Mal
+die richtige Tür (Scharnier auf 3 cm, Mitte auf 6 cm, 84 bis 85° gemessen);
+von sechs Plätzen ohne Blick auf die Blattrückseite und ohne Türblatt kein
+Fund. Gegen Fehlfunde: Raumecke hinter einer verdeckenden Werkbank (Ende
+nicht frei) und ein 1 m tiefer Schrank an der Wand (zu lang) werden nicht
+als Blatt genommen. **Grenze:** Ein Möbel von 0,60 bis 0,95 m Tiefe an einer
+Wand kann von der Seite wie ein Blatt aussehen; dann führt die Anfahrt
+umsonst vor das Möbel, und die Neumessung findet keine Tür (Ende, keine
+Durchfahrt). Die Richtung muss zur gewünschten passen; später sagt die KI am
+Bild, ob dort eine Tür ist.
+
+**Simulation** (ohne Nahsensoren, ein Aufruf, eine Mission):
+
+| Start auf der Blattseite | Ergebnis |
+|---|---|
+| neben einer Stuhllehne (0,31 m) | Tür richtig geschätzt; „keine Fahrt“: zum Drehen nur 0,31 m frei, nötig 0,37 m – richtig, die Ecken hätten die Lehne gestreift |
+| Ecke zwischen Wand und Blatt, 1,0 m vor der Türlinie, Blick weg von der Tür | eine vermessene Öffnung mit „keine Fahrt“ (zu nah), dann „Türblatt gesehen: 0.89 m, 85° … Tür geschätzt“; Anfahrt 2,37 m mit zwei Drehungen; neu gemessen „Wiedergefunden … 0.79 m“, „0.00 m rechts, Aufstellung passt“, Weg 0,32/0,40 m; „Durchfahrt abgeschlossen.“; im Flur nach 159 s, keine Berührung, engste Stelle 3,7 cm (im Stand in der Tür neben dem 5° schräg ragenden Blatt) |
+| 0,9 m vor der Türlinie, 1,2 m neben der Mitte auf der Blattseite | keine türbreite Öffnung, Tür geschätzt (0,90 m, 85°); Anfahrt 2,07 m; wiedergefunden, 0,01 m rechts; „Durchfahrt abgeschlossen.“; im Flur nach 159 s, keine Berührung, engste Stelle 3,8 cm (ebenso) |
+| schräg, 1,55 m vor der Türlinie, 0,93 m neben der Mitte | Tür geschätzt (0,85 m, 89°); Anfahrt; wiedergefunden, 0,00 m; „Durchfahrt abgeschlossen.“; im Flur nach 141 s, keine Berührung, engste Stelle 6,3 cm (beim ersten Drehen neben einer Stuhllehne). Derselbe Start mit dem alten Zeitbudget der Vorlage (60 s) brach mitten in der Anfahrt ab; das war die Simulation, nicht der Ablauf |
+
 ## Ein Ablauf und neue Grenzen (gebaut 23.11.2026, abends)
 
 Entscheidungen des Projektinhabers nach KI-F7: „Wir nehmen 0,25 Meter neben

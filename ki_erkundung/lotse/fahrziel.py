@@ -418,6 +418,194 @@ def wandrichtung(pfosten: Sequence[Sequence[float]], hindernisse: Sequence[Seque
     return beste
 
 
+def gerade_stuecke(punkte: Sequence[Sequence[float]], *, luecke_m: float = 0.15,
+                   spiel_m: float = 0.04, min_punkte: int = 6) -> List[dict]:
+    """Gerade Stücke im Laserbild (Punkte in der Reihenfolge der Strahlen).
+
+    Zusammenhängende Läufe (Abstand zum Nachbarn höchstens ``luecke_m``)
+    werden an der Ecke geteilt (dem Punkt, der am weitesten von der Sehne
+    liegt), solange ein Punkt mehr als ``spiel_m`` neben der ausgeglichenen
+    Linie liegt; danach werden benachbarte Stücke, die zusammen wieder
+    gerade sind, zusammengefügt. ``spiel_m`` ist etwa das Vierfache des
+    Messrauschens (Laser ±1,5 cm). Rückgabe je Stück: ``a`` und ``b`` (Enden
+    auf der ausgeglichenen Linie, in Strahlreihenfolge), ``richtung`` (von a
+    nach b), ``schwer``, ``punkte``, ``laenge_m``, ``frei_a`` und ``frei_b``
+    (das Ende ist zugleich das Ende des zusammenhängenden Laufs, und daneben
+    sieht der Laser mindestens 0,30 m weiter oder gar nichts; endet der Lauf
+    dagegen, weil etwas Näheres ihn verdeckt, ist das Ende nicht frei).
+    """
+    feld = np.asarray(punkte, dtype=float).reshape(-1, 2)
+    if feld.shape[0] < min_punkte:
+        return []
+    # Das Laserbild ist ein Kreis: Es beginnt hinter dem Roboter willkürlich.
+    # Damit dort keine Wand in zwei Stücke mit falschen „freien Enden“
+    # zerfällt, beginnt die Liste am größten Sprung zwischen Nachbarn.
+    rund = np.hypot(*(np.roll(feld, -1, axis=0) - feld).T)
+    feld = np.roll(feld, -(int(np.argmax(rund)) + 1), axis=0)
+    schritte = np.hypot(*np.diff(feld, axis=0).T)
+    grenzen = [0] + [int(i) + 1 for i in np.flatnonzero(schritte > luecke_m)] + [len(feld)]
+    weite = np.hypot(feld[:, 0], feld[:, 1])
+    winkel = np.arctan2(feld[:, 1], feld[:, 0])
+
+    def dahinter_frei(ende: int, nachbar: int) -> bool:
+        """Sieht der Laser neben dem Laufende weiter (oder nichts)?"""
+        nachbar %= len(feld)
+        luecke = abs((float(winkel[nachbar] - winkel[ende]) + math.pi) % (2 * math.pi) - math.pi)
+        return luecke > math.radians(2.0) or weite[nachbar] > weite[ende] + 0.30
+
+    def abweichung(lauf: np.ndarray):
+        schwer = lauf.mean(axis=0)
+        _, _, achsen = np.linalg.svd(lauf - schwer)
+        quer = np.abs((lauf - schwer) @ np.array([-achsen[0][1], achsen[0][0]]))
+        return float(quer.max()), schwer, achsen[0]
+
+    def teile(von: int, bis: int, ergebnis: List[Tuple[int, int]]):
+        lauf = feld[von:bis]
+        if lauf.shape[0] < 2:
+            return
+        if lauf.shape[0] >= 3 and abweichung(lauf)[0] > spiel_m:
+            sehne = lauf[-1] - lauf[0]
+            laenge = float(np.hypot(*sehne))
+            if laenge > 1e-6:
+                quer = np.abs(sehne[0] * (lauf[:, 1] - lauf[0, 1])
+                              - sehne[1] * (lauf[:, 0] - lauf[0, 0])) / laenge
+            else:
+                quer = np.hypot(*(lauf - lauf[0]).T)
+            k = int(np.argmax(quer[1:-1])) + 1
+            teile(von, von + k + 1, ergebnis)
+            teile(von + k, bis, ergebnis)
+            return
+        ergebnis.append((von, bis))
+
+    stuecke: List[dict] = []
+    for von, bis in zip(grenzen[:-1], grenzen[1:]):
+        teile_liste: List[Tuple[int, int]] = []
+        teile(von, bis, teile_liste)
+        # Nachbarn zusammenfügen, die zusammen gerade sind (Rauschen, keine Ecke)
+        zusammen: List[Tuple[int, int]] = []
+        for stueck in teile_liste:
+            if zusammen and abweichung(feld[zusammen[-1][0]:stueck[1]])[0] <= spiel_m:
+                zusammen[-1] = (zusammen[-1][0], stueck[1])
+            else:
+                zusammen.append(stueck)
+        for s_von, s_bis in zusammen:
+            lauf = feld[s_von:s_bis]
+            if lauf.shape[0] < min_punkte:
+                continue
+            _, schwer, richtung = abweichung(lauf)
+            if float(richtung @ (lauf[-1] - lauf[0])) < 0.0:
+                richtung = -richtung
+            a = schwer + richtung * float((lauf[0] - schwer) @ richtung)
+            b = schwer + richtung * float((lauf[-1] - schwer) @ richtung)
+            stuecke.append({'a': a, 'b': b, 'richtung': richtung, 'schwer': schwer,
+                            'punkte': int(lauf.shape[0]),
+                            'laenge_m': float(np.hypot(*(b - a))),
+                            'frei_a': s_von - von <= 2 and dahinter_frei(von, von - 1),
+                            'frei_b': bis - s_bis <= 2 and dahinter_frei(bis - 1, bis)})
+    return stuecke
+
+
+# Ein offenes Türblatt: so lang wie eine Tür breit ist, gerade, an der Wand
+# ansetzend und schräg bis senkrecht zu ihr. Bis 0,95 m: Zimmertüren sind
+# schmaler; ein 1 m tiefer Schrank an der Wand sähe sonst von der Seite
+# genauso aus (Simulation 23.11.2026).
+BLATT_VON_M = 0.60
+BLATT_BIS_M = 0.95
+BLATT_MIN_WINKEL_GRAD = 55.0
+
+
+def tuer_hinter_blatt(hindernisse: Sequence[Sequence[float]], *,
+                      blatt_von_m: float = BLATT_VON_M, blatt_bis_m: float = BLATT_BIS_M,
+                      wand_min_m: float = 0.40) -> Optional[dict]:
+    """Die Tür, deren offenes Blatt sie verdeckt, aus Blatt und Wand geschätzt.
+
+    Steht der Roboter auf der Seite, zu der das Türblatt aufgeht, sieht der
+    Laser die Rückseite des Blatts, nicht die Öffnung (KI-F1, KI-F8: zu
+    breit oder gar nicht vermessen). Zu sehen sind dann ein gerades Stück
+    Wand und ein gerades, 0,60 bis 0,95 m langes Stück, das an dieser Wand
+    ansetzt und schräg bis senkrecht von ihr in den Raum ragt: das Blatt.
+    Dann liegt das Scharnier, wo das Blatt die Wand trifft, die Tür in der
+    Wand auf der anderen Seite des Blatts, so breit wie das Blatt lang ist.
+
+    Das ist eine Schätzung: Für die Anfahrt vor die Tür genügt sie; die
+    Durchfahrt wird danach von vorn neu vermessen. Rückgabe ``None`` oder
+    ``pfosten`` (Scharnier zuerst), ``normal`` (quer zur Wand),
+    ``blatt_m``, ``winkel_grad`` (Blatt gegen Wand), ``wand_punkte``,
+    ``wand_laenge_m``.
+    """
+    stuecke = gerade_stuecke(hindernisse)
+    grenze = math.cos(math.radians(BLATT_MIN_WINKEL_GRAD))
+    beste, wert = None, -math.inf
+    for blatt in stuecke:
+        if not blatt_von_m <= blatt['laenge_m'] <= blatt_bis_m:
+            continue
+        for wand in stuecke:
+            if wand is blatt or wand['laenge_m'] < wand_min_m:
+                continue
+            d_w, d_b = wand['richtung'], blatt['richtung']
+            cos_wb = float(d_w @ d_b)
+            if abs(cos_wb) > grenze:
+                continue
+            n_w = np.array([-d_w[1], d_w[0]])
+
+            def vor_der_wand(q, wand=wand, n_w=n_w):
+                return float((q - wand['schwer']) @ n_w)
+
+            ea, eb = vor_der_wand(blatt['a']), vor_der_wand(blatt['b'])
+            spitze_bei_b = abs(ea) <= abs(eb)
+            wurzel, spitze = ((blatt['a'], blatt['b']) if spitze_bei_b
+                              else (blatt['b'], blatt['a']))
+            if abs(vor_der_wand(wurzel)) > 0.10 or abs(vor_der_wand(spitze)) < 0.45:
+                continue
+            # Hinter der Spitze sieht der Laser weiter (an ihr vorbei); geht
+            # das Laserbild dort um eine Ecke weiter, ist es ein Möbel.
+            if not (blatt['frei_b'] if spitze_bei_b else blatt['frei_a']):
+                continue
+            # Die Spitze ragt auf der Seite des Roboters in den Raum.
+            roboter = vor_der_wand(np.zeros(2))
+            if roboter * vor_der_wand(spitze) <= 0.0:
+                continue
+            scharnier = wurzel - vor_der_wand(wurzel) * n_w
+            lage = float((scharnier - wand['schwer']) @ d_w)
+            enden = sorted((float((wand['a'] - wand['schwer']) @ d_w),
+                            float((wand['b'] - wand['schwer']) @ d_w)))
+            if not enden[0] - 0.20 <= lage <= enden[1] + 0.20:
+                continue
+            # Roboter und gesehene Wand liegen auf derselben Seite des Blatts;
+            # die Tür liegt in der Wand auf der anderen.
+            n_b = np.array([-d_b[1], d_b[0]])
+            seite = float(-scharnier @ n_b)
+            if seite == 0.0 or seite * float((wand['schwer'] - scharnier) @ n_b) <= 0.0:
+                continue
+            zur_tuer = d_w if float(d_w @ n_b) * seite < 0.0 else -d_w
+            breite = min(max(blatt['laenge_m'], TUER_MIN_M), TUER_MAX_M)
+            fern = scharnier + zur_tuer * breite
+            guete = wand['punkte'] - 20.0 * abs(blatt['laenge_m'] - 0.82)
+            if guete > wert:
+                n = n_w if roboter < 0.0 else -n_w       # zeigt vom Roboter durch die Tür
+                beste, wert = {
+                    'pfosten': ((float(scharnier[0]), float(scharnier[1])),
+                                (float(fern[0]), float(fern[1]))),
+                    'normal': (float(n[0]), float(n[1])),
+                    'blatt_m': blatt['laenge_m'],
+                    'winkel_grad': math.degrees(math.acos(min(1.0, abs(cos_wb)))),
+                    'wand_punkte': wand['punkte'], 'wand_laenge_m': wand['laenge_m'],
+                }, guete
+    return beste
+
+
+def blatt_text(fund: dict) -> str:
+    """Die Schätzung „Tür hinter dem Blatt“ in einem Satz."""
+    (ax, ay), (bx, by) = fund['pfosten']
+    mx, my = 0.5 * (ax + bx), 0.5 * (ay + by)
+    breite = math.hypot(bx - ax, by - ay)
+    richtung = math.degrees(math.atan2(my, mx))
+    return (f'Türblatt gesehen: {fund["blatt_m"]:.2f} m lang, {fund["winkel_grad"]:.0f}° zur '
+            f'Wand; die Öffnung dahinter verdeckt es. Tür geschätzt: {breite:.2f} m breit, '
+            f'{richtung:+.1f}°, {math.hypot(mx, my):.2f} m (Wand: {fund["wand_punkte"]} '
+            f'Laserpunkte über {fund["wand_laenge_m"]:.2f} m).')
+
+
 def tuerachse(pfosten: Sequence[Sequence[float]],
               hindernisse: Sequence[Sequence[float]]) -> dict:
     """Die Richtung der Türachse und woraus sie stammt.
