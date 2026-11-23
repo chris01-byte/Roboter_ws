@@ -1,6 +1,19 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 23.11.2026 (nach KI-F5):** KI-F5 fuhr nicht. Amadeus stand mittig
+**Stand 23.11.2026 (mittags): Konzept des Fahrteils wird überdacht.**
+Christopher nach KI-F5: „So kommen wir nicht weiter. […] Ich glaube, ohne
+NAV2 schafft er das nicht. Bitte überdenke unser Konzept“. Rückblick,
+Möglichkeiten und Empfehlung stehen in
+[BEWERTUNG_TUERDURCHFAHRT.md](BEWERTUNG_TUERDURCHFAHRT.md). Kern: Kein
+Fehlschlag lag an der Fahrgenauigkeit; dreimal Vermessung und Planung des
+Werkzeugs, einmal Radsensor, einmal ein wohl berechtigter Halt. Alle realen
+Durchfahrten fuhr Nav2, aber Nav2 erreicht seit 15./19.11. kaum ein Ziel,
+und ohne Nahsensoren sperrt das Fahrtor Nav2 ganz. Empfohlen ist als
+Zielbild der Hybrid (Nav2 grob vor die Tür, Laser-Etappen mit frischer
+Messung hindurch). **KI-F6 ist erteilt, aber nicht übergeben; zuerst
+entscheidet der Projektinhaber den Weg.**
+
+**Davor, 23.11.2026 (nach KI-F5):** KI-F5 fuhr nicht. Amadeus stand mittig
 vor der Tür, aber das Werkzeug meldete fünfmal „30 cm nach links
 versetzen“; es nahm die Türrichtung aus zwei Punkten, und eine Kante war
 7 cm zu nah gemessen. Christopher: „ich mach mich doch hier nicht zum
@@ -79,7 +92,13 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-F6
+**Zuerst: Entscheidung des Projektinhabers zum Fahrweg** nach der
+[Bewertung](BEWERTUNG_TUERDURCHFAHRT.md): KI-F6 noch einmal als letzten
+Versuch ohne Nav2 (grob hinstellen) und parallel den Nav2-Weg vorbereiten,
+oder sofort auf den Nav2-Weg (Nahsensoren wieder an, zuerst den Stand vom
+08.11. nachfahren). Bis dahin wird nichts gefahren und nichts gebaut.
+
+**Erteilt, wartet auf diese Entscheidung und die Übergabe: Auftrag KI-F6
 „Amadeus richtet sich selbst aus und fährt durch die Tür“**
 ([AUFTRAG.md](AUFTRAG.md)). Auf dem Jetson, mit Christopher; ohne Kamera und
 ohne KI-Rechner; **kein Build** (Release `kif5-20261123_0950`), jeder Start
@@ -960,7 +979,7 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Auftrag KI-F6 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): Amadeus irgendwo
-1,5 bis 3 m vor die Tür stellen, einmal messen, die Tür bestätigen; dann
-richtet er sich selbst aus und fährt ohne Nahsensoren durch die offene
-Labortür.
+Der Projektinhaber entscheidet nach der
+[Bewertung](BEWERTUNG_TUERDURCHFAHRT.md) den Fahrweg: KI-F6 als letzter
+Versuch ohne Nav2 (parallel den Nav2-Weg vorbereiten) oder sofort der
+Nav2-Weg. Bis dahin wird nichts gefahren und nichts gebaut.
