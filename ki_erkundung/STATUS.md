@@ -1,6 +1,16 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 23.11.2026 (nach KI-F6): Amadeus hat sich zum ersten Mal selbst
+**Stand 23.11.2026 (nach KI-F7): Amadeus ist zum ersten Mal in dieser Linie
+selbst durch die Tür gefahren.** Er stellte sich selbst vor die Labortür
+(1,65 m, zwei Drehungen), richtete sich aus und fuhr gerade hindurch in den
+Flur (1,90 m, fünf Etappen), ohne Nav2, ohne Nahsensoren, nichts berührt.
+Christopher: „ja alles geklappt“; danach: „Jedoch waren die seitlichen
+Abstandsgrenzen zu hoch, die können deutlich herunter genommen werden.“
+Gelungen im zweiten Durchgang; im ersten lag etwas auf dem Roboter, und die
+Tür war nicht ganz offen. **Als Nächstes:** Der Projektinhaber will das
+weitere Vorgehen zuerst besprechen; es gibt keinen offenen Auftrag.
+
+**Davor, 23.11.2026 (nach KI-F6): Amadeus hat sich zum ersten Mal selbst
 vor die Tür gestellt.** Eine Messung, kein Umstellen: Das Werkzeug fand die
 Labortür und entschied „Anfahrt“; Amadeus drehte sich, fuhr 1,42 m, drehte
 sich zur Tür, und danach passten Aufstellung, Weg und Kostenkarte, ohne
@@ -94,7 +104,7 @@ fährt mit seiner Schutzkette.
 |---|---|---|---|
 | Erstes Sehen | im Stand Bild und Laser aufnehmen, die KI fragen, die Antwort prüfen | KI-0 | **erledigt** (21.11.) |
 | Blickrunde | sich selbst einmal herumdrehen; aus acht Bildern nennt die KI den Ausgang | KI-1 | **am Roboter gelungen** (21.11., eine Runde im Labor); für die Kriterien fehlen weitere Runden |
-| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1), Ausrichten (KI-F2), drei Etappen genau auf der Linie bis kurz vor die Tür (KI-F3b); selbst vor die Tür gestellt (KI-F6); durch die Tür bisher nur in der Simulation; als Nächstes KI-F7 |
+| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1), Ausrichten (KI-F2), drei Etappen genau auf der Linie bis kurz vor die Tür (KI-F3b); **selbst vor die Tür gestellt und hindurchgefahren (KI-F7, 23.11.)**; die Tür hat dabei noch ein Mensch bestätigt, nicht die KI |
 | Raum für Raum | weiter, bis kein Ausgang mehr offen ist (Laborraum, Flur, Schlafzimmer) | KI-3 | offen |
 | Räume benennen, um Hilfe rufen | Raumnamen als Vorschlag in der App; Hilferuf mit Grund und Bild | KI-4 | offen |
 | Auf Zuruf | „fahr in die Küche“, „such die Tasse“ | KI-5 | offen |
@@ -104,14 +114,10 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-F7
-„noch einmal selbst ausrichten und durch die Tür“** ([AUFTRAG.md](AUFTRAG.md)).
-Auf dem Jetson, mit Christopher; ohne Kamera und ohne KI-Rechner; **neuer
-Build** (Release `kif7-<STAMP>`, nur `explore_node.py` geändert), jeder
-Start mit `stage_drive_only:=true nahsensoren:=false`. Ablauf wie KI-F6:
-Christopher stellt Amadeus 1,5 bis 3 m vor die Tür, ohne genau
-auszurichten; eine Messung, eine Ja/Nein-Frage zur Tür; dann entscheidet
-Amadeus selbst: Durchfahrt, oder erst Anfahrt und dann Durchfahrt.
+**Kein offener Auftrag.** KI-F7 ist ausgeführt (erste Türdurchfahrt). Vor
+dem nächsten Auftrag bespricht der Projektinhaber das Vorgehen; offen sind
+die seitlichen Abstandsgrenzen des Werkzeugs, Wiederholbarkeit, eine
+Fahrt in einem Zug statt zwei Missionen und die Übergabe der KI-Wahl.
 
 **Danach, je nach Ergebnis:**
 - Durchfahrt gelungen: Rundblick, Frage an die KI und Etappenfahrt in einem
@@ -282,6 +288,31 @@ nur lesend sichern, was die Zeitwache meldet (neues Werkzeug
 `werkzeuge/radsensor_zustand.py`: Größe und Zeitpunkt der ersten Lücke,
 Dauer der Lesepaare), dazu die Last; dann genau ein neuer scharfer Start.
 Am Motortreiber wird nichts geändert (Motorsteuerung, AGENTS §2.7).
+
+## KI-F7 – erste Türdurchfahrt der KI-Linie (Jetson, 23.11.2026, 12:58 bis 14:54)
+
+Neuer Release `kif7-20261123_1258` (nur `explore_node.py` geändert, wie
+erwartet), Tests 356 und 268. Archiv mit Auftrag und beiden Durchgängen:
+[archiv/20261123-kif7-erste-durchfahrt/](archiv/20261123-kif7-erste-durchfahrt/).
+
+**Durchgang 2 (gelungen):** einmal umgestellt, weil am ersten Platz zum
+Drehen nur 0,39 m frei waren (nötig 0,45 m). Anfahrt 1,65 m (Rest nach dem
+Ausrichten −0,1° und −1,0°), danach ohne Anfassen „Aufstellung passt“
+(0,03 m rechts), „Weg passt“ (je 0,39 m), „Kostenkarte passt“. Durchfahrt
+fünf Etappen, 1,90 m, „Durchfahrt abgeschlossen.“ Seitlich höchstens 5 mm,
+höchstens 0,050 m/s, alle Zähler der Kette 0. Christopher: ganz im Flur
+„ja“, Platz „genug“, nichts berührt, „ja alles geklappt“. N-1, T-1, A-1,
+T-2 bis T-6 treffen zu.
+
+**Durchgang 1:** Radsensor beim ersten scharfen Start gesperrt (Ausnahme,
+ein Neustart); erste Anfahrt hielt, weil etwas auf dem Roboter lag; nach
+Wiederholung auf Anordnung gelungen; Durchfahrt nicht gesendet, weil links
+nur 0,24 m frei waren (Tür nicht ganz offen; Gehäuse 0,23 m: 1 cm Luft).
+
+**Beobachtet:** Nach der Anfahrt kam die Türachse aus den zwei Kanten (aus
+1,6 m sieht der Laser die Wand neben der Tür nicht lang genug); es ging
+gut, ist aber der Fall, der in KI-F5 täuschte. Der Radsensor sperrte sich
+zum zweiten Mal in dieser Linie beim Hochfahren.
 
 ## KI-F6 – Anfahrt gelungen, Durchfahrt an zwei Programmfehlern abgebrochen (Jetson, 23.11.2026, 11:07 bis 11:21)
 
@@ -1045,7 +1076,6 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Auftrag KI-F7 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): neuer Build mit der
-Korrektur im Erkunder, dann wie KI-F6: Amadeus 1,5 bis 3 m vor die Tür,
-einmal messen, die Tür bestätigen; er stellt sich selbst vor die Tür und
-fährt ohne Nahsensoren hindurch.
+Besprechung mit dem Projektinhaber, bevor der nächste Auftrag erteilt wird
+(Abstandsgrenzen, Wiederholbarkeit, eine Fahrt in einem Zug, Übergabe der
+KI-Wahl).

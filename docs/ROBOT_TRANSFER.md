@@ -472,15 +472,21 @@ vor die Labortür (zwei Drehungen auf der Stelle, vier gerade Etappen,
 0,080 rad/s; nichts berührt, kein Eingriff. Releases und Umgebungsdateien
 unverändert.
 
-Stand 23.11.2026, **noch keine weitere Jetson-Wirkung:** Auftrag KI-F7 ist
-erteilt (`ki_erkundung/AUFTRAG.md`). Er baut einen neuen Release
-`kif7-<STAMP>` mit eigener Umgebungsdatei `~/roboter_worktrees/kif7.env`
-(Kopie von `kif5.env`, nur `SH_REL`); gegenüber `kif5-20261123_0950` ist nur
-`explore_node.py` geändert (Etappenfahrt liest Odometrie und Scan vor der
-Uhr; Schlussmeldung in zwei Aufrufen). Fahrt wie KI-F6: ohne Nahsensoren,
-höchstens zwei Missionen (Anfahrt, Durchfahrt in den Flur), 5 cm/s, ohne
-Nav2. Rückfall: `kif5.env` weiter benutzen; `kif7.env` und den
+Nachtrag 23.11.2026, tatsächliche Wirkung von KI-F7 (Bericht des
+Jetson-Agenten, 12:58 bis 14:54): Arbeitskopie auf `4ec1bcf`. Neu angelegt:
+Release `~/.local/share/amadeus/releases/kif7-20261123_1258` (14 Pakete,
+Build 177 s; gegenüber `kif5-20261123_0950` nur `explore_node.py` anders)
+und `~/roboter_worktrees/kif7.env` (Kopie von `kif5.env`, nur `SH_REL`).
+Fünf Stackstarts, alle mit `nahsensoren:=false`, davon drei scharf (einer
+mit gesperrtem Radsensor, ohne Bewegung). **Bewegung:** im Laborraum zwei
+Anfahrten vor die Labortür (1,85 m und 1,65 m) und **eine Durchfahrt in den
+Flur** (1,90 m, Amadeus danach ganz im Flur); höchstens 0,050 m/s und
+0,080 rad/s; nichts berührt, kein Eingriff. `kif5.env`, `kif5-20261123_0950`
+und frühere Releases unverändert. Rückfall: `kif7.env` und den
 Release-Ordner löschen.
+
+Stand 23.11.2026, **noch keine weitere Jetson-Wirkung:** kein offener
+Auftrag der KI-Linie.
 
 Davor, Stand 22.11.2026 (nachts, später): ersetzt durch **KI-F5**
 (`ki_erkundung/AUFTRAG.md`). KI-F5 baut einen neuen Release

@@ -2178,6 +2178,15 @@ stehenden Roboter fünfmal umstellen ließ:**
   noch.
 - **Nächster Schritt:** KI-F7 mit neuem Build, sonst wie KI-F6.
 
+**Nachtrag 23.11.2026 – KI-F7: erste Türdurchfahrt der KI-Linie:**
+- Amadeus stellte sich selbst vor die Labortür und fuhr ohne Nav2 und ohne
+  Nahsensoren hindurch in den Flur (Etappenfahrt, `--zur-tuer`, zwei
+  Missionen), nichts berührt. Die Tür bestätigte noch ein Mensch.
+- Der Projektinhaber: Die seitlichen Abstandsgrenzen des Werkzeugs sind zu
+  groß. Vor dem nächsten Auftrag wird das Vorgehen besprochen.
+- Befund, wiederkehrend: Der Radsensor sperrte sich beim Hochfahren
+  (zweimal in der KI-Linie); ein Neustart löst es.
+
 **Nachtrag 22.11.2026 (nachts) – Entscheidung des Projektinhabers: Laborprobe
 ohne Nahsensoren:**
 - **Wortlaut:** „Die Nahbereichssensoren machen gerade Probleme. Deswegen
