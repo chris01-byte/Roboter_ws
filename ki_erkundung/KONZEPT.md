@@ -1,6 +1,6 @@
 # Konzept „KI-Erkundung“ – eine KI übernimmt Ziel- und Suchwahl
 
-**Version 1.12 · 22.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
+**Version 1.13 · 23.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
 nachgeführt nach drei Durchgängen an echten Aufnahmen, der Freigabe der
 Schalter „nur Rundblick“ und „Etappenfahrt“ und der Festlegung „die KI
 bekommt Zeit, kein stiller Rückfall“**
@@ -299,6 +299,13 @@ So läuft es:
    0,45 m, freie Sicht auf die Punkte; was der Laser von dort nicht sieht,
    gilt nicht als frei. Die Anfahrt ist ein eigenes Fahrziel; die
    Durchfahrt danach wird neu vermessen.
+   **Seit v1.13 entscheidet der Roboter selbst** (`--zur-tuer`): Steht er
+   passend und ist die gerade Linie frei, fährt er gleich hindurch; sonst
+   stellt er sich zuerst mit der Anfahrt vor die Tür. Ein Mensch stellt ihn
+   dafür nicht um. **Die Türachse kommt in allen Schritten aus der geraden
+   Wand neben der Tür** (`tuerachse`), nicht aus den zwei Türkanten allein:
+   Eine Kante, die einige Zentimeter falsch gemessen ist, kippt sonst die
+   Achse um Grade (KI-F5: 7 cm, 7°, „30 cm daneben“ bei mittigem Roboter).
 3. **Durchfahrt:** Der Roboter misst die Öffnung im Stand neu und legt zwei
    Punkte auf die **gerade Linie von seinem Standplatz durch die
    Türmitte**: einen
@@ -657,6 +664,14 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   entschieden hat. Der Fahrteil soll aus vorhandenem, real bewährtem Code
   entstehen; Bestand und Vorschlag stehen im STATUS, entschieden ist dazu
   noch nichts.
+- 23.11.2026, v1.13, nach KI-F5 (Projektinhaber: „der roboter muss die tür
+  finden, sich selber ausrichten und hindurch fahren“): Amadeus stand mittig,
+  das Werkzeug meldete fünfmal „30 cm daneben“, weil es die Türrichtung aus
+  zwei Punkten nahm. In §6a: Türachse aus der Wand in allen Schritten; der
+  Roboter wählt selbst zwischen Durchfahrt und Anfahrt. Grundsatz, neu
+  festgehalten: **Was einen Menschen zum Umstellen schickt, muss auf vielen
+  Messpunkten beruhen, und der Roboter korrigiert seine Lage, wo er es
+  kann, selbst.**
 - 22.11.2026, v1.12 (Entscheidung des Projektinhabers: „Die
   Nahbereichssensoren machen gerade Probleme. Deswegen schreibe jetzt einen
   Testlauf, wo diese komplett deaktiviert werden.“): Laborprobe ohne

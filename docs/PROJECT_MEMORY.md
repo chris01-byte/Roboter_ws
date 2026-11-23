@@ -2120,6 +2120,42 @@ falsch geplant, nicht der Halt:**
   Lage (A2) hat die Lage vom Vormittag nicht getroffen; die Vermutung zur
   1,25 m breiten Lücke ist weder bestätigt noch widerlegt.
 
+**Nachtrag 23.11.2026 – KI-F5: keine Fahrt, weil das Werkzeug einen mittig
+stehenden Roboter fünfmal umstellen ließ:**
+- **Ergebnis:** Build und Betrieb ohne Nahsensoren liefen wie vorgesehen.
+  Fünf Messungen meldeten „steht 0.30 m rechts neben der Türmitte: bitte
+  etwa 31 cm nach links versetzen“. Christopher: „doch der roboter steht
+  direkt mittig vor der tür“ und zuletzt „ich mach mich doch hier nicht zum
+  clown, der roboter muss die tür finden, sich selber ausrichten und
+  hindurch fahren“.
+- **Ursache, nachgerechnet:** Die linke Türkante lag wie am 22.11. an
+  derselben Stelle, Amadeus stand also gleich. Die rechte Kante lag 7 cm
+  näher (etwas Schmales vor dem rechten Rahmen). Das Werkzeug nahm die
+  Türrichtung aus diesen zwei Punkten: 7 cm kippten die Tür um 7°, das
+  ergab 30 cm „daneben“.
+- **Fehler der Planung:** (1) Eine Prüfung, nach der ein Mensch den Roboter
+  umstellt, beruhte auf zwei einzelnen Punkten, obwohl die robuste Achse aus
+  der Wand für die Anfahrt schon gebaut war. (2) Der Auftrag ließ bis zu
+  acht Messungen mit Umstellen von Hand zu, auch nachdem der Mensch „steht
+  mittig“ gesagt hatte. (3) Die Selbstausrichtung war hinter eine Stufe
+  gestellt, an der sie gerade gebraucht wurde. Regeln: **Was einen Menschen
+  zum Umstellen schickt, beruht auf vielen Messpunkten. Wo der Roboter seine
+  Lage selbst korrigieren kann, tut er es; Umstellen von Hand höchstens
+  einmal.** Widerspricht der Mensch einer Messung, ist das ein Befund, kein
+  Anlass für die nächste Umstellrunde.
+- **Entscheidung:** Türachse aus der Wand in allen Schritten; Werkzeugbetrieb
+  `--zur-tuer` (Durchfahrt oder erst Anfahrt, der Roboter entscheidet).
+  Weiter ohne Nahsensoren, ohne Nav2, kein Build.
+- **Nachtrag zu KI-F3b (aus dem ausgeführten Teil von KI-F4):** Christopher
+  bestätigte, dass damals etwas vor der Tür auf dem Boden lag; der rechte
+  Nahsensor sah an der Haltestelle etwas in 10 bis 52 cm Höhe, das der Laser
+  nicht sah. Der Nahbereichs-Halt hat damit wahrscheinlich richtig
+  angehalten. Die Entscheidung, ohne Nahsensoren zu prüfen, bleibt die des
+  Projektinhabers; der Schalter lässt sich mit einem Startargument
+  zurückstellen.
+- **Richtiggestellt:** Das Archiv von KI-F4 hieß zuerst „nicht übergeben und
+  nicht ausgeführt“; KI-F4 lief am 22.11. bis Teil M3.
+
 **Nachtrag 22.11.2026 (nachts) – Entscheidung des Projektinhabers: Laborprobe
 ohne Nahsensoren:**
 - **Wortlaut:** „Die Nahbereichssensoren machen gerade Probleme. Deswegen

@@ -745,3 +745,69 @@ def test_nahsensoren_im_fahrstreifen_in_einem_satz():
                     'cm über dem Boden; rechts nicht empfangen.')
     assert nah_text(None) == 'Nahsensoren im Fahrstreifen: nicht empfangen.'
     assert nah_text({'links': [], 'rechts': []}).endswith('links nichts; rechts nichts.')
+
+
+# --- KI-F5: eine Türkante falsch, Achse aus der Wand; selbst entscheiden ------
+
+from fahrziel_senden import ENTSCHEIDUNG_TEXT, entscheidung, vorschlag  # noqa: E402
+from lotse.fahrziel import achse_text, tuerachse  # noqa: E402
+
+
+def kif5_messung():
+    """Die Kanten aus dem Bericht KI-F5 (23.11.2026), dazu die Wand neben der Tür.
+
+    Am 22.11. stand Amadeus am selben Platz; die linke Kante lag auf 2 cm
+    genauso, die rechte 7 cm weiter weg. Die Wand liegt quer vor ihm wie am
+    22.11. (dort: Tür 1° gedreht).
+    """
+    def polar(w, r):
+        return (r * math.cos(math.radians(w)), r * math.sin(math.radians(w)))
+    rechts, links = polar(-10.0, 1.83), polar(13.1, 1.95)
+    wand = [(1.89, -0.40 - 0.02 * i) for i in range(50)]           # rechts der Tür
+    wand += [(1.89, 0.46 + 0.02 * i) for i in range(50)]           # links der Tür
+    return (rechts, links), wand
+
+
+def test_kif5_eine_kante_kippt_die_achse_die_wand_nicht():
+    pfosten, wand = kif5_messung()
+    # nur aus den Kanten: 7° gekippt, „30 cm daneben“ – so meldete es das Werkzeug
+    nur_kanten = aufstellung(pfosten)
+    assert nur_kanten['seitlich_m'] == pytest.approx(-0.296, abs=0.005)
+    assert nur_kanten['winkel_grad'] == pytest.approx(-7.3, abs=0.2)
+    assert any('nach links versetzen' in h for h in aufstellung_hinweise(nur_kanten))
+    # aus der Wand: er steht mittig, wie Christopher sagte
+    achse = tuerachse(pfosten, wand)
+    assert achse['quelle'] == 'wand' and achse['punkte'] >= 12
+    lage = aufstellung(pfosten, achse=achse['normal'])
+    assert abs(lage['seitlich_m']) < 0.08 and abs(lage['winkel_grad']) < 1.0
+    assert aufstellung_hinweise(lage) == []
+    assert achse_text(achse).startswith('Türachse aus der Wand neben der Tür (')
+    # die gerade Linie ist dann kaum schräg und geht durch die Türmitte
+    linie = gerade_linie(pfosten, hinter_m=0.45, achse=achse['normal'])
+    assert len(linie) == 2 and abs(linie[-1][1]) < 0.15
+
+
+def test_ohne_wand_bleibt_es_bei_den_kanten():
+    pfosten, _ = kif5_messung()
+    achse = tuerachse(pfosten, [])
+    assert achse['quelle'] == 'kanten'
+    assert aufstellung(pfosten, achse=achse['normal']) == pytest.approx(aufstellung(pfosten))
+    assert 'nur aus den zwei Türkanten' in achse_text(achse)
+
+
+def test_entscheidung_zur_tuer():
+    assert entscheidung(True, True, True) == 'durchfahrt'
+    assert entscheidung(True, True, False) == 'durchfahrt'
+    assert entscheidung(False, True, True) == 'anfahrt'
+    assert entscheidung(False, False, True) == 'anfahrt'
+    assert entscheidung(False, True, False) == 'nichts'
+    # steht er passend, aber die Linie ist nicht frei, hilft keine Anfahrt
+    assert entscheidung(True, False, True) == 'nichts'
+    assert ENTSCHEIDUNG_TEXT['anfahrt'].startswith('Entscheidung: Anfahrt')
+
+
+def test_vorschlag_ist_die_tiefste_tuerbreite_oeffnung():
+    tuer = Oeffnung(1, 0.77, (1.85, 0.06), ((1.8, -0.3), (1.9, 0.4)), 2.0, 1.85, 1.62, True)
+    luecke = Oeffnung(2, 0.82, (1.0, -1.0), ((0.6, -1.0), (1.4, -0.9)), -43.0, 1.43, 0.67, True)
+    assert vorschlag([luecke, tuer]) is tuer
+    assert vorschlag([]) is None

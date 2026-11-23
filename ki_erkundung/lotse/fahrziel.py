@@ -91,7 +91,7 @@ def tuer_punkte(pfosten: Sequence[Sequence[float]],
 
 def aufstellung(pfosten: Sequence[Sequence[float]],
                 standpunkt: Sequence[float] = (0.0, 0.0),
-                blick_rad: float = 0.0) -> dict:
+                blick_rad: float = 0.0, achse: Optional[Sequence[float]] = None) -> dict:
     """Wie der Roboter zur Tür steht.
 
     ``abstand_m``: bis zur Türlinie, entlang der Türachse.
@@ -99,6 +99,12 @@ def aufstellung(pfosten: Sequence[Sequence[float]],
     links der Achse (mit Blick zur Tür).
     ``winkel_grad``: Richtung der Türachse gegen die Blickrichtung; positiv =
     die Achse liegt links, der Roboter müsste sich nach links drehen.
+
+    ``achse``: Richtung der Türachse (``tuerachse``, aus der Wand neben der
+    Tür). Ohne sie steht die Achse senkrecht auf der Verbindung der zwei
+    Kanten; dann kippt ein Fehler von wenigen Zentimetern an einer Kante die
+    Achse um Grade (KI-F5, 23.11.2026: 7 cm an der rechten Kante, 7° Kippung,
+    „30 cm daneben“ bei einem Roboter, der mittig stand).
     """
     (ax, ay), (bx, by) = [(float(p[0]), float(p[1])) for p in pfosten]
     sx, sy = float(standpunkt[0]), float(standpunkt[1])
@@ -106,7 +112,13 @@ def aufstellung(pfosten: Sequence[Sequence[float]],
     if not math.isfinite(breite) or breite <= 0.0:
         raise ValueError('Fahrziel: Pfosten fallen zusammen')
     mx, my = 0.5 * (ax + bx), 0.5 * (ay + by)
-    nx, ny = -(by - ay) / breite, (bx - ax) / breite
+    if achse is not None:
+        laenge = math.hypot(float(achse[0]), float(achse[1]))
+        if not math.isfinite(laenge) or laenge < 1e-9:
+            raise ValueError('Fahrziel: Türachse ohne Richtung')
+        nx, ny = float(achse[0]) / laenge, float(achse[1]) / laenge
+    else:
+        nx, ny = -(by - ay) / breite, (bx - ax) / breite
     if (sx - mx) * nx + (sy - my) * ny > 0.0:      # Achse zeigt vom Standpunkt weg
         nx, ny = -nx, -ny
     abstand = (mx - sx) * nx + (my - sy) * ny
@@ -176,7 +188,8 @@ def punkt_relativ(voraus_m: float, links_m: float, pose: Sequence[float]) -> Lis
 def gerade_linie(pfosten: Sequence[Sequence[float]], *,
                  vor_m: float = VOR_DER_TUER_M, hinter_m: float = HINTER_DER_TUER_M,
                  max_schraeg_grad: float = MAX_SCHRAEG_GRAD,
-                 min_anlauf_m: float = 0.40) -> List[Punkt]:
+                 min_anlauf_m: float = 0.40,
+                 achse: Optional[Sequence[float]] = None) -> List[Punkt]:
     """Fahrpunkte auf der geraden Linie vom Standplatz durch die Türmitte.
 
     Im Standpunktrahmen (Antriebsmitte im Ursprung, x voraus, y links). Der
@@ -188,8 +201,10 @@ def gerade_linie(pfosten: Sequence[Sequence[float]], *,
     (22.11.2026) fuhr der Roboter erst schräg zur Achse und wollte sich
     dort drehen; die schräge Strecke führte 1,5 cm an der Spitze des
     offenen Türblatts vorbei. Die gerade Linie hält dort 39 cm Abstand.
+
+    ``achse`` wie bei ``aufstellung``.
     """
-    lage = aufstellung(pfosten)
+    lage = aufstellung(pfosten, achse=achse)
     (ax, ay), (bx, by) = [(float(q[0]), float(q[1])) for q in pfosten]
     mx, my = 0.5 * (ax + bx), 0.5 * (ay + by)
     strecke = math.hypot(mx, my)
@@ -398,6 +413,36 @@ def wandrichtung(pfosten: Sequence[Sequence[float]], hindernisse: Sequence[Seque
     return beste
 
 
+def tuerachse(pfosten: Sequence[Sequence[float]],
+              hindernisse: Sequence[Sequence[float]]) -> dict:
+    """Die Richtung der Türachse und woraus sie stammt.
+
+    Aus der geraden Wand neben der Tür (``wandrichtung``, viele Laserpunkte),
+    nur ohne solche Wand aus der Verbindung der zwei Türkanten. Rückgabe:
+    ``normal`` (Einheitsvektor quer zur Wand; die Seite legt ``aufstellung``
+    fest), ``quelle`` (``'wand'`` oder ``'kanten'``), ``punkte``, ``laenge_m``.
+    """
+    wand = wandrichtung(pfosten, hindernisse)
+    if wand is not None:
+        rx, ry = wand['richtung']
+        return {'normal': (-ry, rx), 'quelle': 'wand', 'punkte': wand['punkte'],
+                'laenge_m': wand['laenge_m']}
+    (ax, ay), (bx, by) = [(float(q[0]), float(q[1])) for q in pfosten]
+    breite = math.hypot(bx - ax, by - ay)
+    if not math.isfinite(breite) or breite <= 0.0:
+        raise ValueError('Fahrziel: Pfosten fallen zusammen')
+    return {'normal': (-(by - ay) / breite, (bx - ax) / breite), 'quelle': 'kanten',
+            'punkte': 0, 'laenge_m': 0.0}
+
+
+def achse_text(achse: dict) -> str:
+    """Woraus die Türachse stammt, in einem Satz."""
+    if achse.get('quelle') == 'wand':
+        return (f'Türachse aus der Wand neben der Tür ({achse["punkte"]} Laserpunkte über '
+                f'{achse["laenge_m"]:.2f} m).')
+    return 'Türachse nur aus den zwei Türkanten (neben der Tür keine gerade Wand gesehen).'
+
+
 def anfahrt(pfosten: Sequence[Sequence[float]], hindernisse: Sequence[Sequence[float]],
             sicht: Optional[dict] = None, *,
             vor_m: Sequence[float] = ANFAHRT_VOR_M, anlauf_m: float = ANFAHRT_ANLAUF_M,
@@ -429,15 +474,12 @@ def anfahrt(pfosten: Sequence[Sequence[float]], hindernisse: Sequence[Sequence[f
     (ax, ay), (bx, by) = [(float(q[0]), float(q[1])) for q in pfosten]
     mx, my = 0.5 * (ax + bx), 0.5 * (ay + by)
     # Die Türachse zeigt vom Standplatz weg durch die Tür.
-    wand = wandrichtung(pfosten, hindernisse)
-    if wand is not None:
-        nx, ny = -wand['richtung'][1], wand['richtung'][0]
-    else:
-        nx, ny = -(by - ay) / lage['breite_m'], (bx - ax) / lage['breite_m']
+    tuer = tuerachse(pfosten, hindernisse)
+    nx, ny = tuer['normal']
     if mx * nx + my * ny < 0.0:
         nx, ny = -nx, -ny
     achse = math.atan2(ny, nx)
-    achse_aus = ('wand', wand['punkte'], wand['laenge_m']) if wand else ('kanten', 0, 0.0)
+    achse_aus = (tuer['quelle'], tuer['punkte'], tuer['laenge_m'])
 
     def pruefe(punkte: List[Punkt]) -> dict:
         drehen, strecken = [], []

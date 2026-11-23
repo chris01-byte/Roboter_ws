@@ -1,6 +1,21 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 22.11.2026 (nachts, Laborprobe ohne Nahsensoren):** Der
+**Stand 23.11.2026 (nach KI-F5):** KI-F5 fuhr nicht. Amadeus stand mittig
+vor der Tür, aber das Werkzeug meldete fünfmal „30 cm nach links
+versetzen“; es nahm die Türrichtung aus zwei Punkten, und eine Kante war
+7 cm zu nah gemessen. Christopher: „ich mach mich doch hier nicht zum
+clown, der roboter muss die tür finden, sich selber ausrichten und hindurch
+fahren“. **Nachgebessert:** Türrichtung aus der Wand neben der Tür, und
+Amadeus entscheidet selbst, ob er gleich durchfährt oder sich zuerst vor die
+Tür stellt (`--zur-tuer`). Niemand stellt ihn mehr nach Hinweisen um.
+**Als Nächstes:** Auftrag KI-F6, weiter ohne Nahsensoren.
+
+Zu KI-F3b neu: Christopher bestätigte (in KI-F4), dass damals etwas vor der
+Tür auf dem Boden lag, und der rechte Nahsensor sah an der Haltestelle etwas
+in 10 bis 52 cm Höhe. Der Nahbereichs-Halt hat dort also wahrscheinlich
+richtig angehalten.
+
+**Davor, 22.11.2026 (nachts), Laborprobe ohne Nahsensoren:** Der
 Projektinhaber hat entschieden, das Konzept einmal **ohne die beiden
 Nahsensoren** zu prüfen: „Die Nahbereichssensoren machen gerade Probleme.
 Deswegen schreibe jetzt einen Testlauf, wo diese komplett deaktiviert
@@ -54,7 +69,7 @@ fährt mit seiner Schutzkette.
 |---|---|---|---|
 | Erstes Sehen | im Stand Bild und Laser aufnehmen, die KI fragen, die Antwort prüfen | KI-0 | **erledigt** (21.11.) |
 | Blickrunde | sich selbst einmal herumdrehen; aus acht Bildern nennt die KI den Ausgang | KI-1 | **am Roboter gelungen** (21.11., eine Runde im Labor); für die Kriterien fehlen weitere Runden |
-| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1), Ausrichten (KI-F2), drei Etappen genau auf der Linie bis kurz vor die Tür (KI-F3b); durch die Tür und selbst vor die Tür bisher nur in der Simulation; als Nächstes KI-F5 ohne Nahsensoren |
+| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1), Ausrichten (KI-F2), drei Etappen genau auf der Linie bis kurz vor die Tür (KI-F3b); durch die Tür und selbst ausrichten bisher nur in der Simulation; als Nächstes KI-F6 |
 | Raum für Raum | weiter, bis kein Ausgang mehr offen ist (Laborraum, Flur, Schlafzimmer) | KI-3 | offen |
 | Räume benennen, um Hilfe rufen | Raumnamen als Vorschlag in der App; Hilferuf mit Grund und Bild | KI-4 | offen |
 | Auf Zuruf | „fahr in die Küche“, „such die Tasse“ | KI-5 | offen |
@@ -64,16 +79,14 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-F5
-„Türdurchfahrt ohne Nahsensoren (Laborprobe)“** ([AUFTRAG.md](AUFTRAG.md)).
-Auf dem Jetson, mit Christopher; ohne Kamera und ohne KI-Rechner; **mit
-neuem Build** (Release `kif5-<STAMP>`), jeder Start mit
-`nahsensoren:=false`.
-- **Stufe 1:** wie in KI-F3b von vorn auf gerader Linie durch die Tür;
-  vor der Fahrt fragt der Agent, ob der Weg frei von niedrigen Dingen ist.
-- **Stufe 2** (nur nach bestandener Stufe 1 und wenn in der Übergabe
-  genannt): Amadeus fährt von einem Platz im Raum selbst vor die Tür und
-  dann hindurch.
+**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-F6
+„Amadeus richtet sich selbst aus und fährt durch die Tür“**
+([AUFTRAG.md](AUFTRAG.md)). Auf dem Jetson, mit Christopher; ohne Kamera und
+ohne KI-Rechner; **kein Build** (Release `kif5-20261123_0950`), jeder Start
+mit `nahsensoren:=false`. Christopher stellt Amadeus irgendwo 1,5 bis 3 m
+vor die Tür, ohne genau auszurichten; eine Messung, eine Ja/Nein-Frage zur
+Tür. Dann entscheidet Amadeus selbst: Durchfahrt, oder erst Anfahrt vor die
+Tür und dann Durchfahrt (zwei Missionen in einem Stacklauf).
 
 **Danach, je nach Ergebnis:**
 - Durchfahrt gelungen: Rundblick, Frage an die KI und Etappenfahrt in einem
@@ -244,6 +257,54 @@ nur lesend sichern, was die Zeitwache meldet (neues Werkzeug
 `werkzeuge/radsensor_zustand.py`: Größe und Zeitpunkt der ersten Lücke,
 Dauer der Lesepaare), dazu die Last; dann genau ein neuer scharfer Start.
 Am Motortreiber wird nichts geändert (Motorsteuerung, AGENTS §2.7).
+
+## KI-F5 – nicht gefahren: Amadeus stand mittig, das Werkzeug kippte die Tür (Jetson, 23.11.2026, 09:50 bis 10:18)
+
+Zahlen und Nachrechnung stehen im
+[Archiv](archiv/20261123-kif5-ohne-nahsensoren/). Der Bericht liegt nicht im
+Repository.
+
+**Was lief:** Build des Release `kif5-20261123_0950` (177 s, alle Prüfzeilen
+wie erwartet, Profile gleich `kif1`), Tests 350 und 264 bestanden. Ohne
+Nahsensoren im Stand: kein VL53-Knoten, Fahrtor `require_near_field`
+`False`, beide VL53-Quellen des Kollisionsmonitors aus (diese Version kennt
+das Abschalten einzelner Quellen), Logzeile zweimal. N-1 trifft im Stand zu.
+
+**Was nicht lief:** Fünf Messungen meldeten „steht 0.30 bis 0.33 m rechts
+neben der Türmitte“, Tür 7 bis 8° gedreht; die ersten zwei dazu „Weg passt
+nicht“ (etwas lag auf dem Roboter im Blick des Lasers, von Christopher
+entfernt). Keine Fahrt; Christopher beendete den Durchgang.
+
+**Ursache, nachgerechnet:** Die linke Türkante lag wie am 22.11. auf 2 cm
+an derselben Stelle, Amadeus stand also am selben Platz und mittig. Die
+rechte Kante lag 7 cm näher (der Laser traf dort etwas Schmales vor dem
+rechten Rahmen). Aus den zwei Kanten gerechnet kippte die Tür um 7,3°, auf
+1,8 m wurden daraus 0,30 m „daneben“. Für die Anfahrt gab es die Achse aus
+der Wand schon, für die Aufstellung nicht.
+
+**Fehler der Planung:** Eine Prüfung, nach der ein Mensch den Roboter
+umstellt, stützte sich auf zwei einzelne Punkte; der Auftrag erlaubte bis zu
+acht Messungen mit Umstellen; und die Selbstausrichtung (Stufe 2) war an die
+Stufe 1 gebunden.
+
+**Nachgebessert (nur Werkzeug der KI-Linie):**
+- `tuerachse`: Die Türachse kommt in allen Betrieben aus der geraden Wand
+  neben der Tür; nur ohne Wand aus den Kanten. Mit den Zahlen aus KI-F5:
+  aus den Kanten 0,296 m und 7,3° (wie gemeldet), aus der Wand mittig.
+- `--zur-tuer`: misst, entscheidet „Durchfahrt“ (passend, Weg und
+  Kostenkarte frei) oder „Anfahrt“ (sonst, wenn geprüft möglich) und
+  sendet; nach der Anfahrt eine zweite Mission mit `--tuer`. Am Ende steht
+  „Anfahrt abgeschlossen.“ oder „Durchfahrt abgeschlossen.“ (auch bei
+  `--tuer`).
+- Mehrere türbreite Öffnungen: Vorschlag ist die mit dem meisten freien Raum
+  dahinter.
+
+**Simulation** (ohne Nahsensoren, 85° offenes Blatt):
+
+| Fall | Ergebnis |
+|---|---|
+| Stange 6 bis 10 cm vor dem rechten Türrahmen, Amadeus mittig (wie KI-F5) | „Türachse aus der Wand (60 Laserpunkte über 1,12 m)“, „0.03 m rechts, Tür 0°, Aufstellung passt“; Entscheidung Durchfahrt; „Durchfahrt abgeschlossen.“ (6 Etappen, 2,20 m); im Flur nach 52 s, keine Berührung, engste Stelle 7,6 cm |
+| Amadeus schräg im Raum, 1,00 m rechts der Türmitte, Tür 58° rechts | „Aufstellung passt nicht“; Entscheidung Anfahrt: 28° links drehen, 1,01 m, 86° rechts drehen, 0,45 m; „Anfahrt abgeschlossen.“ (1,40 m, 114° gedreht). Zweite Mission mit `--tuer`: „0.00 m rechts, Tür 1°, Aufstellung passt“, 5 Etappen 2,01 m, einmal 7° nachgerichtet; im Flur nach 116 s, keine Berührung, engste Stelle 5,7 cm. Wiederholt nach der Nachbesserung der Schlusszeile: gleiche Entscheidung, „Durchfahrt abgeschlossen.“ auch nach `--tuer`, im Flur nach 117 s, keine Berührung, engste Stelle 6,7 cm |
 
 ## Laborprobe ohne Nahsensoren (Entscheidung des Projektinhabers, gebaut 22.11.2026, nachts)
 
@@ -807,6 +868,8 @@ KONZEPT §13.
 | 22.11.2026 | Tests dieser Linie mit Herkunftsprüfung | Entwicklungsumgebung | 254 bestanden, 2 übersprungen (ohne ROS); 264 bestanden (ROS 2 Jazzy, abgeschottet) |
 | 22.11.2026 | Laborschalter ohne Nahsensoren | Entwicklungsumgebung (ROS 2 Jazzy) | Fahrtor und Startdateien: 55 Tests der betroffenen Dateien, Paket `robot_navigation` mit Erkunderprüfungen 254 bestanden; neu: ohne Schalter ohne VL53 keine Freigabe, mit Schalter nur Dreh- und Direktkanal, Nav2 und Raumfahrt gesperrt |
 | 22.11.2026 | Fahrten ohne Nahsensoren | Simulation | siehe Abschnitt „Laborprobe ohne Nahsensoren“: Durchfahrt gelungen; gegen einen 20 cm hohen Gegenstand ungebremst gefahren |
+| 23.11.2026 | **KI-F5** | Jetson, Laborraum, mit Christopher | Build `kif5-20261123_0950`, Tests 350 und 264; ohne Nahsensoren im Stand wie vorgesehen; fünf Messungen „Aufstellung passt nicht“ (0,30 bis 0,33 m) bei mittig stehendem Roboter, Ursache das Werkzeug; keine Fahrt |
+| 23.11.2026 | Türachse aus der Wand, `--zur-tuer` | Entwicklungsumgebung, Simulation | Test mit den Zahlen aus KI-F5 (Kanten: 0,296 m, 7,3°; Wand: mittig); KI-Linie 258 bestanden, 2 übersprungen; 268 mit ROS; Simulation siehe Abschnitt KI-F5 |
 
 **Gemessen an der künstlichen Beispielwelt** (ausgedachtes Zimmer mit
 80-cm-Tür, 90-cm-Glastür zum Balkon, Schränken, Kiste; LiDAR-Rauschen 1 cm):
@@ -858,9 +921,11 @@ Jetson, echte Bilder.
   9,6 cm Abstand der gepolsterten Kontur zum Pfosten).
 - **Die Prüfung des Freiraums und die Zeile zur Kostenkarte** an echten
   Messungen.
-- **Was in KI-F3b vor der Tür stand:** Quelle und Gegenstand sind nicht
-  festgestellt; die Messung dazu (KI-F4) entfiel mit der Entscheidung für
-  die Laborprobe ohne Nahsensoren.
+- **Was in KI-F3b vor der Tür stand:** Nach Christophers „ja“ (KI-F4, M1)
+  lag dort etwas; an der Haltestelle sah der rechte Nahsensor etwas in 10
+  bis 52 cm Höhe. Was es war, ist nicht festgestellt.
+- **Die Selbstausrichtung am Roboter** (`--zur-tuer`, Achse aus der Wand,
+  zwei Missionen in einem Stacklauf): bisher nur in Tests und Simulation.
 - **Der Laborschalter am Roboter:** ob der Kollisionsmonitor der
   Humble-Version das Abschalten einzelner Quellen kennt (ohne VL53-Daten
   sieht er so oder so nichts), und ob das Fahrtor ohne VL53 wie in der
@@ -895,7 +960,7 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Auftrag KI-F5 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): neuer Build mit dem
-Laborschalter, dann ohne Nahsensoren von vorn auf gerader Linie durch die
-offene Labortür, vorher den Weg freiräumen; nach bestandener Stufe 1
-Stufe 2, in der Amadeus selbst vor die Tür fährt und dann hindurch.
+Auftrag KI-F6 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): Amadeus irgendwo
+1,5 bis 3 m vor die Tür stellen, einmal messen, die Tür bestätigen; dann
+richtet er sich selbst aus und fährt ohne Nahsensoren durch die offene
+Labortür.

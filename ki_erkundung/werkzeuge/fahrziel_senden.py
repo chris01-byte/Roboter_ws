@@ -19,6 +19,9 @@ in kurzen geraden Etappen, mit Fahrtor und Kollisionsmonitor.
     # vom Platz im Raum selbst vor diese Öffnung fahren (danach --tuer)
     python3 fahrziel_senden.py --vor-die-tuer --richtung 20 --quelle mensch
 
+    # selbst entscheiden: steht er passend, gleich hindurch; sonst erst davor
+    python3 fahrziel_senden.py --zur-tuer --richtung 20 --quelle mensch
+
 Für ``--tuer`` misst das Werkzeug die Öffnungen im Stand neu (zwei Sekunden
 Laser), nimmt die gewählte und legt die Fahrpunkte auf die **gerade Linie
 vom Standplatz durch die Türmitte**: einen 1,2 m vor und einen 0,6 m hinter
@@ -29,6 +32,12 @@ beidseits 0,30 m frei sind (gemessen am selben Laserbild: Türblatt,
 Pfosten, alles, was im Weg steht); dann sagt es, was an der Aufstellung zu
 ändern ist. ``--tuer --nur-messen`` zeigt dasselbe, ohne zu senden, und dazu
 das Protokoll der Vermessung.
+
+``--zur-tuer`` entscheidet selbst: Passen Aufstellung, Weg und Kostenkarte,
+sendet es die Durchfahrt; sonst die Anfahrt vor die Tür (danach eine zweite
+Mission und ``--tuer``). Niemand muss den Roboter dafür umstellen. Die
+Türachse kommt in allen Betrieben aus der geraden Wand neben der Tür, nicht
+nur aus den zwei Kanten.
 
 ``--vor-die-tuer`` ist die **Anfahrt**: Steht der Roboter irgendwo im Raum,
 fährt er über einen Punkt auf der Türachse vor die Tür und dreht sich zu
@@ -63,11 +72,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lotse.blickrunde import profil_ursprung, scan_als_dict, stand_profil  # noqa: E402
 from lotse.fahrziel import (  # noqa: E402
     BASIS_UEBER_BODEN_M, FREI_NEBEN_DER_LINIE_M, HINTER_DER_TUER_M, TUER_MAX_M, TUER_MIN_M,
-    VOR_DER_TUER_M, anfahrt, anfahrt_im_kartenrahmen, anfahrt_text, aufstellung,
+    VOR_DER_TUER_M, achse_text, anfahrt, anfahrt_im_kartenrahmen, anfahrt_text, aufstellung,
     aufstellung_hinweise, belegt_auf_dem_weg, botschaft, freiraum, freiraum_hinweise,
     gerade_durch_die_tuer, gerade_linie, geradeaus, herkunft, herkunft_text, in_den_boden,
     kostenkarte_text, kostenkarte_voraus, nah_text, pruefe_grenzen, punkt_relativ,
-    weg_belegt_text, wolke_xyz, zellen_im_streifen,
+    tuerachse, weg_belegt_text, wolke_xyz, zellen_im_streifen,
 )
 from lotse.geometrie import aus_tf  # noqa: E402
 from lotse.kandidaten import TUERBREIT_M, Oeffnung, oeffnungen  # noqa: E402
@@ -169,10 +178,12 @@ def vermesse(scans: List[dict], boden_lidar,
     return oeffnungen(winkel, profil, ursprung=ursprung, protokoll=protokoll)
 
 
-def weg_text(o: Oeffnung, hindernisse: Sequence, vor_m: float, hinter_m: float):
+def weg_text(o: Oeffnung, hindernisse: Sequence, vor_m: float, hinter_m: float,
+             achse: Optional[dict] = None):
     """Die Fahrlinie durch eine Öffnung in einem Satz; dazu, ob sie passt."""
     try:
-        linie = gerade_linie(o.pfosten, vor_m=vor_m, hinter_m=hinter_m)
+        linie = gerade_linie(o.pfosten, vor_m=vor_m, hinter_m=hinter_m,
+                             achse=None if achse is None else achse['normal'])
     except ValueError as grund:
         return f'Fahrlinie: {grund}.', False
     frei = freiraum(hindernisse, linie[-1])
@@ -189,13 +200,15 @@ def weg_text(o: Oeffnung, hindernisse: Sequence, vor_m: float, hinter_m: float):
                     else ' – Weg passt nicht: ' + '; '.join(hinweise) + '.'), not hinweise)
 
 
-def anfahrt_zeile(o: Oeffnung, hindernisse: Sequence, sicht: Optional[dict]):
+def anfahrt_zeile(o: Oeffnung, hindernisse: Sequence, sicht: Optional[dict],
+                  achse: Optional[dict] = None):
     """Die Anfahrt vor eine Öffnung in einem Satz; dazu der Weg (oder ``None``).
 
     Rückgabe ``(text, weg, noetig)``: ``noetig`` ist falsch, wenn der Roboter
     schon passend vor der Tür steht.
     """
-    if not aufstellung_hinweise(aufstellung(o.pfosten)):
+    if not aufstellung_hinweise(aufstellung(
+            o.pfosten, achse=None if achse is None else achse['normal'])):
         return 'Anfahrt: nicht nötig, er steht schon passend vor der Tür.', None, False
     try:
         weg = anfahrt(o.pfosten, hindernisse, sicht or None)
@@ -206,9 +219,9 @@ def anfahrt_zeile(o: Oeffnung, hindernisse: Sequence, sicht: Optional[dict]):
     return anfahrt_text(weg) + ' – Anfahrt passt.', weg, True
 
 
-def lage_text(o: Oeffnung, mit_hinweisen: bool = True) -> str:
+def lage_text(o: Oeffnung, mit_hinweisen: bool = True, achse: Optional[dict] = None) -> str:
     """Die Aufstellung zu einer Öffnung in einem Satz, mit dem, was zu ändern ist."""
-    lage = aufstellung(o.pfosten)
+    lage = aufstellung(o.pfosten, achse=None if achse is None else achse['normal'])
     hinweise = aufstellung_hinweise(lage) if mit_hinweisen else None
     seite = 'links' if lage['seitlich_m'] > 0 else 'rechts'
     text = (f'Nr. {o.nr}: {lage["abstand_m"]:.2f} m vor der Türlinie, '
@@ -219,6 +232,34 @@ def lage_text(o: Oeffnung, mit_hinweisen: bool = True) -> str:
         return text + '.'
     return text + (' – Aufstellung passt.' if not hinweise
                    else ' – Aufstellung passt nicht: ' + '; '.join(hinweise) + '.')
+
+
+def entscheidung(lage_passt: bool, weg_passt: bool, anfahrt_moeglich: bool) -> str:
+    """Was ``--zur-tuer`` sendet: ``'durchfahrt'``, ``'anfahrt'`` oder ``'nichts'``.
+
+    Steht der Roboter passend und ist die gerade Linie frei, fährt er gleich
+    hindurch. Sonst stellt er sich zuerst selbst vor die Tür, wenn die
+    Anfahrt geprüft möglich ist. Niemand muss ihn dafür umstellen.
+    """
+    if lage_passt and weg_passt:
+        return 'durchfahrt'
+    if not lage_passt and anfahrt_moeglich:
+        return 'anfahrt'
+    return 'nichts'
+
+
+ENTSCHEIDUNG_TEXT = {
+    'durchfahrt': 'Entscheidung: Durchfahrt – er steht passend, gerade durch die Türmitte.',
+    'anfahrt': ('Entscheidung: Anfahrt – er stellt sich zuerst selbst vor die Tür; danach '
+                'eine zweite Mission und die Durchfahrt mit --tuer.'),
+    'nichts': 'Entscheidung: keine Fahrt – weder Durchfahrt noch Anfahrt passen.',
+}
+
+
+def vorschlag(tueren: Sequence[Oeffnung]) -> Optional[Oeffnung]:
+    """Die türbreite Öffnung mit dem meisten freien Raum dahinter (eine Tür
+    führt in einen Raum, eine Lücke zwischen Möbeln nicht)."""
+    return max(tueren, key=lambda o: o.tiefe_m, default=None)
 
 
 def protokoll_text(protokoll: Sequence[dict], max_breite_m: float = 1.6,
@@ -262,6 +303,8 @@ def eingabe() -> argparse.ArgumentParser:
                      help='auf gerader Linie durch eine vermessene Öffnung')
     art.add_argument('--vor-die-tuer', action='store_true',
                      help='Anfahrt: vom Platz im Raum vor eine vermessene Öffnung')
+    art.add_argument('--zur-tuer', action='store_true',
+                     help='selbst entscheiden: gleich hindurch oder zuerst davor (Anfahrt)')
     e.add_argument('--nummer', type=int, help='Nummer der Öffnung aus der Tabelle')
     e.add_argument('--richtung', type=float, metavar='GRAD',
                    help='Richtung der gemeinten Öffnung; 0 = voraus, positiv = links')
@@ -491,6 +534,36 @@ def main(argv=None) -> int:
             zeilen.append(herkunft_zeile(im_roboterrahmen(befund['ort'], pose), pose, laser))
         return zeilen, befund is None
 
+    def plan_zeilen(o, achse, hindernisse, sicht, pose):
+        """Was ``--zur-tuer`` für eine Öffnung täte; Zeilen, Entscheidung, Anfahrt."""
+        zeilen = [lage_text(o, achse=achse), achse_text(achse)]
+        weg, weg_passt = weg_text(o, hindernisse, wahl.vor, wahl.hinter, achse)
+        zeilen.append(weg)
+        lage_passt = not aufstellung_hinweise(aufstellung(o.pfosten, achse=achse['normal']))
+        kosten_frei = True
+        if lage_passt and weg_passt and pose is not None:
+            try:
+                linie = gerade_durch_die_tuer(o.pfosten, pose, vor_m=wahl.vor,
+                                              hinter_m=wahl.hinter, achse=achse['normal'])
+                kz, kosten_frei = weg_in_der_kostenkarte(linie, pose, hindernisse)
+                zeilen += kz
+            except ValueError as grund:
+                zeilen.append(f'Fahrlinie: {grund}.')
+                kosten_frei = False
+        weg_a = None
+        if not (lage_passt and weg_passt and kosten_frei):
+            zeile, weg_a, _ = anfahrt_zeile(o, hindernisse, sicht, achse)
+            zeilen.append(zeile)
+            if weg_a is not None and pose is not None:
+                kz, anfahrt_frei = weg_in_der_kostenkarte(
+                    anfahrt_im_kartenrahmen(weg_a, pose), pose, hindernisse)
+                zeilen += kz
+                if not anfahrt_frei:
+                    weg_a = None
+        plan = entscheidung(lage_passt, weg_passt and kosten_frei, weg_a is not None)
+        zeilen.append(ENTSCHEIDUNG_TEXT[plan])
+        return zeilen, plan, weg_a
+
     def phase() -> Optional[str]:
         return (stand['status'] or {}).get('phase')
 
@@ -510,7 +583,9 @@ def main(argv=None) -> int:
         punkte: List = []
         bemerkung = None
         weg_anfahrt = None
-        if wahl.tuer or wahl.vor_die_tuer:
+        plan = None
+        zur_tuer = wahl.zur_tuer
+        if wahl.tuer or wahl.vor_die_tuer or zur_tuer:
             scans, boden_lidar = laserbild(wahl.messdauer)
             if scans is None:
                 print('Kein Scan oder keine Montage des LiDAR (TF). Nichts gesendet.')
@@ -523,6 +598,7 @@ def main(argv=None) -> int:
             print(tabelle(gefunden))
             tueren = [o for o in gefunden
                       if o.befahrbar and wahl.breite_min <= o.breite_m <= wahl.breite_max]
+            achsen = {o.nr: tuerachse(o.pfosten, hindernisse) for o in tueren}
             if wahl.nur_messen:
                 # Die Kostenkarte kommt einmal je Sekunde und ist groß.
                 drehe(5.0, lambda: stand['kostenkarte'] is not None)
@@ -531,9 +607,14 @@ def main(argv=None) -> int:
                     print(f'Türbreit vermessen ({wahl.breite_min:.2f} bis '
                           f'{wahl.breite_max:.2f} m):')
                     for o in tueren:
+                        if zur_tuer:
+                            for z in plan_zeilen(o, achsen[o.nr], hindernisse, sicht,
+                                                 pose_jetzt)[0]:
+                                print('  ' + z)
+                            continue
                         if wahl.vor_die_tuer:
                             print('  ' + lage_text(o, mit_hinweisen=False))
-                            zeile, weg_a, _ = anfahrt_zeile(o, hindernisse, sicht)
+                            zeile, weg_a, _ = anfahrt_zeile(o, hindernisse, sicht, achsen[o.nr])
                             print('  ' + zeile)
                             if weg_a is not None and pose_jetzt is not None:
                                 for z in weg_in_der_kostenkarte(
@@ -541,19 +622,27 @@ def main(argv=None) -> int:
                                         hindernisse)[0]:
                                     print('  ' + z)
                             continue
-                        print('  ' + lage_text(o))
-                        print('  ' + weg_text(o, hindernisse, wahl.vor, wahl.hinter)[0])
+                        print('  ' + lage_text(o, achse=achsen[o.nr]))
+                        print('  ' + achse_text(achsen[o.nr]))
+                        print('  ' + weg_text(o, hindernisse, wahl.vor, wahl.hinter,
+                                              achsen[o.nr])[0])
                         if pose_jetzt is None:
                             print('  Kostenkarte auf dem Weg: Lage in der Karte fehlt (TF) – '
                                   'Kostenkarte passt nicht.')
                             continue
                         try:
                             linie = gerade_durch_die_tuer(o.pfosten, pose_jetzt,
-                                                          vor_m=wahl.vor, hinter_m=wahl.hinter)
+                                                          vor_m=wahl.vor, hinter_m=wahl.hinter,
+                                                          achse=achsen[o.nr]['normal'])
                         except ValueError:
                             continue
                         for z in weg_in_der_kostenkarte(linie, pose_jetzt, hindernisse)[0]:
                             print('  ' + z)
+                    if zur_tuer and len(tueren) > 1:
+                        v = vorschlag(tueren)
+                        print(f'Vorschlag: Nr. {v.nr}, {v.breite_m:.2f} m breit, '
+                              f'{v.richtung_grad:+.1f}°, {v.entfernung_m:.2f} m (dahinter '
+                              f'{v.tiefe_m:.2f} m frei, die tiefste türbreite Öffnung).')
                 else:
                     print(f'Keine Öffnung ist türbreit vermessen ({wahl.breite_min:.2f} '
                           f'bis {wahl.breite_max:.2f} m). So würde nichts gesendet.')
@@ -575,9 +664,20 @@ def main(argv=None) -> int:
             bemerkung = (f'Öffnung {gewaehlt.nr}, {gewaehlt.breite_m:.2f} m breit, '
                          f'{gewaehlt.richtung_grad:+.0f}°, {gewaehlt.entfernung_m:.2f} m')
             print(f'Gewählt: {bemerkung}.')
+            achse = achsen.get(gewaehlt.nr) or tuerachse(gewaehlt.pfosten, hindernisse)
+            if zur_tuer:
+                pose_jetzt = lage_in_der_karte()
+                drehe(5.0, lambda: stand['kostenkarte'] is not None)
+                zeilen_plan, plan, weg_anfahrt = plan_zeilen(gewaehlt, achse, hindernisse, sicht,
+                                                             pose_jetzt)
+                for z in zeilen_plan:
+                    print(z)
+                if plan == 'nichts':
+                    print('Nichts gesendet: Weder Durchfahrt noch Anfahrt passen.')
+                    return 2
             if wahl.vor_die_tuer:
                 print(lage_text(gewaehlt, mit_hinweisen=False))
-                zeile, weg_anfahrt, noetig = anfahrt_zeile(gewaehlt, hindernisse, sicht)
+                zeile, weg_anfahrt, noetig = anfahrt_zeile(gewaehlt, hindernisse, sicht, achse)
                 print(zeile)
                 if not noetig:
                     print('Nichts gesendet: Er steht schon passend vor der Tür.')
@@ -586,11 +686,12 @@ def main(argv=None) -> int:
                     print('Nichts gesendet: Die Anfahrt passt nicht.')
                     return 2
         if wahl.tuer:
-            print(lage_text(gewaehlt))
-            weg, weg_passt = weg_text(gewaehlt, hindernisse, wahl.vor, wahl.hinter)
+            print(lage_text(gewaehlt, achse=achse))
+            print(achse_text(achse))
+            weg, weg_passt = weg_text(gewaehlt, hindernisse, wahl.vor, wahl.hinter, achse)
             print(weg)
             if not wahl.aufstellung_egal:
-                if aufstellung_hinweise(aufstellung(gewaehlt.pfosten)):
+                if aufstellung_hinweise(aufstellung(gewaehlt.pfosten, achse=achse['normal'])):
                     print('Nichts gesendet: Die Aufstellung passt nicht.')
                     return 2
                 if not weg_passt:
@@ -608,11 +709,12 @@ def main(argv=None) -> int:
         print(kostenkarte_zeile())
 
         try:
-            if wahl.vor_die_tuer:
+            if wahl.vor_die_tuer or plan == 'anfahrt':
                 punkte = anfahrt_im_kartenrahmen(weg_anfahrt, pose)
-            elif wahl.tuer:
+            elif wahl.tuer or plan == 'durchfahrt':
                 punkte = gerade_durch_die_tuer(gewaehlt.pfosten, pose,
-                                               vor_m=wahl.vor, hinter_m=wahl.hinter)
+                                               vor_m=wahl.vor, hinter_m=wahl.hinter,
+                                               achse=achse['normal'])
             elif wahl.punkt:
                 punkte = punkt_relativ(*lies_punkt(wahl.punkt), pose)
             else:
@@ -622,15 +724,17 @@ def main(argv=None) -> int:
             print(f'Nichts gesendet: {grund}.')
             return 2
         zeilen, frei = weg_in_der_kostenkarte(
-            punkte, pose, hindernisse if (wahl.tuer or wahl.vor_die_tuer) else None)
-        for zeile in zeilen:
+            punkte, pose, hindernisse if (wahl.tuer or wahl.vor_die_tuer or zur_tuer) else None)
+        # Bei --zur-tuer stehen dieselben Zeilen schon in der Entscheidung.
+        for zeile in ([] if zur_tuer and frei else zeilen):
             print(zeile)
         if not frei and not wahl.aufstellung_egal:
             print('Nichts gesendet: Auf dem Weg ist die Kostenkarte belegt; dort hielte der '
                   'Erkunder an.')
             return 2
 
-        art_name = ('anfahrt' if wahl.vor_die_tuer else 'tuer' if wahl.tuer
+        art_name = ('anfahrt' if wahl.vor_die_tuer or plan == 'anfahrt'
+                    else 'tuer' if wahl.tuer or plan == 'durchfahrt'
                     else 'punkt' if wahl.punkt else 'gerade')
         kennung = wahl.kennung or f'{art_name}-{int(time.time())}'
         text = botschaft(punkte, kennung=kennung, quelle=wahl.quelle, zeit_s=time.time(),
@@ -660,8 +764,15 @@ def main(argv=None) -> int:
             print(herkunft_zeile(stelle, pose_ende))
         print(nah_text(nah_jetzt()))
         # Der Erkunder meldet einen gelungenen Auftrag ohne Flächenziel als „partial“.
-        return 0 if (zustand in ('partial', 'success')
-                     and meldung().startswith('Etappenfahrt abgeschlossen')) else 1
+        gelungen = (zustand in ('partial', 'success')
+                    and meldung().startswith('Etappenfahrt abgeschlossen'))
+        if gelungen and art_name == 'anfahrt':
+            print('Anfahrt abgeschlossen. Als Nächstes die Durchfahrt: zweite Mission, dann '
+                  'fahrziel_senden.py --tuer --richtung 0.')
+        elif gelungen and art_name == 'tuer':
+            # auch für --tuer, die zweite Mission nach der Anfahrt
+            print('Durchfahrt abgeschlossen.')
+        return 0 if gelungen else 1
     finally:
         knoten.destroy_node()
         rclpy.try_shutdown()

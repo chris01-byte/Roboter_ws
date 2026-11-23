@@ -443,8 +443,35 @@ Nahbereichs-Halt 0,26 m vor der Türlinie, die Tür nicht erreicht; nichts
 berührt. Keine Kamera, kein KI-Rechner. Releases und Umgebungsdateien
 unverändert.
 
-Stand 22.11.2026 (nachts, später), **noch keine weitere Jetson-Wirkung:**
-Auftrag KI-F4 wurde nicht übergeben; ersetzt durch **KI-F5**
+Nachtrag 23.11.2026, tatsächliche Wirkung von KI-F4 (Bericht zu KI-F5):
+KI-F4 wurde am 22.11.2026 doch übergeben und von 23:25 bis 23:36 bis Teil
+M3 ausgeführt: ein Stackstart ohne Motorfreigabe im Release
+`kif1-20261122_1515`, Amadeus von Hand an die Haltestelle vor der Tür
+gestellt, nur gemessen; Prüfdateien unter `kif1-20261122_1515/pruefung/kif4/`.
+Keine Bewegung.
+
+Nachtrag 23.11.2026, tatsächliche Wirkung von KI-F5 (Bericht des
+Jetson-Agenten, 09:50 bis 10:18): Arbeitskopie auf `88efba4`. Neu angelegt:
+Release `~/.local/share/amadeus/releases/kif5-20261123_0950` (14 Pakete,
+Build 177 s, Prüfdateien unter `pruefung/`) und
+`~/roboter_worktrees/kif5.env` (Kopie von `kif1.env`, nur `SH_REL`). Ein
+Stackstart ohne Motorfreigabe mit `nahsensoren:=false`: kein VL53-Knoten,
+Fahrtor `require_near_field` `False`, VL53-Quellen des Kollisionsmonitors
+aus. **Keine Bewegung**, kein scharfer Start. Frühere Releases und
+Umgebungsdateien unverändert. Rückfall: `kif5.env` und den Release-Ordner
+löschen.
+
+Stand 23.11.2026, **noch keine weitere Jetson-Wirkung:** Auftrag KI-F6 ist
+erteilt (`ki_erkundung/AUFTRAG.md`). Er baut nichts (Release
+`kif5-20261123_0950`, `kif5.env`) und legt nur Prüfdateien unter
+`kif5-20261123_0950/pruefung/kif6/` an. Ein Stackstart ohne
+Motorfreigabe (einmal messen), einer scharf, jeder mit `nahsensoren:=false`.
+Amadeus richtet sich selbst aus: entweder gleich eine Durchfahrt durch die
+Labortür in den Flur oder zuerst eine Anfahrt vor die Tür (Drehen auf der
+Stelle, kurze gerade Stücke) und dann die Durchfahrt, höchstens zwei
+Missionen; 5 cm/s, ohne Nav2.
+
+Davor, Stand 22.11.2026 (nachts, später): ersetzt durch **KI-F5**
 (`ki_erkundung/AUFTRAG.md`). KI-F5 baut einen neuen Release
 `kif5-<STAMP>` mit eigener Umgebungsdatei `~/roboter_worktrees/kif5.env`
 (Kopie von `kif1.env`, nur `SH_REL` geändert); Prüfdateien unter
