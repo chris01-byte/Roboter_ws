@@ -5136,7 +5136,8 @@ class ExploreNode(MetricFrontierRuntime, SelfHealingRuntime, Node):
     def _drive_forward_lidar(
             self, distance_m: float, wheel_budget_m: float,
             speed_mps: float, timeout_s: float,
-            stop_requested=lambda: False
+            stop_requested=lambda: False,
+            snapshot_before_clock: bool = False
             ) -> Tuple[str, float, float, float, float, float, float, int]:
         """Drive until a frozen local LiDAR contour confirms real motion.
 
@@ -5144,6 +5145,13 @@ class ExploreNode(MetricFrontierRuntime, SelfHealingRuntime, Node):
         rotation budget.  Unlike ``map->base_link``, the frozen reference scan
         is not advanced by encoder slip.  Therefore a spinning wheel can never
         complete this stage.
+
+        ``snapshot_before_clock`` (nur die Etappenfahrt der KI-Linie setzt es):
+        Odometrie und Scan werden vor der Uhr gelesen, wie in
+        ``_rotate_in_place`` seit f746b1c. Sonst kann ein Rueckruf zwischen
+        Uhr und Lesen einen frischen Wert als Wert aus der Zukunft erscheinen
+        lassen, und die Etappe endet sofort mit ``odom_stale`` (KI-F6,
+        23.11.2026). Fristen und die Sperre echter Zeitfehler bleiben gleich.
         """
         if distance_m <= 1e-9 or wheel_budget_m <= distance_m:
             return (
@@ -5184,6 +5192,9 @@ class ExploreNode(MetricFrontierRuntime, SelfHealingRuntime, Node):
 
         try:
             while rclpy.ok():
+                if snapshot_before_clock:
+                    odom_sample = self._motion_odom_snapshot()
+                    scan_sample = self._door_lidar_scan_snapshot()
                 now = time.monotonic()
                 if stop_requested():
                     status = 'interrupted'
@@ -5193,7 +5204,9 @@ class ExploreNode(MetricFrontierRuntime, SelfHealingRuntime, Node):
                     break
 
                 (xy, yaw, _linear_speed, _angular_speed,
-                 received_at) = self._motion_odom_snapshot()
+                 received_at) = (
+                    odom_sample if snapshot_before_clock
+                    else self._motion_odom_snapshot())
                 odom_state = odom_freshness_state(
                     now, received_at, started,
                     self._scan_odom_timeout,
@@ -5249,7 +5262,9 @@ class ExploreNode(MetricFrontierRuntime, SelfHealingRuntime, Node):
                     status = 'encoder_no_progress'
                     break
 
-                scan = self._door_lidar_scan_snapshot()
+                scan = (
+                    scan_sample if snapshot_before_clock
+                    else self._door_lidar_scan_snapshot())
                 scan_fresh = (
                     scan is not None
                     and 0.0 <= now - scan['received_at']
@@ -7502,8 +7517,13 @@ class ExploreNode(MetricFrontierRuntime, SelfHealingRuntime, Node):
                 goal_handle.succeed()
             else:
                 goal_handle.abort()
-            (self.get_logger().info if erfolg or abgebrochen
-             else self.get_logger().error)(text)
+            # Zwei getrennte Aufrufe: rclpy merkt sich je Aufrufstelle die
+            # Stufe und wirft, wenn dieselbe Stelle sie wechselt (KI-F6:
+            # erst Anfahrt mit info, dann Durchfahrt mit error).
+            if erfolg or abgebrochen:
+                self.get_logger().info(text)
+            else:
+                self.get_logger().error(text)
             return self._finish_result(result, 0)
 
         while True:
@@ -7714,7 +7734,8 @@ class ExploreNode(MetricFrontierRuntime, SelfHealingRuntime, Node):
                             wert, 1.5 * wert + 0.15, self._stage_speed,
                             max(30.0, 4.0 * wert / self._stage_speed + 10.0),
                             stop_requested=lambda: (
-                                stop_requested() or halt.is_set())))
+                                stop_requested() or halt.is_set()),
+                            snapshot_before_clock=True))
                 finally:
                     fertig.set()
                     waechter.join(timeout=2.0)

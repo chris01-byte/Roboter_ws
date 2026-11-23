@@ -245,6 +245,7 @@ def knoten(etappenfahrt=True, rundblick=False):
     node.get_logger = lambda: SimpleNamespace(
         info=node.logs.append, warn=node.logs.append, error=node.logs.append)
     node.bewegungen = []
+    node.erst_lesen = []             # snapshot_before_clock je Etappe
     node.ueberdrehen = 0.03          # so viel dreht der Roboter beim Bremsen nach
     node.nachlauf = 0.02             # so viel rollt er nach dem Schaltpunkt
     node.drehstatus = 'success'
@@ -261,7 +262,9 @@ def knoten(etappenfahrt=True, rundblick=False):
         node.pose[2] += math.copysign(gedreht, angle)
         return 'success', gedreht
 
-    def drive(distance, budget, speed, timeout, stop_requested=lambda: False):
+    def drive(distance, budget, speed, timeout, stop_requested=lambda: False,
+              snapshot_before_clock=False):
+        node.erst_lesen.append(snapshot_before_clock)
         node.bewegungen.append(
             ('fahren', round(distance, 3), round(budget, 3), speed, round(timeout, 1)))
         # so fragt die echte Etappe laufend; der Wächter läuft daneben in echter Zeit
@@ -826,5 +829,118 @@ def test_der_waechter_haelt_bei_belegtem_nahbereich_und_endet_mit_der_etappe():
 def test_die_fahrschleife_rechnet_den_nahbereich_nicht_selbst():
     """Die Etappe liest nur ein fertiges Ja oder Nein (kein Rechnen zwischen Uhr und Odometrie)."""
     source = (PACKAGE_ROOT / 'explore' / 'explore_node.py').read_text(encoding='utf-8')
-    assert 'stop_requested() or halt.is_set())))' in source
+    assert 'stop_requested() or halt.is_set()),' in source
     assert 'stop_requested() or nahbereich_haelt_an()' not in source
+
+
+# ---------------------------------------------------------------- KI-F6, 23.11.2026
+
+class StufenLogger:
+    """Wie rclpy: je Aufrufstelle eine feste Stufe; ein Wechsel wirft ValueError.
+
+    rclpy erkennt die Aufrufstelle an Datei, Zeile und Befehlsindex
+    (``CallerId``); dieselbe Stelle mit info und dann error wirft
+    „Logger severity cannot be changed between calls.“
+    """
+
+    def __init__(self):
+        self.stellen = {}
+        self.zeilen = []
+
+    def _log(self, stufe, text):
+        rahmen = sys._getframe(2)
+        stelle = (rahmen.f_code.co_filename, rahmen.f_lineno, rahmen.f_lasti)
+        if self.stellen.setdefault(stelle, stufe) != stufe:
+            raise ValueError('Logger severity cannot be changed between calls.')
+        self.zeilen.append((stufe, text))
+
+    def info(self, text, **_):
+        self._log('info', text)
+
+    def warn(self, text, **_):
+        self._log('warn', text)
+
+    def error(self, text, **_):
+        self._log('error', text)
+
+
+def test_erst_gelungen_dann_fehlgeschlagen_im_selben_erkunder(uhr):
+    """KI-F6: Anfahrt gelang (info), die Durchfahrt endete mit Fehler (error).
+
+    Vorher warf die Schlussmeldung beim zweiten Auftrag ValueError, und die
+    eigentliche Meldung „Etappe fehlgeschlagen …“ ging verloren.
+    """
+    node = knoten()
+    logger = StufenLogger()
+    node.get_logger = lambda: logger
+    sende_beim_warten(uhr, node, ziel([[0.5, 0.0]], kennung='anfahrt'))
+    erste = node._execute_reserved(Handle())
+    assert erste.success is True
+
+    uhr.bei_schlaf.clear()
+    node.etappenstatus = 'odom_stale'
+    handle = Handle()
+    sende_beim_warten(uhr, node, ziel([[1.5, 0.0]], kennung='tuer'))
+    zweite = node._execute_reserved(handle)
+    assert zweite.success is False and handle.calls == ['abort']
+    assert 'Etappe fehlgeschlagen: odom_stale' in zweite.message
+    assert ('error', zweite.message) in logger.zeilen
+
+
+def test_die_etappenfahrt_liest_die_messwerte_vor_der_uhr(uhr):
+    node, handle = knoten(), Handle()
+    sende_beim_warten(uhr, node, ziel([[1.0, 0.0]]))
+    assert node._execute_reserved(handle).success is True
+    assert node.erst_lesen and all(node.erst_lesen)
+
+
+def lidar_etappe_knoten(uhr):
+    """Nur so viel Erkunder, wie die Odometrieprüfung der Laser-Etappe braucht.
+
+    Der Odometrie-Rückruf läuft „zwischen“ Uhr und Lesen: Jedes Lesen schiebt
+    die Uhr um 10 ms weiter und stempelt den Wert mit der neuen Zeit. Einen
+    Scan gibt es nicht; kommt die Etappe an der Odometrie vorbei, endet sie
+    nach der Wartefrist mit ``lidar_scan_stale``.
+    """
+    befehle = []
+
+    def odometrie():
+        uhr.zeit += 0.01
+        return (0.0, 0.0), 0.0, 0.0, 0.0, uhr.zeit
+
+    return SimpleNamespace(
+        _scan_command_rate=20.0, _scan_odom_timeout=0.8,
+        _scan_odom_recovery_timeout=5.0, _door_max_localized_step=0.2,
+        _door_reverse_limit=0.03, _door_progress_window=0.01,
+        _door_no_progress_timeout=100.0, _door_lidar_scan_timeout=0.5,
+        _door_lidar_recovery_timeout=1.0,
+        _motion_odom_snapshot=odometrie,
+        _door_lidar_scan_snapshot=lambda: None,
+        _publish_door_stop=lambda: befehle.append('stop'),
+        _stop_door_and_confirm=lambda: 'success',
+        get_logger=lambda: SimpleNamespace(
+            warn=lambda *_, **__: None, info=lambda *_, **__: None)), befehle
+
+
+@pytest.mark.parametrize('erst_lesen, erwartet', [
+    (False, 'odom_stale'),          # so endete die Durchfahrt in KI-F6
+    (True, 'lidar_scan_stale'),     # die Odometrie gilt als frisch
+])
+def test_rueckruf_zwischen_uhr_und_lesen(uhr, erst_lesen, erwartet):
+    node, befehle = lidar_etappe_knoten(uhr)
+    status = ExploreNode._drive_forward_lidar(
+        node, 0.3, 0.6, 0.05, 30.0, snapshot_before_clock=erst_lesen)[0]
+    assert status == erwartet
+    assert befehle                     # ohne frische Werte bleibt das Kommando null
+
+
+@pytest.mark.parametrize('alter_s, erwartet', [
+    (6.0, 'odom_stale'),            # wirklich veraltet: bleibt gesperrt
+    (-1.0, 'odom_stale'),           # wirklich aus der Zukunft: bleibt gesperrt
+])
+def test_echte_zeitfehler_bleiben_gesperrt(uhr, alter_s, erwartet):
+    node, _ = lidar_etappe_knoten(uhr)
+    node._motion_odom_snapshot = lambda: ((0.0, 0.0), 0.0, 0.0, 0.0, uhr.zeit - alter_s)
+    status = ExploreNode._drive_forward_lidar(
+        node, 0.3, 0.6, 0.05, 30.0, snapshot_before_clock=True)[0]
+    assert status == erwartet
