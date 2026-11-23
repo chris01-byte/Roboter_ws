@@ -1,6 +1,15 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 23.11.2026 (abends): Auftrag KI-F8 erteilt, wartet auf die
+**Stand 23.11.2026 (nach KI-F8): Drei von drei Läufen sind in einem Ablauf
+durch die Labortür gefahren.** Von drei Plätzen: einmal gleich hindurch,
+zweimal erst selbst vor die Tür (1,23 und 1,81 m), neu gemessen und
+hindurch; je eine Mission und ein Aufruf des Werkzeugs, eine Frage vorab,
+kein Nav2-Ziel, nichts berührt. Christopher: „erfolgreich“. Seit `f70151d`
+findet das Werkzeug die Tür auch von der Seite des Türblatts (nur in der
+Simulation erprobt). **Als Nächstes:** Die KI wählt die Tür; zuerst mit
+Christophers Einspruch vor der Fahrt. Es gibt keinen offenen Auftrag.
+
+**Davor, 23.11.2026 (abends): Auftrag KI-F8 erteilt, wartet auf die
 Übergabe.** Entscheidungen des Projektinhabers nach der ersten Durchfahrt:
 Grenzen des Werkzeugs 0,26 m neben der Fahrlinie und 0,37 m zum Drehen
 (vorher 0,30 und 0,45 m); **ein Ablauf statt zwei Aufträge** (Anfahrt und
@@ -112,7 +121,7 @@ fährt mit seiner Schutzkette.
 |---|---|---|---|
 | Erstes Sehen | im Stand Bild und Laser aufnehmen, die KI fragen, die Antwort prüfen | KI-0 | **erledigt** (21.11.) |
 | Blickrunde | sich selbst einmal herumdrehen; aus acht Bildern nennt die KI den Ausgang | KI-1 | **am Roboter gelungen** (21.11., eine Runde im Labor); für die Kriterien fehlen weitere Runden |
-| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1), Ausrichten (KI-F2), drei Etappen genau auf der Linie bis kurz vor die Tür (KI-F3b); **selbst vor die Tür gestellt und hindurchgefahren (KI-F7, 23.11.)**; die Tür hat dabei noch ein Mensch bestätigt, nicht die KI |
+| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1), Ausrichten (KI-F2), drei Etappen genau auf der Linie bis kurz vor die Tür (KI-F3b); **selbst vor die Tür gestellt und hindurchgefahren (KI-F7; KI-F8: drei von drei in einem Ablauf)**; die Tür bestimmt noch der Mensch, nicht die KI |
 | Raum für Raum | weiter, bis kein Ausgang mehr offen ist (Laborraum, Flur, Schlafzimmer) | KI-3 | offen |
 | Räume benennen, um Hilfe rufen | Raumnamen als Vorschlag in der App; Hilferuf mit Grund und Bild | KI-4 | offen |
 | Auf Zuruf | „fahr in die Küche“, „such die Tasse“ | KI-5 | offen |
@@ -122,14 +131,7 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Erteilt, wartet auf die Übergabe durch den Projektinhaber: Auftrag KI-F8
-„dreimal selbst durch die Tür, in einem Ablauf“** ([AUFTRAG.md](AUFTRAG.md)).
-Auf dem Jetson, mit Christopher; ohne Kamera und ohne KI-Rechner; **neuer
-Build** (Release `kif8-<STAMP>`), jeder Start mit `stage_drive_only:=true
-nahsensoren:=false`. Eine Frage vorab („ist alles aufgebaut?“), dann ein
-Vorlauf ohne Motorfreigabe und drei Läufe von drei Plätzen, je ein Stack,
-eine Mission und ein Aufruf des Werkzeugs; nach jedem Lauf eine kurze
-Nachricht an Christopher. Ziel: drei von drei.
+**Kein offener Auftrag.** KI-F8 ist ausgeführt: drei von drei.
 
 **Danach (vorgesehen):** Die KI wählt die Tür (Rundblick, Frage, Übergabe
 der gewählten Öffnung an das Werkzeug); zuerst sieht Christopher die Wahl
@@ -306,6 +308,27 @@ nur lesend sichern, was die Zeitwache meldet (neues Werkzeug
 `werkzeuge/radsensor_zustand.py`: Größe und Zeitpunkt der ersten Lücke,
 Dauer der Lesepaare), dazu die Last; dann genau ein neuer scharfer Start.
 Am Motortreiber wird nichts geändert (Motorsteuerung, AGENTS §2.7).
+
+## KI-F8 – drei von drei in einem Ablauf (Jetson, 23.11.2026, 21:38 bis 22:24)
+
+Zweiter vollständiger Durchgang auf Christophers Anweisung; der erste
+(Release `kif8-20261123_2053`) blieb unvollständig, darin stand Amadeus
+einmal auf der Blattseite (Anlass für die Ergänzung unten). Release
+`kif8-20261123_2138`, Stand `d61453c`, Tests 370 und 271. Archiv:
+[archiv/20261123-kif8-dreimal-durch/](archiv/20261123-kif8-dreimal-durch/).
+
+| Lauf | Start | Ablauf | Ergebnis |
+|---|---|---|---|
+| 1 | 2,29 m vor der Tür, 0,05 m rechts | gleich hindurch, 7 Etappen, 2,48 m | „Durchfahrt abgeschlossen.“ |
+| 2 | 2,31 m vor der Tür, 0,80 m rechts | Anfahrt 1,23 m, neu gemessen (0,05 m rechts), hindurch; 8 Etappen, 3,21 m | „Durchfahrt abgeschlossen.“ |
+| 3 | 3,36 m vor der Tür, 0,77 m rechts | Anfahrt 1,81 m, neu gemessen, hindurch; 10 Etappen, 3,73 m | „Durchfahrt abgeschlossen.“ |
+
+Eine Frage vorab; kein Radsensor gesperrt; Rest nach dem Ausrichten
+höchstens 1,0°, seitlich höchstens 5 mm, höchstens 0,050 m/s; alle Zähler
+der Kette 0; neben der Fahrlinie je 0,38 bis 0,39 m frei. **G-1 trifft
+zu.** Beobachtet: Die Etappen zählen über alle Ziele einer Mission (bis 16
+erlaubt, Lauf 3: 10); für Aufträge mit mehr Zielen gehört die Grenze je
+Ziel.
 
 ## Von der Seite des Türblatts (gebaut 23.11.2026, spät)
 
@@ -1170,6 +1193,6 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Auftrag KI-F8 auf dem Jetson ([AUFTRAG.md](AUFTRAG.md)): neuer Build, eine
-Frage vorab, dann dreimal von drei Plätzen selbst vor die Tür und hindurch,
-jedes Mal in einem Ablauf.
+Mit dem Projektinhaber den Weg „die KI wählt die Tür“ bestätigen, dann die
+Übergabe der KI-Wahl an den Ablauf bauen und in der Simulation mit einer
+gespielten KI prüfen; erst danach ein Auftrag am Roboter.

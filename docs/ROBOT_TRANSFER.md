@@ -485,15 +485,20 @@ Flur** (1,90 m, Amadeus danach ganz im Flur); höchstens 0,050 m/s und
 und frühere Releases unverändert. Rückfall: `kif7.env` und den
 Release-Ordner löschen.
 
-Stand 23.11.2026 (abends), **noch keine weitere Jetson-Wirkung:** Auftrag
-KI-F8 ist erteilt (`ki_erkundung/AUFTRAG.md`). Er baut einen neuen Release
-`kif8-<STAMP>` mit `~/roboter_worktrees/kif8.env` (Kopie von `kif7.env`,
-nur `SH_REL`); gegenüber `kif7-20261123_1258` sind nur `explore_node.py`
-und `stage_drive.py` geändert (Folgeziel und „Ende“ in der Etappenfahrt).
-Ein Vorlauf ohne Motorfreigabe, dann drei scharfe Läufe mit
-`nahsensoren:=false`: je eine Mission mit Anfahrt vor die Labortür und
-Durchfahrt in den Flur, 5 cm/s, ohne Nav2. Rückfall: `kif7.env` weiter
-benutzen; `kif8.env` und den Release-Ordner löschen.
+Nachtrag 23.11.2026, tatsächliche Wirkung von KI-F8 (Bericht des
+Jetson-Agenten): Arbeitskopie auf `d61453c`. Zwei Durchgänge auf Anweisung
+des Projektinhabers; neu angelegt: die Releases `kif8-20261123_2053` (erster
+Durchgang) und `kif8-20261123_2138` (zweiter, je 14 Pakete) und
+`~/roboter_worktrees/kif8.env` (zeigt auf `kif8-20261123_2138`). Im zweiten
+Durchgang ein Vorlauf ohne Motorfreigabe und drei scharfe Läufe mit
+`nahsensoren:=false`: **dreimal durch die Labortür in den Flur** (2,48 m,
+3,21 m und 3,73 m, davon zweimal mit Anfahrt), höchstens 0,050 m/s und
+0,080 rad/s, nichts berührt. Wirkung des ersten Durchgangs laut dessen
+Bericht auf dem Jetson (nicht im Repository). `kif7.env` und frühere
+Releases unverändert. Rückfall: `kif8.env` und die Ordner `kif8-…` löschen.
+
+Stand 23.11.2026, **noch keine weitere Jetson-Wirkung:** kein offener
+Auftrag der KI-Linie.
 
 Davor, Stand 22.11.2026 (nachts, später): ersetzt durch **KI-F5**
 (`ki_erkundung/AUFTRAG.md`). KI-F5 baut einen neuen Release

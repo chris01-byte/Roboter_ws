@@ -2216,6 +2216,11 @@ stehenden Roboter fünfmal umstellen ließ:**
 - Bekannte Grenze: Ein Möbel von Türblatttiefe an einer Wand sieht von der
   Seite gleich aus; der Ablauf endet dann nach der Anfahrt ohne Durchfahrt.
 
+**Nachtrag 23.11.2026 – KI-F8: drei von drei.** Anfahrt und Durchfahrt in
+einem Ablauf tragen am Roboter (drei Plätze, je eine Mission, nichts
+berührt), mit einer Frage vorab. Nächster Schritt der KI-Linie: die KI wählt
+die Tür, zuerst mit Einspruch des Menschen vor der Fahrt.
+
 **Nachtrag 22.11.2026 (nachts) – Entscheidung des Projektinhabers: Laborprobe
 ohne Nahsensoren:**
 - **Wortlaut:** „Die Nahbereichssensoren machen gerade Probleme. Deswegen
