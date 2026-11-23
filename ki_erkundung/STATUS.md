@@ -1,6 +1,19 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 23.11.2026 (nach KI-F8): Drei von drei Läufen sind in einem Ablauf
+**Stand 23.11.2026 (nachts): Die KI wählt die Tür – gebaut, in der
+Simulation erprobt, Auftrag KI-F9 erteilt.** Entscheidung des
+Projektinhabers nach KI-F8 („Ja“): Die KI wählt nach dem Rundblick die Tür;
+zuerst sieht Christopher ihre Wahl und sagt vor der Fahrt ja oder nein. Die
+Wahl geht über eine Wahl-Datei mit dem Ort der Öffnung in der Karte an das
+Werkzeug (`ki_tuer_waehlen.py`, `fahrziel_senden.py --wahl`, `--ende`).
+In der Simulation lief die ganze Kette: Rundblick, Aufnahme mit Lage in der
+Karte, gespielte KI wählt, Neumessung findet die gewählte Tür wieder,
+Anfahrt und Durchfahrt in einer Mission (unten). Dabei gefunden und
+behoben: Die Aufnahme schrieb unter der neueren ROS-Fassung nach `kill
+-INT` keine Runde. **Als Nächstes:** Auftrag KI-F9
+([AUFTRAG.md](AUFTRAG.md)), wartet auf die Übergabe.
+
+**Davor, 23.11.2026 (nach KI-F8): Drei von drei Läufen sind in einem Ablauf
 durch die Labortür gefahren.** Von drei Plätzen: einmal gleich hindurch,
 zweimal erst selbst vor die Tür (1,23 und 1,81 m), neu gemessen und
 hindurch; je eine Mission und ein Aufruf des Werkzeugs, eine Frage vorab,
@@ -121,7 +134,7 @@ fährt mit seiner Schutzkette.
 |---|---|---|---|
 | Erstes Sehen | im Stand Bild und Laser aufnehmen, die KI fragen, die Antwort prüfen | KI-0 | **erledigt** (21.11.) |
 | Blickrunde | sich selbst einmal herumdrehen; aus acht Bildern nennt die KI den Ausgang | KI-1 | **am Roboter gelungen** (21.11., eine Runde im Labor); für die Kriterien fehlen weitere Runden |
-| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1), Ausrichten (KI-F2), drei Etappen genau auf der Linie bis kurz vor die Tür (KI-F3b); **selbst vor die Tür gestellt und hindurchgefahren (KI-F7; KI-F8: drei von drei in einem Ablauf)**; die Tür bestimmt noch der Mensch, nicht die KI |
+| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1), Ausrichten (KI-F2), drei Etappen genau auf der Linie bis kurz vor die Tür (KI-F3b); **selbst vor die Tür gestellt und hindurchgefahren (KI-F7; KI-F8: drei von drei in einem Ablauf)**; die Tür bestimmte dabei der Mensch. **Übergabe der KI-Wahl gebaut, in der Simulation gelaufen; am Roboter: Auftrag KI-F9** |
 | Raum für Raum | weiter, bis kein Ausgang mehr offen ist (Laborraum, Flur, Schlafzimmer) | KI-3 | offen |
 | Räume benennen, um Hilfe rufen | Raumnamen als Vorschlag in der App; Hilferuf mit Grund und Bild | KI-4 | offen |
 | Auf Zuruf | „fahr in die Küche“, „such die Tasse“ | KI-5 | offen |
@@ -131,21 +144,22 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Kein offener Auftrag.** KI-F8 ist ausgeführt: drei von drei.
-
-**Danach (vorgesehen):** Die KI wählt die Tür (Rundblick, Frage, Übergabe
-der gewählten Öffnung an das Werkzeug); zuerst sieht Christopher die Wahl
-vor der Fahrt und kann sie stoppen, später nicht mehr. Davor in der
-Simulation eine gespielte KI mit falscher, langsamer, stummer und
-unsinniger Antwort.
+**Offener Auftrag: KI-F9 – die KI wählt die Tür** ([AUFTRAG.md](AUFTRAG.md)),
+zweimal von zwei Plätzen, je mit Christophers Ja oder Nein vor der Fahrt;
+kein Build.
 
 **Danach, je nach Ergebnis:**
-- Durchfahrt gelungen: Rundblick, Frage an die KI und Etappenfahrt in einem
-  Zug (die Übergabe der gewählten Öffnung an das Fahrziel ist noch zu
-  bauen); dazu die gespielte KI in der Simulation mit falscher, langsamer,
-  stummer und unsinniger Antwort (Konzept, KI-2).
+- Zweimal gelungen: Christophers Ja entfällt (die KI wählt, die Vermessung
+  prüft, die Schutzkette fährt); dann weiter in den Flur mit neuem
+  Rundblick (KI-3). Vorher entscheiden, was nach der Tür kommt (wohin im
+  nächsten Raum, wann ein Raum fertig ist).
+- Die KI wählt falsch (Christophers Nein): Antworten und Bilder auf dem
+  KI-Rechner ansehen (Lotsen-Fenster), Frage oder Vermessung nachbessern;
+  keine Fahrt ohne Einspruch, solange das vorkommt.
 - Durchfahrt angehalten oder misslungen: zuerst die Ursache aus den
   Meldungen des Erkunders eingrenzen; keine neue Funktion darauf setzen.
+- Mit dem nächsten Build des Erkunders: die Grenze der Etappen je Ziel statt
+  je Mission (KI-F8, Lauf 3: 10 von 16).
 - **Die Vermessung von der Seite des Türblatts** richtig stellen (Ursache
   weiter offen, siehe unten). Für eine KI, die Türen von beliebigen Plätzen
   aus wählt, ist das nötig; bis dahin fährt Amadeus nur aus einer
@@ -308,6 +322,65 @@ nur lesend sichern, was die Zeitwache meldet (neues Werkzeug
 `werkzeuge/radsensor_zustand.py`: Größe und Zeitpunkt der ersten Lücke,
 Dauer der Lesepaare), dazu die Last; dann genau ein neuer scharfer Start.
 Am Motortreiber wird nichts geändert (Motorsteuerung, AGENTS §2.7).
+
+## Die KI wählt die Tür (gebaut 23.11.2026, nachts)
+
+Entscheidung des Projektinhabers nach KI-F8, auf die Frage „Soll ich das so
+bauen, mit deinem Ja oder Nein zur Wahl der KI vor der Fahrt?“: „Ja“.
+
+**Gebaut (nur KI-Linie, kein Build des Erkunders):**
+- `blickrunde_aufnehmen.py` hält fest, wo Amadeus am Ende des Rundblicks in
+  der Karte steht (TF `map` → `base_link`, nur lesend). Mit dem aus den Scans
+  gemessenen Drehwinkel der Runde liegt jede Nummer an einem Ort in der
+  Karte (`lotse/wahl.py`).
+- `ki_tuer_waehlen.py`: die neueste Blickrunde (höchstens 10 Minuten alt
+  und mit Lage in der Karte, sonst wird die KI gar nicht gefragt)
+  aufbereiten, die KI über den Lotsen-Dienst fragen (120 s, höchstens zwei
+  Versuche bis zu einer gültigen Antwort), prüfen und gegen die Vermessung
+  halten. Eine gültige Wahl kommt mit ihrem Ort in eine Wahl-Datei (gilt
+  15 Minuten), dazu ein Protokoll ohne Bilder. Für den Menschen: ein Satz
+  mit Art, Breite, Entfernung und Richtung von Amadeus aus, je Nummer die
+  Einordnung der KI, ihre Begründung; ist die Wahl nicht türbreit, sagt
+  der Satz, dass der Fahrteil dort nicht hindurchfährt. Rückgabe 0 (Wahl),
+  2 (kein Ausgang oder Vermessung dagegen), 3 (keine gültige Antwort),
+  4 (Runde oder Lage fehlt), 5 (KI-Rechner nicht erreichbar).
+- `fahrziel_senden.py --zur-tuer --wahl DATEI`: prüft die Wahl (Art,
+  Rahmen, Alter), misst neu und nimmt die türbreite Öffnung, deren Mitte
+  höchstens 0,40 m neben dem gewählten Ort liegt; liegt eine zweite kaum
+  weiter weg, ist das nicht eindeutig, und es fährt nicht. Eine nicht
+  türbreite Öffnung an der Stelle nennt es mit ihrem Maß; die Schätzung
+  hinter einem Türblatt gilt nur, wenn sie höchstens 0,50 m daneben liegt.
+  Danach der Ablauf aus KI-F8; Quelle in allen Meldungen `ki`. `--ende`
+  sagt dem wartenden Erkunder, dass kein Fahrziel kommt.
+- **Behoben:** Unter der neueren ROS-Fassung beendet `kill -INT` rclpy
+  selbst (`ExternalShutdownException`) statt eines `KeyboardInterrupt`; die
+  Aufnahme schrieb dann keine Runde (erster Simulationslauf). Aufnahme und
+  Lotsen-Dienst fangen jetzt beides ab. Am Roboter (Humble) hatte `kill
+  -INT` in KI-1 die Runde geschrieben.
+- Tests: KI-Linie 328 ohne ROS (2 übersprungen), 340 mit ROS. Neu u. a.
+  `test_wahl.py` (34) und `test_ki_tuer_waehlen.py` (11, gespielte KI:
+  richtig, kein Ausgang, zweimal falsch, Unsinn dann richtig, stumm, Runde
+  ohne Lage, alte Runde, KI-Rechner fehlt, Ablage in einer Arbeitskopie);
+  über echte ROS-Themen das Werkzeug über den Lotsen-Dienst und die
+  Aufnahme mit Lage aus TF.
+
+**Simulation** (Laborraum mit Möbeln und 85° offenem Türblatt, ohne
+Nahsensoren; Rundblick, Ersatzkamera ohne Bildinhalt, die echte Aufnahme,
+eine gespielte KI, die die Welt der Simulation kennt, dann das Werkzeug mit
+`--wahl`; ein Lauf, eine Mission). Die Simulation prüft die Kopplung, nicht
+das Sehen.
+
+| Fall | Ergebnis |
+|---|---|
+| mitten im Raum, richtige Wahl | Rundblick 361,5°, 223 Aufnahmen, keine verworfen, Lage festgehalten; Drehwinkel der Runde aus den Scans 351,2° (passend zur Karte; die Odometrie mit 3 % Fehler sagte 362°); gewählte Tür 7 cm neben der wahren Mitte; beim Neumessen wiedergefunden (Mitten 5 cm auseinander); Anfahrt 1,31 m, neu gemessen, Durchfahrt; „Durchfahrt abgeschlossen.“, Quelle ki, 8 Etappen, 3,27 m; im Flur nach 181 s, keine Berührung, engste Stelle 6,0 cm (an der Spitze des Türblatts) |
+| anderer Platz, Tür 49° rechts, richtige Wahl | In der Runde drei Öffnungen, darunter eine 0,90 m breite Lücke zwischen Möbeln; die KI wählt die Tür (in der Runde 0,74 m), 3 cm neben der wahren Mitte. Im Stand vier Öffnungen mit neuen Nummern; die gewählte wiedergefunden (2 cm). Anfahrt mit 38° und 88° Drehung (Rest +1,6° und −1,7°), Durchfahrt; „Durchfahrt abgeschlossen.“, 9 Etappen, 3,40 m; im Flur nach 200 s, keine Berührung, engste Stelle 6,6 cm (ebenso) |
+| KI wählt falsch (eine 1,12 m breite Lücke) | Satz der Wahl mit „So breit fährt der Fahrteil nicht hindurch“; das Werkzeug: „an der gewählten Stelle ist Öffnung 2 vermessen, 1.19 m breit – nicht türbreit“, „Nichts gesendet“, `ende`; der Erkunder: „beendet ohne Fahrziel (Quelle ki); nichts gefahren“. Keine Bewegung außer dem Rundblick |
+| erster Lauf, Aufnahme ohne Runde (Fehler oben) | Der Ablauf schickte `--ende --quelle ki`; der Erkunder schloss sofort: „beendet ohne Fahrziel (Quelle ki); nichts gefahren“ |
+
+Grenze: Wählt die KI eine türbreite Öffnung, die keine Tür ist (etwa die
+0,90 m breite Lücke im zweiten Fall), hält das Werkzeug sie nicht auf; dann
+fährt Amadeus davor und hindurch, soweit der Weg frei ist. Deshalb zuerst
+Christophers Ja vor jeder Fahrt.
 
 ## KI-F8 – drei von drei in einem Ablauf (Jetson, 23.11.2026, 21:38 bis 22:24)
 
@@ -1052,6 +1125,8 @@ KONZEPT §13.
 | `werkzeuge/lotse_fenster.py`, `lotse_fenster_seite.html` | KI-Rechner: Programm für den Bildschirm. Startet den Lotsen-Dienst und zeigt KI-Programm, Dienst, Roboter im Netz, die letzten Fragen mit Bildern und Antwort und das Log. Nur von diesem Rechner aus erreichbar |
 | `werkzeuge/blickrunde_aufnehmen.py`, `trockenlauf.py`, `trockenlauf_auswerten.py`, `beispielrunde_erzeugen.py` | Aufnahme, Trockenlauf (direkt oder `--ueber-ros`), Auswertung, künstliche Beispielrunde (auf Wunsch mit Türblatt) |
 | `werkzeuge/vermessung_pruefen.py`, `wahrheit_eintragen.py` | Prüftext der Vermessung zu gespeicherten Aufnahmen; Angaben des Menschen mit Lage der Nummern eintragen |
+| `lotse/fahrziel.py`, `werkzeuge/fahrziel_senden.py` | Roboter: aus der gewählten, neu vermessenen Öffnung das Fahrziel für die Etappenfahrt (Anfahrt, Durchfahrt, in einem Ablauf); mit `--wahl` die Öffnung, die die KI gewählt hat; mit `--ende` keine Fahrt |
+| `lotse/wahl.py`, `werkzeuge/ki_tuer_waehlen.py` | Roboter, nach dem Rundblick: die KI fragen und die geprüfte Wahl mit dem Ort der Öffnung in der Karte in eine Wahl-Datei schreiben (bleibt auf dem Roboter); fährt nicht |
 | `werkzeuge/sucher.py` | Jetson: das Kamerabild live in einem gewöhnlichen Browserfenster, zum Hinstellen für eine Ansicht. Liest nur mit, speichert nichts, endet von selbst |
 
 ## Nachweise
@@ -1175,11 +1250,14 @@ Jetson, echte Bilder.
   (Türzarge, Möbel an der Wand), zwei Missionen in einem Stacklauf, und wie
   genau Amadeus danach vor der Tür steht. In der Simulation bleibt am
   Türblatt wenig Luft (0,32 m bei nötigen 0,30 m).
-- **Die gespielte KI in der Simulation wählt bisher nur richtig.** Die Fälle
-  falsch, langsam, stumm und Unsinn (Konzept, KI-2) stehen aus.
-- **Der Weg von der Antwort der KI zum Fahrziel in einem Zug.** Heute nennt
-  ein Mensch dem Werkzeug Nummer oder Richtung; die Übergabe der gewählten
-  Öffnung aus der Blickrunde ist nicht gebaut.
+- **Die Wahl der KI am Roboter** (KI-F9): ob die Lage am Ende des
+  Rundblicks (SLAM) und der Drehwinkel aus den Scans am Roboter so gut
+  zusammenpassen wie in der Simulation (dort 5 bis 7 cm), wie lange das
+  Aufbereiten der Runde auf dem Jetson neben dem Stack dauert, und ob die
+  KI aus der echten Runde die Labortür wählt. Die Fälle falsch, langsam,
+  stumm, Unsinn und „kein Ausgang“ sind für die Frage mit einer gespielten
+  KI getestet; in der Simulation lief die ganze Kette mit einer gespielten
+  KI, die die Welt kennt (sie prüft die Kopplung, nicht das Sehen).
 - **Die Blickrunde in anderen Lagen:** Bisher eine Runde von einem Platz im
   Labor. Andere Standorte, der Flur und Räume mit Glas oder Spiegel fehlen.
 - **Kamera neben dem Stack während einer Fahrt.** Gemessen ist sie im Stand
@@ -1193,6 +1271,6 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Mit dem Projektinhaber den Weg „die KI wählt die Tür“ bestätigen, dann die
-Übergabe der KI-Wahl an den Ablauf bauen und in der Simulation mit einer
-gespielten KI prüfen; erst danach ein Auftrag am Roboter.
+Auftrag KI-F9 übergeben und am Roboter ausführen lassen (die KI wählt die
+Tür, Christopher sagt vor jeder Fahrt ja oder nein), danach den Bericht
+auswerten.

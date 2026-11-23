@@ -988,3 +988,55 @@ def test_die_geschaetzte_tuer_wird_eine_oeffnung_mit_achse_aus_der_wand():
     weg = anfahrt(o.pfosten, _laserbild(_laborwelt(), pose))
     ende = _in_der_welt(weg['punkte'][-1], pose)
     assert ende[1] == pytest.approx(2.0, abs=0.08) and 2.1 <= ende[0] <= 2.8
+
+
+# ------------------- Wahl der KI übernehmen (23.11.2026, abends) -------------------------
+
+import fahrziel_senden  # noqa: E402
+from fahrziel_senden import blatt_passt_zur_wahl, oeffnung_zur_wahl  # noqa: E402
+
+
+def _o(nr, mitte, breite):
+    mx, my = mitte
+    return Oeffnung(nr=nr, breite_m=breite, mitte=(mx, my),
+                    pfosten=((mx, my - breite / 2), (mx, my + breite / 2)),
+                    richtung_grad=math.degrees(math.atan2(my, mx)),
+                    entfernung_m=math.hypot(mx, my), tiefe_m=1.5, befahrbar=True)
+
+
+def test_wahl_der_ki_findet_die_tuerbreite_oeffnung_an_ihrer_stelle():
+    pose = (1.0, 2.0, 0.0)
+    tuer, durchgang = _o(1, (2.0, 0.05), 0.80), _o(2, (1.5, 2.0), 1.20)
+    o, abstand = oeffnung_zur_wahl([tuer, durchgang], [tuer], {'mitte': [3.0, 2.0]}, pose)
+    assert o is tuer and abstand == pytest.approx(0.05, abs=1e-6)
+
+
+def test_wahl_der_ki_auf_einer_nicht_tuerbreiten_oeffnung_wird_mit_mass_genannt():
+    pose = (1.0, 2.0, 0.0)
+    tuer, durchgang = _o(1, (2.0, 0.0), 0.80), _o(2, (1.5, 2.0), 1.20)
+    with pytest.raises(ValueError, match='Öffnung 2 vermessen, 1.20 m breit – nicht türbreit'):
+        oeffnung_zur_wahl([tuer, durchgang], [tuer], {'mitte': [2.5, 4.0]}, pose)
+    with pytest.raises(ValueError, match='keine türbreite Öffnung vermessen'):
+        oeffnung_zur_wahl([tuer, durchgang], [tuer], {'mitte': [1.0, -2.0]}, pose)
+
+
+def test_geschaetzte_tuer_hinter_dem_blatt_passt_nur_zur_wahl_an_ihrer_stelle():
+    pose = (2.6, 3.1, -0.9)                  # Karte = Welt der Laborsimulation
+    o, _, _ = tuer_aus_blatt(_laserbild(_laborwelt(), pose), 7)
+    assert blatt_passt_zur_wahl(o, {'mitte': [4.3, 2.0]}, pose)
+    assert blatt_passt_zur_wahl(o, {'mitte': [4.25, 2.3]}, pose)
+    assert not blatt_passt_zur_wahl(o, {'mitte': [0.4, 3.0]}, pose)
+    assert not blatt_passt_zur_wahl(o, {'mitte': [4.3, 1.2]}, pose)
+
+
+@pytest.mark.parametrize('argumente, grund', [
+    (['--tuer', '--wahl', 'w.json'], '--wahl nur mit --zur-tuer'),
+    (['--zur-tuer', '--wahl', 'w.json', '--nummer', '2'], '--wahl ersetzt --nummer'),
+    (['--zur-tuer', '--wahl', 'w.json', '--richtung', '20'], '--wahl ersetzt --nummer'),
+    (['--zur-tuer', '--wahl', 'w.json', '--quelle', 'mensch'], 'Quelle ki'),
+    (['--ende', '--geradeaus', '0.5'], 'not allowed with argument'),
+])
+def test_wahl_und_ende_nur_in_sinnvoller_verbindung(argumente, grund, capsys):
+    with pytest.raises(SystemExit) as ende:
+        fahrziel_senden.main(argumente)
+    assert ende.value.code == 2 and grund in capsys.readouterr().err

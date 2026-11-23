@@ -497,8 +497,23 @@ Durchgang ein Vorlauf ohne Motorfreigabe und drei scharfe Läufe mit
 Bericht auf dem Jetson (nicht im Repository). `kif7.env` und frühere
 Releases unverändert. Rückfall: `kif8.env` und die Ordner `kif8-…` löschen.
 
-Stand 23.11.2026, **noch keine weitere Jetson-Wirkung:** kein offener
-Auftrag der KI-Linie.
+Stand 23.11.2026 (nachts), **noch keine weitere Jetson-Wirkung:** Auftrag
+**KI-F9** (`ki_erkundung/AUFTRAG.md`, die KI wählt die Tür) ist erteilt und
+wartet auf die Übergabe. Er baut nichts: Release `kif8-20261123_2138` und
+`kif8.env` bleiben unverändert, unter `src/` gibt es seit `d61453c` keine
+Änderung. Er holt den neuen Stand in die Arbeitskopie (nur Python-Werkzeuge
+der KI-Linie) und legt an: Blickrunden unter
+`~/.local/share/amadeus/ki_erkundung/blickrunden/`, Wahl-Dateien und
+Protokolle unter `~/.local/share/amadeus/ki_erkundung/wahl/` (mit
+Koordinaten der Wohnung; sie bleiben auf dem Jetson), Prüfdateien unter
+`kif8-20261123_2138/pruefung/kif9/` und `~/ki_trockenlauf_kif9/`.
+Bewegung: je Lauf ein Rundblick auf der Stelle und, nur nach Christophers
+Ja zur Wahl der KI, Anfahrt und Durchfahrt wie in KI-F8 (5 cm/s, ohne Nav2,
+ohne Nahsensoren). Die Kamera läuft nur während des Rundblicks. Rückfall:
+die genannten Ordner löschen; ohne `--wahl` arbeitet `fahrziel_senden.py`
+wie in KI-F8.
+
+Davor, Stand 23.11.2026: kein offener Auftrag der KI-Linie.
 
 Davor, Stand 22.11.2026 (nachts, später): ersetzt durch **KI-F5**
 (`ki_erkundung/AUFTRAG.md`). KI-F5 baut einen neuen Release

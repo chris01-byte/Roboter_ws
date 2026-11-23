@@ -205,8 +205,13 @@ def erzeuge(ausgabe, name: str = 'beispiel_zimmer', schritt_grad: float = 5.0,
             gesamt_grad: float = 365.0, drehsinn: int = 1, saat: int = 1,
             mit_odometrie: bool = False,
             standpunkt: Tuple[float, float, float] = STANDPUNKT,
-            tuerblatt_grad: Optional[float] = None) -> Path:
-    """Die künstliche Blickrunde in ``ausgabe/name`` schreiben."""
+            tuerblatt_grad: Optional[float] = None,
+            mit_karte: bool = False) -> Path:
+    """Die künstliche Blickrunde in ``ausgabe/name`` schreiben.
+
+    ``mit_karte``: die Lage am Ende der Runde festhalten, wie die Aufnahme am
+    Roboter es aus TF tut; die Karte ist hier die Beispielwelt selbst.
+    """
     zufall = np.random.default_rng(saat)
     flaechen = welt(tuerblatt_grad)
     kamera = Kamera.aus_oeffnungswinkel(640, 360, 69.0)
@@ -219,13 +224,18 @@ def erzeuge(ausgabe, name: str = 'beispiel_zimmer', schritt_grad: float = 5.0,
         scans.append(scan(flaechen, x, y, gier, t, zufall=zufall))
         zeiten.append(t)
         odometrie.append(gier - gier0 + zufall.normal(0.0, 0.01))
+    karte = None
+    if mit_karte:
+        karte = {'rahmen': 'map', 't': zeiten[-1],
+                 'basis_ende': [x, y, math.atan2(math.sin(gier), math.cos(gier))]}
     return schreibe_runde(
         Path(ausgabe) / name, name, kamera, bilder, scans, zeiten,
         gier_odom=odometrie if mit_odometrie else None,
         boden_kamera=kamera_montage(), boden_lidar=lidar_montage(),
         montage_quelle='kuenstlich',
         quelle={'art': 'kuenstliche Beispielwelt, keine echte Wohnung'},
-        bemerkung='Künstliche Blickrunde zum Ausprobieren des Trockenlaufs.')
+        bemerkung='Künstliche Blickrunde zum Ausprobieren des Trockenlaufs.',
+        karte=karte)
 
 
 def tuer_im_standpunktrahmen(standpunkt: Tuple[float, float, float] = STANDPUNKT):
@@ -252,11 +262,13 @@ def main(argv=None) -> int:
     eingabe.add_argument('--tuerblatt', type=float, default=None, metavar='GRAD',
                          help='offenes Türblatt in der Flurtür (90 = rechtwinklig '
                               'im Zimmer); ohne Angabe hat die Tür kein Blatt')
+    eingabe.add_argument('--mit-karte', action='store_true',
+                         help='Lage am Ende der Runde festhalten (wie aus TF am Roboter)')
     wahl = eingabe.parse_args(argv)
     ordner = erzeuge(wahl.ausgabe, wahl.name, wahl.schritt_grad,
                      drehsinn=-1 if wahl.rechtsherum else 1,
                      mit_odometrie=wahl.mit_odometrie,
-                     tuerblatt_grad=wahl.tuerblatt)
+                     tuerblatt_grad=wahl.tuerblatt, mit_karte=wahl.mit_karte)
     print(f'Künstliche Blickrunde geschrieben: {ordner}')
     return 0
 

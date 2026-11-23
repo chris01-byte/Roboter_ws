@@ -1,6 +1,6 @@
 # Konzept „KI-Erkundung“ – eine KI übernimmt Ziel- und Suchwahl
 
-**Version 1.15 · 23.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
+**Version 1.16 · 23.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
 nachgeführt nach drei Durchgängen an echten Aufnahmen, der Freigabe der
 Schalter „nur Rundblick“ und „Etappenfahrt“ und der Festlegung „die KI
 bekommt Zeit, kein stiller Rückfall“**
@@ -287,6 +287,25 @@ unverändert im heutigen Erkunder.
 So läuft es:
 
 1. Die KI nennt eine Nummer; die Antwort ist geprüft (Abschnitt 6).
+   **Seit v1.16 geht diese Wahl an den Fahrteil** (Entscheidung des
+   Projektinhabers vom 23.11.2026, zuerst mit seinem Ja oder Nein vor der
+   Fahrt): Die Aufnahme der Blickrunde hält fest, wo Amadeus am Ende der
+   Runde in der Karte steht. Mit dem aus den Scans gemessenen Drehwinkel
+   der Runde liegt damit jede Nummer an einem Ort in der Karte.
+   `ki_tuer_waehlen.py` fragt die KI (über den Lotsen-Dienst, Zeitgrenze
+   120 s, höchstens zwei Versuche) und schreibt die geprüfte Wahl mit
+   diesem Ort in eine Wahl-Datei, die auf dem Roboter bleibt. Ein Mensch
+   sieht sie in einem Satz (Art, Breite, Entfernung, Richtung von Amadeus
+   aus, Begründung der KI) und sagt ja oder nein. Erst nach dem Ja nimmt
+   das Werkzeug (`--zur-tuer --wahl`) beim neuen Messen die türbreite
+   Öffnung, die an diesem Ort liegt (höchstens 0,40 m daneben, keine zweite
+   fast gleich nah), und der Ablauf ab Schritt 2 folgt; eine Tür hinter dem
+   Türblatt gilt nur, wenn ihre Schätzung höchstens 0,50 m daneben liegt.
+   Nach einem Nein, ohne gültige Antwort, wenn die KI keinen Ausgang nennt
+   oder an der Stelle keine türbreite Öffnung liegt, bekommt der Erkunder
+   ein „Ende“: **Wählt die KI nicht, fährt Amadeus nicht** (kein stiller
+   Rückfall auf eine Regel). Die Wahl gilt 15 Minuten und nur in der
+   Karte, in der sie entstand.
 2. **Anfahrt (seit v1.10):** Steht der Roboter nicht passend vor der
    gewählten Tür, fährt er selbst dorthin: zu einem Vorpunkt auf der
    Türachse gut zwei Meter vor der Tür, dreht sich dort zur Tür und fährt
@@ -543,6 +562,13 @@ nicht das Sehen.
 (Abschnitt 6a). Sie ist gebaut und in der Simulation mit richtig gewähltem
 Ziel gelaufen; die Fälle falsch, langsam, stumm und Unsinn stehen aus.
 
+**Stand 23.11.2026 (v1.16):** Die Übergabe der Wahl an den Fahrteil ist
+gebaut (§6a, Schritt 1). Die Fälle falsch, langsam, stumm und Unsinn sind
+für die Frage selbst mit einer gespielten KI getestet (kein Fahrziel,
+Amadeus bleibt stehen, der Erkunder bekommt ein „Ende“); in der Simulation
+läuft die ganze Kette Rundblick, Wahl, Fahrt mit einer gespielten KI, die
+die Welt der Simulation kennt (STATUS).
+
 Vor KI-2 ist zu entscheiden, wie die Wahl an die vorhandene Erkundung
 angeschlossen wird (README, Regel 2). Bis dahin wird kein bestehender Code
 angefasst.
@@ -683,6 +709,12 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   entschieden hat. Der Fahrteil soll aus vorhandenem, real bewährtem Code
   entstehen; Bestand und Vorschlag stehen im STATUS, entschieden ist dazu
   noch nichts.
+- 23.11.2026, v1.16 (Entscheidung des Projektinhabers: die KI wählt die Tür,
+  zuerst mit seinem Ja oder Nein vor der Fahrt): Die Wahl geht über eine
+  Wahl-Datei mit dem Ort der Öffnung in der Karte an den Fahrteil (§6a,
+  Schritt 1); die Aufnahme der Blickrunde hält dafür die Lage am Ende der
+  Runde fest. Kein stiller Rückfall: ohne gültige Wahl kein Fahrziel, der
+  Erkunder bekommt ein „Ende“. Stand von KI-2 in §8 nachgetragen.
 - 23.11.2026, v1.15 (Frage des Projektinhabers aus KI-F8: „Was passiert in
   solchen Fällen?“): Tür von der Seite des Türblatts aus Blatt und Wand
   geschätzt; nur Anfahrt, Durchfahrt nach neuer Messung von vorn.

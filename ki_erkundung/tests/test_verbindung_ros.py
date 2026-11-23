@@ -154,6 +154,39 @@ def test_trockenlauf_vom_roboter_aus_ueber_den_dienst(dienst, ki_attrappe, beisp
     assert ki_attrappe.anfragen[0]['think'] is False
 
 
+def test_ki_waehlt_die_tuer_vom_roboter_aus_ueber_den_dienst(dienst, ki_attrappe, tmp_path,
+                                                             capsys):
+    """ki_tuer_waehlen.py --ueber-ros: Runde mit Lage in der Karte -> Wahl-Datei."""
+    import beispielrunde_erzeugen
+    import ki_tuer_waehlen
+    from lotse.wahl import wahl_lesen
+    beispielrunde_erzeugen.erzeuge(tmp_path / 'runden', 'labor_rundblick', mit_karte=True)
+    ki_attrappe.antworten.append(json.dumps({
+        'wahl': 2, 'begruendung': 'offene Tür', 'raum': 'Zimmer', 'gefahren': [],
+        'kandidaten': [{'nr': 2, 'art': 'tuer_offen'}, {'nr': 1, 'art': 'glas'}]}))
+    rc = ki_tuer_waehlen.main(['--runden', str(tmp_path / 'runden'), '--ausgabe',
+                               str(tmp_path / 'wahl'), '--ueber-ros'])
+    aus = capsys.readouterr().out
+    assert rc == ki_tuer_waehlen.RC_WAHL, aus
+    (datei,) = (tmp_path / 'wahl').glob('*_wahl.json')
+    wahl = wahl_lesen(datei.read_text(encoding='utf-8'), jetzt_s=time.time())
+    assert wahl['nr'] == 2 and wahl['modell'] == 'pruefmodell'
+    assert abs(wahl['mitte'][0] - 4.0) < 0.05 and abs(wahl['mitte'][1] - 1.4) < 0.05
+    assert 'Die KI wählt Nr. 2: offene Tür' in aus
+    assert ki_attrappe.anfragen[0]['think'] is False
+
+
+def test_ki_wahl_ohne_dienst_nennt_den_ki_rechner(ros, tmp_path, capsys):
+    import beispielrunde_erzeugen
+    import ki_tuer_waehlen
+    beispielrunde_erzeugen.erzeuge(tmp_path / 'runden', 'labor_rundblick', mit_karte=True)
+    rc = ki_tuer_waehlen.main(['--runden', str(tmp_path / 'runden'), '--ausgabe',
+                               str(tmp_path / 'wahl'), '--ueber-ros'])
+    assert rc == ki_tuer_waehlen.RC_KI_RECHNER
+    assert 'Lotsen-Dienst' in capsys.readouterr().out
+    assert not (tmp_path / 'wahl').exists() or not list((tmp_path / 'wahl').iterdir())
+
+
 def test_trockenlauf_meldet_fehlenden_dienst(ros, beispielordner, tmp_path, capsys):
     assert trockenlauf.main(['--runden', str(beispielordner), '--ausgabe',
                              str(tmp_path / 'a'), '--ueber-ros']) == 3

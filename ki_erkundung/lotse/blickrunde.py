@@ -492,6 +492,11 @@ class Blickrunde:
     def boden_lidar(self) -> np.ndarray:
         return self._montage('boden_lidar', lidar_montage())
 
+    @property
+    def karte(self) -> Optional[dict]:
+        """Lage am Ende der Runde in der Karte (oder None bei älteren Runden)."""
+        return self.meta.get('karte')
+
     def vorgabe_gier(self) -> Optional[List[Optional[float]]]:
         werte = [a.get('gier_odom') for a in self.aufnahmen]
         return werte if all(v is not None for v in werte) else None
@@ -505,8 +510,14 @@ def schreibe_runde(ordner, name: str, kamera: Kamera,
                    boden_kamera: Optional[np.ndarray] = None,
                    boden_lidar: Optional[np.ndarray] = None,
                    montage_quelle: str = 'vorgabe', quelle: Optional[dict] = None,
-                   bemerkung: str = '') -> Path:
-    """Eine Blickrunde als Ordner schreiben (Aufnahme und künstliche Beispiele)."""
+                   bemerkung: str = '', karte: Optional[dict] = None) -> Path:
+    """Eine Blickrunde als Ordner schreiben (Aufnahme und künstliche Beispiele).
+
+    ``karte``: wo der Roboter am Ende der Runde in der Karte stand
+    (``rahmen``, ``basis_ende`` = [x, y, gier]); damit lässt sich eine
+    gewählte Öffnung später in der Karte wiederfinden. Die Angabe bleibt
+    mit der Runde auf dem Roboter.
+    """
     ordner = Path(ordner)
     ordner.mkdir(parents=True, exist_ok=True)
     aufnahmen = []
@@ -536,6 +547,7 @@ def schreibe_runde(ordner, name: str, kamera: Kamera,
             'boden_lidar': None if boden_lidar is None else np.asarray(boden_lidar).tolist(),
         },
         'quelle': quelle or {},
+        'karte': karte,
         'aufnahmen': aufnahmen,
     }
     with open(ordner / 'meta.json', 'w', encoding='utf-8') as datei:

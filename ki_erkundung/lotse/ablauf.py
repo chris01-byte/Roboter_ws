@@ -42,6 +42,9 @@ class Vorbereitung:
     # Von wo aus vermessen wurde (Standpunktrahmen) und was dabei geprüft wurde
     ursprung: Sequence[float] = (0.0, 0.0)
     protokoll: List[dict] = field(default_factory=list)
+    # Drehwinkel der letzten Aufnahme gegen die erste (aus den Scans): So steht
+    # der Roboter am Ende der Runde zum Standpunktrahmen.
+    gier_ende_rad: Optional[float] = None
 
     def bilder_fuer_ki(self, mosaik: bool = False) -> List[bytes]:
         if mosaik:
@@ -112,7 +115,8 @@ def bereite_vor(runde: Blickrunde, anzahl_bilder: int = 8,
         oeffnungen=gefunden, sichtbar=sichtbar, frage=frage, fotos=fotos,
         skizze=skizze_bild, blatt=uebersicht(fotos, skizze_bild),
         kamera_winkel_grad=kamera.oeffnungswinkel_grad(),
-        ursprung=(float(ursprung[0]), float(ursprung[1])), protokoll=protokoll)
+        ursprung=(float(ursprung[0]), float(ursprung[1])), protokoll=protokoll,
+        gier_ende_rad=float(gier[-1]) if len(gier) else None)
 
 
 def befrage(vorbereitung: Vorbereitung, modell: str, url: str = STANDARD_URL,

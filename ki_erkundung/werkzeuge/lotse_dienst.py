@@ -235,6 +235,7 @@ def main(argv=None) -> int:
     wahl = eingabe.parse_args(argv)
 
     import rclpy
+    from rclpy.executors import ExternalShutdownException
     rclpy.init()
     knoten = rclpy.create_node('ki_lotse_dienst')
     dienst = Dienst(knoten, wahl.modell, wahl.url, wahl.kontext,
@@ -246,8 +247,8 @@ def main(argv=None) -> int:
         + ('' if bekannt.get('modell_kennung') else '; das Modell ist dort NICHT vorhanden'))
     try:
         rclpy.spin(knoten)
-    except KeyboardInterrupt:
-        pass
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass                    # Strg+C, je nach ROS-Fassung so oder so
     finally:
         knoten.destroy_node()
         if rclpy.ok():

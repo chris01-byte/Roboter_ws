@@ -140,7 +140,8 @@ class Sammler:
 
 
 def schreibe(sammler: Sammler, ziel: Path, name: str, kamera: Optional[Kamera],
-             boden_kamera, boden_lidar, quelle: dict) -> Optional[Path]:
+             boden_kamera, boden_lidar, quelle: dict,
+             karte: Optional[dict] = None) -> Optional[Path]:
     """Die gesammelten Aufnahmen als Blickrunde schreiben."""
     aufnahmen = sammler.abschliessen()
     if not aufnahmen:
@@ -163,13 +164,14 @@ def schreibe(sammler: Sammler, ziel: Path, name: str, kamera: Optional[Kamera],
         boden_kamera=boden_kamera, boden_lidar=boden_lidar,
         montage_quelle='tf' if boden_kamera is not None and boden_lidar is not None
         else 'vorgabe',
-        quelle=quelle)
+        quelle=quelle, karte=karte)
 
 
 def nehme_auf(wahl, halt=None) -> Optional[Path]:
     """Mit ROS mithören und die Blickrunde schreiben. ``halt``: Funktion, die
     True liefert, wenn die Aufnahme enden soll (für Tests)."""
     import rclpy
+    from rclpy.executors import ExternalShutdownException
     from rclpy.qos import (QoSDurabilityPolicy, QoSHistoryPolicy, QoSProfile,
                            QoSReliabilityPolicy)
     from nav_msgs.msg import Odometry
@@ -190,7 +192,7 @@ def nehme_auf(wahl, halt=None) -> Optional[Path]:
                         durability=QoSDurabilityPolicy.VOLATILE)
     sammler = Sammler()
     stand = {'kamera': None, 'kamera_rahmen': None, 'lidar_rahmen': None,
-             'boden_kamera': None, 'boden_lidar': None}
+             'boden_kamera': None, 'boden_lidar': None, 'karte': None}
 
     def auf_bild(nachricht):
         stand['kamera_rahmen'] = stand['kamera_rahmen'] or nachricht.header.frame_id
@@ -236,6 +238,19 @@ def nehme_auf(wahl, halt=None) -> Optional[Path]:
         v, q = tf.transform.translation, tf.transform.rotation
         return aus_tf([v.x, v.y, v.z], [q.x, q.y, q.z, q.w], wahl.basis_hoehe)
 
+    def lage_in_der_karte() -> Optional[dict]:
+        """Wo der Roboter jetzt in der Karte steht (nur TF lesen)."""
+        try:
+            tf = tf_puffer.lookup_transform(wahl.karten_rahmen, wahl.basis_rahmen,
+                                            rclpy.time.Time())
+        except Exception:                      # noqa: BLE001 (tf2 wirft mehrere Arten)
+            return None
+        v, q = tf.transform.translation, tf.transform.rotation
+        return {'rahmen': wahl.karten_rahmen,
+                'basis_ende': [round(v.x, 4), round(v.y, 4),
+                               round(gier_aus_quaternion(q.x, q.y, q.z, q.w), 5)],
+                't': round(sekunden(tf.header.stamp), 3)}
+
     # Kurze Aufnahmen sind Ansichten im Stand (KI-0); zum Drehen ist keine Zeit.
     hinweis = ('Der Roboter bleibt stehen.' if wahl.dauer <= 20.0
                else 'Für eine Blickrunde dreht sich der Roboter einmal langsam ganz herum.')
@@ -252,6 +267,11 @@ def nehme_auf(wahl, halt=None) -> Optional[Path]:
                 stand['boden_lidar'] = montage(stand['lidar_rahmen'])
             if halt is not None and halt():
                 break
+            # Die Lage am Ende der Runde: Mit ihr findet sich eine gewählte
+            # Öffnung später in der Karte wieder (ki_tuer_waehlen.py).
+            lage = lage_in_der_karte()
+            if lage is not None:
+                stand['karte'] = lage
             if time.monotonic() - letzte_meldung >= 5.0:
                 letzte_meldung = time.monotonic()
                 gedreht = sammler.gedreht_grad()
@@ -259,7 +279,10 @@ def nehme_auf(wahl, halt=None) -> Optional[Path]:
                       + ('' if gedreht is None else f', gedreht etwa {gedreht:.0f}°')
                       + ('' if stand['kamera'] else ', noch keine Kameradaten')
                       + ('' if stand['lidar_rahmen'] else ', noch kein Scan'))
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
+        # Strg+C oder kill -INT: Je nach ROS-Fassung kommt es als
+        # KeyboardInterrupt oder beendet rclpy selbst (ExternalShutdownException,
+        # Simulation 23.11.2026). Beides heißt: Aufnahme beenden und schreiben.
         pass
     finally:
         knoten.destroy_node()
@@ -273,7 +296,8 @@ def nehme_auf(wahl, halt=None) -> Optional[Path]:
                        'scan_topic': wahl.scan_topic, 'odom_topic': wahl.odom_topic,
                        'kamera_rahmen': stand['kamera_rahmen'],
                        'lidar_rahmen': stand['lidar_rahmen'],
-                       'basis_rahmen': wahl.basis_rahmen})
+                       'basis_rahmen': wahl.basis_rahmen},
+                      karte=stand['karte'])
     if ordner is not None:
         gedreht = sammler.gedreht_grad()
         print(f'Blickrunde geschrieben: {ordner}\n'
@@ -281,7 +305,10 @@ def nehme_auf(wahl, halt=None) -> Optional[Path]:
               f'{sammler.verworfen_ohne_scan}'
               + ('' if gedreht is None else f', gedreht laut Odometrie {gedreht:.0f}°')
               + ('' if stand['boden_kamera'] is not None and stand['boden_lidar'] is not None
-                 else '\n  Montage nicht aus TF gelesen; es gelten die Projektvorgaben.'))
+                 else '\n  Montage nicht aus TF gelesen; es gelten die Projektvorgaben.')
+              + ('\n  Lage in der Karte am Ende: festgehalten.' if stand['karte']
+                 else '\n  Lage in der Karte: nicht gelesen (TF); die Wahl der KI lässt '
+                      'sich dann nicht an den Fahrteil übergeben.'))
     return ordner
 
 
@@ -300,6 +327,8 @@ def eingabe() -> argparse.ArgumentParser:
     leser.add_argument('--scan-topic', default='/scan')
     leser.add_argument('--odom-topic', default='/odom')
     leser.add_argument('--basis-rahmen', default='base_link')
+    leser.add_argument('--karten-rahmen', default='map',
+                       help='Rahmen der Karte (für die Lage am Ende der Runde)')
     leser.add_argument('--basis-hoehe', type=float, default=0.09,
                        help='Höhe von base_link über dem Boden in Metern')
     return leser

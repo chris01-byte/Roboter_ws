@@ -60,10 +60,18 @@ def test_aufnahme_ueber_ros_ergibt_eine_auswertbare_blickrunde(tmp_path):
             (tf.transform.rotation.x, tf.transform.rotation.y,
              tf.transform.rotation.z, tf.transform.rotation.w) = quaternion
             transformationen.append(tf)
+        schritte = 25                           # 25 Bilder in 15-Grad-Schritten
+        # Lage in der Karte (vom SLAM): am Ende der Drehung, Blick wie das letzte Bild
+        gier_ende = gier0 + math.radians(15.0 * (schritte - 1))
+        karte = TransformStamped()
+        karte.header.frame_id, karte.child_frame_id = 'map', 'base_link'
+        karte.transform.translation.x, karte.transform.translation.y = x, y
+        karte.transform.rotation.z = math.sin(gier_ende / 2.0)
+        karte.transform.rotation.w = math.cos(gier_ende / 2.0)
+        transformationen.append(karte)
         tf_sender.sendTransform(transformationen)
 
         fertig = threading.Event()
-        schritte = 25                           # 25 Bilder in 15-Grad-Schritten
 
         def stempel(t):
             nachricht = quelle.get_clock().now().to_msg()
@@ -136,6 +144,13 @@ def test_aufnahme_ueber_ros_ergibt_eine_auswertbare_blickrunde(tmp_path):
     vorbereitung = bereite_vor(runde)
     assert vorbereitung.auswahl['vollstaendig']
     assert len(vorbereitung.oeffnungen) == 2
+    # Lage am Ende der Runde aus TF: daraus der Standpunktrahmen der Runde
+    from lotse.wahl import standpunkt_in_der_karte
+    assert runde.karte['rahmen'] == 'map'
+    assert runde.karte['basis_ende'][:2] == pytest.approx([x, y], abs=1e-4)
+    sx, sy, sgier = standpunkt_in_der_karte(runde.karte, vorbereitung.gier_ende_rad)
+    assert (sx, sy) == pytest.approx((x, y), abs=1e-4)
+    assert math.degrees(sgier) == pytest.approx(math.degrees(gier0), abs=1.5)
 
 
 def test_sucher_zeigt_das_laufende_kamerabild_und_endet_von_selbst(tmp_path):

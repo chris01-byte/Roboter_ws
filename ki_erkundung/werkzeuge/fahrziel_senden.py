@@ -22,6 +22,12 @@ in kurzen geraden Etappen, mit Fahrtor und Kollisionsmonitor.
     # selbst entscheiden: steht er passend, gleich hindurch; sonst erst davor
     python3 fahrziel_senden.py --zur-tuer --richtung 20 --quelle mensch
 
+    # die Tür, die die KI gewählt hat (Wahl-Datei von ki_tuer_waehlen.py)
+    python3 fahrziel_senden.py --zur-tuer --wahl DATEI
+
+    # kein Fahrziel: dem wartenden Erkunder sagen, dass keines kommt
+    python3 fahrziel_senden.py --ende --quelle mensch
+
 Für ``--tuer`` misst das Werkzeug die Öffnungen im Stand neu (zwei Sekunden
 Laser), nimmt die gewählte und legt die Fahrpunkte auf die **gerade Linie
 vom Standplatz durch die Türmitte**: einen 1,2 m vor und einen 0,6 m hinter
@@ -41,6 +47,16 @@ Tür wieder und sendet die Durchfahrt. Sieht der Laser von dort die Wand
 neben der Tür nicht lang genug, nimmt es die Türachse aus der ersten
 Messung. Niemand muss den Roboter dafür umstellen. Passt etwas nicht,
 schickt es dem Erkunder ein „Ende“; die Mission schließt dann sofort.
+
+``--wahl DATEI`` nimmt statt Nummer oder Richtung die Wahl der KI: Die
+Datei nennt den Ort der gewählten Öffnung in der Karte; das Werkzeug misst
+neu und nimmt die türbreite Öffnung, deren Mitte dort liegt (höchstens
+0,40 m daneben, keine zweite fast gleich nah). Liegt dort keine, sendet es
+das „Ende“. Die Quelle ist dann ``ki``. Freigeben muss die Wahl vorher ein
+Mensch; dieses Werkzeug fragt nicht.
+
+``--ende`` sendet kein Fahrziel, sondern dem wartenden Erkunder das „Ende“
+(nach einem Nein zur Wahl der KI oder wenn sie keinen Ausgang nennt).
 
 ``--vor-die-tuer`` ist die **Anfahrt**: Steht der Roboter irgendwo im Raum,
 fährt er über einen Punkt auf der Türachse vor die Tür und dreht sich zu
@@ -84,6 +100,7 @@ from lotse.fahrziel import (  # noqa: E402
 from lotse.fahrziel import blatt_text, tuer_hinter_blatt  # noqa: E402
 from lotse.geometrie import aus_tf  # noqa: E402
 from lotse.kandidaten import TUERBREIT_M, Oeffnung, oeffnungen  # noqa: E402
+from lotse.wahl import im_standpunktrahmen, wahl_lesen, zur_wahl  # noqa: E402
 
 WARTEPHASE = 'stage_drive_wait_target'
 
@@ -286,6 +303,41 @@ def tuer_aus_blatt(hindernisse: Sequence, nr: int):
     return o, achse, fund
 
 
+# Eine hinter dem Türblatt geschätzte Tür gilt als die gewählte, wenn ihre
+# Mitte höchstens so weit von der Mitte aus der Blickrunde entfernt liegt
+# (die Schätzung aus Blatt und Wand ist ungenauer als eine Vermessung).
+WAHL_BLATT_ABSTAND_M = 0.50
+
+
+def oeffnung_zur_wahl(gefunden: Sequence[Oeffnung], tueren: Sequence[Oeffnung],
+                      wahl_daten: dict, pose: Sequence[float], *,
+                      breite_von_m: float = TUER_MIN_M, breite_bis_m: float = TUER_MAX_M):
+    """Die neu vermessene Öffnung zur Wahl der KI: ``(oeffnung, abstand_m)``.
+
+    ``ValueError`` mit Grund; liegt an der Stelle eine Öffnung, die nicht
+    türbreit vermessen ist, wird sie mit ihrem Maß genannt.
+    """
+    try:
+        return zur_wahl(tueren, wahl_daten, pose)
+    except ValueError as grund:
+        andere = [o for o in gefunden if o not in tueren]
+        try:
+            o, _ = zur_wahl(andere, wahl_daten, pose, eindeutig_m=0.0)
+        except ValueError:
+            raise grund from None
+        raise ValueError(
+            f'an der gewählten Stelle ist Öffnung {o.nr} vermessen, {o.breite_m:.2f} m breit – '
+            f'nicht türbreit ({breite_von_m:.2f} bis {breite_bis_m:.2f} m)') from grund
+
+
+def blatt_passt_zur_wahl(o: Oeffnung, wahl_daten: dict, pose: Sequence[float],
+                         max_abstand_m: float = WAHL_BLATT_ABSTAND_M) -> bool:
+    ziel = im_standpunktrahmen(wahl_daten['mitte'], pose)
+    mx = 0.5 * (o.pfosten[0][0] + o.pfosten[1][0])
+    my = 0.5 * (o.pfosten[0][1] + o.pfosten[1][1])
+    return math.hypot(mx - ziel[0], my - ziel[1]) <= max_abstand_m
+
+
 def richtung_passt(o: Oeffnung, richtung_grad: Optional[float], toleranz_grad: float) -> bool:
     if richtung_grad is None:
         return True
@@ -335,12 +387,18 @@ def eingabe() -> argparse.ArgumentParser:
                      help='Anfahrt: vom Platz im Raum vor eine vermessene Öffnung')
     art.add_argument('--zur-tuer', action='store_true',
                      help='selbst entscheiden: gleich hindurch oder zuerst davor (Anfahrt)')
+    art.add_argument('--ende', action='store_true',
+                     help='kein Fahrziel: dem wartenden Erkunder sagen, dass keines kommt')
     e.add_argument('--nummer', type=int, help='Nummer der Öffnung aus der Tabelle')
     e.add_argument('--richtung', type=float, metavar='GRAD',
                    help='Richtung der gemeinten Öffnung; 0 = voraus, positiv = links')
     e.add_argument('--richtung-toleranz', type=float, default=25.0)
-    e.add_argument('--quelle', choices=('ki', 'mensch', 'test'), default='test',
-                   help='wer gewählt hat; steht später in jeder Meldung des Erkunders')
+    e.add_argument('--wahl', metavar='DATEI',
+                   help='nur mit --zur-tuer: die Tür, die die KI gewählt hat (Wahl-Datei '
+                        'von ki_tuer_waehlen.py); ersetzt --nummer und --richtung')
+    e.add_argument('--quelle', choices=('ki', 'mensch', 'test'), default=None,
+                   help='wer gewählt hat; steht später in jeder Meldung des Erkunders '
+                        '(Vorgabe: ki mit --wahl, sonst test)')
     e.add_argument('--kennung', default='')
     e.add_argument('--vor', type=float, default=VOR_DER_TUER_M,
                    help='Zwischenpunkt vor der Türlinie, m')
@@ -376,7 +434,22 @@ def main(argv=None) -> int:
     for strom in (sys.stdout, sys.stderr):
         if hasattr(strom, 'reconfigure'):
             strom.reconfigure(line_buffering=True)
-    wahl = eingabe().parse_args(argv)
+    leser = eingabe()
+    wahl = leser.parse_args(argv)
+    if wahl.wahl is not None:
+        if not wahl.zur_tuer:
+            leser.error('--wahl nur mit --zur-tuer')
+        if wahl.nummer is not None or wahl.richtung is not None:
+            leser.error('--wahl ersetzt --nummer und --richtung')
+        if wahl.quelle not in (None, 'ki'):
+            leser.error('mit --wahl hat die KI gewählt: Quelle ki')
+    wahl.quelle = wahl.quelle or ('ki' if wahl.wahl is not None else 'test')
+    wahl_text, wahl_fehler = None, None
+    if wahl.wahl is not None:
+        try:
+            wahl_text = Path(wahl.wahl).expanduser().read_text(encoding='utf-8')
+        except OSError as fehler:
+            wahl_fehler = f'Wahl-Datei nicht lesbar ({fehler.strerror or fehler})'
     import rclpy
     from rclpy.qos import (QoSDurabilityPolicy, QoSProfile, QoSReliabilityPolicy,
                            qos_profile_sensor_data)
@@ -600,16 +673,22 @@ def main(argv=None) -> int:
     def meldung() -> str:
         return str((stand['status'] or {}).get('message', ''))
 
+    def ende_senden() -> bool:
+        """Dem wartenden Erkunder das Ende sagen; wahr, wenn er danach nicht mehr läuft."""
+        if wahl.nur_messen or sender.empfaenger() == 0:
+            return False
+        sender.sende(ende_botschaft(kennung=f'ende-{int(time.time())}',
+                                    quelle=wahl.quelle, zeit_s=time.time(),
+                                    frame=wahl.karten_rahmen))
+        drehe(10.0, lambda: (stand['status'] or {}).get('state') not in ('running', None))
+        zustand = (stand['status'] or {}).get('state')
+        print(f'Ende an den Erkunder gesendet; Zustand {zustand!r}; {meldung()}')
+        return zustand not in ('running', None)
+
     def nichts_gesendet(grund: str, code: int = 2) -> int:
         """Nichts senden, aber dem wartenden Erkunder das Ende sagen."""
         print(f'Nichts gesendet: {grund}.')
-        if not wahl.nur_messen and sender.empfaenger() > 0:
-            sender.sende(ende_botschaft(kennung=f'ende-{int(time.time())}',
-                                        quelle=wahl.quelle, zeit_s=time.time(),
-                                        frame=wahl.karten_rahmen))
-            drehe(10.0, lambda: (stand['status'] or {}).get('state') not in ('running', None))
-            zustand = (stand['status'] or {}).get('state')
-            print(f'Ende an den Erkunder gesendet; Zustand {zustand!r}; {meldung()}')
+        ende_senden()
         return code
 
     def senden_und_beobachten(punkte, art_name: str, bemerkung, gesamt: float,
@@ -728,6 +807,24 @@ def main(argv=None) -> int:
                       f'(Phase: {phase()!r}). Nichts gesendet.')
                 return 3
 
+        if wahl.ende:
+            print(f'Kein Fahrziel: Ende auf Wunsch (Quelle {wahl.quelle}).')
+            return 0 if ende_senden() else 1
+
+        wahl_daten = None
+        if wahl.wahl is not None:
+            if wahl_fehler is None:
+                try:
+                    wahl_daten = wahl_lesen(wahl_text, jetzt_s=time.time(),
+                                            rahmen=wahl.karten_rahmen)
+                except ValueError as grund:
+                    wahl_fehler = str(grund)
+            if wahl_fehler is not None:
+                return nichts_gesendet(wahl_fehler)
+            print(f'Wahl der KI: Nr. {wahl_daten["nr"]} aus der Blickrunde '
+                  f'{wahl_daten.get("runde")!r} ({wahl_daten.get("einordnung")}, '
+                  f'{float(wahl_daten.get("breite_m") or 0.0):.2f} m breit).')
+
         punkte: List = []
         bemerkung = None
         weg_anfahrt = None
@@ -746,6 +843,23 @@ def main(argv=None) -> int:
             tueren = [o for o in gefunden
                       if o.befahrbar and wahl.breite_min <= o.breite_m <= wahl.breite_max]
             achsen = {o.nr: tuerachse(o.pfosten, hindernisse) for o in tueren}
+            pose_wahl, zur_wahl_o, zur_wahl_grund = None, None, None
+            if wahl_daten is not None:
+                if lage_in_der_karte() is None:
+                    drehe(3.0, lambda: lage_in_der_karte() is not None)
+                pose_wahl = lage_in_der_karte()
+                if pose_wahl is None:
+                    return nichts_gesendet('Die Lage des Roboters in der Karte fehlt (TF); '
+                                           'die Wahl der KI lässt sich nicht zuordnen', 4)
+                try:
+                    zur_wahl_o, abstand_wahl = oeffnung_zur_wahl(
+                        gefunden, tueren, wahl_daten, pose_wahl,
+                        breite_von_m=wahl.breite_min, breite_bis_m=wahl.breite_max)
+                    print(f'Zur Wahl der KI passt Öffnung {zur_wahl_o.nr} '
+                          f'(die Mitten liegen {abstand_wahl:.2f} m auseinander).')
+                except ValueError as grund:
+                    zur_wahl_grund = str(grund)
+                    print(f'Zur Wahl der KI passt keine türbreite Öffnung: {grund}.')
             if wahl.nur_messen:
                 # Die Kostenkarte kommt einmal je Sekunde und ist groß.
                 drehe(5.0, lambda: stand['kostenkarte'] is not None)
@@ -822,11 +936,20 @@ def main(argv=None) -> int:
                 if ersatz is not None and not richtung_passt(ersatz[0], wahl.richtung,
                                                              wahl.richtung_toleranz):
                     ersatz = None
+                if (ersatz is not None and wahl_daten is not None
+                        and not blatt_passt_zur_wahl(ersatz[0], wahl_daten, pose_wahl)):
+                    ersatz = None
             try:
-                gewaehlt = waehle_oeffnung(
-                    gefunden, nummer=wahl.nummer, richtung_grad=wahl.richtung,
-                    toleranz_grad=wahl.richtung_toleranz,
-                    breite_von_m=wahl.breite_min, breite_bis_m=wahl.breite_max)
+                if wahl_daten is not None:
+                    if zur_wahl_o is None:
+                        raise ValueError(f'Die Wahl der KI ist hier nicht wiederzufinden: '
+                                         f'{zur_wahl_grund}')
+                    gewaehlt = zur_wahl_o
+                else:
+                    gewaehlt = waehle_oeffnung(
+                        gefunden, nummer=wahl.nummer, richtung_grad=wahl.richtung,
+                        toleranz_grad=wahl.richtung_toleranz,
+                        breite_von_m=wahl.breite_min, breite_bis_m=wahl.breite_max)
                 achse = achsen.get(gewaehlt.nr) or tuerachse(gewaehlt.pfosten, hindernisse)
             except ValueError as grund:
                 if ersatz is None:
@@ -856,7 +979,9 @@ def main(argv=None) -> int:
             bemerkung = (f'Öffnung {gewaehlt.nr}, {gewaehlt.breite_m:.2f} m breit, '
                          f'{gewaehlt.richtung_grad:+.0f}°, {gewaehlt.entfernung_m:.2f} m'
                          + (' (hinter dem Türblatt geschätzt)'
-                            if gewaehlt.schluss == 'blatt_geschaetzt' else ''))
+                            if gewaehlt.schluss == 'blatt_geschaetzt' else '')
+                         + ('' if wahl_daten is None
+                            else f'; Wahl der KI Nr. {wahl_daten["nr"]}'))
             print(f'Gewählt: {bemerkung}.')
             if wahl.vor_die_tuer:
                 print(lage_text(gewaehlt, mit_hinweisen=False))

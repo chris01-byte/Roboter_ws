@@ -2204,6 +2204,30 @@ stehenden Roboter fünfmal umstellen ließ:**
 - **Danach:** Die KI wählt die Tür, zuerst mit Einspruchsmöglichkeit des
   Menschen vor der Fahrt.
 
+**Nachtrag 23.11.2026 (nachts) – Die KI wählt die Tür (Übergabe gebaut):**
+- **Entscheidung des Projektinhabers** auf die Frage „Soll ich das so bauen,
+  mit deinem Ja oder Nein zur Wahl der KI vor der Fahrt?“: „Ja“.
+- **Form:** Die Aufnahme der Blickrunde hält die Lage am Ende des Rundblicks
+  in der Karte fest; mit dem aus den Scans gemessenen Drehwinkel der Runde
+  liegt jede Nummer an einem Ort in der Karte. `ki_tuer_waehlen.py` fragt
+  die KI und schreibt die geprüfte Wahl mit diesem Ort in eine Wahl-Datei
+  (bleibt auf dem Roboter). Nach dem Ja des Menschen nimmt
+  `fahrziel_senden.py --zur-tuer --wahl` beim Neumessen die türbreite
+  Öffnung an diesem Ort (höchstens 0,40 m daneben, keine zweite fast gleich
+  nah); sonst, nach einem Nein oder ohne gültige Wahl, `ende`.
+- **Begründung:** Die Nummern der KI gehören zur Vermessung der Runde, die
+  Fahrt zu einer neuen Messung im Stand; verbinden lässt sich beides nur
+  über den Ort, nicht über die Nummer. Kein stiller Rückfall: Wählt die KI
+  nicht, fährt Amadeus nicht (Festlegung vom 21.11.).
+- **Verworfen:** die Richtung der gewählten Öffnung an das Werkzeug geben
+  (wie bisher der Mensch): Sie hängt am Drehwinkel der Runde und trifft bei
+  zwei Öffnungen in ähnlicher Richtung die falsche.
+- **Gelernt (Simulation):** Unter der neueren ROS-Fassung kommt `kill -INT`
+  nicht als `KeyboardInterrupt` an, sondern beendet rclpy selbst
+  (`ExternalShutdownException`); die Aufnahme schrieb dann keine Runde.
+  Werkzeuge, die mit Strg+C enden, fangen beides ab (Aufnahme und
+  Lotsen-Dienst nachgezogen).
+
 **Nachtrag 23.11.2026 (spät) – Tür von der Seite des Türblatts:**
 - Anlass: In KI-F8 stand Amadeus auf der Seite, zu der das Blatt aufgeht;
   der Laser sah die Öffnung nicht. Auftrag des Projektinhabers: „ja baue und
