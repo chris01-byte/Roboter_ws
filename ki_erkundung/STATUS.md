@@ -194,7 +194,9 @@ ist folgende Reihenfolge; sie wartet auf Christophers Bestätigung
 4. **KI-F10 „Nachfassen im Stand“**, eine Verhaltensänderung: die Regeln
    des Werkzeugs vor dem Senden (Wiederfinden in Stufen, Wegvarianten mit
    Ansage, durch die Tür nur nach frontaler Messung mit zwei Kanten).
-   Erkunder und Schutzkette bleiben unverändert.
+   Erkunder und Schutzkette bleiben unverändert. Danach ein bis zwei Starts
+   auf der Seite des Türblatts: gebaut am 23.11., am Roboter noch nie
+   geprüft, kein neuer Code.
 5. Danach KI-F11 (das verbesserte Sehen am Roboter), Nahsensoren wieder an,
    „Pause statt Ende“ im Erkunder, Flur.
 
