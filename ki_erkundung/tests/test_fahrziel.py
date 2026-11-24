@@ -1076,6 +1076,44 @@ def test_stelle_knapp_hinter_dem_ende_ohne_negative_abstaende():
     assert 'nicht auf der Strecke' not in text and ' -0.' not in text
 
 
+def test_bei_der_durchfahrt_liegt_die_stelle_hinter_dem_zwischenpunkt_auf_dem_weg():
+    """Gegenprüfung 24.11.2026: Durchfahrt mit Zwischenpunkt, Strecke 2 geht geradeaus
+    weiter. Die Stelle 0,45 m hinter dem Zwischenpunkt liegt auf Strecke 2, nicht neben
+    einem Wendepunkt (dort dreht er sich gar nicht)."""
+    punkte = [(0.6, 0.0), (2.4, 0.0)]                 # Zwischenpunkt, dann durch die Tür
+    daten, b, h, z, u = raster([(1.05, 0.03)])
+    befund = belegt_auf_dem_weg(daten, b, h, z, u, (0.0, 0.0, 0.0), punkte)
+    assert befund['strecke'] == 1 and befund['folgestrecke'] == 2
+    assert befund['auf_folgestrecke_m'] == pytest.approx(0.45, abs=0.006)
+    text = weg_belegt_text(befund, 2.4)
+    assert 'Die Stelle liegt auf Strecke 2, 0.45 m nach dem Zwischenpunkt, also auf dem Weg' \
+        in text
+    assert 'nicht auf der Strecke' not in text and 'dreht' not in text
+    # knapp dahinter: Die Vorderkante überführe sie, und sie liegt auch auf Strecke 2
+    daten, b, h, z, u = raster([(0.75, 0.0)])
+    text = weg_belegt_text(belegt_auf_dem_weg(daten, b, h, z, u, (0.0, 0.0, 0.0), punkte), 2.4)
+    assert 'so nah, dass seine Vorderkante sie am Ende überfahren würde; sie liegt auch auf ' \
+           'Strecke 2, 0.1' in text and 'm nach dem Zwischenpunkt –' in text    # Zelle 0,755 m
+    # nach rechts abbiegend (2w2) liegt die Stelle weiter nicht auf der Folgestrecke
+    daten, b, h, z, u = raster([(1.866, -0.135)])
+    befund = belegt_auf_dem_weg(daten, b, h, z, u, (0.0, 0.0, 0.0), [(1.35, 0.0), (1.35, -0.45)])
+    assert 'folgestrecke' not in befund
+
+
+def test_herkunft_ohne_karte_oder_laser_ist_offen_nicht_widerspruechlich():
+    """Gegenprüfung 24.11.2026: „nicht empfangen“ zählte wie „frei“."""
+    stelle = (0.58, 0.09)
+    ohne_karte = herkunft_text(herkunft(stelle, karte=None, nah=None, laser=[]))
+    assert 'Karte (SLAM) nicht empfangen: Herkunft offen' in ohne_karte
+    assert 'widersprüchlich' not in ohne_karte
+    ohne_laser = herkunft_text(herkunft(stelle, karte=[], nah=None, laser=None))
+    assert ohne_laser.endswith('– Laser nicht empfangen: Herkunft offen.')
+    beides = herkunft_text(herkunft(stelle, karte=None, nah={'links': [], 'rechts': []},
+                                    laser=None))
+    assert 'Karte (SLAM) und Laser nicht empfangen: Herkunft offen' in beides
+    assert 'ältere Markierung' not in beides
+
+
 def test_lage_einer_stelle_neben_oder_hinter_dem_roboter_in_worten():
     assert lage_vom_roboter(-0.236, 1.860) == (
         '1.86 m links von ihm, 0.24 m hinter seiner Antriebsmitte')

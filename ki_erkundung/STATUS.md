@@ -312,8 +312,9 @@ Kostenkarte und Aufstellung sind unverändert). Gebaut nur in
   - Lage in Worten vom Roboter aus: vor der gepolsterten Vorderkante mit
     Gehäuse-Abstand, sonst „… m links von ihm, … m hinter seiner
     Antriebsmitte“. Liegt die Stelle hinter dem Ende einer Strecke, steht das
-    da, mit dem Abstand zu Gehäuse und Polster am Wendepunkt; „dort könnte
-    der Nahbereichs-Halt anhalten“ statt „hielte“.
+    da: auf der nächsten Strecke (bei der Durchfahrt geht es am Zwischenpunkt
+    geradeaus weiter) oder sonst mit dem Abstand zu Gehäuse und Polster am
+    Wendepunkt; „dort könnte der Nahbereichs-Halt anhalten“ statt „hielte“.
   - Nach der Anfahrt nennt es für jede Öffnung, wie weit sie neben der
     gemerkten Tür liegt (tiefer oder näher, links oder rechts, Breite), dazu
     Breite, Schluss und Schrägblick der ersten Messung. Die Regel (0,35 m)
@@ -375,9 +376,21 @@ Ablaufhilfe und Meldungen), gefunden und behoben:**
 - **Stelle knapp hinter dem Ende einer Strecke:** Die Meldung nannte
   negative Abstände („-0.22 m vor seinem Gehäuse“); jetzt „so nah, dass
   seine Vorderkante sie am Ende überfahren würde“.
+- **Durchfahrt mit Zwischenpunkt:** Eine Stelle hinter dem Zwischenpunkt auf
+  der geradeaus weiterführenden Strecke hieß „nicht auf der Strecke … wo er
+  sich dreht oder hält“, also harmlos wie in 2w2. Jetzt: „liegt auf Strecke
+  2, 0.47 m nach dem Zwischenpunkt, also auf dem Weg“. Die Entscheidung
+  (nichts senden) war schon vorher richtig.
+- **Herkunft ohne Karte oder Laser:** „nicht empfangen“ zählte wie „frei“
+  und ergab „Prüfung widersprüchlich, vermutlich verschiedene Zeitstände“;
+  jetzt „… nicht empfangen: Herkunft offen“.
+- **Beleg einer Sperre:** `laser_nahe` zählte alle Laserpunkte des Bildes
+  (zum Beispiel 584, während die Zeile „Laser sieht dort nichts“ sagte);
+  jetzt die Punkte an der Stelle, und der ganze Herkunftsbefund steht im
+  Beleg. Am echten Werkzeug in einer nachgebauten Türwelt geprüft.
 
 **Geprüft (hier, ROS 2 Jazzy):**
-- Tests: 392 bestanden mit ROS, 373 und 3 übersprungen ohne (vorher 340).
+- Tests: 395 bestanden mit ROS, 376 und 3 übersprungen ohne (vorher 340).
   Die Tests der Ablaufhilfe prüfen maschinenweit, ob schon eine Kamera oder
   Fahrt läuft; laufen daneben andere Läufe, lehnen sie zu Recht ab. Dann
   abgeschottet starten: `unshare --pid --fork --mount-proc python3 -m
@@ -403,6 +416,13 @@ Ablaufhilfe und Meldungen), gefunden und behoben:**
     passt“), Durchfahrt. 8 Etappen, 3,27 m, im Flur nach 185 s, keine
     Berührung, engste Stelle 5,2 cm.
   - `aufraeumen`: nichts übrig.
+- **Zweiter Lauf nach der Gegenprüfung** (dieselbe Welt, abgeschottet, die
+  Ersatzkamera mit dem Merkmal `oak.launch.py`, damit die neuen Prüfungen
+  sie sehen): Die Frage kam aus der Wahl-Datei (Kennung geprüft), die
+  Kamera war vor der Frage nachweislich aus. Nach „ja“: Anfahrt 1,35 m, neu
+  gemessen („0.02 m näher, 0.07 m rechts, 0.05 m schmaler; Mitten 0.07 m –
+  passt“), Durchfahrt 2,00 m. 8 Etappen, 3,26 m, im Flur nach 185 s, keine
+  Berührung, engste Stelle 4,7 cm; `aufraeumen`: nichts übrig.
 - **Gegenprobe in der Simulation mit „nein es ist ein Fensterrollo“:**
   Dieselbe Kette bis zur Frage, dann `--ende --quelle mensch`. Der
   Erkunder schloss mit „beendet ohne Fahrziel (Quelle mensch); nichts

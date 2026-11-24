@@ -677,8 +677,9 @@ def main(argv=None) -> int:
         zeit = stand[schluessel]
         return 'nie' if zeit is None else f'vor {time.monotonic() - zeit:.0f} s'
 
-    def herkunft_zeile(stelle, pose, laser=None) -> str:
-        """Woher eine belegte Stelle (im Rahmen des Roboters) stammt, in einem Satz.
+    def herkunft_befund(stelle, pose, laser=None) -> dict:
+        """Was Karte, Nahsensoren und Laser an einer belegten Stelle (im Rahmen des
+        Roboters) sehen; ohne ``laser`` misst es selbst (1 s Laserbild).
 
         Die Karte wird rings um die Stelle abgefragt, nicht nur vor dem Roboter
         (vorher galt eine Stelle seitlich daneben fälschlich als „frei“, KI-F9).
@@ -688,9 +689,13 @@ def main(argv=None) -> int:
             if scans is not None:
                 laser = []
                 vermesse(scans, boden_lidar, None, laser)
-        text = herkunft_text(herkunft(
+        return herkunft(
             stelle, karte=zellen_um_die_stelle(stand['karte'], pose, stelle), nah=nah_jetzt(),
-            laser=None if laser is None else np.asarray(laser, dtype=float).reshape(-1, 2)))
+            laser=None if laser is None else np.asarray(laser, dtype=float).reshape(-1, 2))
+
+    def herkunft_zeile(stelle, pose, laser=None, befund=None) -> str:
+        """Woher eine belegte Stelle stammt, in einem Satz (``befund``: schon gemessen)."""
+        text = herkunft_text(herkunft_befund(stelle, pose, laser) if befund is None else befund)
         return (text[:-1] + f' (Karte {alter("karte_t")}, Kostenkarte '
                 f'{alter("kostenkarte_t")} empfangen).')
 
@@ -728,7 +733,8 @@ def main(argv=None) -> int:
         zeilen = [weg_belegt_text(befund, laenge)]
         if befund is not None:
             stelle = im_roboterrahmen(befund['ort'], pose)
-            zeilen.append(herkunft_zeile(stelle, pose, laser))
+            quellen = herkunft_befund(stelle, pose, laser)    # derselbe Befund in Zeile und Beleg
+            zeilen.append(herkunft_zeile(stelle, pose, befund=quellen))
             umgebung = {name: zellen_um_die_stelle(stand[name], pose, stelle, 0.30)
                         for name in ('kostenkarte', 'karte')}
             belege.schreibe('sperre', {
@@ -742,8 +748,8 @@ def main(argv=None) -> int:
                 'zellen_karte': (None if umgebung['karte'] is None
                                  else umgebung['karte'].round(3).tolist()),
                 'alter_kostenkarte': alter('kostenkarte_t'), 'alter_karte': alter('karte_t'),
-                'laser_nahe': (None if laser is None else int(len(np.asarray(
-                    laser, dtype=float).reshape(-1, 2))))})
+                # Punkte im Umkreis der Stelle (wie in der Herkunftszeile), nicht alle
+                'herkunft': quellen, 'laser_nahe': quellen['laser']})
         return zeilen, befund is None
 
     def plan_zeilen(o, achse, hindernisse, sicht, pose):

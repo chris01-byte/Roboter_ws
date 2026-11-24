@@ -1055,7 +1055,11 @@ def belegt_auf_dem_weg(daten, breite: int, hoehe: int, zelle_m: float,
     Vorderkante bis 0,25 m davor, über die ganze Strecke und am Ende noch
     so weit voraus. Rückgabe ``None``, wenn der Weg frei ist, sonst Strecke,
     Lage zur Linie (voraus ab Streckenbeginn, seitlich), Länge der Strecke
-    (``strecke_m``), Meter ab dem Start und der Ort im Kartenrahmen.
+    (``strecke_m``), Meter ab dem Start und der Ort im Kartenrahmen. Liegt
+    die Stelle hinter dem Ende ihrer Strecke im Fahrstreifen einer folgenden
+    (bei der Durchfahrt geht es am Zwischenpunkt geradeaus weiter), stehen
+    deren Nummer (``folgestrecke``) und die Meter ab dem Zwischenpunkt
+    (``auf_folgestrecke_m``) dabei.
     """
     vorher = (float(pose[0]), float(pose[1]))
     zurueck = 0.0
@@ -1071,10 +1075,37 @@ def belegt_auf_dem_weg(daten, breite: int, hoehe: int, zelle_m: float,
         if zellen.size:
             voraus, seitlich = (float(v) for v in zellen[0])
             c, s = math.cos(richtung), math.sin(richtung)
-            return {'strecke': nummer, 'voraus_m': voraus, 'seitlich_m': seitlich,
-                    'strecke_m': laenge, 'ab_start_m': zurueck + voraus,
-                    'ort': (vorher[0] + c * voraus - s * seitlich,
-                            vorher[1] + s * voraus + c * seitlich)}
+            ort = (vorher[0] + c * voraus - s * seitlich, vorher[1] + s * voraus + c * seitlich)
+            befund = {'strecke': nummer, 'voraus_m': voraus, 'seitlich_m': seitlich,
+                      'strecke_m': laenge, 'ab_start_m': zurueck + voraus, 'ort': ort}
+            folge = (_auf_folgestrecke(ort, ziel, punkte[nummer:]) if voraus > laenge
+                     else None)
+            if folge is not None:
+                befund['folgestrecke'] = nummer + folge[0]
+                befund['auf_folgestrecke_m'] = folge[1]
+            return befund
+        zurueck += laenge
+        vorher = (float(ziel[0]), float(ziel[1]))
+    return None
+
+
+def _auf_folgestrecke(ort: Sequence[float], anfang: Sequence[float],
+                      folgende: Sequence[Sequence[float]],
+                      halb_m: float = STREIFEN_HALB_M) -> Optional[Tuple[int, float]]:
+    """(wievielte folgende Strecke, Meter ab ``anfang``), wenn ``ort`` in ihrem
+    Fahrstreifen liegt (längs zwischen Anfang und Ende); sonst None."""
+    vorher = (float(anfang[0]), float(anfang[1]))
+    zurueck = 0.0
+    for k, ziel in enumerate(folgende, start=1):
+        dx, dy = float(ziel[0]) - vorher[0], float(ziel[1]) - vorher[1]
+        laenge = math.hypot(dx, dy)
+        if laenge < 1e-6:
+            continue
+        c, s = dx / laenge, dy / laenge
+        ox, oy = float(ort[0]) - vorher[0], float(ort[1]) - vorher[1]
+        laengs, quer = c * ox + s * oy, -s * ox + c * oy
+        if 0.0 <= laengs <= laenge and abs(quer) <= halb_m:
+            return k, zurueck + laengs
         zurueck += laenge
         vorher = (float(ziel[0]), float(ziel[1]))
     return None
@@ -1179,8 +1210,13 @@ def herkunft_text(befund: dict) -> str:
               and not any(w and w[0] for w in (befund['nah'] or {}).values()))
     ohne_nahsensoren = all((befund['nah'] or {}).get(seite) is None
                            for seite in ('links', 'rechts'))
+    # Nicht empfangen ist nicht „frei“: dann lässt sich nichts gegeneinander prüfen.
+    fehlt = [name for name, wert in (('Karte (SLAM)', befund['karte']),
+                                     ('Laser', befund['laser'])) if wert is None]
     text = f'Herkunft der Stelle {lage_vom_roboter(voraus, seitlich)}: ' + '; '.join(teile)
-    if keiner and ohne_nahsensoren:
+    if keiner and fehlt:
+        text += f' – {" und ".join(fehlt)} nicht empfangen: Herkunft offen'
+    elif keiner and ohne_nahsensoren:
         # Ohne Nahsensoren kommt die Kostenkarte nur aus der Karte (SLAM).
         text += (' – keine Quelle sieht dort jetzt etwas, und ohne Nahsensoren stammt die '
                  'Kostenkarte nur aus der Karte (SLAM): Prüfung widersprüchlich, vermutlich '
@@ -1226,7 +1262,13 @@ def weg_belegt_text(befund: Optional[dict], laenge_m: float) -> str:
             f'{"links" if befund["seitlich_m"] >= 0 else "rechts"} der Linie')
     strecke = befund.get('strecke_m')
     hinter = None if strecke is None else befund['voraus_m'] - strecke
-    if hinter is not None and hinter >= VORDERKANTE_M:
+    folge = befund.get('folgestrecke')
+    auf_folge = (None if folge is None else
+                 f'Strecke {folge}, {befund["auf_folgestrecke_m"]:.2f} m nach dem Zwischenpunkt')
+    if hinter is not None and hinter >= VORDERKANTE_M and auf_folge:
+        # Bei der Durchfahrt geht es am Zwischenpunkt geradeaus weiter: auf dem Weg.
+        text += f'. Die Stelle liegt auf {auf_folge}, also auf dem Weg'
+    elif hinter is not None and hinter >= VORDERKANTE_M:
         # Hinter dem Ende der Strecke: nicht auf dem Weg, aber im Blick des
         # Nahbereichs-Halts, der auch auf den letzten Zentimetern so weit schaut.
         text += (f'. Die Stelle liegt nicht auf der Strecke, sondern {hinter:.2f} m hinter '
@@ -1237,6 +1279,8 @@ def weg_belegt_text(befund: Optional[dict], laenge_m: float) -> str:
         # So knapp dahinter überfährt die Vorderkante sie am Ende der Strecke.
         text += (f'. Die Stelle liegt {hinter:.2f} m hinter dem Ende der Strecke, so nah, dass '
                  'seine Vorderkante sie am Ende überfahren würde')
+        if auf_folge:
+            text += f'; sie liegt auch auf {auf_folge}'
     return text + (' – Kostenkarte passt nicht: dort könnte der Nahbereichs-Halt des '
                    'Erkunders anhalten.')
 
