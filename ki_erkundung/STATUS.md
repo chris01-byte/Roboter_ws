@@ -6,10 +6,15 @@ danach bereden wir, wie wir weitermachen.“ Gebaut: Signal-Baustein (keine
 verlorene Runde mehr), Aufnahme endet selbst nach dem Rundblick, Umgebung
 zuerst prüfen, verständliche Meldungen (Herkunft rings um die Stelle,
 Abstand beim Wiederfinden), Belege auf dem Jetson und die Ablaufhilfe
-`ki_lauf.py` statt Handschritten. Am Fahren ändert sich nichts. In der
-Simulation lief die ganze Kette über die Ablaufhilfe bis durch die Tür
-(unten). Es gibt keinen offenen Auftrag; als Nächstes wird besprochen, wie
-es weitergeht.
+`ki_lauf.py` statt Handschritten. Am Fahren ändert sich nichts. Eine
+Gegenprüfung fand weitere Lücken, vor allem in der Ablaufhilfe; alle sind
+behoben: Die Frage entsteht aus der Wahl-Datei, ein Ja fährt nur ohne
+laufende Kamera und nur, solange der Erkunder genau dieses Laufs wartet.
+Kriterium von Schritt 1 erfüllt: 10 von 10 Runden trotz Signal mitten im
+Lesen, alle Tests grün (403). In der Simulation lief die ganze Kette über
+die Ablaufhilfe zweimal bis durch die Tür (unten). Am Jetson ist davon noch
+nichts erprobt. Es gibt keinen offenen Auftrag; als Nächstes wird
+besprochen, wie es weitergeht.
 
 **Davor, 24.11.2026 (Bewertung nach KI-F9): Ursachen gefunden, Weg
 vorgeschlagen.**
@@ -188,8 +193,9 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 Bewertung liegt vor: [BEWERTUNG_KIF9.md](BEWERTUNG_KIF9.md). Vorgeschlagen
 ist folgende Reihenfolge; sie wartet auf Christophers Bestätigung
 (Bewertung §10 und §11):
-1. **Werkzeuge robust machen** – **gebaut 24.11.2026** (Abschnitt
-   „Werkzeuge robust gemacht“ unten; am Jetson noch nicht erprobt):
+1. **Werkzeuge robust machen** – **gebaut und gegengeprüft 24.11.2026**
+   (Abschnitt „Werkzeuge robust gemacht“ unten; am Jetson noch nicht
+   erprobt):
    - Signal-Baustein; die Aufnahme endet selbst und schreibt immer;
    - die Umgebung zuerst prüfen; Ablaufhilfe statt Handschritten;
    - Herkunft und Meldungen in verständlichen Worten; Abstand beim
@@ -351,7 +357,10 @@ Kostenkarte und Aufstellung sind unverändert). Gebaut nur in
   Fehler im Stack aussah.
 
 **Gegenprüfung (24.11.2026, getrennte Prüfer für Signale, Sicherheit,
-Ablaufhilfe und Meldungen), gefunden und behoben:**
+Ablaufhilfe und Meldungen), gefunden und behoben.** Jeder Befund wurde am
+Code nachvollzogen und mit einem Test belegt; die beiden Signal-Befunde hat
+ein eigener Gegenprüfer zusätzlich bestätigt. Die übrigen Gegenprüfer wurden
+angehalten, weil alle Befunde schon behoben waren.
 - **Laufordner wiederverwendet:** Eine alte Zeile `BEREIT` hätte „Mission
   starten“ ausgelöst, Frage und Kennung hätten zu verschiedenen Wahlen
   gehören können. Jetzt lehnt `start` jeden vorhandenen Ordner ab, und die
