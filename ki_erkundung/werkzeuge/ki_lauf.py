@@ -69,6 +69,8 @@ VORGABE = {
     'runden': '~/.local/share/amadeus/ki_erkundung/blickrunden',
     'wahl_ordner': '~/.local/share/amadeus/ki_erkundung/wahl',
     'kamera_befehl': 'ros2 launch robot_bringup oak.launch.py pointcloud:=false',
+    # Jeder Start schreibt sich hier ein, über Aufträge und Basis-Ordner hinweg.
+    'marke': '~/.local/share/amadeus/ki_erkundung/letzter_start.json',
 }
 # So endet in der Befehlszeile, was die Hilfe selbst gestartet hat.
 MERKMAL = {'begleiter': '_rundblick', 'fahrt_begleiter': '_fahrt', 'kamera': 'oak.launch.py',
@@ -161,15 +163,32 @@ def laufende(*muster: str) -> List[int]:
     return sorted(treffer)
 
 
-def ein_sigint(pid: Optional[int], merkmal: str) -> bool:
-    """Genau ein SIGINT an genau diesen Prozess, nur wenn er der erwartete ist."""
+def ein_sigint(pid: Optional[int], merkmal: str, lauf: Optional['Lauf'] = None) -> bool:
+    """Genau ein SIGINT an genau diesen Prozess, nur wenn er der erwartete ist.
+
+    Mit ``lauf``: nur, wenn die PID in diesem Lauf noch keines bekommen hat (auch
+    nicht von einem Begleiter); vermerkt wird vor dem Senden.
+    """
     if not pid or int(pid) <= 0 or not laeuft(pid, merkmal):
         return False
+    if lauf is not None:
+        if int(pid) in lauf.signalisiert():
+            return False
+        lauf.vermerke_sigint(int(pid))
     try:
         os.kill(int(pid), signal.SIGINT)
     except ProcessLookupError:
         return False
     return True
+
+
+def zahl(wert) -> Optional[float]:
+    """Eine endliche Zahl oder None („nan“, „inf“, „-“, fehlt)."""
+    try:
+        ergebnis = float(wert)
+    except (TypeError, ValueError):
+        return None
+    return ergebnis if math.isfinite(ergebnis) else None
 
 
 def warte_bis_beendet(pid: Optional[int], merkmal: str, sekunden: float) -> bool:
@@ -279,15 +298,31 @@ class Lauf:
     def zustand(self) -> dict:
         return lies_json(self.zustand_datei)
 
+    @contextlib.contextmanager
+    def sperre(self, name: str):
+        """Exklusive Sperre dieses Laufs (flock auf ``.<name>.sperre``); je Name eigene."""
+        with open(self.ordner / f'.{name}.sperre', 'a', encoding='utf-8') as datei:
+            fcntl.flock(datei, fcntl.LOCK_EX)
+            yield
+
     def merke(self, **teile) -> dict:
         """Lesen, ändern, schreiben unter einer Sperre: Zwei Befehle desselben Laufs
         (etwa zweimal „verfolgen“) verlieren sonst gegenseitig ihre Einträge."""
-        with open(self.ordner / '.zustand.sperre', 'a', encoding='utf-8') as sperre:
-            fcntl.flock(sperre, fcntl.LOCK_EX)
+        with self.sperre('zustand'):
             zustand = self.zustand()
             zustand.update(teile)
             schreibe_json(self.zustand_datei, zustand)
         return zustand
+
+    def signalisiert(self) -> set:
+        """PIDs, die in diesem Lauf schon ein SIGINT bekommen haben."""
+        return {int(p) for p in lies_json(self.ordner / 'signale.json').get('pids', [])
+                if str(p).isdigit()}
+
+    def vermerke_sigint(self, pid: int) -> None:
+        with self.sperre('signale'):
+            pids = self.signalisiert() | {int(pid)}
+            schreibe_json(self.ordner / 'signale.json', {'pids': sorted(pids)})
 
     def protokoll(self, text: str) -> None:
         with open(self.ordner / 'ablauf.log', 'a', encoding='utf-8') as datei:
@@ -299,6 +334,13 @@ def starte_losgeloest(befehl: List[str], ausgabe: Path) -> subprocess.Popen:
     with open(ausgabe, 'ab') as datei:
         return subprocess.Popen(befehl, stdout=datei, stderr=subprocess.STDOUT,
                                 stdin=subprocess.DEVNULL, start_new_session=True)
+
+
+def sigint_an(lauf: Lauf, prozess: subprocess.Popen) -> None:
+    """Genau ein SIGINT an ein eigenes Kind; vermerkt, damit niemand (auch nicht
+    ``aufraeumen``) ein zweites schickt."""
+    lauf.vermerke_sigint(prozess.pid)
+    prozess.send_signal(signal.SIGINT)
 
 
 def fuehre_aus(befehl: List[str], ausgabe: Path, zeitgrenze: float, abbruch=None) -> int:
@@ -319,11 +361,11 @@ def fuehre_aus(befehl: List[str], ausgabe: Path, zeitgrenze: float, abbruch=None
         return prozess.returncode
 
 
-def ende_senden(lauf: Lauf, z: dict, quelle: str) -> int:
+def ende_senden(lauf: Lauf, z: dict, quelle: str, wartephase_unix) -> int:
     """Dem wartenden Erkunder „Ende“ sagen. Das fährt nie."""
     befehl = in_umgebung(z['umgebung_stack'], [
         z['python'], Path(z['werkzeuge']) / 'fahrziel_senden.py', '--ende', '--quelle', quelle,
-        '--warten', '60'])
+        '--warten', warten_auf_den_erkunder(z, wartephase_unix)])
     lauf.protokoll('ende ' + ' '.join(shlex.quote(t) for t in befehl[5:]))
     rc = fuehre_aus(befehl, lauf.werkzeug, 120)
     for zeile in zeilen(lauf.werkzeug)[-4:]:
@@ -339,7 +381,7 @@ def ende_wenn_er_wartet(lauf: Lauf, z: dict, wartephase_unix, quelle: str) -> Op
         print(f'Kein Ende gesendet: {grund}. Amadeus fährt nicht.')
         lauf.protokoll(f'kein Ende (Quelle {quelle}): {grund}')
         return None
-    return ende_senden(lauf, z, quelle)
+    return ende_senden(lauf, z, quelle, wartephase_unix)
 
 
 # ---- Begleiter (losgelöst): Kamera, Aufnahme, Wahl der KI ----------------------
@@ -380,13 +422,13 @@ def begleiter_rundblick(ordner: Path) -> int:
         weitergegeben = False
         while aufnahme.poll() is None:
             if marke.gesetzt() and not weitergegeben:
-                aufnahme.send_signal(signal.SIGINT)        # genau eines: sie schreibt
+                sigint_an(lauf, aufnahme)                  # genau eines: sie schreibt
                 weitergegeben = True
             time.sleep(0.2)
         melde(aufnahme_rc=aufnahme.returncode)
     # Die Kamera läuft nur während des Rundblicks: genau ein SIGINT, dann warten.
     if kamera.poll() is None:
-        kamera.send_signal(signal.SIGINT)
+        sigint_an(lauf, kamera)
         try:
             kamera.wait(timeout=30)
         except subprocess.TimeoutExpired:
@@ -435,9 +477,17 @@ def fahrt_erlaubt(lauf: Lauf, z: dict) -> Optional[str]:
         return 'kein Ja eingetragen'
     if w.get('rc') != 0 or not w.get('kennung') or not w.get('datei'):
         return 'keine Wahl der KI'
+    if antwort.get('kennung') != w['kennung']:
+        return 'das Ja gilt einer anderen Wahl'
     datei = Path(w['datei'])
     if not datei.is_file() or kennung_der_datei(datei) != w['kennung']:
         return 'Wahl-Datei fehlt oder ist verändert'
+    kamera = laufende(MERKMAL['kamera'], MERKMAL['aufnahme'])
+    if kamera:
+        return f'Kamera oder Aufnahme laufen noch (PID {kamera})'
+    fahrt = laufende(MERKMAL['fahrt_begleiter'], MERKMAL['werkzeug'])
+    if fahrt:
+        return f'eine andere Fahrt läuft (PID {fahrt})'
     return nicht_mehr_dran(lauf, z, w.get('wartephase_unix'))
 
 
@@ -451,6 +501,17 @@ def begleiter_fahrt(ordner: Path) -> int:
         lauf.protokoll('_fahrt abgelehnt: es gab schon eine Fahrt')
         return RC_NEIN
     grund = fahrt_erlaubt(lauf, z)
+    if grund is None:
+        # Das Werkzeug bekommt eine Kopie genau der geprüften Bytes; die Wahl-Datei
+        # selbst könnte sich bis zu seinem Lesen noch ändern (Gegenprüfung 24.11.2026).
+        try:
+            roh = Path(z['wahl']['datei']).read_bytes()
+        except OSError:
+            roh = b''
+        if hashlib.sha256(roh).hexdigest()[:6] != z['wahl']['kennung']:
+            grund = 'Wahl-Datei fehlt oder ist verändert'
+        else:
+            (lauf.ordner / 'wahl_gefahren.json').write_bytes(roh)
     if grund is not None:
         stand.update(phase='abgelehnt', grund=grund)
         schreibe_json(lauf.fahrt_datei, stand)
@@ -465,7 +526,9 @@ def begleiter_fahrt(ordner: Path) -> int:
         schreibe_json(lauf.fahrt_datei, stand)
         befehl = in_umgebung(z['umgebung_stack'], [
             z['python'], Path(z['werkzeuge']) / 'fahrziel_senden.py', '--zur-tuer', '--wahl',
-            z['wahl']['datei'], '--hinter', '0.45', '--warten', '60', '--beobachten', '600'])
+            lauf.ordner / 'wahl_gefahren.json', '--hinter', '0.45',
+            '--warten', warten_auf_den_erkunder(z, z['wahl'].get('wartephase_unix')),
+            '--beobachten', '600'])
         lauf.protokoll('fahrt ' + ' '.join(shlex.quote(str(t)) for t in befehl[5:]))
         with open(lauf.werkzeug, 'ab') as datei:
             werkzeug = subprocess.Popen(befehl, stdout=datei, stderr=subprocess.STDOUT,
@@ -475,7 +538,7 @@ def begleiter_fahrt(ordner: Path) -> int:
         weitergegeben = False
         while werkzeug.poll() is None:
             if marke.gesetzt() and not weitergegeben:
-                werkzeug.send_signal(signal.SIGINT)  # genau eines; es sendet danach nichts mehr
+                sigint_an(lauf, werkzeug)  # genau eines; es sendet danach nichts mehr
                 weitergegeben = True
             time.sleep(0.2)
         stand.update(phase='fertig', rc=werkzeug.returncode, ende_unix=round(time.time(), 1))
@@ -552,41 +615,55 @@ def konfiguration(a) -> dict:
             'dauer': a.dauer, 'nachlauf': a.nachlauf, 'frist': a.frist,
             'hoechstens': 300.0 if a.hoechstens is None else a.hoechstens, 'tuer': a.tuer,
             'nur_stand': bool(getattr(a, 'nur_stand', False)),
+            'marke': str(Path(a.marke).expanduser()),
             'werkzeuge': str(Path(a.werkzeuge).expanduser().resolve()) if a.werkzeuge
             else str(WERKZEUGE)}
 
 
 def befehl_start(a) -> int:
     lauf = Lauf.aus(a)
-    if lauf.ordner.exists():
-        # Auch ohne zustand.json: Alte Ausgaben im Ordner würden sonst mit
-        # neuen vermischt (Gegenprüfung 24.11.2026).
-        print(f'Lauf {a.lauf} von {a.auftrag} gibt es schon ({lauf.ordner}); für eine '
-              'Wiederholung eine neue Laufkennung nehmen (zum Beispiel 1w).')
-        return RC_NEIN
     z = konfiguration(a)
     if a.nur_stand:
         z['dauer'] = a.dauer_stand
+    if zahl(z['frist']) is None or not 0.0 < z['frist'] <= 1800.0:
+        print('--frist muss zwischen 0 und 1800 s liegen (so lange wartet der Erkunder). '
+              'Nichts gestartet.')
+        return RC_NEIN
     fehlen = umgebungen_fehlen(z)
     if fehlen:
         print('Umgebungsdatei fehlt: ' + '; '.join(fehlen) + '. Nichts gestartet.')
         return RC_NEIN
-    schon = laufende(MERKMAL['kamera'], MERKMAL['aufnahme'], MERKMAL['begleiter'])
-    if schon:
-        print(f'Kamera, Aufnahme oder Begleiter laufen schon (PID {schon}). Nichts gestartet.')
-        return RC_NEIN
-    fahrt = laufende(MERKMAL['fahrt_begleiter'], MERKMAL['werkzeug'])
-    if fahrt:
-        print(f'Eine Fahrt läuft noch (PID {fahrt}); erst „verfolgen“, bis sie fertig ist. '
-              'Nichts gestartet.')
-        return RC_NEIN
-    lauf.ordner.mkdir(parents=True, exist_ok=True)
-    z['start_unix'] = round(time.time(), 1)
-    schreibe_json(lauf.zustand_datei, z)
-    begleiter = starte_losgeloest([sys.executable, str(Path(__file__).resolve()),
-                                   '_rundblick', '--ordner', str(lauf.ordner)],
-                                  lauf.ordner / 'begleiter.log')
-    lauf.merke(begleiter_pid=begleiter.pid)
+    marke = Path(z['marke'])
+    marke.parent.mkdir(parents=True, exist_ok=True)
+    # Prüfen und Starten am Stück: Zwei gleichzeitige Starts ergäben zwei Kameras.
+    with open(marke.parent / '.start.sperre', 'a', encoding='utf-8') as sperre:
+        fcntl.flock(sperre, fcntl.LOCK_EX)
+        if lauf.ordner.exists():
+            # Auch ohne zustand.json: Alte Ausgaben im Ordner würden sonst mit
+            # neuen vermischt (Gegenprüfung 24.11.2026).
+            print(f'Lauf {a.lauf} von {a.auftrag} gibt es schon ({lauf.ordner}); für eine '
+                  'Wiederholung eine neue Laufkennung nehmen (zum Beispiel 1w).')
+            return RC_NEIN
+        schon = laufende(MERKMAL['kamera'], MERKMAL['aufnahme'], MERKMAL['begleiter'])
+        if schon:
+            print(f'Kamera, Aufnahme oder Begleiter laufen schon (PID {schon}). '
+                  'Nichts gestartet.')
+            return RC_NEIN
+        fahrt = laufende(MERKMAL['fahrt_begleiter'], MERKMAL['werkzeug'])
+        if fahrt:
+            print(f'Eine Fahrt läuft noch (PID {fahrt}); erst „verfolgen“, bis sie fertig '
+                  'ist. Nichts gestartet.')
+            return RC_NEIN
+        lauf.ordner.mkdir(parents=True, exist_ok=True)
+        z['start_unix'] = round(time.time(), 3)
+        schreibe_json(lauf.zustand_datei, z)
+        # Ab jetzt gilt keine Antwort eines früheren Laufs mehr, auch nicht aus einem
+        # anderen Auftrag oder Basis-Ordner (Gegenprüfung 24.11.2026).
+        schreibe_json(marke, {'ordner': str(lauf.ordner), 'start_unix': z['start_unix']})
+        begleiter = starte_losgeloest([sys.executable, str(Path(__file__).resolve()),
+                                       '_rundblick', '--ordner', str(lauf.ordner)],
+                                      lauf.ordner / 'begleiter.log')
+        lauf.merke(begleiter_pid=begleiter.pid)
     lauf.protokoll(f'start: Begleiter PID {begleiter.pid}')
     print(f'Lauf {a.lauf}: Kamera startet, nach {z["kamera_vorlauf"]:.0f} s die Aufnahme '
           f'(Ablage {lauf.ordner}).')
@@ -643,33 +720,41 @@ def kamera_zustand(lauf: Lauf) -> str:
 
 def stoppe_begleiter(lauf: Lauf) -> None:
     z = lauf.zustand()
-    if ein_sigint(z.get('begleiter_pid'), MERKMAL['begleiter']):
+    if ein_sigint(z.get('begleiter_pid'), MERKMAL['begleiter'], lauf):
         lauf.protokoll('Begleiter: ein SIGINT')
         warte_bis_beendet(z.get('begleiter_pid'), MERKMAL['begleiter'], 40)
 
 
 def restzeit_s(z: dict, wartephase_unix) -> Optional[float]:
-    """So lange wartet der Erkunder dieses Laufs noch auf ein Fahrziel; None: unbekannt."""
-    try:
-        return float(z['frist']) - (time.time() - float(wartephase_unix))
-    except (KeyError, TypeError, ValueError):
+    """So lange wartet der Erkunder dieses Laufs noch auf ein Fahrziel; None: unbekannt
+    (keine endliche Zahl, oder die Wartephase läge in der Zukunft)."""
+    frist, beginn = zahl(z.get('frist')), zahl(wartephase_unix)
+    if frist is None or beginn is None or beginn > time.time() + SPAETESTENS_S:
         return None
+    return frist - (time.time() - beginn)
+
+
+def warten_auf_den_erkunder(z: dict, wartephase_unix) -> str:
+    """``--warten`` des Fahrwerkzeugs: höchstens 60 s und nie über die Frist hinaus;
+    sonst bediente es einen Erkunder, der erst später zu warten beginnt."""
+    rest = restzeit_s(z, wartephase_unix)
+    return str(int(max(1.0, min(60.0, (rest if rest is not None else 0.0) - SPAETESTENS_S))))
 
 
 def spaeterer_lauf(lauf: Lauf, z: dict) -> Optional[str]:
-    """Ein Lauf desselben Auftrags, der nach diesem gestartet wurde; sonst None."""
-    try:
-        eigener = float(z['start_unix'])
-    except (KeyError, TypeError, ValueError):
+    """Ein Lauf, der nach diesem gestartet wurde: im selben Ordner oder laut der
+    Marke, die jeder Start schreibt (auch mit anderem Auftrag oder anderer Basis)."""
+    eigener = zahl(z.get('start_unix'))
+    if eigener is None:
         return None
-    for ordner in sorted(lauf.ordner.parent.glob('lauf*')):
-        if ordner == lauf.ordner:
-            continue
-        try:
-            if float(lies_json(ordner / 'zustand.json').get('start_unix')) > eigener:
-                return ordner.name
-        except (TypeError, ValueError):
-            continue
+    andere = [(ordner, lies_json(ordner / 'zustand.json').get('start_unix'))
+              for ordner in sorted(lauf.ordner.parent.glob('lauf*')) if ordner != lauf.ordner]
+    marke = lies_json(Path(z['marke'])) if z.get('marke') else {}
+    if marke.get('ordner') and Path(marke['ordner']) != lauf.ordner:
+        andere.append((Path(marke['ordner']), marke.get('start_unix')))
+    for ordner, start in andere:
+        if (zahl(start) or 0.0) > eigener:
+            return ordner.name if ordner.parent == lauf.ordner.parent else str(ordner)
     return None
 
 
@@ -681,19 +766,21 @@ def nicht_mehr_dran(lauf: Lauf, z: dict, wartephase_unix) -> Optional[str]:
     begonnen hat. Sonst träfe das Fahrwerkzeug den Erkunder des neuen Laufs
     (Gegenprüfung 24.11.2026).
     """
+    if zahl(z.get('start_unix')) is None:
+        return 'Startzeit dieses Laufs unbekannt'
     spaeter = spaeterer_lauf(lauf, z)
     if spaeter:
         return f'danach wurde {spaeter} gestartet'
     rest = restzeit_s(z, wartephase_unix)
     if rest is None:
         return 'Beginn der Wartephase unbekannt'
-    if rest < SPAETESTENS_S:
+    if not rest >= SPAETESTENS_S:
         return 'die Frist des Erkunders ist abgelaufen, er wartet nicht mehr'
     return None
 
 
 def zeit_satz(rest_s: Optional[float]) -> str:
-    if rest_s is None:
+    if rest_s is None or not math.isfinite(rest_s):
         return ''
     if rest_s >= 120.0:
         return f'(Der Erkunder wartet noch etwa {math.floor(rest_s / 60.0)} Minuten.)'
@@ -752,8 +839,10 @@ def befehl_wahl(a) -> int:
             print(f'Antwort schon eingetragen: {z["antwort"].get("wortlaut")!r}.')
         elif w.get('frage'):
             grund = nicht_mehr_dran(lauf, z, w.get('wartephase_unix'))
-            print(f'Nicht mehr fragen: {grund}.' if grund
-                  else mit_restzeit(w['frage'], restzeit_s(z, w.get('wartephase_unix'))))
+            if grund:
+                print(f'Nicht mehr fragen: {grund}.')
+                return RC_NEIN
+            print(mit_restzeit(w['frage'], restzeit_s(z, w.get('wartephase_unix'))))
         return RC_OK if w.get('rc') == 0 else RC_NEIN
     bis = time.monotonic() + a.warten
     hoechstens = float(z['hoechstens'] if a.hoechstens is None else a.hoechstens)
@@ -845,29 +934,51 @@ def befehl_wahl(a) -> int:
     print(mit_restzeit(frage, restzeit_s(z, wahl['wartephase_unix'])))
     print('Seine Antwort danach eintragen (Kennung der Wahl: ' + wahl['kennung'] + '):')
     print(f'  python3 {Path(__file__).resolve()} antwort --auftrag {a.auftrag} '
-          f'--lauf {a.lauf} --kennung {wahl["kennung"]} --wortlaut "<seine Antwort>"')
+          f'--basis {shlex.quote(str(lauf.ordner.parent))} --lauf {a.lauf} '
+          f'--kennung {wahl["kennung"]} --wortlaut "<seine Antwort>"')
     return RC_OK
 
 
 def befehl_antwort(a) -> int:
     lauf = Lauf.aus(a)
+    if not lauf.zustand_datei.is_file():
+        print(f'Zu Lauf {a.lauf} gibt es keinen Start ({lauf.ordner}). Nichts aufgerufen.')
+        return RC_NEIN
+    # Prüfen und Eintragen am Stück: Zwei gleichzeitige Antworten ergaben sonst eine
+    # Fahrt und ein Ende (Gegenprüfung 24.11.2026). Langsames (Ende, Verfolgen) danach.
+    with lauf.sperre('antwort'):
+        rc, z, ja = antwort_pruefen_und_eintragen(lauf, a)
+    if rc is not None:
+        return rc
+    if not ja:
+        print('Kein Ja: Amadeus fährt nicht.')
+        ende_wenn_er_wartet(lauf, z, (z.get('wahl') or {}).get('wartephase_unix'), 'mensch')
+        print('LAUF ergebnis=nicht_gefahren grund=kein_ja')
+        return RC_OK
+    print('Ja: Das Werkzeug misst neu und gibt dem Erkunder das Fahrziel (Anfahrt und '
+          'Durchfahrt in einer Mission).')
+    return verfolge(lauf, a.warten)
+
+
+def antwort_pruefen_und_eintragen(lauf: Lauf, a) -> Tuple[Optional[int], dict, bool]:
+    """(Rückgabe bei Ablehnung oder None, Zustand, ja). Bei „ja“ ist ``_fahrt`` gestartet."""
     z = lauf.zustand()
     if 'antwort' in z:
         print(f'Zu Lauf {a.lauf} ist schon eine Antwort eingetragen: {z["antwort"]["wortlaut"]!r}. '
               'Nichts aufgerufen.')
-        return RC_NEIN
+        return RC_NEIN, z, False
     w = z.get('wahl') or {}
     if w.get('rc') != 0 or not w.get('kennung') or z.get('nur_stand'):
         print('Zu diesem Lauf gibt es keine Wahl, zu der eine Antwort passen könnte. '
               'Nichts aufgerufen.')
-        return RC_NEIN
+        return RC_NEIN, z, False
     if a.kennung != w['kennung']:
         print(f'Die Kennung {a.kennung!r} passt nicht zur Wahl dieses Laufs. Nichts aufgerufen.')
-        return RC_NEIN
+        return RC_NEIN, z, False
     datei = Path(w['datei'])
     if not datei.is_file() or kennung_der_datei(datei) != w['kennung']:
         print('Die Wahl-Datei fehlt oder hat sich seit der Frage geändert. Nichts aufgerufen.')
-        return RC_NEIN
+        return RC_NEIN, z, False
     grund = nicht_mehr_dran(lauf, z, w.get('wartephase_unix'))
     if grund:
         # Auch kein Ende: Es träfe womöglich den Erkunder eines neuen Laufs.
@@ -875,16 +986,16 @@ def befehl_antwort(a) -> int:
         print(f'Zu spät für Lauf {a.lauf}: {grund}. Antwort nicht eingetragen, nichts '
               'aufgerufen, auch kein Ende. Bei einer Wiederholung gilt nur die Frage des '
               'neuen Laufs.')
-        return RC_NEIN
+        return RC_NEIN, z, False
     fahrt = laufende(MERKMAL['fahrt_begleiter'], MERKMAL['werkzeug'])
     if fahrt:
         print(f'Eine Fahrt läuft noch (PID {fahrt}). Antwort nicht eingetragen, nichts '
               'aufgerufen.')
-        return RC_NEIN
+        return RC_NEIN, z, False
     if lauf.fahrt_datei.exists():
         print('Zu diesem Lauf gab es schon einen Fahrversuch (fahrt.json). Antwort nicht '
               'eingetragen, nichts aufgerufen.')
-        return RC_NEIN
+        return RC_NEIN, z, False
     stoppe_begleiter(lauf)                    # läuft der Begleiter noch: zuerst beenden
     ja = ist_ja(a.wortlaut)
     kamera = laufende(MERKMAL['kamera'], MERKMAL['aufnahme']) if ja else []
@@ -894,22 +1005,17 @@ def befehl_antwort(a) -> int:
         print(f'Kamera oder Aufnahme laufen noch (PID {kamera}). Antwort nicht eingetragen, '
               'nichts gesendet. Gehören sie zu diesem Lauf: „aufraeumen“, dann dieselbe '
               'Antwort noch einmal eintragen; sonst nicht fahren und berichten.')
-        return RC_NEIN
+        return RC_NEIN, z, False
     with open(lauf.ordner / 'christopher.txt', 'a', encoding='utf-8') as datei_c:
         datei_c.write(f'{time.strftime("%Y-%m-%dT%H:%M:%S")} {a.wortlaut}\n')
-    lauf.merke(antwort={'wortlaut': a.wortlaut, 'ja': ja, 'unix': round(time.time(), 1)})
+    z = lauf.merke(antwort={'wortlaut': a.wortlaut, 'ja': ja, 'kennung': a.kennung,
+                            'unix': round(time.time(), 1)})
     lauf.protokoll(f'antwort {a.wortlaut!r} -> {"ja" if ja else "kein ja"}')
-    if not ja:
-        print('Kein Ja: Amadeus fährt nicht.')
-        ende_wenn_er_wartet(lauf, z, w.get('wartephase_unix'), 'mensch')
-        print('LAUF ergebnis=nicht_gefahren grund=kein_ja')
-        return RC_OK
-    begleiter = starte_losgeloest([sys.executable, str(Path(__file__).resolve()), '_fahrt',
-                                   '--ordner', str(lauf.ordner)], lauf.ordner / 'fahrt.log')
-    lauf.merke(fahrt_begleiter_pid=begleiter.pid)
-    print('Ja: Das Werkzeug misst neu und gibt dem Erkunder das Fahrziel (Anfahrt und '
-          'Durchfahrt in einer Mission).')
-    return verfolge(lauf, a.warten)
+    if ja:
+        begleiter = starte_losgeloest([sys.executable, str(Path(__file__).resolve()), '_fahrt',
+                                       '--ordner', str(lauf.ordner)], lauf.ordner / 'fahrt.log')
+        z = lauf.merke(fahrt_begleiter_pid=begleiter.pid)
+    return None, z, ja
 
 
 def ergebnis_der_fahrt(text: List[str]) -> str:
@@ -973,19 +1079,39 @@ def befehl_messen(a) -> int:
 
 
 def befehl_aufraeumen(a) -> int:
+    """Alles dieses Laufs beenden; jede PID bekommt im ganzen Lauf höchstens ein SIGINT.
+
+    Zuerst die Begleiter: Sie geben genau ein Signal an ihre Kinder weiter und warten
+    auf sie (die Kamera bis 30 s). Ein Kind bekommt hier nur dann eines, wenn sein
+    Begleiter nicht mehr läuft und es noch keines hatte. Vorher bekam die Kamera
+    nach 15 s ein zweites (Gegenprüfung 24.11.2026).
+    """
     lauf = Lauf.aus(a)
-    z, b, f = lauf.zustand(), lies_json(lauf.begleiter_datei), lies_json(lauf.fahrt_datei)
-    kandidaten = [('begleiter', z.get('begleiter_pid')), ('aufnahme', b.get('aufnahme_pid')),
-                  ('kamera', b.get('kamera_pid')),
-                  ('fahrt_begleiter', z.get('fahrt_begleiter_pid')),
-                  ('werkzeug', f.get('werkzeug_pid'))]
-    for name, pid in kandidaten:
-        if ein_sigint(pid, MERKMAL[name]):
+    z = lauf.zustand()
+    begleiter = {'begleiter': z.get('begleiter_pid'),
+                 'fahrt_begleiter': z.get('fahrt_begleiter_pid')}
+    for name, pid in begleiter.items():
+        if ein_sigint(pid, MERKMAL[name], lauf):
+            print(f'{name}: ein SIGINT an PID {pid}')
+            lauf.protokoll(f'aufraeumen: SIGINT an {name} {pid}')
+        warte_bis_beendet(pid, MERKMAL[name], 45)
+    b, f = lies_json(lauf.begleiter_datei), lies_json(lauf.fahrt_datei)
+    kinder = [('aufnahme', b.get('aufnahme_pid'), 'begleiter'),
+              ('kamera', b.get('kamera_pid'), 'begleiter'),
+              ('werkzeug', f.get('werkzeug_pid'), 'fahrt_begleiter')]
+    for name, pid, eltern in kinder:
+        if laeuft(begleiter[eltern], MERKMAL[eltern]):
+            continue                                   # sein Begleiter kümmert sich noch
+        if ein_sigint(pid, MERKMAL[name], lauf):
             print(f'{name}: ein SIGINT an PID {pid}')
             lauf.protokoll(f'aufraeumen: SIGINT an {name} {pid}')
             warte_bis_beendet(pid, MERKMAL[name], 15)
-    uebrig = [f'{name} {pid}' for name, pid in kandidaten if laeuft(pid, MERKMAL[name])]
-    print('Alles beendet.' if not uebrig else 'Noch nicht beendet: ' + ', '.join(uebrig))
+    alle = list(begleiter.items()) + [(name, pid) for name, pid, _ in kinder]
+    schon = lauf.signalisiert()
+    uebrig = [f'{name} {pid}' + (' (hatte schon ein SIGINT)' if int(pid) in schon else '')
+              for name, pid in alle if laeuft(pid, MERKMAL[name])]
+    print('Alles beendet.' if not uebrig else
+          'Noch nicht beendet: ' + ', '.join(uebrig) + '. Kein zweites Signal; berichten.')
     return RC_OK if not uebrig else RC_NEIN
 
 
@@ -1036,6 +1162,7 @@ def eingabe() -> argparse.ArgumentParser:
         p.add_argument('--tuer', default='die Labortür',
                        help='so heißt die erwartete Tür in der Frage an den Menschen')
         p.add_argument('--werkzeuge', help=argparse.SUPPRESS)       # nur für Tests
+        p.add_argument('--marke', default=VORGABE['marke'], help=argparse.SUPPRESS)
 
     p = unter.add_parser('pruefe-umgebung', help='beide Umgebungen prüfen')
     welcher_lauf(p, lauf=False)

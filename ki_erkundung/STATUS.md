@@ -6,13 +6,14 @@ danach bereden wir, wie wir weitermachen.“ Gebaut: Signal-Baustein (keine
 verlorene Runde mehr), Aufnahme endet selbst nach dem Rundblick, Umgebung
 zuerst prüfen, verständliche Meldungen (Herkunft rings um die Stelle,
 Abstand beim Wiederfinden), Belege auf dem Jetson und die Ablaufhilfe
-`ki_lauf.py` statt Handschritten. Am Fahren ändert sich nichts. Eine
-Gegenprüfung fand weitere Lücken, vor allem in der Ablaufhilfe; alle sind
-behoben: Die Frage entsteht aus der Wahl-Datei, ein Ja fährt nur ohne
-laufende Kamera und nur, solange der Erkunder genau dieses Laufs wartet.
+`ki_lauf.py` statt Handschritten. Am Fahren ändert sich nichts. Zwei
+Gegenprüfungen fanden weitere Lücken, vor allem in der Ablaufhilfe; alle
+sind behoben: Die Frage entsteht aus der Wahl-Datei, ein Ja fährt nur
+ohne laufende Kamera und nur, solange der Erkunder genau dieses Laufs
+wartet.
 Kriterium von Schritt 1 erfüllt: 10 von 10 Runden trotz Signal mitten im
-Lesen, alle Tests grün (403). In der Simulation lief die ganze Kette über
-die Ablaufhilfe zweimal bis durch die Tür (unten). Am Jetson ist davon noch
+Lesen, alle Tests grün (409). In der Simulation lief die ganze Kette über
+die Ablaufhilfe dreimal bis durch die Tür (unten). Am Jetson ist davon noch
 nichts erprobt. Es gibt keinen offenen Auftrag; als Nächstes wird
 besprochen, wie es weitergeht.
 
@@ -416,8 +417,33 @@ angehalten, weil alle Befunde schon behoben waren.
   Start. Angaben für den ganzen Lauf (Umgebungen, Tür, Frist …) gibt es jetzt
   nur bei `start`.
 
+**Zweite Gegenprüfung (unabhängiger Prüfer, nur die neuen Sperren der
+Ablaufhilfe).** Im normalen Ablauf griffen alle Bedingungen; Lücken gab es an
+den Rändern, alle behoben und mit Tests belegt:
+- **Späterer Lauf mit anderem Auftrag oder Ordner** wurde nicht erkannt.
+  Jetzt schreibt jeder Start eine Marke
+  (`~/.local/share/amadeus/ki_erkundung/letzter_start.json`), und eine
+  Antwort auf einen älteren Lauf ruft nichts auf, auch über Aufträge hinweg.
+- **„nan“ oder „inf“ als Frist** schalteten die Zeitprüfung ab (ein Ja fuhr
+  in der Probe noch nach drei Stunden). Jetzt nur endliche Zahlen; die Frist
+  muss zwischen 0 und 1800 s liegen.
+- **Zwei gleichzeitige Antworten** ergaben in Proben Fahrt und Ende, zwei
+  gleichzeitige Starts zwei Kameras. Prüfen und Eintragen stehen jetzt unter
+  einer Sperre.
+- **`_fahrt` prüfte weniger als `antwort`:** jetzt auch Kamera, andere
+  Fahrt und die Kennung, zu der das Ja eingetragen wurde.
+- **Das Fahrwerkzeug konnte die Frist überdauern** (`--warten 60` bei 6 s
+  Rest); jetzt höchstens bis zur Frist.
+- **`aufraeumen` schickte der Kamera ein zweites SIGINT**, wenn sie länger
+  als 15 s zum Beenden brauchte. Jetzt bekommt jede PID im ganzen Lauf
+  höchstens eines; wer schon eines hatte, steht in `signale.json`.
+- Kleineres: Rückgabe 2 statt 0, wenn nach der Frist nicht mehr gefragt
+  wird; die ausgegebene `antwort`-Zeile enthält `--basis`; das Fahrwerkzeug
+  bekommt eine Kopie genau der geprüften Wahl-Datei (`wahl_gefahren.json` im
+  Laufordner).
+
 **Geprüft (hier, ROS 2 Jazzy):**
-- Tests: 403 bestanden mit ROS, 384 und 3 übersprungen ohne (vorher 340).
+- Tests: 409 bestanden mit ROS, 390 und 3 übersprungen ohne (vorher 340).
   Die Tests der Ablaufhilfe prüfen maschinenweit, ob schon eine Kamera oder
   Fahrt läuft; laufen daneben andere Läufe, lehnen sie zu Recht ab. Dann
   abgeschottet starten: `unshare --pid --fork --mount-proc python3 -m
@@ -450,6 +476,11 @@ angehalten, weil alle Befunde schon behoben waren.
   gemessen („0.02 m näher, 0.07 m rechts, 0.05 m schmaler; Mitten 0.07 m –
   passt“), Durchfahrt 2,00 m. 8 Etappen, 3,26 m, im Flur nach 185 s, keine
   Berührung, engste Stelle 4,7 cm; `aufraeumen`: nichts übrig.
+- **Dritter Lauf mit dem Stand nach der zweiten Gegenprüfung:** Das
+  Fahrwerkzeug bekam die geprüfte Kopie `wahl_gefahren.json` und
+  `--warten 60`; „Durchfahrt abgeschlossen“, im Flur nach 186 s, keine
+  Berührung, engste Stelle 4,9 cm. Im ganzen Lauf bekam genau ein Prozess
+  ein SIGINT (die Kamera, vom Begleiter); `aufraeumen`: „Alles beendet.“
 - **Gegenprobe in der Simulation mit „nein es ist ein Fensterrollo“:**
   Dieselbe Kette bis zur Frage, dann `--ende --quelle mensch`. Der
   Erkunder schloss mit „beendet ohne Fahrziel (Quelle mensch); nichts

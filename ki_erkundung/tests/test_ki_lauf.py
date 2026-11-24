@@ -6,6 +6,7 @@ dieser Wahl** startet das Fahrwerkzeug – mit genau den Argumenten aus KI-F9.
 """
 import json
 import os
+import shlex
 import shutil
 import signal
 import subprocess
@@ -52,7 +53,8 @@ class Umfeld:
             '--kamera-befehl', f'{sys.executable} {ATTRAPPEN} kamera oak.launch.py',
             # Die Attrappe der Kamera braucht unter Last etwas, bis sie Signale fängt.
             '--kamera-vorlauf', '1.0', '--nachlauf', '0.2',
-            '--werkzeuge', str(self.werkzeuge), *mehr]
+            '--werkzeuge', str(self.werkzeuge),
+            '--marke', str(self.wurzel / 'letzter_start.json'), *mehr]
 
     def protokoll(self):
         datei = self.wurzel / 'protokoll.jsonl'
@@ -133,15 +135,21 @@ def test_ganzer_lauf_mit_ja_faehrt_genau_mit_den_argumenten_aus_kif9(umfeld, cap
     assert 'Kamera und Aufnahme beendet. (Kamera rc=0' in aus
     kennung = json.loads((umfeld.lauf_ordner() / 'zustand.json').read_text())['wahl']['kennung']
     assert f'--kennung {kennung}' in aus
-    # „Ja.“ fährt: genau --zur-tuer --wahl DATEI --hinter 0.45 --warten 60 --beobachten 600
-    rc = ki_lauf.main(umfeld.argumente('antwort', '1', '--kennung', kennung, '--wortlaut', 'Ja.'))
+    # „Ja.“ fährt: genau --zur-tuer --wahl DATEI --hinter 0.45 --warten 60 --beobachten 600,
+    # eingetragen mit genau der ausgegebenen Befehlszeile (auch mit eigenem --basis)
+    zeile = next(z for z in aus.splitlines() if ' antwort --auftrag ' in z)
+    befehl = shlex.split(zeile.replace('<seine Antwort>', 'Ja.'))
+    assert befehl[0] == 'python3' and Path(befehl[1]).resolve() == Path(ki_lauf.__file__).resolve()
+    rc = ki_lauf.main(befehl[2:])
     aus = capsys.readouterr().out
     assert rc == ki_lauf.RC_OK, aus
     (fahren,) = umfeld.eintraege('fahren')
-    datei = str(umfeld.wurzel / 'wahl' / 'kiprobe_lauf1_20261124_000000_wahl.json')
+    datei = umfeld.lauf_ordner() / 'wahl_gefahren.json'     # Kopie der geprüften Bytes
     assert fahren['umg'] == 'stack'
-    assert fahren['argv'] == ['--zur-tuer', '--wahl', datei, '--hinter', '0.45', '--warten',
+    assert fahren['argv'] == ['--zur-tuer', '--wahl', str(datei), '--hinter', '0.45', '--warten',
                               '60', '--beobachten', '600']
+    assert datei.read_bytes() == (umfeld.wurzel / 'wahl' /
+                                  'kiprobe_lauf1_20261124_000000_wahl.json').read_bytes()
     assert 'Durchfahrt abgeschlossen.' in aus and 'LAUF ergebnis=durchfahrt werkzeug_rc=0' in aus
     # eine zweite Antwort wird nicht mehr angenommen, der interne Fahrbefehl auch nicht
     assert ki_lauf.main(umfeld.argumente('antwort', '1', '--kennung', kennung,
@@ -502,7 +510,7 @@ def test_zu_spaete_antwort_ruft_nichts_auf_auch_kein_ende(umfeld, capsys):
     assert not (umfeld.lauf_ordner() / 'christopher.txt').exists()
     # die zweite Prüfung im internen Fahrbefehl greift ebenso
     lauf = ki_lauf.Lauf(umfeld.lauf_ordner())
-    zustand = {**lauf.zustand(), 'antwort': {'ja': True, 'wortlaut': 'ja'}}
+    zustand = {**lauf.zustand(), 'antwort': {'ja': True, 'wortlaut': 'ja', 'kennung': kennung}}
     assert 'Frist' in ki_lauf.fahrt_erlaubt(lauf, zustand)
 
 
@@ -521,7 +529,8 @@ def test_antwort_auf_einen_aelteren_lauf_faehrt_nicht(umfeld, capsys):
     assert ki_lauf.main(umfeld.argumente('antwort', '1w', '--kennung', k2,
                                          '--wortlaut', 'ja')) == ki_lauf.RC_OK
     (fahren,) = umfeld.eintraege('fahren')
-    assert fahren['argv'][2].endswith('kiprobe_lauf1w_20261124_000000_wahl.json')
+    assert Path(fahren['argv'][2]).read_bytes() == (
+        umfeld.wurzel / 'wahl' / 'kiprobe_lauf1w_20261124_000000_wahl.json').read_bytes()
 
 
 def test_nach_der_frist_keine_frage_und_kein_ende(neues_umfeld, capsys):
@@ -552,17 +561,19 @@ def test_frage_nennt_bei_jedem_aufruf_die_restzeit_von_jetzt(umfeld, capsys):
     ki_lauf.main(umfeld.argumente('wahl'))
     assert 'weniger als eine Minute.)“' in capsys.readouterr().out
     _wartephase_verschieben(umfeld, 30)
-    ki_lauf.main(umfeld.argumente('wahl'))
+    assert ki_lauf.main(umfeld.argumente('wahl')) == ki_lauf.RC_NEIN
     aus = capsys.readouterr().out
     assert 'Nicht mehr fragen: die Frist des Erkunders ist abgelaufen' in aus and '„' not in aus
 
 
-def test_angaben_fuer_den_ganzen_lauf_gibt_es_nur_beim_start():
+def test_angaben_fuer_den_ganzen_lauf_gibt_es_nur_beim_start(capsys):
     """Gegenprüfung 24.11.2026: „wahl --tuer …“ wurde still übergangen."""
     for befehl in ('wahl', 'antwort', 'verfolgen', 'messen', 'aufraeumen'):
+        mehr = ['--kennung', 'abcdef', '--wortlaut', 'ja'] if befehl == 'antwort' else []
         with pytest.raises(SystemExit) as ende:
-            ki_lauf.main([befehl, '--lauf', '1', '--tuer', 'die Küchentür'])
+            ki_lauf.main([befehl, '--lauf', '1', *mehr, '--tuer', 'die Küchentür'])
         assert ende.value.code == 2, befehl
+        assert '--tuer' in capsys.readouterr().err, befehl
 
 
 def test_zwei_schreiber_verlieren_nichts(tmp_path):
@@ -604,3 +615,114 @@ def test_interne_befehle_stehen_nicht_in_der_hilfe(capsys):
         ki_lauf.main(['--help'])
     hilfe = capsys.readouterr().out
     assert 'antwort' in hilfe and '_fahrt' not in hilfe and '_rundblick' not in hilfe
+
+
+def test_antwort_gilt_nicht_nach_einem_start_in_anderem_auftrag_oder_ordner(umfeld, capsys):
+    """Gegenprüfung 24.11.2026: Ein späterer Lauf wurde nur im selben Ordner erkannt."""
+    _start_und_wahl(umfeld, capsys)
+    kennung = _zustand(umfeld)['wahl']['kennung']
+    andere = umfeld.argumente('start', '1')
+    andere[andere.index('--auftrag') + 1] = 'kiandere'
+    andere[andere.index('--basis') + 1] = str(umfeld.wurzel / 'andere_laeufe')
+    try:
+        assert ki_lauf.main(andere) == ki_lauf.RC_OK
+        capsys.readouterr()
+        for wortlaut in ('ja', 'nein'):
+            assert ki_lauf.main(umfeld.argumente('antwort', '1', '--kennung', kennung,
+                                                 '--wortlaut', wortlaut)) == ki_lauf.RC_NEIN
+            aus = capsys.readouterr().out
+            assert 'danach wurde' in aus and 'andere_laeufe/lauf1 gestartet' in aus
+        assert umfeld.eintraege('fahren') == []
+    finally:
+        ki_lauf.main(['aufraeumen', '--auftrag', 'kiandere', '--lauf', '1',
+                      '--basis', str(umfeld.wurzel / 'andere_laeufe')])
+
+
+def test_frist_und_zeiten_nur_als_endliche_zahlen(umfeld, capsys):
+    """Gegenprüfung 24.11.2026: Mit „nan“ als Frist fuhr ein Ja noch nach drei Stunden."""
+    for frist in ('nan', 'inf', '0', '-5', '2000'):
+        assert ki_lauf.main(umfeld.argumente('start', '1', '--frist', frist)) == ki_lauf.RC_NEIN
+        assert '--frist muss zwischen 0 und 1800 s liegen' in capsys.readouterr().out
+    assert not umfeld.lauf_ordner().exists()
+    jetzt = time.time()
+    assert ki_lauf.restzeit_s({'frist': 420.0}, 'nan') is None
+    assert ki_lauf.restzeit_s({'frist': 420.0}, 'inf') is None
+    assert ki_lauf.restzeit_s({'frist': 420.0}, str(jetzt + 3600)) is None   # in der Zukunft
+    assert ki_lauf.restzeit_s({'frist': float('nan')}, str(jetzt)) is None
+    assert ki_lauf.zeit_satz(float('inf')) == ''
+    lauf = ki_lauf.Lauf(umfeld.wurzel)
+    assert ki_lauf.nicht_mehr_dran(lauf, {'frist': 420.0}, str(jetzt)) == \
+        'Startzeit dieses Laufs unbekannt'
+    assert ki_lauf.nicht_mehr_dran(lauf, {'frist': 420.0, 'start_unix': jetzt}, 'nan') == \
+        'Beginn der Wartephase unbekannt'
+
+
+def test_warten_des_fahrwerkzeugs_endet_vor_der_frist():
+    jetzt = time.time()
+    z = {'frist': 420.0}
+    assert ki_lauf.warten_auf_den_erkunder(z, str(jetzt - 2)) == '60'
+    assert 23 <= int(ki_lauf.warten_auf_den_erkunder(z, str(jetzt - 390))) <= 25
+    assert ki_lauf.warten_auf_den_erkunder(z, 'nan') == '1'
+
+
+def test_interner_fahrbefehl_prueft_dasselbe_wie_antwort(umfeld, capsys):
+    """Gegenprüfung 24.11.2026: _fahrt prüfte weder Kamera noch andere Fahrt noch die
+    Kennung des Ja."""
+    _start_und_wahl(umfeld, capsys)
+    lauf = ki_lauf.Lauf(umfeld.lauf_ordner())
+    kennung = _zustand(umfeld)['wahl']['kennung']
+    zustand = {**lauf.zustand(), 'antwort': {'ja': True, 'wortlaut': 'ja', 'kennung': '000000'}}
+    assert ki_lauf.fahrt_erlaubt(lauf, zustand) == 'das Ja gilt einer anderen Wahl'
+    zustand['antwort']['kennung'] = kennung
+    assert ki_lauf.fahrt_erlaubt(lauf, zustand) is None
+    kamera = _fremde_kamera()
+    try:
+        assert 'Kamera oder Aufnahme laufen noch' in ki_lauf.fahrt_erlaubt(lauf, zustand)
+    finally:
+        _beende(kamera)
+    fahrt = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)',
+                              'fahrziel_senden.py'])
+    try:
+        assert warte_auf(lambda: fahrt.pid in ki_lauf.laufende('fahrziel_senden.py'))
+        assert 'eine andere Fahrt läuft' in ki_lauf.fahrt_erlaubt(lauf, zustand)
+    finally:
+        _beende(fahrt)
+
+
+def test_antwort_prueft_und_traegt_unter_einer_sperre_ein(umfeld, capsys):
+    """Gegenprüfung 24.11.2026: Zwei gleichzeitige Antworten ergaben Fahrt und Ende."""
+    _start_und_wahl(umfeld, capsys)
+    kennung = _zustand(umfeld)['wahl']['kennung']
+    lauf = ki_lauf.Lauf(umfeld.lauf_ordner())
+    with lauf.sperre('antwort'):
+        zweite = subprocess.Popen(
+            [sys.executable, str(Path(ki_lauf.__file__).resolve()),
+             *umfeld.argumente('antwort', '1', '--kennung', kennung, '--wortlaut', 'ja')],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        time.sleep(1.5)
+        # Sie wartet auf die Sperre: noch nichts eingetragen, nichts gestartet.
+        assert zweite.poll() is None
+        assert not (umfeld.lauf_ordner() / 'christopher.txt').exists()
+        lauf.merke(antwort={'wortlaut': 'nein', 'ja': False, 'kennung': kennung,
+                            'unix': time.time()})
+    aus, _ = zweite.communicate(timeout=60)
+    assert zweite.returncode == ki_lauf.RC_NEIN and 'schon eine Antwort eingetragen' in aus
+    assert umfeld.eintraege('fahren') == []
+
+
+def test_jede_pid_bekommt_im_lauf_hoechstens_ein_sigint(tmp_path):
+    """Gegenprüfung 24.11.2026: aufraeumen schickte der Kamera nach 15 s ein zweites."""
+    ordner = tmp_path / 'lauf1'
+    ordner.mkdir()
+    lauf = ki_lauf.Lauf(ordner)
+    zaeh = subprocess.Popen(
+        [sys.executable, '-c', 'import signal, sys, time\n'
+         'signal.signal(signal.SIGINT, signal.SIG_IGN)\nprint("bereit", flush=True)\n'
+         'time.sleep(60)', 'oak.launch.py'], stdout=subprocess.PIPE, text=True)
+    try:
+        assert zaeh.stdout.readline().strip() == 'bereit'
+        assert ki_lauf.ein_sigint(zaeh.pid, 'oak.launch.py', lauf)
+        assert not ki_lauf.ein_sigint(zaeh.pid, 'oak.launch.py', lauf)      # schon eines
+        assert zaeh.pid in lauf.signalisiert() and zaeh.poll() is None
+    finally:
+        _beende(zaeh)
