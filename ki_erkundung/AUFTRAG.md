@@ -78,7 +78,7 @@ mit zweiter Kante „lot“ (so in KI-F9N gefunden).
 
 | Kennung | Erwartung |
 |---|---|
-| T-1 Tests | Tests der KI-Linie unter Humble: `0 failed` (hier unter ROS 2 Jazzy: 414 bestanden) |
+| T-1 Tests | Tests der KI-Linie unter Humble: `0 failed` (hier unter ROS 2 Jazzy: 426 bestanden) |
 | V-1 Tür in Lauf 2 | `vermessung_neu.md`, Lauf 2: angeboten ist eine Öffnung 0,78 bis 0,92 m breit bei +25° bis +40° (die Labortür) |
 | V-2 Scheinlücke weg | `vermessung_neu.md`, Lauf 2: keine angebotene Öffnung mehr 0,82 m bei −174° (±3°); in `vermessung_neu_alle.md`, Lauf 2, steht dort der Vermerk `lot_verkehrt` oder der Grund „Kanten verkehrt herum“ |
 | V-3 nichts verloren | Jede Öffnung, die `vermessung_alt.md` in einer Runde anbietet und `vermessung_neu.md` in derselben Runde nicht (gleiche Öffnung heißt: Richtung ±3°, Breite ±0,10 m), ist entweder (a) die Scheinlücke aus V-2 oder (b) eine zweite Nummer an fast derselben Stelle (in `vermessung_neu.md` gibt es eine Öffnung mit Richtung ±5° und Entfernung ±0,3 m). Jede andere verschwundene Öffnung ist ein Befund. Neu hinzugekommene Öffnungen werden nur aufgezählt |

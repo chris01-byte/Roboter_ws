@@ -398,7 +398,7 @@ Darstellung).** Gefunden und behoben:
 Scheinlücken 64 → 0, Türen 5395 → 5426, keine verloren; die nahe Tür mit
 Tür gegenüber bleibt in allen 493 Fällen über 60°.
 
-**Geprüft:** Tests 395 bestanden, 3 übersprungen (ohne ROS); 414 bestanden
+**Geprüft:** Tests 407 bestanden, 3 übersprungen (ohne ROS); 426 bestanden
 (ROS 2 Jazzy, abgeschottet); flake8 sauber; Quelltext auf Python 3.10
 lesbar. **An echten Aufnahmen ist das noch nicht geprüft**; das tut der
 Auftrag KI-F9R.
@@ -1639,6 +1639,7 @@ KONZEPT §13.
 | 22.11.2026 | Fahrten ohne Nahsensoren | Simulation | siehe Abschnitt „Laborprobe ohne Nahsensoren“: Durchfahrt gelungen; gegen einen 20 cm hohen Gegenstand ungebremst gefahren |
 | 23.11.2026 | **KI-F5** | Jetson, Laborraum, mit Christopher | Build `kif5-20261123_0950`, Tests 350 und 264; ohne Nahsensoren im Stand wie vorgesehen; fünf Messungen „Aufstellung passt nicht“ (0,30 bis 0,33 m) bei mittig stehendem Roboter, Ursache das Werkzeug; keine Fahrt |
 | 23.11.2026 | Türachse aus der Wand, `--zur-tuer` | Entwicklungsumgebung, Simulation | Test mit den Zahlen aus KI-F5 (Kanten: 0,296 m, 7,3°; Wand: mittig); KI-Linie 258 bestanden, 2 übersprungen; 268 mit ROS; Simulation siehe Abschnitt KI-F5 |
+| 24.11.2026 | Sehen ohne Roboter repariert (Schritt 3 nach KI-F9) | Entwicklungsumgebung, 9000 Zufallszimmer, 1500 Fälle „nahe Tür“, Simulation | `8a15a11` und Nachtrag; Tests 407 bestanden, 3 übersprungen (ohne ROS), 426 (ROS 2 Jazzy); Scheinlücken 64 → 0, Türen 5395 → 5426, keine verloren; nahe Tür 493 von 493; drei Simulationen bis in den Flur ohne Berührung; Abschnitt „Sehen repariert“ |
 
 **Gemessen an der künstlichen Beispielwelt** (ausgedachtes Zimmer mit
 80-cm-Tür, 90-cm-Glastür zum Balkon, Schränken, Kiste; LiDAR-Rauschen 1 cm):
