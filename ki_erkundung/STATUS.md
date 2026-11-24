@@ -345,6 +345,9 @@ Kostenkarte und Aufstellung sind unverändert). Gebaut nur in
   eine Shell, deren Befehl den Namen nur als Text enthielt (die Falle aus
   AGENTS.md, „pgrep -f trifft die eigene Shell“). Jetzt zählen nur ganze
   Argumente, und alle Vorfahren des eigenen Prozesses sind ausgenommen.
+- **Für Simulationsläufe:** `ROS_DOMAIN_ID` muss zwischen 0 und 232 liegen.
+  Mit 241 startete kein Knoten („error creating node“), was zuerst wie ein
+  Fehler im Stack aussah.
 
 **Gegenprüfung (24.11.2026, getrennte Prüfer für Signale, Sicherheit,
 Ablaufhilfe und Meldungen), gefunden und behoben:**
@@ -379,8 +382,9 @@ Ablaufhilfe und Meldungen), gefunden und behoben:**
   Fahrt läuft; laufen daneben andere Läufe, lehnen sie zu Recht ab. Dann
   abgeschottet starten: `unshare --pid --fork --mount-proc python3 -m
   pytest …`.
-- Echte Signale an laufende Prozesse: Die Aufnahme schreibt 6 von 6 Runden
-  nach SIGINT oder SIGTERM; ein Prozess, der TF mit 500 Hz und Scans mit
+- Echte Signale an laufende Prozesse: Die Aufnahme schreibt 10 von 10
+  Runden nach einem Signal mitten im Lesen (neunmal SIGINT, einmal SIGTERM;
+  das Kriterium von Schritt 1); ein Prozess, der TF mit 500 Hz und Scans mit
   50 Hz liest, endet 8 von 8 sauber. `ki_tuer_waehlen.py` und
   `fahrziel_senden.py` enden geordnet, nichts gesendet.
 - 2w2 und 2w3 sind als Tests nachgestellt: „0.52 m hinter ihrem Ende … 0.25

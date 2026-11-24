@@ -255,7 +255,10 @@ def test_endet_die_mission_vor_der_wartephase_endet_die_aufnahme(tmp_path, capsy
 
 
 def test_signal_mitten_in_der_aufnahme_schreibt_trotzdem_die_runde(tmp_path):
-    """Wie am Roboter: eigener Prozess, genau ein Signal an seine PID (KI-F9, Lauf 2w)."""
+    """Wie am Roboter: eigener Prozess, genau ein Signal an seine PID (KI-F9, Lauf 2w).
+
+    Zehn Durchgänge: das Kriterium von Schritt 1 (Bewertung nach KI-F9, §10).
+    """
     import random
     import signal
     import subprocess
@@ -267,7 +270,7 @@ def test_signal_mitten_in_der_aufnahme_schreibt_trotzdem_die_runde(tmp_path):
     rclpy.init()
     spieler = Spieler(rclpy, scan_hz=20.0, bild_hz=4.0, tf_hz=100.0, grad_je_s=20.0).start()
     try:
-        for durchgang in range(6):
+        for durchgang in range(10):
             kind = subprocess.Popen(
                 [sys.executable, str(skript)]
                 + aufnahme_argumente(tmp_path / 'runden', name=f'signal{durchgang}', dauer=60)
@@ -297,5 +300,5 @@ def test_signal_mitten_in_der_aufnahme_schreibt_trotzdem_die_runde(tmp_path):
         spieler.stopp()
         rclpy.shutdown()
     runden = sorted((tmp_path / 'runden').iterdir())
-    assert len(runden) == 6
+    assert len(runden) == 10
     assert all(len(Blickrunde.lade(r).aufnahmen) >= 1 for r in runden)
