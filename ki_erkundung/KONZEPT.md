@@ -158,9 +158,10 @@ sehen.
 nachzumessen).** Die OAK-D-S2 sitzt 1,34 m hoch, 0,15 m vor der Antriebsmitte
 und ist 18,94° nach unten geneigt. Der Bildstrom zum KI-Rechner hat 640 × 360
 Punkte (gemessen am 21.11.2026: 320 × 180, waagerecht 63,9°, senkrecht
-38,7°). Daraus folgt: Der Boden ist ab etwa 1,6 m vor der Kamera im Bild; nach
-oben reicht das Bild nur knapp über die Waagerechte (in 3 m Entfernung bis
-etwa 1,45 m Höhe). Türstürze und Zimmerdecken sind also nicht zu sehen,
+38,7°). Daraus folgt: Der Boden ist ab etwa 1,7 m vor der Kamera im Bild; nach
+oben reicht das Bild nur knapp über die Waagerechte (in 1,5 bis 3 m
+Entfernung bis etwa 1,35 bis 1,36 m Höhe; mit dem gemessenen Bildwinkel
+nachgerechnet am 24.11.2026, vorher stand hier 1,6 m und 1,45 m). Türstürze und Zimmerdecken sind also nicht zu sehen,
 Türpfosten, Schwellen, Türblätter und der Boden dahinter schon. Ob das der
 KI genügt, ist die erste Frage an KI-0.
 
@@ -709,6 +710,13 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   entschieden hat. Der Fahrteil soll aus vorhandenem, real bewährtem Code
   entstehen; Bestand und Vorschlag stehen im STATUS, entschieden ist dazu
   noch nichts.
+- 24.11.2026, Nachtrag zu v1.16, nach KI-F9: keine Änderung am Konzept.
+  Einer von zwei Läufen kam durch die Tür; alle Fehlschläge lagen vor dem
+  Fahren (Vermessung, Frage, Regeln des Werkzeugs, Ablauf). Ursachen,
+  Modellfrage, Selbstheilung („Nachfassen“) und der vorgeschlagene Weg
+  stehen in [BEWERTUNG_KIF9.md](BEWERTUNG_KIF9.md); entschieden ist dazu
+  noch nichts. In §5 die Sicht der Kamera mit dem gemessenen Bildwinkel
+  nachgerechnet (bis etwa 1,36 m Höhe, Boden ab etwa 1,7 m).
 - 23.11.2026, v1.16 (Entscheidung des Projektinhabers: die KI wählt die Tür,
   zuerst mit seinem Ja oder Nein vor der Fahrt): Die Wahl geht über eine
   Wahl-Datei mit dem Ort der Öffnung in der Karte an den Fahrteil (§6a,

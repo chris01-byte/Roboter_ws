@@ -2245,6 +2245,40 @@ einem Ablauf tragen am Roboter (drei Plätze, je eine Mission, nichts
 berührt), mit einer Frage vorab. Nächster Schritt der KI-Linie: die KI wählt
 die Tür, zuerst mit Einspruch des Menschen vor der Fahrt.
 
+**Nachtrag 24.11.2026 – KI-F9 und Bewertung (`ki_erkundung/BEWERTUNG_KIF9.md`):**
+- **Ergebnis:** Die KI wählte am Roboter; einer von zwei Läufen kam durch
+  die Tür. Christopher: „Das Grundkonzept funktioniert.“ Alle Fehlschläge
+  lagen vor dem Fahren. Die Bewertung ist keine Entscheidung; der Weg
+  wartet auf seine Bestätigung.
+- **Gelernt, über die KI-Linie hinaus:**
+  - **Signal beim Beenden unter Humble:** Ein `KeyboardInterrupt` mitten
+    im Umwandeln einer Nachricht wird zum `RuntimeError` („Unable to convert
+    call argument …“). Ein Fang nur von `KeyboardInterrupt` und
+    `ExternalShutdownException` reicht nicht. Muster der Hauptlinie: Das
+    Signal setzt nur eine Marke, rclpy läuft ohne eigenen Handler. Die
+    Deutung vom 23.11. („neuere ROS-Fassung“) war falsch; es hing daran, ob
+    SIGINT beim Start ignoriert war. Signalproben deshalb immer so starten
+    wie am Roboter.
+  - **Ohne Nahsensoren ist die globale Kostenkarte die Laserkarte des SLAM.**
+    Was beim Rundblick in Laserhöhe in der Nähe stand, auch ein Mensch,
+    bleibt bis zum Ende des Laufs belegt; Warten räumt es nicht. Während
+    einer Etappe kommt Neues erst nach etwa 0,25 m Fahrt in die Karte.
+  - **Eine schräge erste Messung kann eine Tür um Dezimeter zu nah legen**,
+    wenn neben dem Rahmen etwas vor der Wand steht. Eine Regel, die nach
+    einem Blickwechsel dieselbe Tür sucht, braucht deshalb in der Tiefe
+    mehr Spielraum als seitlich und eine frische frontale Messung, keine
+    feste Grenze in jede Richtung.
+  - **Ein Beispiel in der Frage an ein Sprachmodell wird bei unklarem Bild
+    übernommen:** Die falsche Antwort glich in Wahl, Arten und Zahlen genau
+    dem Antwortmuster. Beispiele neutral halten; erst einordnen, dann
+    wählen.
+  - **Eine Prüfzeile, die eine Quelle nennt, muss die Stelle selbst prüfen:**
+    „Karte (SLAM) frei“ entstand, weil nur ein Streifen voraus abgefragt
+    wurde.
+- **Regel bestätigt:** Nach einem Fehlschlag erst auswerten, dann gezielt
+  nachbessern, nicht denselben Lauf wiederholen (Lauf 2 lief viermal,
+  38 Minuten ohne Durchfahrt).
+
 **Nachtrag 22.11.2026 (nachts) – Entscheidung des Projektinhabers: Laborprobe
 ohne Nahsensoren:**
 - **Wortlaut:** „Die Nahbereichssensoren machen gerade Probleme. Deswegen

@@ -19,6 +19,7 @@ fährt.**
 | [STATUS.md](STATUS.md) | **Einziger** Iststand dieser Linie: Arbeitsliste, Nachweise, genau ein nächster Schritt |
 | [AUFTRAG.md](AUFTRAG.md) | Der aktuelle Auftrag dieser Linie für Jetson und KI-Rechner; aktiv erst nach Übergabe durch den Projektinhaber |
 | [BEWERTUNG_TUERDURCHFAHRT.md](BEWERTUNG_TUERDURCHFAHRT.md) | Rückblick und Möglichkeiten für den Fahrteil vom 23.11.2026 (keine Entscheidung) |
+| [BEWERTUNG_KIF9.md](BEWERTUNG_KIF9.md) | Ursachen der Probleme aus KI-F9, Modellfrage, Selbstheilung („Nachfassen“), Fahrplan, 24.11.2026 (keine Entscheidung) |
 | `lotse/` | Der „Kopf“: reines Python ohne ROS. Vermessene Vorschläge, Nummern im Bild, Frage an die KI, Prüfung der Antwort, Auswertung |
 | `werkzeuge/blickrunde_aufnehmen.py` | Auf dem Jetson: hört während einer Drehung mit und speichert Bilder, Tiefenbilder und Scans als Blickrunde. Nur lesend; legt außerhalb des Repositorys ab |
 | `werkzeuge/trockenlauf.py` | Auf dem KI-Rechner: Blickrunden aufbereiten (Drehwinkel, acht Bilder, Öffnungen, Nummern, Skizze) und die KI befragen |

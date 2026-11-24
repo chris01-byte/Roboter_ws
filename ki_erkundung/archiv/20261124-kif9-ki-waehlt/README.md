@@ -41,4 +41,6 @@ Christophers Einschätzung: „Das Grundkonzept funktioniert. Wir hatten
 einige erfolgreiche Durchfahrten.“ Drei Dinge müssen robuster werden: die
 Wahl der KI (Fensterrollo), die Kostenkarte (belegt, obwohl laut ihm nichts
 da war), das Wiederfinden der Tür nach der Anfahrt. Dazu der Absturz der
-Aufnahme. Die Bewertung dazu folgt (Stand siehe [STATUS.md](../../STATUS.md)).
+Aufnahme. Ursachen, Abhilfen und der vorgeschlagene Weg stehen in der
+[Bewertung nach KI-F9](../../BEWERTUNG_KIF9.md), den Stand führt
+[STATUS.md](../../STATUS.md).

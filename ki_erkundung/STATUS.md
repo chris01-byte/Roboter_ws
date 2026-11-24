@@ -1,14 +1,33 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 24.11.2026 (nach KI-F9): Die KI hat am Roboter gewählt – einer von
+**Stand 24.11.2026 (Bewertung nach KI-F9): Ursachen gefunden, Weg
+vorgeschlagen; er wartet auf Christophers Bestätigung.**
+[BEWERTUNG_KIF9.md](BEWERTUNG_KIF9.md). Alle Fehlschläge lagen vor dem
+Fahren:
+- **Fensterrollo (Lauf 2):** Die Labortür hatte keine Nummer, vermutlich ein
+  Fehler der Vermessung. Zwei Nummern lagen im Foto übereinander, und die
+  Antwort glich genau dem Beispiel in der Frage. Wo die Tür eine Nummer
+  hatte, hat die KI sie bisher immer gewählt.
+- **Kostenkarte (2w2):** Sie war wirklich belegt: etwas in Hüfthöhe, 1,9 m
+  links von Amadeus, knapp hinter dem Punkt, an dem er sich gedreht hätte.
+  „Karte (SLAM) frei“ war ein Fehler im Werkzeug.
+- **Wiederfinden (2w3):** Die schräge erste Messung lag rund 0,35 m zu nah,
+  und die starre 0,35-m-Regel lehnte die echte Tür ab.
+- **Absturz der Aufnahme:** ein bekanntes Signalverhalten unter Humble.
+
+Vorschlag: zuerst Werkzeuge robust machen, dann ein Auswerteauftrag KI-F9N
+ohne Fahrt, dann das Sehen ohne Roboter verbessern, dann KI-F10
+„Nachfassen im Stand“. Christophers Ja vor jeder Fahrt bleibt. Es gibt
+keinen offenen Auftrag.
+
+**Davor, 24.11.2026 (KI-F9): Die KI hat am Roboter gewählt – einer von
 zwei Läufen kam durch die Tür.** Lauf 1: Die KI wählte die Labortür,
 Christopher sagte ja, Amadeus fuhr in einem Ablauf hindurch (3,49 m). Lauf
 2 und drei Wiederholungen nicht: Die KI hielt ein Fensterrollo für eine
 offene Tür (Christophers Nein wirkte, nichts gefahren); die Aufnahme stürzte
 beim Beenden ab; einmal war die Kostenkarte auf der Anfahrt belegt („da war
 aber nichts“); einmal fand das Werkzeug die Tür nach der Anfahrt nicht
-wieder. Christopher: „Das Grundkonzept funktioniert.“ Die Ursachen werden
-untersucht; es gibt keinen offenen Auftrag. Archiv:
+wieder. Christopher: „Das Grundkonzept funktioniert.“ Archiv:
 [archiv/20261124-kif9-ki-waehlt/](archiv/20261124-kif9-ki-waehlt/).
 
 **Davor, 23.11.2026 (nachts): Die KI wählt die Tür – gebaut, in der
@@ -145,7 +164,7 @@ fährt mit seiner Schutzkette.
 |---|---|---|---|
 | Erstes Sehen | im Stand Bild und Laser aufnehmen, die KI fragen, die Antwort prüfen | KI-0 | **erledigt** (21.11.) |
 | Blickrunde | sich selbst einmal herumdrehen; aus acht Bildern nennt die KI den Ausgang | KI-1 | **am Roboter gelungen** (21.11., eine Runde im Labor); für die Kriterien fehlen weitere Runden |
-| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1), Ausrichten (KI-F2), drei Etappen genau auf der Linie bis kurz vor die Tür (KI-F3b); **selbst vor die Tür gestellt und hindurchgefahren (KI-F7; KI-F8: drei von drei in einem Ablauf)**; die Tür bestimmte dabei der Mensch. **Übergabe der KI-Wahl gebaut, in der Simulation gelaufen; am Roboter: Auftrag KI-F9** |
+| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1), Ausrichten (KI-F2), drei Etappen genau auf der Linie bis kurz vor die Tür (KI-F3b); **selbst vor die Tür gestellt und hindurchgefahren (KI-F7; KI-F8: drei von drei in einem Ablauf)**; die Tür bestimmte dabei der Mensch. **Die KI wählt die Tür: am Roboter in KI-F9 einer von zwei Läufen hindurch; Ursachen und Weg in der [Bewertung](BEWERTUNG_KIF9.md)** |
 | Raum für Raum | weiter, bis kein Ausgang mehr offen ist (Laborraum, Flur, Schlafzimmer) | KI-3 | offen |
 | Räume benennen, um Hilfe rufen | Raumnamen als Vorschlag in der App; Hilferuf mit Grund und Bild | KI-4 | offen |
 | Auf Zuruf | „fahr in die Küche“, „such die Tasse“ | KI-5 | offen |
@@ -155,20 +174,36 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Kein offener Auftrag.** KI-F9 ist ausgeführt: einer von zwei. Zuerst
-die Ursachen untersuchen (Fensterrollo, Kostenkarte, Wiederfinden der Tür,
-Absturz der Aufnahme), dann der nächste Auftrag.
+**Kein offener Auftrag.** KI-F9 ist ausgeführt (einer von zwei), die
+Bewertung liegt vor: [BEWERTUNG_KIF9.md](BEWERTUNG_KIF9.md). Vorgeschlagen
+ist folgende Reihenfolge; sie wartet auf Christophers Bestätigung
+(Bewertung §10 und §11):
+1. **Werkzeuge robust machen** (hier, keine Änderung am Fahren):
+   - Signal-Baustein; die Aufnahme endet selbst und schreibt immer;
+   - die Umgebung zuerst prüfen; Ablaufhilfe statt Handschritten;
+   - Herkunft und Meldungen in verständlichen Worten; Abstand beim
+     Wiederfinden ausgeben; Belege jeder Entscheidung auf dem Jetson
+     speichern.
+2. **KI-F9N, Auswerteauftrag ohne Fahrt** (Jetson und KI-Rechner, mit
+   Christopher vor Ort): Protokolle der Läufe 2, 2w2 und 2w3; nachsehen,
+   was rechts neben dem Türrahmen steht und wo er stand; je Nummer
+   eintragen, was sie war; Signalmessung alt gegen neu im Stand.
+3. **Sehen ohne Roboter verbessern** an den gespeicherten Runden:
+   Vermessung, Darstellung der Nummern, Frage, Widerspruchsregel; dann
+   heutiges Modell gegen Qwen3.8-27B; dann eine zweite Meinung als Veto.
+4. **KI-F10 „Nachfassen im Stand“**, eine Verhaltensänderung: die Regeln
+   des Werkzeugs vor dem Senden (Wiederfinden in Stufen, Wegvarianten mit
+   Ansage, durch die Tür nur nach frontaler Messung mit zwei Kanten).
+   Erkunder und Schutzkette bleiben unverändert.
+5. Danach KI-F11 (das verbesserte Sehen am Roboter), Nahsensoren wieder an,
+   „Pause statt Ende“ im Erkunder, Flur.
 
-**Danach, je nach Ergebnis:**
-- Zweimal gelungen: Christophers Ja entfällt (die KI wählt, die Vermessung
-  prüft, die Schutzkette fährt); dann weiter in den Flur mit neuem
-  Rundblick (KI-3). Vorher entscheiden, was nach der Tür kommt (wohin im
-  nächsten Raum, wann ein Raum fertig ist).
-- Die KI wählt falsch (Christophers Nein): Antworten und Bilder auf dem
-  KI-Rechner ansehen (Lotsen-Fenster), Frage oder Vermessung nachbessern;
-  keine Fahrt ohne Einspruch, solange das vorkommt.
-- Durchfahrt angehalten oder misslungen: zuerst die Ursache aus den
-  Meldungen des Erkunders eingrenzen; keine neue Funktion darauf setzen.
+**Christophers Ja bleibt vor jeder Fahrt.** Die frühere Zeile „Zweimal
+gelungen: Christophers Ja entfällt“ ist überholt. Vorschlag der Bewertung:
+erst nach Zahlen (K0-Kriterien an mindestens 12 Runden, dann
+Schattenbetrieb); entscheiden wird das noch.
+
+**Außerdem offen:**
 - Mit dem nächsten Build des Erkunders: die Grenze der Etappen je Ziel statt
   je Mission (KI-F8, Lauf 3: 10 von 16).
 - **Die Vermessung von der Seite des Türblatts** richtig stellen (Ursache
@@ -368,6 +403,11 @@ bauen, mit deinem Ja oder Nein zur Wahl der KI vor der Fahrt?“: „Ja“.
   Aufnahme schrieb dann keine Runde (erster Simulationslauf). Aufnahme und
   Lotsen-Dienst fangen jetzt beides ab. Am Roboter (Humble) hatte `kill
   -INT` in KI-1 die Runde geschrieben.
+  **Richtigstellung 24.11.2026:** Die Ursache war nicht die ROS-Fassung,
+  sondern dass SIGINT beim Start der Aufnahme ignoriert war (Start im
+  Hintergrund). Am Roboter kann ein Signal mitten im Umwandeln einer
+  Nachricht einen `RuntimeError` auslösen; so ging in KI-F9 (2w) eine Runde
+  verloren. Die Abhilfe steht in der [Bewertung](BEWERTUNG_KIF9.md) §5.
 - Tests: KI-Linie 328 ohne ROS (2 übersprungen), 340 mit ROS. Neu u. a.
   `test_wahl.py` (34) und `test_ki_tuer_waehlen.py` (11, gespielte KI:
   richtig, kein Ausgang, zweimal falsch, Unsinn dann richtig, stumm, Runde
@@ -1282,6 +1322,7 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Auftrag KI-F9 übergeben und am Roboter ausführen lassen (die KI wählt die
-Tür, Christopher sagt vor jeder Fahrt ja oder nein), danach den Bericht
-auswerten.
+Christopher bestätigt den Weg aus der [Bewertung nach KI-F9](BEWERTUNG_KIF9.md)
+(§10, §11) oder ändert ihn. Danach als Erstes die Werkzeuge robust machen
+(Schritt 1, hier, ohne Änderung am Fahren) und den Auswerteauftrag KI-F9N
+ohne Fahrt schreiben.
