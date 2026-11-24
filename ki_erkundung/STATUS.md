@@ -1,13 +1,16 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 24.11.2026 (abends): Auftrag KI-F9N erteilt – Auswerten und
-Erproben im Stand, ohne Fahrt.** Christopher hat dem Vorschlag zugestimmt
-(„ja“). Der [Auftrag](AUFTRAG.md) prüft am stehenden Roboter unter Humble
-die neuen Werkzeuge (Tests, Aufnahme alt gegen neu je 30-mal mit Signal,
-Ablaufhilfe von der Kamera bis zum Messen) und wertet KI-F9 aus
-(Vermessung der Runden, Wahlen der KI, Fragen an Christopher vor Ort).
-Keine Motorfreigabe, kein Missionsstart, kein Build. Er wartet auf die
-Übergabe.
+**Stand 24.11.2026 (nachts): KI-F9N ausgeführt – die Werkzeuge halten am
+Jetson, und die Ursache von Lauf 2 ist mit Zahlen belegt.** Nichts ist
+gefahren. Unter Humble 409 Tests bestanden; die neue Aufnahme schrieb 30 von
+30 Runden trotz Signal (die alte im Stand ebenfalls, der Absturz ließ sich
+dort nicht nachstellen); die Ablaufhilfe lief im Stand von der Kamera bis
+zum Aufräumen. Lauf 2: Eine Nummer am Fenster hatte ihre Kanten in
+umgekehrter Reihenfolge, galt deshalb als 346° breit und verdrängte die
+Labortür (Abschnitt „KI-F9N“ unten). Kein offener Auftrag; mit Christopher
+wird der nächste Schritt besprochen.
+
+**Davor, 24.11.2026 (abends): Auftrag KI-F9N erteilt.**
 
 **Davor, 24.11.2026 (später): Werkzeuge robust gemacht – Schritt 1 nach
 KI-F9 ist gebaut.** Christopher: „behebe erstmal die Werkzeugfehler und
@@ -199,10 +202,9 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Offener Auftrag: [KI-F9N](AUFTRAG.md)** (erteilt 24.11.2026, wartet auf
-die Übergabe). Die Reihenfolge aus der
-[Bewertung](BEWERTUNG_KIF9.md) §10; Schritt 1 und der Auftrag zu Schritt 2
-sind von Christopher bestätigt, über die weiteren wird danach gesprochen:
+**Kein offener Auftrag.** KI-F9N ist ausgeführt (Abschnitt unten). Die
+Reihenfolge aus der [Bewertung](BEWERTUNG_KIF9.md) §10; Schritt 1 und 2 sind
+erledigt, über die weiteren wird jetzt gesprochen:
 1. **Werkzeuge robust machen** – **gebaut und gegengeprüft 24.11.2026**
    (Abschnitt „Werkzeuge robust gemacht“ unten; am Jetson noch nicht
    erprobt):
@@ -211,11 +213,9 @@ sind von Christopher bestätigt, über die weiteren wird danach gesprochen:
    - Herkunft und Meldungen in verständlichen Worten; Abstand beim
      Wiederfinden ausgeben; Belege jeder Entscheidung auf dem Jetson
      speichern.
-2. **KI-F9N, Auswerteauftrag ohne Fahrt** – **Auftrag erteilt 24.11.2026**
-   (Jetson und KI-Rechner, mit
-   Christopher vor Ort): Protokolle der Läufe 2, 2w2 und 2w3; nachsehen,
-   was rechts neben dem Türrahmen steht und wo er stand; je Nummer
-   eintragen, was sie war; Signalmessung alt gegen neu im Stand.
+2. **KI-F9N, Auswerteauftrag ohne Fahrt** – **ausgeführt 24.11.2026**
+   (Abschnitt „KI-F9N“ unten): Werkzeuge halten im Stand; Ursache von Lauf 2
+   belegt; Belege und `messen` am Jetson noch nicht erprobt.
 3. **Sehen ohne Roboter verbessern** an den gespeicherten Runden:
    Vermessung, Darstellung der Nummern, Frage, Widerspruchsregel; dann
    heutiges Modell gegen Qwen3.8-27B; dann eine zweite Meinung als Veto.
@@ -293,6 +293,69 @@ auf dem KI-Rechner in Gebrauch · Sucher · Schalter „nur Rundblick“ im
 Erkunder (21.11., `6956252`) · Bestand der Türdurchfahrten · Etappenfahrt
 gebaut und simuliert (21.11., nachts) · KI-1: erste Drehung und Blickrunde
 am Roboter (21.11., nachts).
+
+## KI-F9N – Auswerten und Erproben im Stand (Jetson, 24.11.2026, 20:56 bis 22:13)
+
+Auftrag und Ergebnis im Archiv:
+[archiv/20261124-kif9n-im-stand/](archiv/20261124-kif9n-im-stand/).
+Nichts gefahren, keine Motorsteuerung im Stack, kein Build.
+
+**Die Werkzeuge am Jetson:**
+- Tests unter Humble: 409 bestanden.
+- Signalprobe je 30-mal, SIGINT 4 bis 8 s nach dem Start: neu 30 von 30
+  Runden, 0 Traceback, immer `rc=0`. Die Fassung aus KI-F9 im Stand ebenso
+  30 von 30: Der Absturz aus 2w (während eines Rundblicks) ließ sich ohne
+  Drehung nicht nachstellen. Belegt ist damit, dass die neue Aufnahme am
+  Jetson geordnet endet; dass der alte Absturz weg ist, folgt aus dem
+  Aufbau (ein Signal wirft keine Ausnahme mehr in die ROS-Rückrufe), nicht
+  aus dieser Probe.
+- Ablaufhilfe im Stand: Umgebungen passen; `BEREIT` mit 2,0 Bildern je
+  Sekunde; Kamera mit genau einem SIGINT beendet; `antwort … nein` lehnte im
+  Vorlauf ab; „Alles beendet.“ Im Stand war keine Öffnung im Blick, deshalb
+  wurde die KI nicht gefragt, und `messen` und die Belege sind am Jetson
+  **noch nicht erprobt** (B-1). Das war eine Lücke des Auftrags, nicht der
+  Werkzeuge; beim nächsten Vorlauf mit Blick auf die Tür nachholen.
+- Beim Beenden des Stacks (nach Strg+C) endete `cmd_vel_mission_gate` mit
+  „exit code -11“ (Speicherzugriffsfehler beim Herunterfahren). Das ist ein
+  Baustein der Hauptlinie im Sicherheitsbereich; die KI-Linie ändert ihn
+  nicht. Offen: ob das bei jedem Beenden geschieht (alte Logs lesen).
+
+**Lauf 2 (Fensterrollo): Ursache mit Zahlen belegt.** Angeboten waren nur
+zwei Lücken am Fenster, beide mit geschätztem zweitem Pfosten („lot“):
+Nr. 1 0,82 m bei −173,7° mit den Kanten −166,0° → −180,0°, Nr. 2 0,83 m bei
+−170,8° mit −177,5° → −162,5°. Der Winkelbereich einer Lücke läuft von der
+ersten zur zweiten Kante gegen den Uhrzeigersinn
+(`lotse/kandidaten.py`, `spanne`). Bei Nr. 1 liegen die Kanten verkehrt
+herum, ihr Bereich gilt deshalb als **346° statt 14°**. Weil von zwei sich
+überdeckenden Lücken die schmalere bleibt, verdrängte sie jede breitere im
+ganzen Rundblick: auch die Labortür (0,84 m bei +33,8°, „linie“, und 0,92 m
+bei +30,9°, beide „von einer anderen Lücke überdeckt“). Nr. 2 überlappte sie
+nur am Rand und blieb, daher die doppelte Nummer. In 2w2 und 2w3 wurde
+dieselbe Tür vom etwa selben Platz als Nr. 1 angeboten (0,83 m bei +28,0°,
+0,81 m bei +24,0°) und von der KI gewählt. Das bestätigt die erste Vermutung
+der Bewertung (§2, „Scheinlücke mit vertauschten Kanten“).
+
+**Was die KI in den Nummern sah** (Christopher, O-5): Wo die Tür eine Nummer
+hatte, nannte die KI sie „offene Tür“ oder „Durchgang“ und wählte sie
+(Vorlauf, Lauf 1, 2w2, 2w3). Falsch eingeordnet hat sie zweimal etwas am
+Fenster: in Lauf 1 ein schmales Wandregal direkt neben dem Fenster („offene
+Tür“, 85 %, nicht gewählt) und in Lauf 2 das Rollo („offene Tür“, 90 %,
+gewählt). In 2w3 lag sie bei Wand und Regal richtig. Christophers Angabe
+„Lauf2w2 Nr.2 Fenster, die Nummer ist doppelt identisch“ meint vermutlich
+Lauf 2 (offen).
+
+**Vor Ort:**
+- Rechts neben der Labortür steht ein Stuhl, etwa 1,2 m vom Rahmen, höher
+  als 75 cm. Ob er die schräge erste Messung in 2w3 verschoben hat, bleibt
+  offen; die neue Zeile zum Wiederfinden zeigt so etwas künftig an.
+- Wo Christopher in 2w2 stand, weiß er nicht mehr. Die belegte Stelle 1,9 m
+  links von Amadeus bleibt ungeklärt; ein Mensch passt dazu.
+- Die Fensterscheibe beginnt bei 90 cm, davor steht nichts. Hinter den
+  beiden Fensterlücken sah der Laser trotzdem 3,5 bis 3,9 m frei; wie das
+  zur Höhe des Lasers passt, ist offen.
+- Der Not-Aus sitzt im Gehäuse.
+- Die Fragen von KI-F9 (Bilder und Antworttexte der KI) sind auf dem
+  KI-Rechner nach `~/ki_erkundung_kif9_fragen` kopiert.
 
 ## Werkzeuge robust gemacht (gebaut 24.11.2026, Schritt 1 nach KI-F9)
 
@@ -1560,6 +1623,7 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Den [Auftrag KI-F9N](AUFTRAG.md) am Jetson ausführen lassen (Übergabe durch
-den Projektinhaber) und den Bericht auswerten. Danach mit Christopher
-über Schritt 3 (Sehen ohne Roboter) sprechen.
+Mit Christopher den nächsten Schritt nach KI-F9N besprechen. Vorschlag:
+zuerst das Sehen ohne Roboter reparieren (die verkehrten Kanten in der
+Vermessung, die übereinanderliegenden Nummern, die Frage an die KI), an den
+gespeicherten Runden am Jetson nachrechnen, dann das als nächsten Realtest.
