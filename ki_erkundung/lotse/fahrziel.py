@@ -1225,14 +1225,18 @@ def weg_belegt_text(befund: Optional[dict], laenge_m: float) -> str:
             f'(Strecke {befund["strecke"]}), {abs(befund["seitlich_m"]):.2f} m '
             f'{"links" if befund["seitlich_m"] >= 0 else "rechts"} der Linie')
     strecke = befund.get('strecke_m')
-    if strecke is not None and befund['voraus_m'] > strecke:
+    hinter = None if strecke is None else befund['voraus_m'] - strecke
+    if hinter is not None and hinter >= VORDERKANTE_M:
         # Hinter dem Ende der Strecke: nicht auf dem Weg, aber im Blick des
         # Nahbereichs-Halts, der auch auf den letzten Zentimetern so weit schaut.
-        hinter = befund['voraus_m'] - strecke
         text += (f'. Die Stelle liegt nicht auf der Strecke, sondern {hinter:.2f} m hinter '
                  f'ihrem Ende, wo er sich dreht oder hält; dort läge sie '
                  f'{hinter - GEHAEUSE_VORN_M:.2f} m vor seinem Gehäuse und '
                  f'{hinter - VORDERKANTE_M:.2f} m vor der gepolsterten Vorderkante')
+    elif hinter is not None and hinter > 0.0:
+        # So knapp dahinter überfährt die Vorderkante sie am Ende der Strecke.
+        text += (f'. Die Stelle liegt {hinter:.2f} m hinter dem Ende der Strecke, so nah, dass '
+                 'seine Vorderkante sie am Ende überfahren würde')
     return text + (' – Kostenkarte passt nicht: dort könnte der Nahbereichs-Halt des '
                    'Erkunders anhalten.')
 

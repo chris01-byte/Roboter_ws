@@ -44,7 +44,8 @@ class Umfeld:
                 '--umgebung-stack', str(self.umgebung['stack']),
                 '--python', sys.executable, '--runden', str(self.wurzel / 'runden'),
                 '--wahl-ordner', str(self.wurzel / 'wahl'),
-                '--kamera-befehl', f'{sys.executable} {ATTRAPPEN} kamera',
+                # „oak.launch.py“ als Argument: Die Hilfe erkennt die Kamera daran.
+                '--kamera-befehl', f'{sys.executable} {ATTRAPPEN} kamera oak.launch.py',
                 # Die Attrappe der Kamera braucht unter Last etwas, bis sie Signale fängt.
                 '--kamera-vorlauf', '1.0', '--nachlauf', '0.2', '--warten', '20',
                 '--werkzeuge', str(self.werkzeuge), *mehr]
@@ -120,10 +121,12 @@ def test_ganzer_lauf_mit_ja_faehrt_genau_mit_den_argumenten_aus_kif9(umfeld, cap
     assert waehlen['umg'] == 'kamera' and '--ueber-ros' in waehlen['argv']
     runde = waehlen['argv'][waehlen['argv'].index('--runde') + 1]
     assert runde == str(umfeld.wurzel / 'runden' / 'kiprobe_lauf1_20261124_000000')
-    # Frage an den Menschen, ohne Pfade, mit Gefahren und Minuten
+    # Frage an den Menschen, ohne Pfade, mit Begründung (einzeilig), Gefahren und Minuten
     assert 'FRAGE AN CHRISTOPHER' in aus and '„Die KI hat gewählt. Die KI wählt Nr. 2' in aus
+    assert 'Begründung der KI: Nr. 2 ist eine offene Tür.' in aus
     assert 'Gefahren laut KI: Kabel am Boden.' in aus and 'Minuten.)“' in aus
-    assert 'Wahl-Datei' not in aus and 'attrappe_wahl.json' not in aus
+    assert 'Wahl-Datei' not in aus and '_wahl.json' not in aus
+    assert 'Kamera und Aufnahme beendet. (Kamera rc=0' in aus
     kennung = json.loads((umfeld.lauf_ordner() / 'zustand.json').read_text())['wahl']['kennung']
     assert f'--kennung {kennung}' in aus
     # „Ja.“ fährt: genau --zur-tuer --wahl DATEI --hinter 0.45 --warten 60 --beobachten 600
@@ -131,14 +134,15 @@ def test_ganzer_lauf_mit_ja_faehrt_genau_mit_den_argumenten_aus_kif9(umfeld, cap
     aus = capsys.readouterr().out
     assert rc == ki_lauf.RC_OK, aus
     (fahren,) = umfeld.eintraege('fahren')
-    datei = str(umfeld.wurzel / 'wahl' / 'attrappe_wahl.json')
+    datei = str(umfeld.wurzel / 'wahl' / 'kiprobe_lauf1_20261124_000000_wahl.json')
     assert fahren['umg'] == 'stack'
     assert fahren['argv'] == ['--zur-tuer', '--wahl', datei, '--hinter', '0.45', '--warten',
                               '60', '--beobachten', '600']
     assert 'Durchfahrt abgeschlossen.' in aus and 'LAUF ergebnis=durchfahrt werkzeug_rc=0' in aus
-    # eine zweite Antwort wird nicht mehr angenommen
+    # eine zweite Antwort wird nicht mehr angenommen, der interne Fahrbefehl auch nicht
     assert ki_lauf.main(umfeld.argumente('antwort', '1', '--kennung', kennung,
                                          '--wortlaut', 'ja')) == ki_lauf.RC_NEIN
+    assert ki_lauf.main(['_fahrt', '--ordner', str(umfeld.lauf_ordner())]) == ki_lauf.RC_NEIN
     assert len(umfeld.eintraege('fahren')) == 1
     # ein zweiter Aufruf von wahl fragt die KI nicht noch einmal
     assert ki_lauf.main(umfeld.argumente('wahl')) == ki_lauf.RC_OK
@@ -226,6 +230,11 @@ def test_vorlauf_im_stand_fragt_die_ki_aber_niemanden_und_misst_nur(umfeld, caps
     assert ki_lauf.main(umfeld.argumente('messen', 'v')) == 0
     (fahren,) = umfeld.eintraege('fahren')
     assert '--nur-messen' in fahren['argv'] and fahren['umg'] == 'stack'
+    # auch der interne Fahrbefehl fährt im Vorlauf nicht
+    assert ki_lauf.main(['_fahrt', '--ordner', str(umfeld.lauf_ordner('v'))]) == ki_lauf.RC_NEIN
+    assert ki_lauf.lies_json(umfeld.lauf_ordner('v') / 'fahrt.json')['grund'] == \
+        'Vorlauf im Stand'
+    assert len(umfeld.eintraege('fahren')) == 1
 
 
 def test_derselbe_lauf_startet_nicht_zweimal(umfeld, capsys):
@@ -233,6 +242,11 @@ def test_derselbe_lauf_startet_nicht_zweimal(umfeld, capsys):
     assert ki_lauf.main(umfeld.argumente('start')) == ki_lauf.RC_NEIN
     assert 'gibt es schon' in capsys.readouterr().out
     ki_lauf.main(umfeld.argumente('wahl'))
+    # auch ein Ordner ohne Zustand (alte Ausgaben) wird nicht wiederverwendet
+    umfeld.lauf_ordner('7').mkdir(parents=True)
+    assert ki_lauf.main(umfeld.argumente('start', '7')) == ki_lauf.RC_NEIN
+    assert 'gibt es schon' in capsys.readouterr().out
+    assert len(umfeld.eintraege('kamera_start')) == 1
 
 
 def test_aufraeumen_beendet_eine_laufende_fahrt_mit_genau_einem_sigint(neues_umfeld, capsys):
@@ -250,9 +264,10 @@ def test_aufraeumen_beendet_eine_laufende_fahrt_mit_genau_einem_sigint(neues_umf
 
 
 def test_nur_ein_klares_ja():
-    for ja in ('ja', 'Ja', 'JA', 'Ja.', ' ja! ', '„ja“'):
+    for ja in ('ja', 'Ja', 'JA', 'Ja.', ' ja! ', '„ja“', "'ja'"):
         assert ki_lauf.ist_ja(ja), ja
-    for nein in ('nein', 'ja, aber', 'ja aber', 'jawohl', 'ok', '', 'ja ja', 'naja'):
+    for nein in ('nein', 'ja, aber', 'ja aber', 'jawohl', 'ok', '', 'ja ja', 'naja',
+                 'ja?', 'Ja?', 'ja...', 'ja…', 'ja!?', 'ja?!', 'ja-'):
         assert not ki_lauf.ist_ja(nein), nein
 
 
@@ -304,8 +319,157 @@ def test_eine_shell_mit_dem_namen_im_befehl_gilt_nicht_als_kamera():
                              'blickrunde_aufnehmen.py')
         assert not ki_lauf.passt(['bash', '-c', 'echo blickrunde_aufnehmen.py'],
                                  'blickrunde_aufnehmen.py')
-        assert os.getpid() in ki_lauf.vorfahren() and os.getppid() in ki_lauf.vorfahren()
+        # (Elternprozess 0: Test als PID 1 in eigenem PID-Namensraum, unshare --pid)
+        assert os.getpid() in ki_lauf.vorfahren()
+        assert os.getppid() in ki_lauf.vorfahren() or os.getppid() == 0
     finally:
         for prozess in (text, echt):
             prozess.send_signal(signal.SIGTERM)
             prozess.wait(timeout=5)
+
+
+WAHL_BEISPIEL = {
+    'schema': 1, 'art': 'ki_wahl', 'runde': 'probe', 'erzeugt_s': 1.0, 'quelle': 'ki',
+    'nr': 2, 'einordnung': 'tuer_offen', 'sicherheit': None,
+    'begruendung': 'Simulation: gespielte KI\nwählt Nr. 2', 'gefahren': [],
+    'breite_m': 0.83, 'tuerbreit': True, 'entfernung_m': 2.8, 'richtung_ende_grad': 9.0,
+    'rahmen': 'map', 'mitte': [1.0, 2.0]}
+
+
+def test_frage_setzt_satzzeichen_wo_sie_fehlen():
+    zeilen = ['Die KI wählt Nr. 1: Durchgang.',                 # Text zählt nicht, nur die Datei
+              '  Nr. 2: 0,83 m breit; KI: offene Tür  ← gewählt']
+    frage = ki_lauf.baue_frage(WAHL_BEISPIEL, zeilen, 6, 'die Labortür')
+    assert frage.startswith('„Die KI hat gewählt. Die KI wählt Nr. 2: offene Tür, 0,83 m breit')
+    assert 'wählt Nr. 2. Was sie in jeder Nummer sieht' in frage
+    assert 'Blickrichtung. Begründung der KI: Simulation: gespielte KI wählt' in frage
+    assert 'Blickrichtung..' not in frage and 'Nr. 1' not in frage and 'Gefahren' not in frage
+    assert frage.endswith('(Der Erkunder wartet noch etwa 6 Minuten.)“')
+
+
+def test_wahl_aus_datei_prueft_kennung_und_inhalt(tmp_path):
+    datei = tmp_path / 'w.json'
+    datei.write_text(json.dumps(WAHL_BEISPIEL), encoding='utf-8')
+    kennung = ki_lauf.kennung_der_datei(datei)
+    daten, grund = ki_lauf.wahl_aus_datei(datei, kennung)
+    assert daten == WAHL_BEISPIEL and grund == ''
+    assert ki_lauf.wahl_aus_datei(datei, '000000') == (None, 'Wahl-Datei passt nicht zur Kennung')
+    assert ki_lauf.wahl_aus_datei(tmp_path / 'fehlt.json', kennung) == (None, 'Wahl-Datei fehlt')
+    ohne_breite = {k: v for k, v in WAHL_BEISPIEL.items() if k != 'breite_m'}
+    for inhalt, grund in ((b'kein json', 'Wahl-Datei ist kein JSON'),
+                          (b'\xff\xfe', 'Wahl-Datei ist kein JSON'),
+                          (json.dumps([1, 2]).encode(), 'keine Wahl der KI'),
+                          (json.dumps({**WAHL_BEISPIEL, 'quelle': 'mensch'}).encode(),
+                           'keine Wahl der KI'),
+                          (json.dumps({**WAHL_BEISPIEL, 'nr': True}).encode(), 'Nummer fehlt'),
+                          (json.dumps(ohne_breite).encode(), 'Maße der Wahl fehlen')):
+        datei.write_bytes(inhalt)
+        assert ki_lauf.wahl_aus_datei(datei, ki_lauf.kennung_der_datei(datei)) == (None, grund)
+
+
+def test_frage_kommt_aus_der_wahl_datei_nicht_aus_dem_text(neues_umfeld, capsys):
+    umfeld = neues_umfeld('falscher_text')
+    _start_und_wahl(umfeld, capsys)
+    frage = (umfeld.lauf_ordner() / 'frage.txt').read_text(encoding='utf-8').rstrip('\n')
+    assert 'Die KI wählt Nr. 2: offene Tür (sicher zu 90 %), 0,83 m breit, 2,4 m' in frage
+    assert 'Begründung der KI: Nr. 2 ist eine offene Tür.' in frage
+    assert 'Gefahren laut KI: Kabel am Boden.' in frage
+    assert 'Durchgang' not in frage and 'Die KI wählt Nr. 1' not in frage and '\n' not in frage
+
+
+def test_wahl_datei_nach_der_ki_geaendert_keine_frage_und_ende(umfeld, capsys):
+    assert ki_lauf.main(umfeld.argumente('start')) == ki_lauf.RC_OK
+    begleiter = umfeld.lauf_ordner() / 'begleiter.json'
+    assert warte_auf(lambda: ki_lauf.lies_json(begleiter).get('phase') == 'fertig', 30)
+    datei = Path(ki_lauf.lies_json(begleiter)['wahl_datei'])
+    datei.write_text(datei.read_text(encoding='utf-8') + ' ', encoding='utf-8')
+    assert ki_lauf.main(umfeld.argumente('wahl')) == ki_lauf.RC_NEIN
+    aus = capsys.readouterr().out
+    assert 'passt nicht zur Kennung' in aus and 'FRAGE' not in aus
+    (fahren,) = umfeld.eintraege('fahren')
+    assert fahren['argv'] == ['--ende', '--quelle', 'ki', '--warten', '60']
+    kennung = ki_lauf.lies_json(begleiter)['kennung']
+    assert ki_lauf.main(umfeld.argumente('antwort', '1', '--kennung', kennung,
+                                         '--wortlaut', 'ja')) == ki_lauf.RC_NEIN
+    assert len(umfeld.eintraege('fahren')) == 1
+
+
+def _fremde_kamera():
+    """Ein Prozess, der wie eine Kamera aussieht (ganzes Argument oak.launch.py)."""
+    kamera = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)',
+                               'oak.launch.py'])
+    assert warte_auf(lambda: kamera.pid in ki_lauf.laufende('oak.launch.py'))
+    return kamera
+
+
+def _beende(prozess):
+    prozess.send_signal(signal.SIGTERM)
+    prozess.wait(timeout=5)
+
+
+def test_keine_frage_und_keine_fahrt_solange_eine_kamera_laeuft(umfeld, capsys):
+    assert ki_lauf.main(umfeld.argumente('start')) == ki_lauf.RC_OK
+    kamera = _fremde_kamera()
+    try:
+        assert ki_lauf.main(umfeld.argumente('wahl')) == ki_lauf.RC_LAEUFT
+        aus = capsys.readouterr().out
+        assert 'Noch keine Frage' in aus and 'FRAGE' not in aus
+    finally:
+        _beende(kamera)
+    assert ki_lauf.main(umfeld.argumente('wahl')) == ki_lauf.RC_OK
+    assert 'FRAGE AN CHRISTOPHER' in capsys.readouterr().out
+    kennung = json.loads((umfeld.lauf_ordner() / 'zustand.json').read_text())['wahl']['kennung']
+    kamera = _fremde_kamera()
+    try:
+        assert ki_lauf.main(umfeld.argumente('antwort', '1', '--kennung', kennung,
+                                             '--wortlaut', 'ja')) == ki_lauf.RC_NEIN
+        assert 'Antwort nicht eingetragen' in capsys.readouterr().out
+        assert umfeld.eintraege('fahren') == []
+        assert not (umfeld.lauf_ordner() / 'christopher.txt').exists()
+    finally:
+        _beende(kamera)
+    assert ki_lauf.main(umfeld.argumente('antwort', '1', '--kennung', kennung,
+                                         '--wortlaut', 'ja')) == ki_lauf.RC_OK
+    (fahren,) = umfeld.eintraege('fahren')
+    assert fahren['argv'][0] == '--zur-tuer'
+
+
+def test_waehrend_einer_fahrt_kein_start_und_keine_zweite_fahrt(neues_umfeld, capsys):
+    umfeld = neues_umfeld('lange_fahrt')
+    _start_und_wahl(umfeld, capsys)                                   # Lauf 1 fragt
+    assert ki_lauf.main(umfeld.argumente('start', '2')) == ki_lauf.RC_OK
+    assert ki_lauf.main(umfeld.argumente('wahl', '2')) == ki_lauf.RC_OK  # Lauf 2 fragt auch
+    capsys.readouterr()
+    k1, k2 = (json.loads((umfeld.lauf_ordner(n) / 'zustand.json').read_text())['wahl']['kennung']
+              for n in ('1', '2'))
+    assert ki_lauf.main(umfeld.argumente('antwort', '1', '--kennung', k1, '--wortlaut', 'ja',
+                                         '--warten', '1')) == ki_lauf.RC_LAEUFT
+    capsys.readouterr()
+    assert ki_lauf.main(umfeld.argumente('antwort', '2', '--kennung', k2,
+                                         '--wortlaut', 'ja')) == ki_lauf.RC_NEIN
+    assert 'Eine Fahrt läuft noch' in capsys.readouterr().out
+    assert ki_lauf.main(umfeld.argumente('start', '3')) == ki_lauf.RC_NEIN
+    assert 'Eine Fahrt läuft noch' in capsys.readouterr().out
+    assert not umfeld.lauf_ordner('3').exists()
+    assert len(umfeld.eintraege('fahren')) == 1
+    assert 'antwort' not in json.loads((umfeld.lauf_ordner('2') / 'zustand.json').read_text())
+
+
+def test_interner_fahrbefehl_ohne_ja_tut_nichts(umfeld, capsys):
+    _start_und_wahl(umfeld, capsys)
+    ordner = umfeld.lauf_ordner()
+    assert ki_lauf.main(['_fahrt', '--ordner', str(ordner)]) == ki_lauf.RC_NEIN
+    assert ki_lauf.lies_json(ordner / 'fahrt.json')['grund'] == 'kein Ja eingetragen'
+    # danach fährt auch ein Ja zu diesem Lauf nicht mehr: es gab schon einen Fahrversuch
+    kennung = json.loads((ordner / 'zustand.json').read_text())['wahl']['kennung']
+    assert ki_lauf.main(umfeld.argumente('antwort', '1', '--kennung', kennung,
+                                         '--wortlaut', 'ja')) == ki_lauf.RC_NEIN
+    assert 'schon einen Fahrversuch' in capsys.readouterr().out
+    assert umfeld.eintraege('fahren') == []
+
+
+def test_interne_befehle_stehen_nicht_in_der_hilfe(capsys):
+    with pytest.raises(SystemExit):
+        ki_lauf.main(['--help'])
+    hilfe = capsys.readouterr().out
+    assert 'antwort' in hilfe and '_fahrt' not in hilfe and '_rundblick' not in hilfe

@@ -58,6 +58,8 @@ VORGABE_ZIEL = Path.home() / '.local/share/amadeus/ki_erkundung/blickrunden'
 # liest fahrziel_senden.py.
 RUNDBLICK = 'initial_scan'
 WARTEPHASE = 'stage_drive_wait_target'
+# Mit diesen Phasen beginnt eine Mission der Etappenfahrt (Zustand running).
+MISSIONSBEGINN = ('waiting_for_map', RUNDBLICK)
 
 
 def im_repository(pfad: Path) -> bool:
@@ -162,14 +164,16 @@ class Rundblickende:
     Erst nachdem die Mission mit dem Rundblick begonnen hat (Zustand
     ``running``, Phase ``initial_scan``), zählt die Wartephase als Ende des
     Rundblicks. Die Aufnahme endet ``nachlauf_s`` danach; so kommen noch
-    Bilder im Stand und eine frische Lage in der Karte dazu. Endet die Mission
-    nach Beginn des Rundblicks ohne Wartephase, endet die Aufnahme sofort. Eine
-    Wartephase, vor der kein Rundblick zu sehen war (zum Beispiel der zuletzt
-    gehaltene Status einer früheren Mission), zählt nicht.
+    Bilder im Stand und eine frische Lage in der Karte dazu. Endet eine
+    begonnene Mission (``running`` mit ``waiting_for_map`` oder
+    ``initial_scan``) ohne Wartephase, auch schon vor dem Rundblick, endet die
+    Aufnahme sofort. Eine Wartephase, vor der kein Rundblick zu sehen war (zum
+    Beispiel der zuletzt gehaltene Status einer früheren Mission), zählt nicht.
     """
 
     def __init__(self, nachlauf_s: float):
         self.nachlauf_s = float(nachlauf_s)
+        self.mission_seit: Optional[float] = None
         self.rundblick_seit: Optional[float] = None
         self.wartephase_seit: Optional[float] = None
         self.wartephase_unix: Optional[float] = None
@@ -180,12 +184,21 @@ class Rundblickende:
         """Eine Statusmeldung verarbeiten; Rückgabe: ein Satz, wenn sich etwas ändert."""
         self.gehoert = True
         zustand, phase = status.get('state'), status.get('phase')
-        if self.rundblick_seit is None:
-            if zustand == 'running' and phase == RUNDBLICK:
-                self.rundblick_seit = jetzt
-                return 'Erkunder: Rundblick läuft.'
-            return None
         if self.wartephase_seit is not None or self.mission_ende is not None:
+            return None
+        if self.mission_seit is None:
+            if zustand == 'running' and phase in MISSIONSBEGINN:
+                self.mission_seit = jetzt
+            else:
+                return None
+        if self.rundblick_seit is None and zustand == 'running' and phase == RUNDBLICK:
+            self.rundblick_seit = jetzt
+            return 'Erkunder: Rundblick läuft.'
+        if zustand not in ('running', None):
+            self.mission_ende = str(zustand)
+            vorher = 'ohne Wartephase' if self.rundblick_seit else 'vor dem Rundblick'
+            return f'Erkunder: Mission beendet ({zustand}) {vorher}; Aufnahme endet.'
+        if self.rundblick_seit is None:
             return None
         if zustand == 'running' and phase == WARTEPHASE:
             self.wartephase_seit = jetzt
@@ -193,9 +206,6 @@ class Rundblickende:
             uhr = time.strftime('%H:%M:%S', time.localtime(self.wartephase_unix))
             return (f'Erkunder: Wartephase seit {uhr}, Aufnahme endet in '
                     f'{self.nachlauf_s:.0f} s.')
-        if zustand not in ('running', None):
-            self.mission_ende = str(zustand)
-            return f'Erkunder: Mission beendet ({zustand}) ohne Wartephase; Aufnahme endet.'
         return None
 
     def grund(self, jetzt: float) -> Optional[str]:

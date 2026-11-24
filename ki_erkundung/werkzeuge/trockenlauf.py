@@ -82,8 +82,11 @@ def main(argv=None) -> int:
         eingabe.error('--modell, --ueber-ros oder --nur-markieren angeben')
     if wahl.ueber_ros and wahl.modell:
         eingabe.error('mit --ueber-ros bestimmt der Lotsen-Dienst das Modell')
-    # Ein Signal setzt nur eine Marke (ros_ende); begonnene Runden bleiben im Ergebnis.
-    ende = Ende().anmelden()
+    # Über ROS setzt ein Signal nur eine Marke (ros_ende); begonnene Runden
+    # bleiben im Ergebnis. Ohne ROS bleibt Strg+C, wie es war.
+    ende = Ende()
+    if wahl.ueber_ros:
+        ende.anmelden()
     try:
         return _trockenlauf(wahl, ende)
     finally:

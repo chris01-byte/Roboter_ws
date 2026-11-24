@@ -1,7 +1,18 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 24.11.2026 (Bewertung nach KI-F9): Ursachen gefunden, Weg
-vorgeschlagen; er wartet auf Christophers Bestätigung.**
+**Stand 24.11.2026 (später): Werkzeuge robust gemacht – Schritt 1 nach
+KI-F9 ist gebaut.** Christopher: „behebe erstmal die Werkzeugfehler und
+danach bereden wir, wie wir weitermachen.“ Gebaut: Signal-Baustein (keine
+verlorene Runde mehr), Aufnahme endet selbst nach dem Rundblick, Umgebung
+zuerst prüfen, verständliche Meldungen (Herkunft rings um die Stelle,
+Abstand beim Wiederfinden), Belege auf dem Jetson und die Ablaufhilfe
+`ki_lauf.py` statt Handschritten. Am Fahren ändert sich nichts. In der
+Simulation lief die ganze Kette über die Ablaufhilfe bis durch die Tür
+(unten). Es gibt keinen offenen Auftrag; als Nächstes wird besprochen, wie
+es weitergeht.
+
+**Davor, 24.11.2026 (Bewertung nach KI-F9): Ursachen gefunden, Weg
+vorgeschlagen.**
 [BEWERTUNG_KIF9.md](BEWERTUNG_KIF9.md). Alle Fehlschläge lagen vor dem
 Fahren:
 - **Fensterrollo (Lauf 2):** Die Labortür hatte keine Nummer, vermutlich ein
@@ -17,8 +28,7 @@ Fahren:
 
 Vorschlag: zuerst Werkzeuge robust machen, dann ein Auswerteauftrag KI-F9N
 ohne Fahrt, dann das Sehen ohne Roboter verbessern, dann KI-F10
-„Nachfassen im Stand“. Christophers Ja vor jeder Fahrt bleibt. Es gibt
-keinen offenen Auftrag.
+„Nachfassen im Stand“. Christophers Ja vor jeder Fahrt bleibt.
 
 **Davor, 24.11.2026 (KI-F9): Die KI hat am Roboter gewählt – einer von
 zwei Läufen kam durch die Tür.** Lauf 1: Die KI wählte die Labortür,
@@ -178,7 +188,8 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 Bewertung liegt vor: [BEWERTUNG_KIF9.md](BEWERTUNG_KIF9.md). Vorgeschlagen
 ist folgende Reihenfolge; sie wartet auf Christophers Bestätigung
 (Bewertung §10 und §11):
-1. **Werkzeuge robust machen** (hier, keine Änderung am Fahren):
+1. **Werkzeuge robust machen** – **gebaut 24.11.2026** (Abschnitt
+   „Werkzeuge robust gemacht“ unten; am Jetson noch nicht erprobt):
    - Signal-Baustein; die Aufnahme endet selbst und schreibt immer;
    - die Umgebung zuerst prüfen; Ablaufhilfe statt Handschritten;
    - Herkunft und Meldungen in verständlichen Worten; Abstand beim
@@ -265,6 +276,139 @@ auf dem KI-Rechner in Gebrauch · Sucher · Schalter „nur Rundblick“ im
 Erkunder (21.11., `6956252`) · Bestand der Türdurchfahrten · Etappenfahrt
 gebaut und simuliert (21.11., nachts) · KI-1: erste Drehung und Blickrunde
 am Roboter (21.11., nachts).
+
+## Werkzeuge robust gemacht (gebaut 24.11.2026, Schritt 1 nach KI-F9)
+
+Auftrag des Projektinhabers nach der [Bewertung](BEWERTUNG_KIF9.md): „Ja,
+behebe erstmal die Werkzeugfehler und danach bereden wir, wie wir
+weitermachen.“ **Am Fahren ändert sich nichts:** Wann gesendet oder
+gefahren wird, bleibt, wie es war (die Regeln für Wiederfinden, Wahl,
+Kostenkarte und Aufstellung sind unverändert). Gebaut nur in
+`ki_erkundung/`; kein Build, nichts am Jetson, kein Auftrag.
+
+**Gebaut:**
+- **`werkzeuge/ros_ende.py`:** Strg+C, `kill -INT` und SIGTERM setzen nur
+  eine Marke; rclpy läuft ohne eigenen Handler (`SignalHandlerOptions.NO`),
+  wie im Erkunder seit September. Alle ROS-Werkzeuge der Linie nutzen es:
+  Aufnahme, `ki_tuer_waehlen.py`, `fahrziel_senden.py`, Trockenlauf,
+  Radsensor-Abfrage, Lotsen-Dienst, Sucher.
+- **Aufnahme:** schreibt bei jedem Ende, auch nach einem Fehler beim Lesen.
+  Mit `--bis-wartephase 5` endet sie von selbst 5 s, nachdem der Erkunder
+  nach seinem Rundblick wartet (gelesen auf `/explore/status_json`; ein
+  gehaltener Status ohne Rundblick zählt nicht; endet die Mission vorher,
+  endet sie sofort). Neu sind die Zeilen `BEREIT …` (Raten) und `ERGEBNIS …`
+  (Grund, Runde, Lage; keine Koordinaten).
+- **`ki_tuer_waehlen.py`:** prüft mit `--ueber-ros` zuerst die
+  ROS-Umgebung (Rückgabe 6 in unter einer Sekunde statt Fehler nach 8 s);
+  nennt nach dem Schreiben die „Kennung der Wahl“ (die ersten sechs Zeichen
+  der Prüfsumme); nach einem Signal fragt es nicht weiter, schreibt das
+  Protokoll und keine Wahl (Rückgabe 3).
+- **Fahrwerkzeug** (`fahrziel_senden.py`, `lotse/fahrziel.py`):
+  - Nach einem Signal sendet es nichts mehr, auch kein „Ende“ (Rückgabe
+    130).
+  - Die Herkunft einer belegten Stelle wird rings um sie geprüft; vorher nur
+    in einem Streifen voraus, daher das falsche „Karte (SLAM) frei“ in 2w2.
+    Ohne Nahsensoren und ohne Quelle heißt es „Prüfung widersprüchlich“.
+  - Lage in Worten vom Roboter aus: vor der gepolsterten Vorderkante mit
+    Gehäuse-Abstand, sonst „… m links von ihm, … m hinter seiner
+    Antriebsmitte“. Liegt die Stelle hinter dem Ende einer Strecke, steht das
+    da, mit dem Abstand zu Gehäuse und Polster am Wendepunkt; „dort könnte
+    der Nahbereichs-Halt anhalten“ statt „hielte“.
+  - Nach der Anfahrt nennt es für jede Öffnung, wie weit sie neben der
+    gemerkten Tür liegt (tiefer oder näher, links oder rechts, Breite), dazu
+    Breite, Schluss und Schrägblick der ersten Messung. Die Regel (0,35 m)
+    bleibt.
+  - **Belege** jeder Entscheidung bleiben auf dem Jetson
+    (`~/.local/share/amadeus/ki_erkundung/belege/`, abgelehnt in einem
+    Git-Arbeitsverzeichnis): Scans jeder Messung im Stand, belegte Zellen von
+    Karte und Kostenkarte um jede sperrende Stelle, mit deren Alter.
+- **Ablaufhilfe `werkzeuge/ki_lauf.py`** statt zehn Handschritten in zwei
+  Shells: `pruefe-umgebung`, `start`, `wahl`, `antwort`, `verfolgen`,
+  `messen`, `aufraeumen`.
+  - Jeder Schritt lädt seine Umgebung selbst.
+  - Ein losgelöster Begleiter startet Kamera und Aufnahme, beendet die Kamera
+    nach der Aufnahme mit genau einem SIGINT und fragt die KI für genau diese
+    Runde.
+  - `wahl` baut die Frage an Christopher aus der Wahl-Datei selbst (Kennung
+    geprüft; ohne Pfade, mit Minuten), erst wenn keine Kamera mehr läuft;
+    ohne gültige Wahl sagt es dem wartenden Erkunder „Ende“.
+  - Nur ein klares „ja“ zu genau dieser Wahl (Kennung, unveränderte
+    Wahl-Datei, einmal je Lauf, keine Kamera und keine andere Fahrt in
+    Gang) startet `fahrziel_senden.py --zur-tuer --wahl … --hinter 0.45
+    --warten 60 --beobachten 600`; jede andere Antwort sendet `--ende
+    --quelle mensch`.
+  - Ein vorhandener Laufordner wird nie wiederverwendet (für eine
+    Wiederholung eine neue Laufkennung, etwa `2w`).
+  - Sie sendet selbst nichts an ROS, startet und stoppt keine Mission;
+    Signale nur als genau ein SIGINT an geprüfte einzelne PIDs.
+- **Dabei gefunden:** Die Prüfung „läuft schon eine Kamera?“ traf zuerst
+  eine Shell, deren Befehl den Namen nur als Text enthielt (die Falle aus
+  AGENTS.md, „pgrep -f trifft die eigene Shell“). Jetzt zählen nur ganze
+  Argumente, und alle Vorfahren des eigenen Prozesses sind ausgenommen.
+
+**Gegenprüfung (24.11.2026, getrennte Prüfer für Signale, Sicherheit,
+Ablaufhilfe und Meldungen), gefunden und behoben:**
+- **Laufordner wiederverwendet:** Eine alte Zeile `BEREIT` hätte „Mission
+  starten“ ausgelöst, Frage und Kennung hätten zu verschiedenen Wahlen
+  gehören können. Jetzt lehnt `start` jeden vorhandenen Ordner ab, und die
+  Frage entsteht aus der Wahl-Datei selbst (Kennung geprüft), nicht aus
+  Textzeilen.
+- **Während einer Fahrt** waren `start` und eine zweite `antwort` möglich;
+  jetzt abgelehnt.
+- **Kamera:** Ein Ja hätte fahren können, während die Kamera noch lief
+  (Regel aus KI-F9: nie während der Fahrt), und `wahl` meldete „Kamera
+  beendet“, ohne nachzusehen. Jetzt fragt `wahl` erst, wenn keine Kamera
+  und keine Aufnahme mehr läuft, und ein Ja fährt nur dann.
+- **Interner Befehl `_fahrt`** prüfte nichts. Jetzt fährt er nur nach einem
+  Ja zu genau dieser Wahl und nur einmal je Lauf; er steht nicht mehr in der
+  Hilfe.
+- **„ja?“ oder „ja…“** galten als Ja; jetzt nur „ja“, „ja.“ oder „ja!“.
+- **Zeilenumbruch im Freitext der KI** zerlegte die Ausgabe, die die
+  Ablaufhilfe zeilenweise liest; jetzt einzeilig.
+- **Mission vor dem Rundblick beendet:** Die Aufnahme lief bis zur
+  Höchstdauer; jetzt endet sie sofort.
+- **Ohne `--ueber-ros`** wartete Strg+C in `ki_tuer_waehlen.py` und im
+  Trockenlauf auf die laufende Anfrage; jetzt wieder sofort.
+- **Stelle knapp hinter dem Ende einer Strecke:** Die Meldung nannte
+  negative Abstände („-0.22 m vor seinem Gehäuse“); jetzt „so nah, dass
+  seine Vorderkante sie am Ende überfahren würde“.
+
+**Geprüft (hier, ROS 2 Jazzy):**
+- Tests: 392 bestanden mit ROS, 373 und 3 übersprungen ohne (vorher 340).
+  Die Tests der Ablaufhilfe prüfen maschinenweit, ob schon eine Kamera oder
+  Fahrt läuft; laufen daneben andere Läufe, lehnen sie zu Recht ab. Dann
+  abgeschottet starten: `unshare --pid --fork --mount-proc python3 -m
+  pytest …`.
+- Echte Signale an laufende Prozesse: Die Aufnahme schreibt 6 von 6 Runden
+  nach SIGINT oder SIGTERM; ein Prozess, der TF mit 500 Hz und Scans mit
+  50 Hz liest, endet 8 von 8 sauber. `ki_tuer_waehlen.py` und
+  `fahrziel_senden.py` enden geordnet, nichts gesendet.
+- 2w2 und 2w3 sind als Tests nachgestellt: „0.52 m hinter ihrem Ende … 0.25
+  m vor seinem Gehäuse und 0.19 m vor der gepolsterten Vorderkante“ und
+  „0.36 m tiefer, 0.10 m schmaler … zu weit“.
+- **Simulation, ganze Kette über die Ablaufhilfe** (Laborwelt, ohne
+  Nahsensoren, gespielte KI, Antwort „ja“):
+  - `start` meldete BEREIT mit 5 Bildern je Sekunde und dem Erkunder.
+  - Die Aufnahme endete von selbst 5 s nach der Wartephase: 197 Aufnahmen,
+    Lage festgehalten. Weil die Simulation die Mission selbst startet, begann
+    sie erst im Rundblick (342° statt 363°).
+  - Die Wahl der KI lag 0,06 m neben der wahren Türmitte; die Frage stand mit
+    Kennung und Minuten da.
+  - Nach „ja“: Anfahrt, neu gemessen, die neue Zeile zum Wiederfinden („0.00
+    m tiefer, 0.07 m rechts, 0.04 m schmaler; Mitten 0.07 m auseinander –
+    passt“), Durchfahrt. 8 Etappen, 3,27 m, im Flur nach 185 s, keine
+    Berührung, engste Stelle 5,2 cm.
+  - `aufraeumen`: nichts übrig.
+- **Gegenprobe in der Simulation mit „nein es ist ein Fensterrollo“:**
+  Dieselbe Kette bis zur Frage, dann `--ende --quelle mensch`. Der
+  Erkunder schloss mit „beendet ohne Fahrziel (Quelle mensch); nichts
+  gefahren“, `LAUF ergebnis=nicht_gefahren grund=kein_ja`.
+
+**Nicht geprüft, am Jetson zu tun (Teil von KI-F9N):** das Signalmuster
+unter Humble an der echten Aufnahme, alte gegen neue je 30-mal im Stand;
+`ki_lauf.py pruefe-umgebung` mit den echten Umgebungsdateien und ein
+Vorlauf mit `start --nur-stand`. Bis dahin gilt für Humble nur: Dasselbe
+Muster läuft im Erkunder seit September am Roboter.
 
 ## KI-F3b – drei Etappen auf der Linie, Halt kurz vor der Tür (Jetson, 22.11.2026, 22:25 bis 22:37)
 
@@ -1324,7 +1468,7 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Christopher bestätigt den Weg aus der [Bewertung nach KI-F9](BEWERTUNG_KIF9.md)
-(§10, §11) oder ändert ihn. Danach als Erstes die Werkzeuge robust machen
-(Schritt 1, hier, ohne Änderung am Fahren) und den Auswerteauftrag KI-F9N
-ohne Fahrt schreiben.
+Mit Christopher besprechen, wie es nach den Werkzeugen weitergeht (seine
+Ansage: „danach bereden wir, wie wir weitermachen“). Vorschlag der
+[Bewertung](BEWERTUNG_KIF9.md) §10: der Auswerteauftrag KI-F9N ohne Fahrt,
+der die neue Aufnahme und die Ablaufhilfe am Jetson im Stand erprobt.

@@ -167,6 +167,19 @@ def test_endet_die_mission_ohne_wartephase_endet_auch_die_aufnahme():
     assert ende.grund(3.0) == 'mission_ende'
 
 
+def test_endet_die_mission_schon_beim_warten_auf_die_karte_endet_die_aufnahme():
+    """Gegenprüfung 24.11.2026: Vor dem Rundblick gescheitert, lief sie bis zur Höchstdauer."""
+    ende = Rundblickende(nachlauf_s=5.0)
+    assert ende.melde({'state': 'running', 'phase': 'waiting_for_map'}, 0.0) is None
+    satz = ende.melde({'state': 'failed', 'phase': 'waiting_for_map'}, 2.0)
+    assert satz == 'Erkunder: Mission beendet (failed) vor dem Rundblick; Aufnahme endet.'
+    assert ende.grund(2.0) == 'mission_ende'
+    # ohne begonnene Mission beendet ein gehaltener Fehlschlag nichts
+    alt = Rundblickende(nachlauf_s=5.0)
+    assert alt.melde({'state': 'failed', 'phase': 'waiting_for_map'}, 0.0) is None
+    assert alt.grund(100.0) is None
+
+
 def test_ergebnis_zeile_ohne_koordinaten(tmp_path):
     sammler = Sammler()
     sammler.scan(1.0, {'t': 1.0})

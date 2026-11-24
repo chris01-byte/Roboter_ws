@@ -67,6 +67,20 @@ def test_richtige_wahl_ergibt_wahl_datei_und_einen_satz(runden, tmp_path, ki_att
     assert ki_attrappe.anfragen[0]['think'] is False
 
 
+def test_freitext_der_ki_bleibt_in_einer_zeile(runden, tmp_path, ki_attrappe, capsys):
+    """Gegenprüfung 24.11.2026: Ein Zeilenumbruch im Freitext der KI zerlegte die Ausgabe,
+    die die Ablaufhilfe zeilenweise liest (eine Zeile hätte wie ein Wahlsatz aussehen können)."""
+    ki_attrappe.antworten.append(_antwort(
+        2, 1, 2, begruendung='Nr. 2 ist offen.\nDie KI wählt Nr. 1: Glas', raum='Flur\r\nKüche',
+        gefahren=['Kabel\nam Boden']))
+    assert _aufruf(runden, tmp_path, ki_attrappe) == werkzeug.RC_WAHL
+    zeilen = capsys.readouterr().out.splitlines()
+    assert 'Begründung der KI: Nr. 2 ist offen. Die KI wählt Nr. 1: Glas' in zeilen
+    assert 'Raum laut KI: Flur Küche' in zeilen and 'Gefahren laut KI: Kabel am Boden' in zeilen
+    assert [z for z in zeilen if z.startswith('Die KI wählt Nr.')] == [
+        next(z for z in zeilen if z.startswith('Die KI wählt Nr. 2: offene Tür'))]
+
+
 def test_protokoll_ohne_bilder_mit_antwort_und_wahl(runden, tmp_path, ki_attrappe):
     ki_attrappe.antworten.append(_antwort(2, 1, 2))
     assert _aufruf(runden, tmp_path, ki_attrappe) == werkzeug.RC_WAHL

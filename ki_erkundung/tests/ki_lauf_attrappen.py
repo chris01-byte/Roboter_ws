@@ -78,15 +78,30 @@ def waehlen():
         sys.exit(2)
     ausgabe = Path(wert('--ausgabe'))
     ausgabe.mkdir(parents=True, exist_ok=True)
-    datei = ausgabe / 'attrappe_wahl.json'
-    datei.write_text(json.dumps({'nr': 2, 'zeit': time.time()}), encoding='utf-8')
+    runde = Path(wert('--runde')).name
+    datei = ausgabe / f'{runde}_wahl.json'
+    # wie lotse.wahl.wahl_aufschreiben, mit erfundenen Maßen (keine Wohnung)
+    datei.write_text(json.dumps({
+        'schema': 1, 'art': 'ki_wahl', 'runde': runde, 'erzeugt_s': round(time.time(), 1),
+        'quelle': 'ki', 'modell': 'pruefmodell', 'dauer_s': 2.0, 'nr': 2,
+        'einordnung': 'tuer_offen', 'sicherheit': 0.9,
+        'begruendung': 'Nr. 2 ist eine\noffene Tür.', 'raum': 'Labor',
+        'gefahren': ['Kabel am Boden'], 'breite_m': 0.83, 'tuerbreit': True,
+        'entfernung_m': 2.4, 'richtung_ende_grad': 25.0, 'rahmen': 'map',
+        'mitte': [1.0, 2.0], 'pfosten': [[0.6, 2.0], [1.4, 2.0]]}, ensure_ascii=False),
+        encoding='utf-8')
     print('Frage 1 an pruefmodell: Wahl 2, 2,0 s')
     print('Was die KI in den Nummern sieht (Richtung von seiner jetzigen Blickrichtung):')
     print('  Nr. 1: 0,82 m breit, 2,6 m entfernt, 176° rechts; KI: Lücke an Möbeln')
     print('  Nr. 2: 0,83 m breit, 2,4 m entfernt, 25° links; KI: offene Tür  ← gewählt')
-    print('Begründung der KI: Nr. 2 ist eine offene Tür.')
-    print('Gefahren laut KI: Kabel am Boden')
-    print('Die KI wählt Nr. 2: offene Tür, 0,83 m breit, 2,4 m entfernt, 25° links.')
+    if 'falscher_text' in SZENARIO:       # Text einer anderen Wahl: die Frage nimmt die Datei
+        print('Begründung der KI: Nr. 1 ist ein Durchgang.')
+        print('Die KI wählt Nr. 1: Durchgang, 0,82 m breit, 2,6 m entfernt.')
+    else:
+        print('Begründung der KI: Nr. 2 ist eine offene Tür.')
+        print('Gefahren laut KI: Kabel am Boden')
+        print('Die KI wählt Nr. 2: offene Tür (sicher zu 90 %), 0,83 m breit, 2,4 m '
+              'entfernt, 25° links von seiner Blickrichtung.')
     print(f'Wahl-Datei: {datei}')
     print(f'Kennung der Wahl: {hashlib.sha256(datei.read_bytes()).hexdigest()[:6]}')
 

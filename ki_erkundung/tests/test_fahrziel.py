@@ -1065,6 +1065,17 @@ def test_kif9_2w2_die_stelle_lag_hinter_dem_ende_der_ersten_strecke():
     assert VORDERKANTE_M - GEHAEUSE_VORN_M == pytest.approx(0.06)
 
 
+def test_stelle_knapp_hinter_dem_ende_ohne_negative_abstaende():
+    """Gegenprüfung 24.11.2026: 0,05 m hinter dem Ende ergab „-0.22 m vor seinem Gehäuse“."""
+    daten, b, h, z, u = raster([(1.40, -0.10)])
+    befund = belegt_auf_dem_weg(daten, b, h, z, u, (0.0, 0.0, 0.0), [(1.35, 0.0), (1.35, -0.45)])
+    assert befund['voraus_m'] - befund['strecke_m'] == pytest.approx(0.05, abs=0.006)
+    text = weg_belegt_text(befund, 1.80)
+    assert ('Die Stelle liegt 0.05 m hinter dem Ende der Strecke, so nah, dass seine '
+            'Vorderkante sie am Ende überfahren würde') in text
+    assert 'nicht auf der Strecke' not in text and ' -0.' not in text
+
+
 def test_lage_einer_stelle_neben_oder_hinter_dem_roboter_in_worten():
     assert lage_vom_roboter(-0.236, 1.860) == (
         '1.86 m links von ihm, 0.24 m hinter seiner Antriebsmitte')

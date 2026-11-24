@@ -26,7 +26,8 @@ die Antwort des Menschen an genau diese Wahl binden (``ki_lauf.py``).
 
 Rückgabe: 0 Wahl geschrieben; 2 die KI nennt keinen geeigneten Ausgang oder
 die Vermessung spricht gegen die Wahl; 3 keine gültige Antwort (auch nach
-Strg+C oder ``kill -INT``: Das Protokoll wird geschrieben, eine Wahl nicht);
+Strg+C oder ``kill -INT`` mit ``--ueber-ros``: Wurde schon gefragt, wird das
+Protokoll geschrieben, eine Wahl nie);
 4 Blickrunde, ihre Lage in der Karte oder eine wählbare Öffnung fehlt;
 5 KI-Rechner nicht erreichbar; 6 ROS-Umgebung fehlt (mit ``--ueber-ros``,
 geprüft vor dem Aufbereiten).
@@ -49,8 +50,8 @@ from lotse import SCHEMA_VERSION  # noqa: E402
 from lotse.ablauf import befrage, bereite_vor  # noqa: E402
 from lotse.blickrunde import Blickrunde, runden_finden  # noqa: E402
 from lotse.ki_rechner import STANDARD_URL, modelle  # noqa: E402
-from lotse.wahl import (ARTEN_TEXT, standpunkt_in_der_karte, wahl_aufschreiben,  # noqa: E402
-                        wahl_satz)
+from lotse.wahl import (ARTEN_TEXT, einzeilig, standpunkt_in_der_karte,  # noqa: E402
+                        wahl_aufschreiben, wahl_satz)
 from ros_ende import Ende, ros_beenden, ros_starten  # noqa: E402
 
 VORGABE_RUNDEN = Path.home() / '.local/share/amadeus/ki_erkundung/blickrunden'
@@ -181,8 +182,13 @@ def main(argv=None) -> int:
                   'Umgebung der Kamera sourcen (zum Beispiel source '
                   '~/ki_trockenlauf_ki0/umgebung_we1.bash).')
             return RC_UMGEBUNG
-    # Ein Signal setzt nur eine Marke (ros_ende); danach wird nicht weiter gefragt.
-    ende = Ende().anmelden()
+    # Über ROS setzt ein Signal nur eine Marke (ros_ende); danach wird nicht
+    # weiter gefragt. Ohne ROS (direkt an Ollama) bleibt Strg+C, wie es war:
+    # Dort gibt es keine Nachrichten umzuwandeln, und die Marke wirkte erst
+    # nach der laufenden Anfrage (Gegenprüfung 24.11.2026).
+    ende = Ende()
+    if wahl.ueber_ros:
+        ende.anmelden()
     try:
         return _waehle(wahl, ende)
     finally:
@@ -313,11 +319,11 @@ def _waehle(wahl, ende: Ende) -> int:
         for zeile in zeilen_der_nummern(vorbereitung, pruefung):
             print(zeile)
         if pruefung.get('raum'):
-            print(f'Raum laut KI: {pruefung["raum"]}')
+            print(f'Raum laut KI: {einzeilig(pruefung["raum"])}')
         if pruefung.get('begruendung'):
-            print(f'Begründung der KI: {pruefung["begruendung"]}')
+            print(f'Begründung der KI: {einzeilig(pruefung["begruendung"])}')
         if pruefung.get('gefahren'):
-            print(f'Gefahren laut KI: {", ".join(map(str, pruefung["gefahren"]))}')
+            print(f'Gefahren laut KI: {einzeilig(", ".join(map(str, pruefung["gefahren"])))}')
     print(f'Protokoll: {protokoll_pfad}')
     if daten is None:
         print(f'Keine Wahl: {ablehnung}.')

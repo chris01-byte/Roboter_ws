@@ -17,10 +17,12 @@ in einer Datei, und kein Schritt baut auf Variablen eines früheren auf.
 Aufnahme (``--bis-wartephase``: sie endet 5 s nach dem Rundblick von selbst),
 beendet danach die Kamera mit genau einem SIGINT und fragt die KI
 (``ki_tuer_waehlen.py --ueber-ros --runde …``). ``wahl`` wartet darauf und
-baut die Frage an den Menschen; ohne gültige Wahl sendet es dem wartenden
-Erkunder das „Ende“. Nach ``antwort``: Nur ein „ja“ zu genau dieser Wahl
-(Kennung) startet ``fahrziel_senden.py --zur-tuer --wahl …``; jede andere
-Antwort sendet ``--ende --quelle mensch``.
+baut die Frage an den Menschen aus der Wahl-Datei selbst (Kennung geprüft);
+gefragt wird erst, wenn keine Kamera mehr läuft. Ohne gültige Wahl sendet es
+dem wartenden Erkunder das „Ende“. Nach ``antwort``: Nur ein „ja“ zu genau
+dieser Wahl (Kennung) startet ``fahrziel_senden.py --zur-tuer --wahl …``, und
+nur, wenn weder eine Kamera noch eine andere Fahrt läuft; jede andere Antwort
+sendet ``--ende --quelle mensch``.
 
 **Kein Navigator, kein Aufseher:** Die Hilfe sendet selbst nichts an ROS,
 startet und stoppt keine Mission und plant keinen Weg. Gefahren wird nur
@@ -45,7 +47,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -63,14 +65,18 @@ VORGABE = {
 # So endet in der Befehlszeile, was die Hilfe selbst gestartet hat.
 MERKMAL = {'begleiter': '_rundblick', 'fahrt_begleiter': '_fahrt', 'kamera': 'oak.launch.py',
            'aufnahme': 'blickrunde_aufnehmen.py', 'werkzeug': 'fahrziel_senden.py'}
-RAND = ' \t\r\n.,;:!?"\'„“”‚‘’»«()'
+ANFUEHRUNG = ' \t\r\n"\'„“”‚‘’»«'
 
 
 # ---- kleine Bausteine --------------------------------------------------------
 
 def ist_ja(wortlaut: str) -> bool:
-    """Nur ein klares „ja“ gibt die Fahrt frei („Ja.“ ja, „ja, aber …“ nein)."""
-    return wortlaut.strip(RAND).lower() == 'ja'
+    """Nur ein klares „ja“ gibt die Fahrt frei: „ja“, „Ja.“ oder „ja!“.
+
+    Alles andere ist kein Ja, auch „ja?“ (eine Rückfrage), „ja…“ oder
+    „ja, aber …“ (Gegenprüfung 24.11.2026).
+    """
+    return wortlaut.strip(ANFUEHRUNG).lower() in ('ja', 'ja.', 'ja!')
 
 
 def kennung_der_datei(pfad: Path) -> str:
@@ -111,8 +117,10 @@ def passt(teile: Optional[List[str]], merkmal: str) -> bool:
 def vorfahren() -> set:
     """Dieser Prozess und alle seine Vorfahren (Shells, die ihn gestartet haben)."""
     pids, pid = set(), os.getpid()
-    while pid > 1 and pid not in pids:
-        pids.add(pid)
+    while pid >= 1 and pid not in pids:
+        pids.add(pid)                    # auch PID 1 (eigener Namensraum, Init)
+        if pid == 1:
+            break
         try:
             status = Path(f'/proc/{pid}/status').read_text(encoding='utf-8', errors='replace')
         except OSError:
@@ -188,6 +196,45 @@ def schluesselwerte(zeile: str) -> Dict[str, str]:
 def letzte_zeile(pfad: Path, anfang: str) -> Optional[str]:
     treffer = [z for z in zeilen(pfad) if z.startswith(anfang)]
     return treffer[-1] if treffer else None
+
+
+def _wahl_werkzeuge():
+    """``wahl_satz`` und ``einzeilig`` aus dem Lotsen, erst bei Bedarf geladen
+    (numpy): ``aufraeumen`` und ``verfolgen`` gehen auch ohne."""
+    if str(WERKZEUGE.parent) not in sys.path:
+        sys.path.insert(0, str(WERKZEUGE.parent))
+    from lotse.wahl import einzeilig, wahl_satz
+    return wahl_satz, einzeilig
+
+
+def wahl_aus_datei(pfad, kennung: str) -> Tuple[Optional[dict], str]:
+    """Die Wahl-Datei, nur wenn genau diese Bytes zur Kennung passen; sonst Grund.
+
+    Die Frage an den Menschen entsteht aus dieser Datei, nicht aus Textzeilen,
+    die zu einer anderen Wahl gehören könnten (Gegenprüfung 24.11.2026).
+    """
+    try:
+        roh = Path(pfad).read_bytes()
+    except (OSError, TypeError):
+        return None, 'Wahl-Datei fehlt'
+    if hashlib.sha256(roh).hexdigest()[:6] != kennung:
+        return None, 'Wahl-Datei passt nicht zur Kennung'
+    try:
+        daten = json.loads(roh.decode('utf-8'))
+    except ValueError:
+        return None, 'Wahl-Datei ist kein JSON'
+    if not isinstance(daten, dict) or daten.get('art') != 'ki_wahl' or daten.get('quelle') != 'ki':
+        return None, 'keine Wahl der KI'
+    if isinstance(daten.get('nr'), bool) or not isinstance(daten.get('nr'), int):
+        return None, 'Nummer fehlt'
+    try:
+        wahl_satz, _ = _wahl_werkzeuge()
+        wahl_satz(daten)
+    except ImportError as fehler:
+        return None, f'Lotse nicht ladbar ({fehler})'
+    except (KeyError, TypeError, ValueError):
+        return None, 'Maße der Wahl fehlen'
+    return daten, ''
 
 
 # ---- ein Lauf ----------------------------------------------------------------
@@ -288,7 +335,7 @@ def begleiter_rundblick(ordner: Path) -> int:
     if not marke.gesetzt() and kamera.poll() is None:
         argumente = [z['python'], Path(z['werkzeuge']) / 'blickrunde_aufnehmen.py',
                      '--name', z['name'], '--ausgabe', Path(z['runden']).expanduser(),
-                     '--dauer', str(z['dauer'])]
+                     '--dauer', str(z['dauer']), '--bereit-nach', str(z['bereit_nach'])]
         if not z['nur_stand']:
             argumente += ['--bis-wartephase', str(z['nachlauf'])]
         with open(lauf.aufnahme, 'ab') as datei:
@@ -308,9 +355,9 @@ def begleiter_rundblick(ordner: Path) -> int:
     if kamera.poll() is None:
         kamera.send_signal(signal.SIGINT)
         try:
-            kamera.wait(timeout=15)
+            kamera.wait(timeout=30)
         except subprocess.TimeoutExpired:
-            lauf.protokoll('Kamera nach 15 s noch nicht beendet')
+            lauf.protokoll('Kamera nach 30 s noch nicht beendet')
     fehler = sum(1 for zeile in zeilen(lauf.kamera_log) if 'error' in zeile.lower())
     ergebnis_zeile = letzte_zeile(lauf.aufnahme, 'ERGEBNIS')
     ergebnis = schluesselwerte(ergebnis_zeile) if ergebnis_zeile else {}
@@ -341,30 +388,66 @@ def begleiter_rundblick(ordner: Path) -> int:
     return 0
 
 
+def fahrt_erlaubt(z: dict) -> Optional[str]:
+    """Grund, warum nicht gefahren werden darf; None, wenn alles passt.
+
+    Dieselben Bedingungen wie in ``antwort``, hier ein zweites Mal geprüft: Der
+    interne Befehl ``_fahrt`` darf ohne ein „ja“ zu genau dieser Wahl nichts tun.
+    """
+    w, antwort = z.get('wahl') or {}, z.get('antwort') or {}
+    if z.get('nur_stand'):
+        return 'Vorlauf im Stand'
+    if antwort.get('ja') is not True or not ist_ja(str(antwort.get('wortlaut', ''))):
+        return 'kein Ja eingetragen'
+    if w.get('rc') != 0 or not w.get('kennung') or not w.get('datei'):
+        return 'keine Wahl der KI'
+    datei = Path(w['datei'])
+    if not datei.is_file() or kennung_der_datei(datei) != w['kennung']:
+        return 'Wahl-Datei fehlt oder ist verändert'
+    return None
+
+
 def begleiter_fahrt(ordner: Path) -> int:
     lauf = Lauf(ordner)
     z = lauf.zustand()
-    marke = Ende().anmelden()
     stand = {'phase': 'faehrt', 'pid': os.getpid(), 'start_unix': round(time.time(), 1)}
-    schreibe_json(lauf.fahrt_datei, stand)
-    befehl = in_umgebung(z['umgebung_stack'], [
-        z['python'], Path(z['werkzeuge']) / 'fahrziel_senden.py', '--zur-tuer', '--wahl',
-        z['wahl']['datei'], '--hinter', '0.45', '--warten', '60', '--beobachten', '600'])
-    lauf.protokoll('fahrt ' + ' '.join(shlex.quote(str(t)) for t in befehl[5:]))
-    with open(lauf.werkzeug, 'ab') as datei:
-        werkzeug = subprocess.Popen(befehl, stdout=datei, stderr=subprocess.STDOUT,
-                                    stdin=subprocess.DEVNULL)
-    stand['werkzeug_pid'] = werkzeug.pid
-    schreibe_json(lauf.fahrt_datei, stand)
-    weitergegeben = False
-    while werkzeug.poll() is None:
-        if marke.gesetzt() and not weitergegeben:
-            werkzeug.send_signal(signal.SIGINT)      # genau eines; es sendet danach nichts mehr
-            weitergegeben = True
-        time.sleep(0.2)
-    stand.update(phase='fertig', rc=werkzeug.returncode, ende_unix=round(time.time(), 1))
-    schreibe_json(lauf.fahrt_datei, stand)
-    marke.abmelden()
+    try:                                 # nur einmal je Lauf: die Datei darf es noch nicht geben
+        os.close(os.open(lauf.fahrt_datei, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644))
+    except FileExistsError:
+        lauf.protokoll('_fahrt abgelehnt: es gab schon eine Fahrt')
+        return RC_NEIN
+    grund = fahrt_erlaubt(z)
+    if grund is not None:
+        stand.update(phase='abgelehnt', grund=grund)
+        schreibe_json(lauf.fahrt_datei, stand)
+        lauf.protokoll(f'_fahrt abgelehnt: {grund}')
+        return RC_NEIN
+    marke = Ende().anmelden()            # ab hier setzt ein Signal nur die Marke
+    try:
+        if marke.gesetzt():
+            stand.update(phase='abgelehnt', grund='Signal vor dem Start')
+            schreibe_json(lauf.fahrt_datei, stand)
+            return RC_NEIN
+        schreibe_json(lauf.fahrt_datei, stand)
+        befehl = in_umgebung(z['umgebung_stack'], [
+            z['python'], Path(z['werkzeuge']) / 'fahrziel_senden.py', '--zur-tuer', '--wahl',
+            z['wahl']['datei'], '--hinter', '0.45', '--warten', '60', '--beobachten', '600'])
+        lauf.protokoll('fahrt ' + ' '.join(shlex.quote(str(t)) for t in befehl[5:]))
+        with open(lauf.werkzeug, 'ab') as datei:
+            werkzeug = subprocess.Popen(befehl, stdout=datei, stderr=subprocess.STDOUT,
+                                        stdin=subprocess.DEVNULL)
+        stand['werkzeug_pid'] = werkzeug.pid
+        schreibe_json(lauf.fahrt_datei, stand)
+        weitergegeben = False
+        while werkzeug.poll() is None:
+            if marke.gesetzt() and not weitergegeben:
+                werkzeug.send_signal(signal.SIGINT)  # genau eines; es sendet danach nichts mehr
+                weitergegeben = True
+            time.sleep(0.2)
+        stand.update(phase='fertig', rc=werkzeug.returncode, ende_unix=round(time.time(), 1))
+        schreibe_json(lauf.fahrt_datei, stand)
+    finally:
+        marke.abmelden()
     return 0
 
 
@@ -431,6 +514,7 @@ def konfiguration(a) -> dict:
             'umgebung_kamera': a.umgebung_kamera, 'umgebung_stack': a.umgebung_stack,
             'python': a.python, 'runden': a.runden, 'wahl_ordner': a.wahl_ordner,
             'kamera_befehl': a.kamera_befehl, 'kamera_vorlauf': a.kamera_vorlauf,
+            'bereit_nach': a.bereit_nach,
             'dauer': a.dauer, 'nachlauf': a.nachlauf, 'frist': a.frist,
             'hoechstens': 300.0 if a.hoechstens is None else a.hoechstens, 'tuer': a.tuer,
             'nur_stand': bool(getattr(a, 'nur_stand', False)),
@@ -440,7 +524,9 @@ def konfiguration(a) -> dict:
 
 def befehl_start(a) -> int:
     lauf = Lauf.aus(a)
-    if lauf.zustand_datei.exists():
+    if lauf.ordner.exists():
+        # Auch ohne zustand.json: Alte Ausgaben im Ordner würden sonst mit
+        # neuen vermischt (Gegenprüfung 24.11.2026).
         print(f'Lauf {a.lauf} von {a.auftrag} gibt es schon ({lauf.ordner}); für eine '
               'Wiederholung eine neue Laufkennung nehmen (zum Beispiel 1w).')
         return RC_NEIN
@@ -454,6 +540,11 @@ def befehl_start(a) -> int:
     schon = laufende(MERKMAL['kamera'], MERKMAL['aufnahme'], MERKMAL['begleiter'])
     if schon:
         print(f'Kamera, Aufnahme oder Begleiter laufen schon (PID {schon}). Nichts gestartet.')
+        return RC_NEIN
+    fahrt = laufende(MERKMAL['fahrt_begleiter'], MERKMAL['werkzeug'])
+    if fahrt:
+        print(f'Eine Fahrt läuft noch (PID {fahrt}); erst „verfolgen“, bis sie fertig ist. '
+              'Nichts gestartet.')
         return RC_NEIN
     lauf.ordner.mkdir(parents=True, exist_ok=True)
     z['start_unix'] = round(time.time(), 1)
@@ -477,7 +568,7 @@ def befehl_start(a) -> int:
         for zeile in (zeilen(lauf.aufnahme) + zeilen(lauf.kamera_log))[-8:]:
             print('  ' + zeile)
         stoppe_begleiter(lauf)
-        print('Kamera und Aufnahme beendet. Keine Mission starten.')
+        print(f'{kamera_zustand(lauf)} Keine Mission starten.')
         return RC_NEIN
     werte = schluesselwerte(bereit)
     gruende = []
@@ -492,7 +583,7 @@ def befehl_start(a) -> int:
     print(bereit)
     if gruende:
         stoppe_begleiter(lauf)
-        print('Nicht bereit: ' + '; '.join(gruende) + '. Kamera und Aufnahme beendet. '
+        print('Nicht bereit: ' + '; '.join(gruende) + f'. {kamera_zustand(lauf)} '
               'Keine Mission starten.')
         return RC_NEIN
     if z['nur_stand']:
@@ -502,6 +593,18 @@ def befehl_start(a) -> int:
         print('Aufnahme läuft und endet von selbst 5 s nach dem Rundblick. Jetzt genau einmal '
               'die Mission starten.')
     return RC_OK
+
+
+def kamera_laeuft(lauf: Lauf) -> List[str]:
+    """Was von Kamera und Aufnahme dieses Laufs noch läuft (Argumente geprüft)."""
+    b = lies_json(lauf.begleiter_datei)
+    return [name for name in ('kamera', 'aufnahme') if laeuft(b.get(f'{name}_pid'), MERKMAL[name])]
+
+
+def kamera_zustand(lauf: Lauf) -> str:
+    noch = kamera_laeuft(lauf)
+    return ('Kamera und Aufnahme beendet.' if not noch
+            else f'NOCH NICHT BEENDET: {", ".join(noch)}.')
 
 
 def stoppe_begleiter(lauf: Lauf) -> None:
@@ -519,20 +622,28 @@ def minuten_uebrig(z: dict, wartephase_unix: Optional[str]) -> Optional[int]:
     return max(0, math.floor((float(z['frist']) - seit) / 60.0))
 
 
-def baue_frage(wahl_zeilen: List[str], minuten: Optional[int], tuer: str) -> Optional[str]:
-    satz = next((z for z in wahl_zeilen if z.startswith('Die KI wählt Nr.')), None)
-    if satz is None:
-        return None
-    begruendung = next((z for z in wahl_zeilen if z.startswith('Begründung der KI:')), None)
-    gefahren = next((z for z in wahl_zeilen if z.startswith('Gefahren laut KI:')), None)
-    nummern = [z.strip() for z in wahl_zeilen if z.startswith('  Nr. ')]
-    teile = ['Die KI hat gewählt.', satz]
+def _mit_punkt(satz: str) -> str:
+    satz = satz.strip()
+    return satz if satz.endswith(('.', '!', '?', '“', '"')) else satz + '.'
+
+
+def baue_frage(daten: dict, wahl_zeilen: List[str], minuten: Optional[int], tuer: str) -> str:
+    """Die Frage an den Menschen. Wahl, Begründung und Gefahren kommen aus der
+    geprüften Wahl-Datei (``daten``); aus dem Wahl-Text nur die Übersicht, was
+    die KI in jeder Nummer sieht."""
+    wahl_satz, einzeilig = _wahl_werkzeuge()
+    begruendung = einzeilig(daten.get('begruendung') or '')
+    gefahren = daten.get('gefahren') or []
+    gefahren = einzeilig(', '.join(map(str, gefahren if isinstance(gefahren, list)
+                                       else [gefahren])))
+    nummern = [einzeilig(z) for z in wahl_zeilen if z.startswith('  Nr. ')]
+    teile = ['Die KI hat gewählt.', _mit_punkt(wahl_satz(daten))]
     if begruendung:
-        teile.append(begruendung)
+        teile.append(_mit_punkt(f'Begründung der KI: {begruendung}'))
     if nummern:
         teile.append('Was sie in jeder Nummer sieht: ' + ' / '.join(nummern) + '.')
     if gefahren:
-        teile.append(gefahren + '.')
+        teile.append(_mit_punkt(f'Gefahren laut KI: {gefahren}'))
     teile.append('Die Bilder mit den Nummern zeigt das Lotsen-Fenster auf dem KI-Rechner. '
                  f'Ist die gewählte Öffnung {tuer}, und soll Amadeus hindurchfahren? '
                  "Schreib ‚ja' oder ‚nein'.")
@@ -580,8 +691,9 @@ def befehl_wahl(a) -> int:
         time.sleep(1.0)
     b = lies_json(lauf.begleiter_datei)
     erg = b.get('ergebnis') or {}
-    print(f'Aufnahme: {letzte_zeile(lauf.aufnahme, "ERGEBNIS") or "kein Ergebnis"}; Kamera '
-          f'beendet (Fehlerzeilen im Log: {b.get("kamera_fehlerzeilen", "-")}).')
+    print(f'Aufnahme: {letzte_zeile(lauf.aufnahme, "ERGEBNIS") or "kein Ergebnis"}; '
+          f'{kamera_zustand(lauf)} (Kamera rc={b.get("kamera_rc")}, Fehlerzeilen im Log: '
+          f'{b.get("kamera_fehlerzeilen", "-")})')
     if b.get('wahl_rc') is None:
         grund = ('Aufnahme abgebrochen' if b.get('abgebrochen')
                  else 'keine Runde' if erg.get('runde') in (None, '-')
@@ -606,15 +718,30 @@ def befehl_wahl(a) -> int:
             ende_senden(lauf, z, 'ki')
         print('LAUF ergebnis=nicht_gefahren grund=keine_wahl')
         return RC_NEIN
+    daten, grund = wahl_aus_datei(wahl['datei'], wahl['kennung'])
+    if daten is None:
+        lauf.merke(wahl={**wahl, 'rc': RC_NEIN, 'grund': grund})
+        print(f'Die Wahl lässt sich nicht prüfen ({grund}). Keine Frage an den Menschen.')
+        if not z['nur_stand']:
+            ende_senden(lauf, z, 'ki')
+        print('LAUF ergebnis=nicht_gefahren grund=keine_wahl')
+        return RC_NEIN
     if z['nur_stand']:
         lauf.merke(wahl=wahl)
         print(f'Vorlauf im Stand: Wahl der KI mit Kennung {wahl["kennung"]}; keine Frage, '
               'nichts gesendet. Weiter mit: messen.')
         return RC_OK
-    frage = baue_frage(text, minuten_uebrig(z, wahl['wartephase_unix']), z['tuer'])
+    kamera = laufende(MERKMAL['kamera'], MERKMAL['aufnahme'])
+    if kamera:
+        # Die Kamera läuft nie während der Fahrt; erst fragen, wenn sie aus ist.
+        print(f'Kamera oder Aufnahme laufen noch (PID {kamera}). Noch keine Frage. In einigen '
+              'Sekunden „wahl“ erneut aufrufen; enden sie nicht: „aufraeumen“, nicht fahren, '
+              'berichten.')
+        return RC_LAEUFT
+    frage = baue_frage(daten, text, minuten_uebrig(z, wahl['wartephase_unix']), z['tuer'])
     wahl['frage'] = frage
     lauf.merke(wahl=wahl)
-    (lauf.ordner / 'frage.txt').write_text((frage or '') + '\n', encoding='utf-8')
+    (lauf.ordner / 'frage.txt').write_text(frage + '\n', encoding='utf-8')
     print('FRAGE AN CHRISTOPHER (wörtlich weitergeben):')
     print(frage)
     print('Seine Antwort danach eintragen (Kennung der Wahl: ' + wahl['kennung'] + '):')
@@ -642,8 +769,25 @@ def befehl_antwort(a) -> int:
     if not datei.is_file() or kennung_der_datei(datei) != w['kennung']:
         print('Die Wahl-Datei fehlt oder hat sich seit der Frage geändert. Nichts aufgerufen.')
         return RC_NEIN
-    stoppe_begleiter(lauf)                    # läuft die Kamera noch: zuerst beenden
+    fahrt = laufende(MERKMAL['fahrt_begleiter'], MERKMAL['werkzeug'])
+    if fahrt:
+        print(f'Eine Fahrt läuft noch (PID {fahrt}). Antwort nicht eingetragen, nichts '
+              'aufgerufen.')
+        return RC_NEIN
+    if lauf.fahrt_datei.exists():
+        print('Zu diesem Lauf gab es schon einen Fahrversuch (fahrt.json). Antwort nicht '
+              'eingetragen, nichts aufgerufen.')
+        return RC_NEIN
+    stoppe_begleiter(lauf)                    # läuft der Begleiter noch: zuerst beenden
     ja = ist_ja(a.wortlaut)
+    kamera = laufende(MERKMAL['kamera'], MERKMAL['aufnahme']) if ja else []
+    if kamera:
+        # Die Kamera läuft nie während der Fahrt (KI-F9-Regel); ein Nein geht immer.
+        lauf.protokoll(f'antwort {a.wortlaut!r} zurückgestellt: Kamera/Aufnahme PID {kamera}')
+        print(f'Kamera oder Aufnahme laufen noch (PID {kamera}). Antwort nicht eingetragen, '
+              'nichts gesendet. Gehören sie zu diesem Lauf: „aufraeumen“, dann dieselbe '
+              'Antwort noch einmal eintragen; sonst nicht fahren und berichten.')
+        return RC_NEIN
     with open(lauf.ordner / 'christopher.txt', 'a', encoding='utf-8') as datei_c:
         datei_c.write(f'{time.strftime("%Y-%m-%dT%H:%M:%S")} {a.wortlaut}\n')
     lauf.merke(antwort={'wortlaut': a.wortlaut, 'ja': ja, 'unix': round(time.time(), 1)})
@@ -681,9 +825,11 @@ def verfolge(lauf: Lauf, warten: float) -> int:
         gezeigt = len(alle)
         lauf.merke(gezeigt_bis=gezeigt)
         f = lies_json(lauf.fahrt_datei)
-        if f.get('phase') == 'fertig' or not laeuft(z.get('fahrt_begleiter_pid'),
-                                                    MERKMAL['fahrt_begleiter']):
+        if f.get('phase') in ('fertig', 'abgelehnt') or not laeuft(
+                z.get('fahrt_begleiter_pid'), MERKMAL['fahrt_begleiter']):
             f = lies_json(lauf.fahrt_datei)
+            if f.get('phase') == 'abgelehnt':
+                print(f'Fahrt abgelehnt: {f.get("grund")}. Nichts gesendet.')
             ergebnis = ergebnis_der_fahrt(zeilen(lauf.werkzeug))
             print(f'LAUF ergebnis={ergebnis} werkzeug_rc={f.get("rc")}')
             return RC_OK if ergebnis == 'durchfahrt' else RC_NEIN
@@ -738,7 +884,10 @@ def befehl_aufraeumen(a) -> int:
 
 def eingabe() -> argparse.ArgumentParser:
     e = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
-    unter = e.add_subparsers(dest='befehl', required=True)
+    # Die internen Befehle der Begleiter (_rundblick, _fahrt) stehen nicht in der Hilfe.
+    unter = e.add_subparsers(
+        dest='befehl', required=True,
+        metavar='{pruefe-umgebung,start,wahl,antwort,verfolgen,messen,aufraeumen}')
 
     def gemeinsam(p, lauf=True):
         p.add_argument('--auftrag', default='kif10',
@@ -754,6 +903,8 @@ def eingabe() -> argparse.ArgumentParser:
         p.add_argument('--wahl-ordner', default=VORGABE['wahl_ordner'])
         p.add_argument('--kamera-befehl', default=VORGABE['kamera_befehl'])
         p.add_argument('--kamera-vorlauf', type=float, default=20.0)
+        p.add_argument('--bereit-nach', type=float, default=8.0,
+                       help='so lange misst die Aufnahme die Raten bis zur Zeile BEREIT, s')
         p.add_argument('--dauer', type=float, default=420.0, help='höchste Aufnahmedauer, s')
         p.add_argument('--nachlauf', type=float, default=5.0,
                        help='so lange nimmt die Aufnahme nach dem Rundblick noch auf, s')

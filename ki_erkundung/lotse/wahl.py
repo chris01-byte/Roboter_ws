@@ -163,6 +163,12 @@ def wahl_lesen(text: str, *, jetzt_s: float, rahmen: str = 'map',
     return wahl
 
 
+def einzeilig(text) -> str:
+    """Freitext der KI in einer Zeile: Zeilenumbrüche würden Ausgaben zerlegen,
+    die zeilenweise gelesen werden (Wahl-Text, Frage an den Menschen)."""
+    return ' '.join(str(text).split())
+
+
 def _komma(wert: float, stellen: int) -> str:
     return f'{wert:.{stellen}f}'.replace('.', ',')
 
