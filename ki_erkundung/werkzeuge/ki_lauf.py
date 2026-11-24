@@ -7,6 +7,7 @@ in einer Datei, und kein Schritt baut auf Variablen eines früheren auf.
 
     ki_lauf.py pruefe-umgebung
     ki_lauf.py start   --auftrag kif10 --lauf 1      # Kamera, Aufnahme
+                       [--tuer "die Labortür" --frist 420 …]  # nur hier
     (Missionsstart von Hand, genau einmal)
     ki_lauf.py wahl    --auftrag kif10 --lauf 1      # Wahl der KI, Frage
     ki_lauf.py antwort --auftrag kif10 --lauf 1 --kennung abc123 --wortlaut "ja"
@@ -22,7 +23,11 @@ gefragt wird erst, wenn keine Kamera mehr läuft. Ohne gültige Wahl sendet es
 dem wartenden Erkunder das „Ende“. Nach ``antwort``: Nur ein „ja“ zu genau
 dieser Wahl (Kennung) startet ``fahrziel_senden.py --zur-tuer --wahl …``, und
 nur, wenn weder eine Kamera noch eine andere Fahrt läuft; jede andere Antwort
-sendet ``--ende --quelle mensch``.
+sendet ``--ende --quelle mensch``. Eine Antwort gilt nur, solange der Erkunder
+dieses Laufs wartet (Frist ab der Wartephase) und kein späterer Lauf begonnen
+hat; danach ruft sie nichts auf, auch kein „Ende“. Angaben für den ganzen Lauf
+(Umgebungen, Tür, Frist …) gibt es nur bei ``start``; die späteren Schritte
+lesen sie aus dem gespeicherten Zustand.
 
 **Kein Navigator, kein Aufseher:** Die Hilfe sendet selbst nichts an ROS,
 startet und stoppt keine Mission und plant keinen Weg. Gefahren wird nur
@@ -36,6 +41,8 @@ keine Runde; 10 läuft noch – denselben Befehl noch einmal aufrufen.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import fcntl
 import hashlib
 import json
 import math
@@ -45,6 +52,7 @@ import shlex
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -66,6 +74,9 @@ VORGABE = {
 MERKMAL = {'begleiter': '_rundblick', 'fahrt_begleiter': '_fahrt', 'kamera': 'oak.launch.py',
            'aufnahme': 'blickrunde_aufnehmen.py', 'werkzeug': 'fahrziel_senden.py'}
 ANFUEHRUNG = ' \t\r\n"\'„“”‚‘’»«'
+# Mit weniger Restzeit des wartenden Erkunders wird nicht mehr gefragt und
+# ihm nichts mehr gesagt (er schließt die Mission nach seiner Frist selbst).
+SPAETESTENS_S = 5.0
 
 
 # ---- kleine Bausteine --------------------------------------------------------
@@ -176,10 +187,18 @@ def lies_json(pfad: Path) -> dict:
 
 
 def schreibe_json(pfad: Path, daten: dict) -> None:
-    """Erst in eine Nebendatei, dann umbenennen: Leser sehen nie eine halbe Datei."""
-    neu = Path(str(pfad) + '.neu')
-    neu.write_text(json.dumps(daten, indent=1, ensure_ascii=False), encoding='utf-8')
-    os.replace(neu, pfad)
+    """Erst in eine eigene Nebendatei, dann umbenennen: Leser sehen nie eine halbe
+    Datei, und zwei Schreiber kommen sich nicht in die Quere (Gegenprüfung 24.11.2026)."""
+    pfad = Path(pfad)
+    nummer, neu = tempfile.mkstemp(dir=pfad.parent, prefix=pfad.name + '.', suffix='.neu')
+    try:
+        with os.fdopen(nummer, 'w', encoding='utf-8') as datei:
+            json.dump(daten, datei, indent=1, ensure_ascii=False)
+        os.replace(neu, pfad)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(neu)
+        raise
 
 
 def zeilen(pfad: Path) -> List[str]:
@@ -261,9 +280,13 @@ class Lauf:
         return lies_json(self.zustand_datei)
 
     def merke(self, **teile) -> dict:
-        zustand = self.zustand()
-        zustand.update(teile)
-        schreibe_json(self.zustand_datei, zustand)
+        """Lesen, ändern, schreiben unter einer Sperre: Zwei Befehle desselben Laufs
+        (etwa zweimal „verfolgen“) verlieren sonst gegenseitig ihre Einträge."""
+        with open(self.ordner / '.zustand.sperre', 'a', encoding='utf-8') as sperre:
+            fcntl.flock(sperre, fcntl.LOCK_EX)
+            zustand = self.zustand()
+            zustand.update(teile)
+            schreibe_json(self.zustand_datei, zustand)
         return zustand
 
     def protokoll(self, text: str) -> None:
@@ -307,6 +330,16 @@ def ende_senden(lauf: Lauf, z: dict, quelle: str) -> int:
         print('  ' + zeile)
     print(f'Ende an den Erkunder (Quelle {quelle}): rc={rc}. Amadeus fährt nicht.')
     return rc
+
+
+def ende_wenn_er_wartet(lauf: Lauf, z: dict, wartephase_unix, quelle: str) -> Optional[int]:
+    """„Ende“ nur an den Erkunder, der zu diesem Lauf wartet, sonst nichts senden."""
+    grund = nicht_mehr_dran(lauf, z, wartephase_unix)
+    if grund:
+        print(f'Kein Ende gesendet: {grund}. Amadeus fährt nicht.')
+        lauf.protokoll(f'kein Ende (Quelle {quelle}): {grund}')
+        return None
+    return ende_senden(lauf, z, quelle)
 
 
 # ---- Begleiter (losgelöst): Kamera, Aufnahme, Wahl der KI ----------------------
@@ -388,11 +421,12 @@ def begleiter_rundblick(ordner: Path) -> int:
     return 0
 
 
-def fahrt_erlaubt(z: dict) -> Optional[str]:
+def fahrt_erlaubt(lauf: Lauf, z: dict) -> Optional[str]:
     """Grund, warum nicht gefahren werden darf; None, wenn alles passt.
 
     Dieselben Bedingungen wie in ``antwort``, hier ein zweites Mal geprüft: Der
-    interne Befehl ``_fahrt`` darf ohne ein „ja“ zu genau dieser Wahl nichts tun.
+    interne Befehl ``_fahrt`` darf ohne ein „ja“ zu genau dieser Wahl, an den
+    Erkunder genau dieses Laufs, nichts tun.
     """
     w, antwort = z.get('wahl') or {}, z.get('antwort') or {}
     if z.get('nur_stand'):
@@ -404,7 +438,7 @@ def fahrt_erlaubt(z: dict) -> Optional[str]:
     datei = Path(w['datei'])
     if not datei.is_file() or kennung_der_datei(datei) != w['kennung']:
         return 'Wahl-Datei fehlt oder ist verändert'
-    return None
+    return nicht_mehr_dran(lauf, z, w.get('wartephase_unix'))
 
 
 def begleiter_fahrt(ordner: Path) -> int:
@@ -416,7 +450,7 @@ def begleiter_fahrt(ordner: Path) -> int:
     except FileExistsError:
         lauf.protokoll('_fahrt abgelehnt: es gab schon eine Fahrt')
         return RC_NEIN
-    grund = fahrt_erlaubt(z)
+    grund = fahrt_erlaubt(lauf, z)
     if grund is not None:
         stand.update(phase='abgelehnt', grund=grund)
         schreibe_json(lauf.fahrt_datei, stand)
@@ -614,12 +648,66 @@ def stoppe_begleiter(lauf: Lauf) -> None:
         warte_bis_beendet(z.get('begleiter_pid'), MERKMAL['begleiter'], 40)
 
 
-def minuten_uebrig(z: dict, wartephase_unix: Optional[str]) -> Optional[int]:
+def restzeit_s(z: dict, wartephase_unix) -> Optional[float]:
+    """So lange wartet der Erkunder dieses Laufs noch auf ein Fahrziel; None: unbekannt."""
     try:
-        seit = time.time() - float(wartephase_unix)
-    except (TypeError, ValueError):
+        return float(z['frist']) - (time.time() - float(wartephase_unix))
+    except (KeyError, TypeError, ValueError):
         return None
-    return max(0, math.floor((float(z['frist']) - seit) / 60.0))
+
+
+def spaeterer_lauf(lauf: Lauf, z: dict) -> Optional[str]:
+    """Ein Lauf desselben Auftrags, der nach diesem gestartet wurde; sonst None."""
+    try:
+        eigener = float(z['start_unix'])
+    except (KeyError, TypeError, ValueError):
+        return None
+    for ordner in sorted(lauf.ordner.parent.glob('lauf*')):
+        if ordner == lauf.ordner:
+            continue
+        try:
+            if float(lies_json(ordner / 'zustand.json').get('start_unix')) > eigener:
+                return ordner.name
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def nicht_mehr_dran(lauf: Lauf, z: dict, wartephase_unix) -> Optional[str]:
+    """Warum dieser Lauf dem Erkunder nichts mehr sagen darf; None, solange er wartet.
+
+    Ein Ja (oder Ende) gilt nur für den Erkunder, der zu genau dieser Frage
+    wartet: nicht nach seiner Frist und nicht, wenn danach ein neuer Lauf
+    begonnen hat. Sonst träfe das Fahrwerkzeug den Erkunder des neuen Laufs
+    (Gegenprüfung 24.11.2026).
+    """
+    spaeter = spaeterer_lauf(lauf, z)
+    if spaeter:
+        return f'danach wurde {spaeter} gestartet'
+    rest = restzeit_s(z, wartephase_unix)
+    if rest is None:
+        return 'Beginn der Wartephase unbekannt'
+    if rest < SPAETESTENS_S:
+        return 'die Frist des Erkunders ist abgelaufen, er wartet nicht mehr'
+    return None
+
+
+def zeit_satz(rest_s: Optional[float]) -> str:
+    if rest_s is None:
+        return ''
+    if rest_s >= 120.0:
+        return f'(Der Erkunder wartet noch etwa {math.floor(rest_s / 60.0)} Minuten.)'
+    if rest_s >= 60.0:
+        return '(Der Erkunder wartet noch etwa eine Minute.)'
+    return '(Der Erkunder wartet noch weniger als eine Minute.)'
+
+
+def mit_restzeit(frage: str, rest_s: Optional[float]) -> str:
+    """Die gespeicherte Frage mit der Restzeit von jetzt (nie die vom ersten Aufruf)."""
+    satz = zeit_satz(rest_s)
+    if not satz or not frage.endswith('“'):
+        return frage
+    return frage[:-1] + ' ' + satz + '“'
 
 
 def _mit_punkt(satz: str) -> str:
@@ -627,8 +715,9 @@ def _mit_punkt(satz: str) -> str:
     return satz if satz.endswith(('.', '!', '?', '“', '"')) else satz + '.'
 
 
-def baue_frage(daten: dict, wahl_zeilen: List[str], minuten: Optional[int], tuer: str) -> str:
-    """Die Frage an den Menschen. Wahl, Begründung und Gefahren kommen aus der
+def baue_frage(daten: dict, wahl_zeilen: List[str], tuer: str) -> str:
+    """Die Frage an den Menschen, ohne Restzeit (die kommt bei jeder Ausgabe mit
+    ``mit_restzeit`` neu dazu). Wahl, Begründung und Gefahren kommen aus der
     geprüften Wahl-Datei (``daten``); aus dem Wahl-Text nur die Übersicht, was
     die KI in jeder Nummer sieht."""
     wahl_satz, einzeilig = _wahl_werkzeuge()
@@ -647,8 +736,6 @@ def baue_frage(daten: dict, wahl_zeilen: List[str], minuten: Optional[int], tuer
     teile.append('Die Bilder mit den Nummern zeigt das Lotsen-Fenster auf dem KI-Rechner. '
                  f'Ist die gewählte Öffnung {tuer}, und soll Amadeus hindurchfahren? '
                  "Schreib ‚ja' oder ‚nein'.")
-    if minuten is not None:
-        teile.append(f'(Der Erkunder wartet noch etwa {minuten} Minuten.)')
     return '„' + ' '.join(teile) + '“'
 
 
@@ -659,10 +746,15 @@ def befehl_wahl(a) -> int:
         print(f'Zu Lauf {a.lauf} gibt es keinen Start ({lauf.zustand_datei}).')
         return RC_NEIN
     if 'wahl' in z:                                   # nie zweimal fragen
-        print(f'Die Wahl zu Lauf {a.lauf} steht schon fest (rc={z["wahl"].get("rc")}).')
-        if z['wahl'].get('frage'):
-            print(z['wahl']['frage'])
-        return RC_OK if z['wahl'].get('rc') == 0 else RC_NEIN
+        w = z['wahl']
+        print(f'Die Wahl zu Lauf {a.lauf} steht schon fest (rc={w.get("rc")}).')
+        if 'antwort' in z:
+            print(f'Antwort schon eingetragen: {z["antwort"].get("wortlaut")!r}.')
+        elif w.get('frage'):
+            grund = nicht_mehr_dran(lauf, z, w.get('wartephase_unix'))
+            print(f'Nicht mehr fragen: {grund}.' if grund
+                  else mit_restzeit(w['frage'], restzeit_s(z, w.get('wartephase_unix'))))
+        return RC_OK if w.get('rc') == 0 else RC_NEIN
     bis = time.monotonic() + a.warten
     hoechstens = float(z['hoechstens'] if a.hoechstens is None else a.hoechstens)
     naechste_meldung = 0.0
@@ -702,7 +794,7 @@ def befehl_wahl(a) -> int:
         print(f'Die KI wird nicht gefragt: {grund}.')
         lauf.merke(wahl={'rc': RC_KEINE_RUNDE, 'grund': grund})
         if not z['nur_stand'] and erg.get('grund') == 'wartephase':
-            ende_senden(lauf, z, 'ki')
+            ende_wenn_er_wartet(lauf, z, erg.get('wartephase_unix'), 'ki')
         print('LAUF ergebnis=nicht_gefahren grund=keine_runde')
         return RC_KEINE_RUNDE
     text = [zz for zz in zeilen(lauf.wahl_txt)
@@ -715,7 +807,7 @@ def befehl_wahl(a) -> int:
         lauf.merke(wahl=wahl)
         print(f'Keine Wahl der KI (rc={b["wahl_rc"]}). Keine Frage an den Menschen.')
         if not z['nur_stand']:
-            ende_senden(lauf, z, 'ki')
+            ende_wenn_er_wartet(lauf, z, wahl['wartephase_unix'], 'ki')
         print('LAUF ergebnis=nicht_gefahren grund=keine_wahl')
         return RC_NEIN
     daten, grund = wahl_aus_datei(wahl['datei'], wahl['kennung'])
@@ -723,7 +815,7 @@ def befehl_wahl(a) -> int:
         lauf.merke(wahl={**wahl, 'rc': RC_NEIN, 'grund': grund})
         print(f'Die Wahl lässt sich nicht prüfen ({grund}). Keine Frage an den Menschen.')
         if not z['nur_stand']:
-            ende_senden(lauf, z, 'ki')
+            ende_wenn_er_wartet(lauf, z, wahl['wartephase_unix'], 'ki')
         print('LAUF ergebnis=nicht_gefahren grund=keine_wahl')
         return RC_NEIN
     if z['nur_stand']:
@@ -738,12 +830,19 @@ def befehl_wahl(a) -> int:
               'Sekunden „wahl“ erneut aufrufen; enden sie nicht: „aufraeumen“, nicht fahren, '
               'berichten.')
         return RC_LAEUFT
-    frage = baue_frage(daten, text, minuten_uebrig(z, wahl['wartephase_unix']), z['tuer'])
+    grund = nicht_mehr_dran(lauf, z, wahl['wartephase_unix'])
+    if grund:
+        # Ein Ja könnte nichts mehr bewirken: nicht fragen (der Erkunder schließt selbst).
+        lauf.merke(wahl={**wahl, 'rc': RC_NEIN, 'grund': grund})
+        print(f'Keine Frage an den Menschen: {grund}. Nichts gesendet.')
+        print('LAUF ergebnis=nicht_gefahren grund=zu_spaet')
+        return RC_NEIN
+    frage = baue_frage(daten, text, z['tuer'])
     wahl['frage'] = frage
     lauf.merke(wahl=wahl)
     (lauf.ordner / 'frage.txt').write_text(frage + '\n', encoding='utf-8')
     print('FRAGE AN CHRISTOPHER (wörtlich weitergeben):')
-    print(frage)
+    print(mit_restzeit(frage, restzeit_s(z, wahl['wartephase_unix'])))
     print('Seine Antwort danach eintragen (Kennung der Wahl: ' + wahl['kennung'] + '):')
     print(f'  python3 {Path(__file__).resolve()} antwort --auftrag {a.auftrag} '
           f'--lauf {a.lauf} --kennung {wahl["kennung"]} --wortlaut "<seine Antwort>"')
@@ -768,6 +867,14 @@ def befehl_antwort(a) -> int:
     datei = Path(w['datei'])
     if not datei.is_file() or kennung_der_datei(datei) != w['kennung']:
         print('Die Wahl-Datei fehlt oder hat sich seit der Frage geändert. Nichts aufgerufen.')
+        return RC_NEIN
+    grund = nicht_mehr_dran(lauf, z, w.get('wartephase_unix'))
+    if grund:
+        # Auch kein Ende: Es träfe womöglich den Erkunder eines neuen Laufs.
+        lauf.protokoll(f'antwort {a.wortlaut!r} zu spät: {grund}')
+        print(f'Zu spät für Lauf {a.lauf}: {grund}. Antwort nicht eingetragen, nichts '
+              'aufgerufen, auch kein Ende. Bei einer Wiederholung gilt nur die Frage des '
+              'neuen Laufs.')
         return RC_NEIN
     fahrt = laufende(MERKMAL['fahrt_begleiter'], MERKMAL['werkzeug'])
     if fahrt:
@@ -794,7 +901,7 @@ def befehl_antwort(a) -> int:
     lauf.protokoll(f'antwort {a.wortlaut!r} -> {"ja" if ja else "kein ja"}')
     if not ja:
         print('Kein Ja: Amadeus fährt nicht.')
-        ende_senden(lauf, z, 'mensch')
+        ende_wenn_er_wartet(lauf, z, w.get('wartephase_unix'), 'mensch')
         print('LAUF ergebnis=nicht_gefahren grund=kein_ja')
         return RC_OK
     begleiter = starte_losgeloest([sys.executable, str(Path(__file__).resolve()), '_fahrt',
@@ -889,12 +996,27 @@ def eingabe() -> argparse.ArgumentParser:
         dest='befehl', required=True,
         metavar='{pruefe-umgebung,start,wahl,antwort,verfolgen,messen,aufraeumen}')
 
-    def gemeinsam(p, lauf=True):
+    def welcher_lauf(p, lauf=True):
         p.add_argument('--auftrag', default='kif10',
                        help='Kennung des Auftrags (Ordner ~/ki_trockenlauf_<auftrag>)')
         if lauf:
             p.add_argument('--lauf', required=True, help='Kennung des Laufs, zum Beispiel 1, 2w')
         p.add_argument('--basis', help='Ordner der Läufe (Vorgabe ~/ki_trockenlauf_<auftrag>)')
+
+    def warten(p):
+        p.add_argument('--warten', type=float, default=100.0,
+                       help='so lange wartet ein Aufruf, dann rc 10 (erneut aufrufen), s')
+
+    def hoechstens(p):
+        p.add_argument('--hoechstens', type=float, default=None,
+                       help='kommt bis dahin (ab start) keine Wartephase: Abbruch, s '
+                            '(Vorgabe 300; bei wahl gilt, was hier steht, sonst der Wert '
+                            'vom Start)')
+
+    def fuer_den_ganzen_lauf(p):
+        """Gilt für den ganzen Lauf und wird beim Start gespeichert. Die späteren
+        Schritte nehmen nur den gespeicherten Wert und bieten diese Angaben nicht an:
+        Ein „wahl --tuer …“ wurde vorher still übergangen (Gegenprüfung 24.11.2026)."""
         p.add_argument('--umgebung-kamera', default=VORGABE['umgebung_kamera'])
         p.add_argument('--umgebung-stack', default=VORGABE['umgebung_stack'])
         p.add_argument('--python', default='python3',
@@ -910,32 +1032,37 @@ def eingabe() -> argparse.ArgumentParser:
                        help='so lange nimmt die Aufnahme nach dem Rundblick noch auf, s')
         p.add_argument('--frist', type=float, default=420.0,
                        help='so lange wartet der Erkunder auf ein Fahrziel, s')
-        p.add_argument('--hoechstens', type=float, default=None,
-                       help='kommt bis dahin (ab start) keine Wartephase: Abbruch, s '
-                            '(Vorgabe 300; bei wahl gilt, was hier steht, sonst der Wert '
-                            'vom Start)')
+        hoechstens(p)
         p.add_argument('--tuer', default='die Labortür',
                        help='so heißt die erwartete Tür in der Frage an den Menschen')
-        p.add_argument('--warten', type=float, default=100.0,
-                       help='so lange wartet ein Aufruf, dann rc 10 (erneut aufrufen), s')
         p.add_argument('--werkzeuge', help=argparse.SUPPRESS)       # nur für Tests
 
-    gemeinsam(unter.add_parser('pruefe-umgebung', help='beide Umgebungen prüfen'), lauf=False)
+    p = unter.add_parser('pruefe-umgebung', help='beide Umgebungen prüfen')
+    welcher_lauf(p, lauf=False)
+    fuer_den_ganzen_lauf(p)
     p = unter.add_parser('start', help='Kamera und Aufnahme starten (losgelöst)')
-    gemeinsam(p)
+    welcher_lauf(p)
+    fuer_den_ganzen_lauf(p)
     p.add_argument('--nur-stand', action='store_true',
                    help='Vorlauf ohne Mission: Aufnahme im Stand, keine Frage, nichts senden')
     p.add_argument('--dauer-stand', type=float, default=10.0)
     p.add_argument('--mindestrate', type=float, default=1.8, help='Bilder je Sekunde')
     p.add_argument('--bereit-warten', type=float, default=60.0)
-    gemeinsam(unter.add_parser('wahl', help='Wahl der KI abwarten, Frage bauen'))
+    p = unter.add_parser('wahl', help='Wahl der KI abwarten, Frage bauen')
+    welcher_lauf(p)
+    warten(p)
+    hoechstens(p)
     p = unter.add_parser('antwort', help='Antwort des Menschen eintragen')
-    gemeinsam(p)
+    welcher_lauf(p)
+    warten(p)
     p.add_argument('--kennung', required=True)
     p.add_argument('--wortlaut', required=True)
-    gemeinsam(unter.add_parser('verfolgen', help='die Fahrt weiter zeigen'))
-    gemeinsam(unter.add_parser('messen', help='nur messen, nichts senden (Vorlauf)'))
-    gemeinsam(unter.add_parser('aufraeumen', help='alles dieses Laufs mit je einem SIGINT beenden'))
+    for name, hilfe in (('verfolgen', 'die Fahrt weiter zeigen'),
+                        ('messen', 'nur messen, nichts senden (Vorlauf)'),
+                        ('aufraeumen', 'alles dieses Laufs mit je einem SIGINT beenden')):
+        p = unter.add_parser(name, help=hilfe)
+        welcher_lauf(p)
+        warten(p)
     for name in ('_rundblick', '_fahrt'):
         p = unter.add_parser(name)
         p.add_argument('--ordner', required=True)

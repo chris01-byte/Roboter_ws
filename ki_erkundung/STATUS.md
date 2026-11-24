@@ -388,9 +388,27 @@ Ablaufhilfe und Meldungen), gefunden und behoben:**
   (zum Beispiel 584, während die Zeile „Laser sieht dort nichts“ sagte);
   jetzt die Punkte an der Stelle, und der ganze Herkunftsbefund steht im
   Beleg. Am echten Werkzeug in einer nachgebauten Türwelt geprüft.
+- **Späte Antwort (wichtig):** Ein „ja“ war an die Wahl gebunden, nicht an
+  den Erkunder, der zu genau dieser Frage wartet. Nach dessen Frist oder
+  nach dem Start eines neuen Laufs (etwa einer Wiederholung 1w) hätte das
+  Fahrwerkzeug den Erkunder des neuen Laufs treffen können, ein spätes
+  „nein“ ihm ein „Ende“ geschickt. Jetzt gilt eine Antwort nur, solange der
+  Erkunder dieses Laufs wartet und kein späterer Lauf begonnen hat; sonst
+  ruft sie nichts auf, auch kein „Ende“. Dasselbe prüft `_fahrt` noch
+  einmal.
+- **Restzeit in der Frage:** Sie stand fest im Text und konnte „etwa 0
+  Minuten“ lauten oder beim zweiten Aufruf veraltet sein. Jetzt wird sie bei
+  jeder Ausgabe neu gerechnet („weniger als eine Minute“), und nach der Frist
+  wird nicht mehr gefragt.
+- **Zwei Befehle gleichzeitig** (etwa zweimal `verfolgen`) konnten
+  `zustand.json` bis auf einen Eintrag leeren; jetzt eigene Nebendateien und
+  eine Sperre.
+- **`wahl --tuer …`** wurde still übergangen; die Frage nannte die Tür vom
+  Start. Angaben für den ganzen Lauf (Umgebungen, Tür, Frist …) gibt es jetzt
+  nur bei `start`.
 
 **Geprüft (hier, ROS 2 Jazzy):**
-- Tests: 395 bestanden mit ROS, 376 und 3 übersprungen ohne (vorher 340).
+- Tests: 403 bestanden mit ROS, 384 und 3 übersprungen ohne (vorher 340).
   Die Tests der Ablaufhilfe prüfen maschinenweit, ob schon eine Kamera oder
   Fahrt läuft; laufen daneben andere Läufe, lehnen sie zu Recht ab. Dann
   abgeschottet starten: `unshare --pid --fork --mount-proc python3 -m

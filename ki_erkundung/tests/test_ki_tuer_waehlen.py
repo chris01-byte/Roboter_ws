@@ -93,7 +93,7 @@ def test_ablaufhilfe_nimmt_die_echte_wahl_datei_und_denselben_satz(runden, tmp_p
     kennung = next(z for z in zeilen if z.startswith('Kennung der Wahl: ')).split(': ', 1)[1]
     daten, grund = ki_lauf.wahl_aus_datei(datei, kennung)
     assert grund == '' and daten['nr'] == 2
-    frage = ki_lauf.baue_frage(daten, zeilen, 5, 'die Labortür')
+    frage = ki_lauf.baue_frage(daten, zeilen, 'die Labortür')
     assert next(z for z in zeilen if z.startswith('Die KI wählt Nr. 2')) in frage
     assert 'Begründung der KI: Nr. 2 ist eine offene Tür zum Flur.' in frage
     assert 'Gefahren laut KI: Glastür.' in frage and 'Was sie in jeder Nummer sieht: Nr. 1' in frage
