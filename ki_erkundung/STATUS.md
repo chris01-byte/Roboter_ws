@@ -1,6 +1,15 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 24.11.2026 (später): Werkzeuge robust gemacht – Schritt 1 nach
+**Stand 24.11.2026 (abends): Auftrag KI-F9N erteilt – Auswerten und
+Erproben im Stand, ohne Fahrt.** Christopher hat dem Vorschlag zugestimmt
+(„ja“). Der [Auftrag](AUFTRAG.md) prüft am stehenden Roboter unter Humble
+die neuen Werkzeuge (Tests, Aufnahme alt gegen neu je 30-mal mit Signal,
+Ablaufhilfe von der Kamera bis zum Messen) und wertet KI-F9 aus
+(Vermessung der Runden, Wahlen der KI, Fragen an Christopher vor Ort).
+Keine Motorfreigabe, kein Missionsstart, kein Build. Er wartet auf die
+Übergabe.
+
+**Davor, 24.11.2026 (später): Werkzeuge robust gemacht – Schritt 1 nach
 KI-F9 ist gebaut.** Christopher: „behebe erstmal die Werkzeugfehler und
 danach bereden wir, wie wir weitermachen.“ Gebaut: Signal-Baustein (keine
 verlorene Runde mehr), Aufnahme endet selbst nach dem Rundblick, Umgebung
@@ -190,10 +199,10 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Kein offener Auftrag.** KI-F9 ist ausgeführt (einer von zwei), die
-Bewertung liegt vor: [BEWERTUNG_KIF9.md](BEWERTUNG_KIF9.md). Vorgeschlagen
-ist folgende Reihenfolge; sie wartet auf Christophers Bestätigung
-(Bewertung §10 und §11):
+**Offener Auftrag: [KI-F9N](AUFTRAG.md)** (erteilt 24.11.2026, wartet auf
+die Übergabe). Die Reihenfolge aus der
+[Bewertung](BEWERTUNG_KIF9.md) §10; Schritt 1 und der Auftrag zu Schritt 2
+sind von Christopher bestätigt, über die weiteren wird danach gesprochen:
 1. **Werkzeuge robust machen** – **gebaut und gegengeprüft 24.11.2026**
    (Abschnitt „Werkzeuge robust gemacht“ unten; am Jetson noch nicht
    erprobt):
@@ -202,7 +211,8 @@ ist folgende Reihenfolge; sie wartet auf Christophers Bestätigung
    - Herkunft und Meldungen in verständlichen Worten; Abstand beim
      Wiederfinden ausgeben; Belege jeder Entscheidung auf dem Jetson
      speichern.
-2. **KI-F9N, Auswerteauftrag ohne Fahrt** (Jetson und KI-Rechner, mit
+2. **KI-F9N, Auswerteauftrag ohne Fahrt** – **Auftrag erteilt 24.11.2026**
+   (Jetson und KI-Rechner, mit
    Christopher vor Ort): Protokolle der Läufe 2, 2w2 und 2w3; nachsehen,
    was rechts neben dem Türrahmen steht und wo er stand; je Nummer
    eintragen, was sie war; Signalmessung alt gegen neu im Stand.
@@ -1550,7 +1560,6 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Mit Christopher besprechen, wie es nach den Werkzeugen weitergeht (seine
-Ansage: „danach bereden wir, wie wir weitermachen“). Vorschlag der
-[Bewertung](BEWERTUNG_KIF9.md) §10: der Auswerteauftrag KI-F9N ohne Fahrt,
-der die neue Aufnahme und die Ablaufhilfe am Jetson im Stand erprobt.
+Den [Auftrag KI-F9N](AUFTRAG.md) am Jetson ausführen lassen (Übergabe durch
+den Projektinhaber) und den Bericht auswerten. Danach mit Christopher
+über Schritt 3 (Sehen ohne Roboter) sprechen.
