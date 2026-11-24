@@ -131,6 +131,11 @@ def pruefe(antwort_text, angeboten: Sequence[int],
         if art not in ARTEN:
             ergebnis.toleriert.append('art_unbekannt')
             art = 'unklar'
+        if nr in ergebnis.arten and ergebnis.arten[nr] != art:
+            # Zweimal verschieden eingeordnet (etwa erst Fenster, dann offene
+            # Tür): widersprüchlich heißt unklar, die spätere Angabe gilt nicht.
+            ergebnis.toleriert.append('nummer_doppelt_eingeordnet')
+            art = 'unklar'
         ergebnis.arten[nr] = art
         sicher = eintrag.get('sicherheit')
         if isinstance(sicher, (int, float)) and not isinstance(sicher, bool):

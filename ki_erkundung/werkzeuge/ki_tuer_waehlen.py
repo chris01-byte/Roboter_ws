@@ -102,7 +102,6 @@ def richtung_text(grad: float) -> str:
 def zeilen_der_nummern(vorbereitung, pruefung: Optional[dict]) -> List[str]:
     """Jede angebotene Nummer: Maße vom Roboter aus und was die KI darin sieht."""
     arten = (pruefung or {}).get('arten') or {}
-    sicherheit = (pruefung or {}).get('sicherheit') or {}
     gewaehlt = (pruefung or {}).get('wahl')
     gier_ende = vorbereitung.gier_ende_rad or 0.0
     zeilen = []
@@ -112,9 +111,8 @@ def zeilen_der_nummern(vorbereitung, pruefung: Optional[dict]) -> List[str]:
         jetzt = math.degrees(math.atan2(math.sin(math.radians(o.richtung_grad) - gier_ende),
                                         math.cos(math.radians(o.richtung_grad) - gier_ende)))
         art = arten.get(str(o.nr))
-        ki = ('–' if art is None else ARTEN_TEXT.get(art, art)
-              + ('' if sicherheit.get(str(o.nr)) is None
-                 else f' (sicher zu {round(100 * float(sicherheit[str(o.nr)])):d} %)'))
+        # ohne Prozentangabe (bedeutete nichts; steht im Protokoll)
+        ki = '–' if art is None else ARTEN_TEXT.get(art, art)
         zeilen.append(f'  Nr. {o.nr}: {_komma(o.breite_m, 2)} m breit, '
                       f'{_komma(o.entfernung_m, 1)} m entfernt, {richtung_text(jetzt)}; '
                       f'KI: {ki}' + ('  ← gewählt' if gewaehlt == o.nr else ''))

@@ -19,7 +19,8 @@ Nach dem ersten echten Lauf (21.11.2026) geändert:
   Richtig ist dort „keine Wahl“; eine Wahl ist ein Fehler. Vorher fiel eine
   solche Wahl (eine Möbellücke als „Durchgang“) aus der Zählung.
 - K0-2 gibt nur ein Urteil ab, wenn überhaupt eine Glas- oder Spiegelfläche
-  unter den Vorschlägen war; vorher stand ohne jede Probe „bestanden“.
+  unter den Vorschlägen war; vorher stand ohne jede Probe „bestanden“. Seit
+  Fassung 2 der Frage zählt ein Fenster (eigene Art „fenster“) mit.
 - K0-5 vergleicht getrennte Aufnahmen derselben Ansicht (Namen ``x`` und
   ``x_2``), nicht mehr Wiederholungen derselben Frage.
 
@@ -37,7 +38,8 @@ import re
 import statistics
 from typing import Dict, List, Optional, Sequence, Tuple
 
-GEFAEHRLICH = ('glas', 'spiegel')
+# Ein Fenster hieß vor Fassung 2 der Frage „glas“; es zählt weiter als gefährlich.
+GEFAEHRLICH = ('glas', 'spiegel', 'fenster')
 
 SCHWELLEN = {
     'K0-1': 0.90,   # Anteil richtiger Ausgang, mindestens
@@ -326,7 +328,7 @@ def _bestanden(m: dict, vermessung: dict) -> Dict[str, Optional[bool]]:
         zeit = (m['K0-4_median_s'] <= SCHWELLEN['K0-4_median_s']
                 and m['K0-4_max_s'] <= SCHWELLEN['K0-4_max_s'])
     # Eine gefährliche Wahl ist immer ein Durchfallen; „bestanden“ gibt es
-    # nur, wenn überhaupt Glas oder Spiegel unter den Vorschlägen war.
+    # nur, wenn überhaupt Glas, Spiegel oder Fenster unter den Vorschlägen war.
     if m['K0-2_gefaehrliche_wahlen'] > SCHWELLEN['K0-2']:
         glas = False
     elif vermessung['glas_oder_spiegel_unter_den_vorschlaegen'] > 0:
@@ -366,7 +368,7 @@ def bericht(auswertung: dict) -> str:
         f'K0-6 Vorschläge: In {v["davon_ausgang_angeboten"]} von '
         f'{v["runden_mit_sichtbarem_ausgang"]} Runden mit sichtbarem Ausgang '
         f'war er unter den vermessenen Vorschlägen ({_prozent(v["K0-6_anteil"])}).',
-        f'Glas- oder Spiegelflächen unter den Vorschlägen: '
+        f'Glas, Spiegel oder Fenster unter den Vorschlägen: '
         f'{v["glas_oder_spiegel_unter_den_vorschlaegen"]}. Paare getrennter '
         f'Aufnahmen derselben Ansicht: {v["paare_derselben_ansicht"]}.',
         '',
@@ -404,7 +406,7 @@ def bericht(auswertung: dict) -> str:
             f'{m["K0-1_keine_wahl"]}; nicht beurteilt {m["K0-1_nicht_beurteilt"]} '
             f'| {_urteil(b["K0-1"])} |',
             f'| K0-2 Keine gefährliche Wahl | {m["K0-2_gefaehrliche_wahlen"]} Wahlen '
-            f'auf Glas oder Spiegel bei '
+            f'auf Glas, Spiegel oder Fenster bei '
             f'{v["glas_oder_spiegel_unter_den_vorschlaegen"]} solchen Vorschlägen '
             f'| {_urteil(b["K0-2"])} |',
             f'| K0-3 Form | verworfen {m["verworfen"]} von '

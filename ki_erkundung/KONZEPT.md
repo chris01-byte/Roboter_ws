@@ -1,9 +1,10 @@
 # Konzept „KI-Erkundung“ – eine KI übernimmt Ziel- und Suchwahl
 
-**Version 1.16 · 23.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
+**Version 1.17 · 24.11.2026 · Entscheidung des Projektinhabers vom 19.11.2026,
 nachgeführt nach drei Durchgängen an echten Aufnahmen, der Freigabe der
-Schalter „nur Rundblick“ und „Etappenfahrt“ und der Festlegung „die KI
-bekommt Zeit, kein stiller Rückfall“**
+Schalter „nur Rundblick“ und „Etappenfahrt“, der Festlegung „die KI
+bekommt Zeit, kein stiller Rückfall“ und der Reparatur des Sehens nach
+KI-F9N**
 
 Dieses Dokument ist die verbindliche Beschreibung der zweiten
 Entwicklungslinie. Verankert in MASTERPLAN §10. Den aktuellen Stand führt nur
@@ -196,11 +197,31 @@ Seit dem ersten echten Lauf (21.11.2026) gilt dazu:
   Wandpunkte um einige Zentimeter; gerade Wände gelten dann als krumm, und
   Türen werden zu schmal oder zu breit vermessen. Nach einer Drehung wird
   vorerst weiter gerastert.
+- **Keine Lücke über mehr als 180° (seit 24.11.2026, nach KI-F9N).** Wird
+  der zweite Pfosten aus dem Lot von der Kante auf die Wand geschätzt und
+  liegt der Fußpunkt auf der falschen Seite, waren die Kanten vertauscht:
+  Die „Lücke“ umspannte fast die ganze Runde (in KI-F9, Lauf 2, 346°) und
+  verdrängte die echte Tür. Solche Lot-Schätzungen werden verworfen, Lücken
+  über 180° ebenso. Hinter einer türgroßen Lücke werden ihre Kanten weiter
+  übersprungen (so verdrängt eine Tür, die man durch eine nahe Tür sieht,
+  die nahe nicht), außer hinter einer Lücke über 1,0 m Breite, die mehr als
+  60° umspannt: Eine so nahe Lücke zu einem Möbel verdeckte sonst die Tür
+  dahinter. Nachgerechnet an 9000 zufälligen Zimmern: 64
+  solche Phantome vorher, keines nachher; 31 Türen mehr gefunden, keine
+  verloren. Liegen zwei Öffnungen mit fast derselben Mitte (unter 0,30 m)
+  übereinander, bekommt die KI nur eine Nummer.
+- **Nicht direkt durch eine geschätzte Öffnung (seit 24.11.2026).** Ist der
+  zweite Pfosten nur aus dem Lot geschätzt, fährt der Fahrteil höchstens
+  davor, misst neu und fährt nur hindurch, wenn er dann zwei gemessene
+  Kanten hat.
 
 **Nummern im Bild.** Jede Nummer wird an der vermessenen Stelle in die Fotos
 gezeichnet (am Boden der Öffnung) und in eine Kartenskizze von oben. Grund:
 Bild-Sprach-Modelle sind unzuverlässig bei Meterangaben, aber gut darin,
-zwischen markierten Stellen zu wählen.
+zwischen markierten Stellen zu wählen. Liegen zwei Nummern zu dicht
+beieinander, werden die Scheiben auseinandergeschoben und mit einer Linie
+mit ihrer Stelle verbunden (seit 24.11.2026; in KI-F9, Lauf 2, verdeckten
+sich zwei Nummern).
 
 **Später** kommen als Vorschläge die Ziele hinzu, die die
 vorhandene Erkundung ohnehin bildet (Ränder zum Unbekannten). Dann kann die
@@ -208,37 +229,45 @@ KI auch entscheiden, wo im Raum weitergesucht wird.
 
 ## 6. Frage, Antwort und Prüfung
 
-**Frage an den Lotsen** (Fassung 1, für den Trockenlauf):
+**Frage an den Lotsen** (Fassung 2, seit 24.11.2026 nach KI-F9N):
 
 - die acht Fotos mit eingezeichneten Nummern, in Drehrichtung,
 - die Kartenskizze,
 - eine Tabelle der Vorschläge (Nummer, Breite, Entfernung, Richtung, in
   welchen Bildern zu sehen),
 - der bisherige Verlauf an diesem Standpunkt (im Trockenlauf leer),
-- die Aufgabe: Raum verlassen, um weitere Räume zu erkunden.
+- die Aufgabe in fünf Schritten: **erst jede Nummer einordnen** (mit
+  Prüffragen: Reicht die Öffnung bis zum Boden? Was ist dahinter?), dann
+  begründen, dann wählen, dann Raum und Gefahren nennen.
 
-**Antwort** (JSON, Fassung 1):
+**Antwort** (JSON, Fassung 2). Die Frage zeigt nur ein **Muster ohne Werte**:
 
 ```json
-{
-  "wahl": 2,
-  "begruendung": "Nummer 2 ist eine offene Zimmertür, dahinter Flurboden.",
-  "kandidaten": [
-    {"nr": 1, "art": "moebelspalt", "sicherheit": 0.8},
-    {"nr": 2, "art": "tuer_offen", "sicherheit": 0.9}
-  ],
-  "raum": "Arbeitszimmer",
-  "gefahren": []
-}
+{"kandidaten": [{"nr": 0, "art": "ART", "sicherheit": 0.0}],
+ "begruendung": "SATZ", "wahl": null, "raum": "RAUM", "gefahren": []}
 ```
 
+Grund (Bewertung nach KI-F9): In KI-F9, Lauf 2, glich die Antwort in Wahl,
+Arten und Zahlen genau dem Beispiel der Fassung 1 („wahl 2, tuer_offen 0,9,
+moebelspalt 0,8“), und die KI wählte ein Fensterrollo. Im neuen Muster gibt
+es die Nummer 0 nie, „ART“ ist keine Art und die Wahl ist `null`: Wer das
+Muster abschreibt, wählt nichts. Die Reihenfolge der Felder ist auch die
+Reihenfolge, in der das Modell schreibt (die Antwortform wird dem Modell
+vorgegeben): erst `kandidaten`, dann `begruendung`, zuletzt `wahl`.
+
 `wahl` ist eine angebotene Nummer oder `null` („kein geeigneter Ausgang“).
+Die Frage sagt ausdrücklich: Lieber keine Wahl als eine falsche; `null` ist
+eine richtige Antwort, der Roboter bleibt dann stehen. Ein Fenster ist nie
+ein Ausgang.
 Wählbar sind nur Nummern, die in einem Foto stehen: Was nur der Laser kennt,
 kann die KI nicht beurteilen (seit KI-0N).
-`art` ist eines von: `tuer_offen`, `tuer_geschlossen`, `durchgang`, `glas`,
-`spiegel`, `moebelspalt`, `nische`, `wand`, `unklar`. `wand` heißt: Die
+`art` ist eines von: `tuer_offen`, `tuer_geschlossen`, `durchgang`,
+`fenster`, `glas`, `spiegel`, `moebel`, `moebelspalt`, `nische`, `wand`,
+`unklar` (`fenster` und `moebel` seit Fassung 2). `wand` heißt: Die
 Nummer steht auf einer Wand, dort ist keine Öffnung. Damit kann die KI einen
-Fehler der Vermessung benennen.
+Fehler der Vermessung benennen. Die `sicherheit` wird gespeichert, aber
+Christopher nicht mehr als Prozentzahl gezeigt: Sie war in KI-F9 aus dem
+Beispiel abgeschrieben und sagt nichts über die Güte der Wahl.
 
 **Prüfung der Antwort** (auf dem Roboter; im Trockenlauf dieselbe Prüfung):
 
@@ -247,8 +276,9 @@ Fehler der Vermessung benennen.
 | kein lesbares JSON | verworfen |
 | `wahl` ist keine angebotene Nummer | verworfen |
 | `wahl` ist eine Nummer, die in keinem Foto steht | verworfen |
-| die KI ordnet ihre eigene Wahl als nicht befahrbar ein (geschlossene Tür, Glas, Spiegel, Möbelspalt, Nische) | verworfen |
+| die KI ordnet ihre eigene Wahl nicht als offene Tür oder Durchgang ein (etwa geschlossene Tür, Fenster, Glas, Spiegel, Möbel, Möbelspalt, Nische, unklar) | verworfen |
 | unbekannte `art` | wird zu `unklar`, Antwort bleibt gültig |
+| eine Nummer zweimal verschieden eingeordnet (seit 24.11.2026) | gilt als `unklar`; als Wahl verworfen |
 | `wahl` als Text statt Zahl („2“) | toleriert und gezählt |
 | Antwort später als die Zeitgrenze | verworfen |
 
@@ -537,7 +567,7 @@ an, welche Nummern echte Ausgänge sind:
 | Kennung | Kriterium |
 |---|---|
 | K0-1 Ausgang | In mindestens 90 % der Runden wählt die KI richtig: einen echten, offenen Ausgang, wenn einer angeboten ist, und nichts, wenn keiner angeboten ist. Ein Urteil gibt es ab zehn Runden mit angebotenem Ausgang |
-| K0-2 Keine gefährliche Wahl | Nie wählt die KI eine Nummer, die in Wahrheit Glas oder Spiegel ist. Bestanden ist das nur, wenn Glas oder Spiegel unter den Vorschlägen war |
+| K0-2 Keine gefährliche Wahl | Nie wählt die KI eine Nummer, die in Wahrheit Glas, Spiegel oder Fenster ist (Fenster seit Fassung 2 der Frage eine eigene Art, vorher „Glas“). Bestanden ist das nur, wenn so etwas unter den Vorschlägen war |
 | K0-3 Form | Höchstens 10 % der Antworten werden von der Prüfung verworfen |
 | K0-4 Zeit | Antwortzeit im Mittel (Median) höchstens 20 s, längste höchstens 45 s, bei geladenem Modell; zusätzlich wird der Wert genannt, den 95 % der Antworten einhalten |
 | K0-5 Wiederholbarkeit | Zwei getrennte Aufnahmen derselben Ansicht: in mindestens 90 % der Paare dieselbe Wahl |
@@ -710,6 +740,16 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   entschieden hat. Der Fahrteil soll aus vorhandenem, real bewährtem Code
   entstehen; Bestand und Vorschlag stehen im STATUS, entschieden ist dazu
   noch nichts.
+- 24.11.2026, v1.17 (Zustimmung des Projektinhabers zur Reihenfolge nach
+  KI-F9N, „Ja beginne“): Sehen ohne Roboter repariert. §5: keine Lücke über
+  180° und keine Lot-Schätzung mit vertauschten Kanten (Ursache des
+  346°-Phantoms aus KI-F9, Lauf 2); hinter einer breiten, nahen Lücke
+  (über 1,0 m, über 60°) werden Kanten nicht mehr übersprungen; fast gleiche Mitten bekommen eine Nummer; Nummern im Bild
+  verdecken sich nicht mehr; durch eine Lot-Öffnung nie direkt. §6: Frage
+  in Fassung 2 (Muster ohne Werte, erst einordnen, dann wählen, Arten
+  `fenster` und `moebel`, lieber keine Wahl als eine falsche); die
+  Sicherheit der KI wird nicht mehr als Prozentzahl gezeigt. Rollen,
+  Grenzen, Stufen und Kriterien unverändert; keine Abnahme.
 - 24.11.2026, Nachtrag zu v1.16, nach KI-F9: keine Änderung am Konzept.
   Einer von zwei Läufen kam durch die Tür; alle Fehlschläge lagen vor dem
   Fahren (Vermessung, Frage, Regeln des Werkzeugs, Ablauf). Ursachen,

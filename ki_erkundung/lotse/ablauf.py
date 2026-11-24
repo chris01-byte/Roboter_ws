@@ -19,7 +19,7 @@ from .antwort import pruefe, wahl_nachmessen
 from .blickrunde import (Blickrunde, bilder_waehlen, gier_schaetzen,
                          profil_der_runde)
 from .frage import Frage, baue_frage
-from .kandidaten import Oeffnung, oeffnungen
+from .kandidaten import MITTEN_GLEICH_M, Oeffnung, oeffnungen
 from .ki_rechner import STANDARD_URL, Rohantwort, frage_stellen
 from .markierung import (als_jpeg, marken_fuer_bild, markiere, sichtbar_in,
                          skizze, uebersicht)
@@ -90,7 +90,8 @@ def bereite_vor(runde: Blickrunde, anzahl_bilder: int = 8,
     # Drehung über das Raster von der Antriebsmitte aus (siehe blickrunde).
     winkel, entfernung, ursprung = profil_der_runde(scans, gier, boden_lidar)
     protokoll: List[dict] = []
-    gefunden = oeffnungen(winkel, entfernung, ursprung=ursprung, protokoll=protokoll)
+    gefunden = oeffnungen(winkel, entfernung, ursprung=ursprung, protokoll=protokoll,
+                          mitten_gleich_m=MITTEN_GLEICH_M)
 
     marken_je_bild = {}
     fotos = []

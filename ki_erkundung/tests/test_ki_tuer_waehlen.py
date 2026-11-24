@@ -52,9 +52,10 @@ def test_richtige_wahl_ergibt_wahl_datei_und_einen_satz(runden, tmp_path, ki_att
     wahl = wahl_lesen(dateien[0].read_text(encoding='utf-8'), jetzt_s=time.time())
     assert wahl['nr'] == 2 and wahl['einordnung'] == 'tuer_offen' and wahl['tuerbreit']
     assert math.hypot(wahl['mitte'][0] - TUER_MITTE[0], wahl['mitte'][1] - TUER_MITTE[1]) < 0.05
-    assert 'Die KI wählt Nr. 2: offene Tür (sicher zu 90 %), 0,75 m breit' in aus
+    assert 'Die KI wählt Nr. 2: offene Tür, 0,75 m breit' in aus
+    assert 'sicher zu' not in aus          # die Prozentangabe bedeutete nichts
     assert '° rechts von seiner Blickrichtung' in aus
-    assert 'Nr. 1: ' in aus and 'KI: Glas (sicher zu 80 %)' in aus and '← gewählt' in aus
+    assert 'Nr. 1: ' in aus and 'KI: Glas' in aus and '← gewählt' in aus
     assert 'Begründung der KI: Nr. 2 ist eine offene Tür zum Flur.' in aus
     assert f'Wahl-Datei: {dateien[0]}' in aus
     assert '--zur-tuer --wahl DATEI' in aus and '--ende --quelle mensch' in aus

@@ -27,13 +27,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from lotse.blickrunde import (Blickrunde, echo_statistik, gier_schaetzen,  # noqa: E402
                               profil_der_runde, runden_finden)
-from lotse.kandidaten import TUERBREIT_M, oeffnungen  # noqa: E402
+from lotse.kandidaten import MITTEN_GLEICH_M, TUERBREIT_M, oeffnungen  # noqa: E402
 
 GRUENDE = {
     'zu_flach': 'dahinter zu wenig freie Tiefe',
     'blick_zu_flach': 'Blick zu flach auf die Lücke',
     'entfernung': 'zu nah oder zu weit',
     'ueberdeckt': 'von einer anderen Lücke überdeckt',
+    'verkehrt': 'Kanten verkehrt herum (Winkelbereich über 180°)',
     'schmalere_gewaehlt': 'von derselben Kante aus gab es eine schmalere',
     'nur_bis_zur_blattspitze': 'reicht nur bis zur Spitze eines Türblatts',
     'blatt_im_weg': 'das Türblatt steht im Weg',
@@ -67,7 +68,8 @@ def pruefe_runde(runde: Blickrunde, alle: bool = False) -> List[str]:
     winkel, entfernung, ursprung = profil_der_runde(scans, gier, lidar)
     im_stand = bool(np.any(ursprung))
     protokoll: List[dict] = []
-    gefunden = oeffnungen(winkel, entfernung, ursprung=ursprung, protokoll=protokoll)
+    gefunden = oeffnungen(winkel, entfernung, ursprung=ursprung, protokoll=protokoll,
+                          mitten_gleich_m=MITTEN_GLEICH_M)
     echo = echo_statistik(scans, gier, lidar, ursprung) if im_stand else None
     gedreht = math.degrees(float(np.max(np.abs(gier - gier[0])))) if len(gier) else 0.0
     unbeobachtet = float(np.mean(np.isnan(entfernung)))

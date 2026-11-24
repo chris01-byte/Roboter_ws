@@ -149,3 +149,26 @@ def test_wand_als_einordnung_macht_die_wahl_ungueltig():
     p = pruefe(antwort(wahl=1, kandidaten=kandidaten), ANGEBOTEN)
     assert not p.gueltig and p.fehler == ['wahl_widerspricht_einordnung']
     assert pruefe(antwort(wahl=2, kandidaten=kandidaten), ANGEBOTEN).arten[1] == 'wand'
+
+
+def test_doppelt_eingeordnete_nummer_gilt_als_unklar_und_ist_nicht_waehlbar():
+    """Gegenprüfung Schritt 3: Ordnet die KI eine Nummer zweimal verschieden ein
+    (zuerst Fenster, dann offene Tür), darf die zweite Angabe die Wahl nicht
+    gültig machen. Widersprüchlich heißt unklar."""
+    kandidaten = [{'nr': 2, 'art': 'fenster', 'sicherheit': 0.9},
+                  {'nr': 2, 'art': 'tuer_offen', 'sicherheit': 0.9}]
+    p = pruefe(antwort(wahl=2, kandidaten=kandidaten), ANGEBOTEN)
+    assert not p.gueltig and p.fehler == ['wahl_widerspricht_einordnung'] and p.wahl is None
+    assert p.arten[2] == 'unklar' and 'nummer_doppelt_eingeordnet' in p.toleriert
+    # dieselbe Art zweimal ist kein Widerspruch
+    gleich = [{'nr': 2, 'art': 'tuer_offen'}, {'nr': 2, 'art': 'tuer_offen'}]
+    p = pruefe(antwort(wahl=2, kandidaten=gleich), ANGEBOTEN)
+    assert p.gueltig and p.wahl == 2 and p.arten[2] == 'tuer_offen'
+
+
+@pytest.mark.parametrize('art', ['fenster', 'moebel'])
+def test_fenster_und_moebel_sind_nie_ein_ausgang(art):
+    kandidaten = [{'nr': 2, 'art': art}]
+    p = pruefe(antwort(wahl=2, kandidaten=kandidaten), ANGEBOTEN)
+    assert not p.gueltig and p.fehler == ['wahl_widerspricht_einordnung']
+    assert pruefe(antwort(wahl=None, kandidaten=kandidaten), ANGEBOTEN).arten[2] == art

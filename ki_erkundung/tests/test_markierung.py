@@ -7,7 +7,7 @@ from PIL import Image
 
 from lotse.geometrie import Kamera, kamera_montage
 from lotse.kandidaten import Oeffnung
-from lotse.markierung import (als_jpeg, marken_fuer_bild, markiere,
+from lotse.markierung import (als_jpeg, auseinander, marken_fuer_bild, markiere,
                               sichtbar_in, skizze, uebersicht)
 
 KAMERA = Kamera.aus_oeffnungswinkel(640, 360, 69.0)
@@ -137,3 +137,53 @@ def test_ohne_schriftdatei_bleiben_die_nummern_lesbar(monkeypatch):
     u, v = int(marken[0]['u']), int(marken[0]['v'])
     scheibe = pixel[v - 10:v + 10, u - 10:u + 10]
     assert (scheibe > 200).mean() > 0.4 and (scheibe < 80).any()
+
+
+def test_stellen_werden_auseinandergeschoben_bis_sich_nichts_mehr_deckt():
+    neu = auseinander([(100.0, 50.0), (100.0, 50.0), (104.0, 52.0)], 44.0, (20, 20, 619, 339))
+    for i in range(3):
+        for j in range(i + 1, 3):
+            assert math.hypot(neu[i][0] - neu[j][0], neu[i][1] - neu[j][1]) >= 44.0 - 1e-6
+    assert neu[0][0] < neu[1][0]                    # die frühere weicht nach links
+    # am Rand bleiben sie im Bild
+    rand = auseinander([(615.0, 300.0), (617.0, 300.0)], 44.0, (20, 20, 619, 339))
+    assert all(20 <= u <= 619 for u, _ in rand)
+    assert abs(rand[0][0] - rand[1][0]) >= 44.0 - 1e-6
+    # weit genug auseinander: nichts bewegt sich
+    assert auseinander([(100.0, 50.0), (300.0, 50.0)], 44.0) == [(100.0, 50.0), (300.0, 50.0)]
+
+
+def test_zwei_nummern_an_derselben_stelle_sind_beide_zu_sehen():
+    """KI-F9, Lauf 2: zwei Nummern 4 bis 23 Bildpunkte auseinander; die zweite deckte die
+    erste fast ganz zu. Hier liegen beide genau aufeinander."""
+    marken = marken_fuer_bild([oeffnung(1, (2.6, 0.0)), oeffnung(2, (2.6, 0.0))], 0.0,
+                              kamera_montage(), KAMERA)
+    assert len(marken) == 2 and marken[0]['u'] == marken[1]['u']
+    pixel = np.asarray(markiere(leeres_foto(), marken)).mean(axis=2)
+    radius = 640 // 32
+    u0 = marken[0]['u']
+    v = int(round(min(max(marken[0]['v'], radius), 359 - radius)))
+    for seite in (-1, 1):       # links und rechts je eine eigene Scheibe, weiter außen
+        u = int(round(u0 + seite * 1.35 * radius))      # als eine Scheibe reicht
+        flecken = pixel[v - radius // 3:v + radius // 3, u - radius // 3:u + radius // 3]
+        assert (flecken > 200).mean() > 0.3, seite
+
+
+def test_auseinander_am_bildrand_haelt_den_abstand():
+    """Gegenprüfung Schritt 3: Wurde eine Stelle an den Rand zurückgeholt, prüfte
+    die alte Fassung den Abstand danach nicht mehr (37 statt 44 Bildpunkte)."""
+    neu = auseinander([(12.5, 200.0), (57.0, 200.0)], 44.0, (20.0, 20.0, 619.0, 339.0))
+    assert math.dist(*neu) >= 44.0 - 0.01
+    assert all(20.0 <= u <= 619.0 for u, _ in neu)
+    # zwei Stellen jenseits des oberen Rands: nicht beide auf denselben Punkt
+    neu = auseinander([(320.0, -10.0), (320.0, -60.0)], 44.0, (20.0, 18.0, 619.0, 339.0))
+    assert math.dist(*neu) >= 44.0 - 0.01
+
+
+def test_auseinander_behaelt_die_reihenfolge_einer_dichten_gruppe():
+    """Gegenprüfung Schritt 3: Paarweise nacheinander geschoben, lasen sich drei
+    Nummern auf einer Reihe „1 3 2“, und Scheibe 3 lag genau auf Stelle 2."""
+    stellen = [(150.0, 90.0), (158.0, 90.0), (166.0, 90.0)]
+    neu = auseinander(stellen, 24.2, (11.0, 11.0, 308.0, 168.0))
+    assert [u for u, _ in neu] == sorted(u for u, _ in neu)
+    assert min(math.dist(a, b) for i, a in enumerate(neu) for b in neu[i + 1:]) >= 24.2 - 0.01

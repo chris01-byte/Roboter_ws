@@ -1,4 +1,10 @@
-"""Die Frage an den Lotsen zusammenstellen (Fassung 1, Trockenlauf).
+"""Die Frage an den Lotsen zusammenstellen (Fassung 2, nach KI-F9N).
+
+Fassung 2 (Bewertung nach KI-F9, §2): In KI-F9, Lauf 2, glich die Antwort in
+Wahl, Arten und Zahlen genau dem Beispiel aus der Frage, und die KI wählte ein
+Fensterrollo. Seither: ein Muster ohne Werte zum Abschreiben (wer es abschreibt,
+wählt nichts), erst einordnen, dann wählen, eine eigene Art „fenster“ und
+„lieber keine Wahl als eine falsche“.
 
 Die Frage enthält alles, was die KI braucht: Sie ist zustandslos, das
 Gedächtnis liegt beim Roboter. Dieselbe Frage lässt sich deshalb beliebig oft
@@ -11,8 +17,8 @@ from typing import Dict, List, Optional, Sequence
 
 from .kandidaten import Oeffnung
 
-ARTEN = ('tuer_offen', 'tuer_geschlossen', 'durchgang', 'glas', 'spiegel',
-         'moebelspalt', 'nische', 'wand', 'unklar')
+ARTEN = ('tuer_offen', 'tuer_geschlossen', 'durchgang', 'fenster', 'glas', 'spiegel',
+         'moebel', 'moebelspalt', 'nische', 'wand', 'unklar')
 # Nur durch diese Arten darf die KI den Roboter schicken.
 ARTEN_AUSGANG = ('tuer_offen', 'durchgang')
 ROBOTER_BREITE_M = 0.46
@@ -22,9 +28,16 @@ SYSTEM = (
     'erkundet eine ihm unbekannte Wohnung und zeigt dir, was seine Kamera '
     'sieht. Du entscheidest, durch welche Öffnung er den Raum verlassen '
     'soll. Du steuerst keine Motoren; der Roboter misst deine Wahl nach und '
-    'fährt selbst. Antworte ausschließlich mit einem JSON-Objekt nach dem '
-    'vorgegebenen Muster, ohne weiteren Text.'
+    'fährt selbst. Eine falsche Wahl ist schlimmer als keine. Antworte '
+    'ausschließlich mit einem JSON-Objekt nach dem vorgegebenen Muster, ohne '
+    'weiteren Text.'
 )
+
+# Das Antwortmuster: gültiges JSON ohne Werte, die das Modell abschreiben kann.
+# Die Nummer 0 gibt es nie, „ART“ ist keine Art, und die Wahl ist null: Wer das
+# Muster abschreibt, wählt nichts (KI-F9, Lauf 2, schrieb das alte Beispiel ab).
+ANTWORTMUSTER = ('{"kandidaten": [{"nr": 0, "art": "ART", "sicherheit": 0.0}], '
+                 '"begruendung": "SATZ", "wahl": null, "raum": "RAUM", "gefahren": []}')
 
 
 @dataclass
@@ -60,11 +73,11 @@ def antwortschema(angeboten: Sequence[int],
     Öffnung, die nur der Laser kennt, kann die KI nicht beurteilen.
     """
     nummern = [int(n) for n in (angeboten if waehlbar is None else waehlbar)]
+    # Reihenfolge der Felder = Reihenfolge, in der das Modell schreibt: erst
+    # jede Nummer einordnen, dann begründen, dann wählen.
     return {
         'type': 'object',
         'properties': {
-            'wahl': {'enum': nummern + [None]},
-            'begruendung': {'type': 'string'},
             'kandidaten': {
                 'type': 'array',
                 'items': {
@@ -74,13 +87,15 @@ def antwortschema(angeboten: Sequence[int],
                         'art': {'type': 'string', 'enum': list(ARTEN)},
                         'sicherheit': {'type': 'number'},
                     },
-                    'required': ['nr', 'art'],
+                    'required': ['nr', 'art', 'sicherheit'],
                 },
             },
+            'begruendung': {'type': 'string'},
+            'wahl': {'enum': nummern + [None]},
             'raum': {'type': 'string'},
             'gefahren': {'type': 'array', 'items': {'type': 'string'}},
         },
-        'required': ['wahl', 'begruendung', 'kandidaten', 'raum', 'gefahren'],
+        'required': ['kandidaten', 'begruendung', 'wahl', 'raum', 'gefahren'],
     }
 
 
@@ -174,31 +189,44 @@ def baue_frage(oeffnungen: Sequence[Oeffnung], anzahl_bilder: int,
     zeilen += [
         '',
         'Aufgabe:',
-        '1. Ordne jede Nummer ein (art): tuer_offen = offene Zimmertür; '
-        'tuer_geschlossen = Tür, aber geschlossen; durchgang = offener '
-        'Durchgang ohne Tür; glas = Glastür, Fenster oder Glasscheibe; '
-        'spiegel = Spiegel; moebelspalt = Lücke zwischen oder neben Möbeln; '
-        'nische = Nische, Schrank oder Sackgasse; wand = die Nummer steht auf einer '
-        'Wand oder auf Mauerwerk, dort ist keine Öffnung; unklar = nicht zu erkennen.',
-        '2. Wähle die Nummer, durch die der Roboter den Raum verlassen soll '
+        '1. Ordne jede Nummer aus der Tabelle ein (kandidaten, art). Schau dazu '
+        'bei jeder Nummer: Reicht die Öffnung bis zum Boden? Was ist dahinter: '
+        'ein Raum oder Flur, draußen, Glas, ein Rollo, ein Möbel? Die Arten: '
+        'tuer_offen = offene Zimmertür, reicht bis zum Boden, dahinter ein '
+        'anderer Raum oder Flur; tuer_geschlossen = Tür, aber geschlossen; '
+        'durchgang = offener Durchgang ohne Tür, reicht bis zum Boden; '
+        'fenster = Fenster, auch mit Rollo, Jalousie oder Vorhang, beginnt meist '
+        'erst über dem Boden an einer Fensterbank, dahinter ist draußen; '
+        'glas = Glastür oder Glasscheibe bis zum Boden; spiegel = Spiegel; '
+        'moebel = an der Nummer steht ein Möbelstück (Regal, Schrank, Stuhl, '
+        'Tisch); moebelspalt = Lücke zwischen oder neben Möbeln; '
+        'nische = Nische, Schrank oder Sackgasse; wand = die Nummer steht auf '
+        'einer Wand oder auf Mauerwerk, dort ist keine Öffnung; unklar = nicht '
+        'zu erkennen. sicherheit = wie sicher du bei dieser Einordnung bist, von '
+        '0 (geraten) bis 1 (eindeutig).',
+        '2. Begründe in einem kurzen Satz, was du bei der gewählten Nummer siehst, '
+        'oder warum keine passt (begruendung).',
+        '3. Wähle die Nummer, durch die der Roboter den Raum verlassen soll '
         '(wahl). Erlaubt sind nur Nummern aus der Tabelle mit art tuer_offen '
         f'oder durchgang. Der Roboter ist {int(ROBOTER_BREITE_M * 100)} cm '
-        'breit. Gibt es keinen geeigneten Ausgang, setze wahl auf null.',
-        '3. Nenne den Raum, in dem der Roboter steht (raum), zum Beispiel '
+        'breit. Lieber keine Wahl als eine falsche: Bist du nicht sicher, dass '
+        'es eine offene Tür oder ein Durchgang in einen anderen Raum ist, setze '
+        'wahl auf null. Das ist eine richtige Antwort; der Roboter bleibt dann '
+        'stehen. Ein Fenster ist nie ein Ausgang.',
+        '4. Nenne den Raum, in dem der Roboter steht (raum), zum Beispiel '
         'Flur, Wohnzimmer, Schlafzimmer, Küche, Bad, Arbeitszimmer, '
         'Abstellraum oder unklar.',
-        '4. Nenne Gefahren für einen fahrenden Roboter, die du siehst '
+        '5. Nenne Gefahren für einen fahrenden Roboter, die du siehst '
         '(gefahren), zum Beispiel Treppe, Kabel am Boden, Glas. Sonst eine '
         'leere Liste.',
         '',
         'Bisheriger Verlauf an diesem Standpunkt: '
         + ('; '.join(verlauf) if verlauf else 'keiner.'),
         '',
-        'Antwortmuster:',
-        '{"wahl": 2, "begruendung": "ein kurzer Satz", "kandidaten": '
-        '[{"nr": 1, "art": "moebelspalt", "sicherheit": 0.8}, '
-        '{"nr": 2, "art": "tuer_offen", "sicherheit": 0.9}], '
-        '"raum": "Flur", "gefahren": []}',
+        'Antwortmuster (nur die Form: je Nummer aus der Tabelle ein Eintrag in '
+        'kandidaten; die 0 und die großgeschriebenen Wörter durch deine Angaben '
+        'ersetzen):',
+        ANTWORTMUSTER,
     ]
     return Frage(system=SYSTEM, text='\n'.join(zeilen),
                  schema=antwortschema(angeboten, waehlbar), angeboten=angeboten,

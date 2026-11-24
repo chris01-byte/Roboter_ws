@@ -93,7 +93,8 @@ def test_satz_fuer_den_menschen_nennt_nur_masse_vom_roboter_aus(runde_mit_karte,
     stand = standpunkt_in_der_karte(runde_mit_karte.karte, vorbereitung.gier_ende_rad)
     wahl = wahl_aufschreiben(vorbereitung, _eintrag(tuer.nr), stand, jetzt_s=JETZT)
     satz = wahl_satz(wahl)
-    assert satz.startswith(f'Die KI wählt Nr. {tuer.nr}: offene Tür (sicher zu 85 %), ')
+    assert satz.startswith(f'Die KI wählt Nr. {tuer.nr}: offene Tür, ')
+    assert 'sicher zu' not in satz
     assert ' m breit, ' in satz and ' m entfernt, ' in satz and '° rechts von seiner' in satz
     for zahl in wahl['mitte']:
         assert f'{zahl:.2f}'.replace('.', ',') not in satz

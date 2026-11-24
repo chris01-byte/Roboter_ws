@@ -392,7 +392,7 @@ def test_frage_kommt_aus_der_wahl_datei_nicht_aus_dem_text(neues_umfeld, capsys)
     umfeld = neues_umfeld('falscher_text')
     _start_und_wahl(umfeld, capsys)
     frage = (umfeld.lauf_ordner() / 'frage.txt').read_text(encoding='utf-8').rstrip('\n')
-    assert 'Die KI wählt Nr. 2: offene Tür (sicher zu 90 %), 0,83 m breit, 2,4 m' in frage
+    assert 'Die KI wählt Nr. 2: offene Tür, 0,83 m breit, 2,4 m' in frage
     assert 'Begründung der KI: Nr. 2 ist eine offene Tür.' in frage
     assert 'Gefahren laut KI: Kabel am Boden.' in frage
     assert 'Durchgang' not in frage and 'Die KI wählt Nr. 1' not in frage and '\n' not in frage

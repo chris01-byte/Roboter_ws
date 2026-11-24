@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import io
 import math
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -63,6 +63,62 @@ def _scheibe(bild: Image.Image, u: float, v: float, nr: int, radius: int) -> Non
                      width=max(2, radius // 6))
     zahl = _text_bild(str(nr), int(radius * 1.25))
     bild.paste(zahl, (int(round(u - zahl.width / 2)), int(round(v - zahl.height / 2))), zahl)
+
+
+def auseinander(stellen: Sequence[Sequence[float]], abstand: float,
+                grenzen: Optional[Tuple[float, float, float, float]] = None,
+                runden: int = 200) -> List[Tuple[float, float]]:
+    """Stellen so verschieben, dass je zwei mindestens ``abstand`` auseinander liegen.
+
+    In KI-F9, Lauf 2, lagen zwei Nummernscheiben 4 bis 23 Bildpunkte
+    auseinander, jede 22 Bildpunkte breit: Die spätere deckte die frühere fast
+    ganz zu (Bewertung nach KI-F9, §2). Liegen zwei Stellen gleich, weicht die
+    frühere nach links, die spätere nach rechts aus. ``grenzen``: (u0, v0, u1, v1).
+
+    Alle Schübe einer Runde wirken gemeinsam (nicht Paar für Paar), damit eine
+    dichte Gruppe ihre Reihenfolge behält; geprüft wird immer der Stand nach
+    dem Zurückholen an die Grenzen (Gegenprüfung Schritt 3).
+    """
+    p = np.array(stellen, dtype=float).reshape(-1, 2)
+
+    def an_die_grenzen(q: np.ndarray) -> np.ndarray:
+        if grenzen is not None:
+            q[:, 0] = np.clip(q[:, 0], grenzen[0], grenzen[2])
+            q[:, 1] = np.clip(q[:, 1], grenzen[1], grenzen[3])
+        return q
+
+    p = an_die_grenzen(p)
+    for _ in range(runden):
+        schub = np.zeros_like(p)
+        for i in range(len(p)):
+            for j in range(i + 1, len(p)):
+                d = p[j] - p[i]
+                laenge = float(np.hypot(d[0], d[1]))
+                if laenge >= abstand - 1e-6:
+                    continue
+                richtung = d / laenge if laenge > 1e-6 else np.array([1.0, 0.0])
+                s = (abstand - laenge) / 2.0 + 1e-3
+                schub[i] -= richtung * s
+                schub[j] += richtung * s
+        if not schub.any():
+            break
+        p = an_die_grenzen(p + schub)
+    return [(float(u), float(v)) for u, v in p]
+
+
+def _scheiben(bild: Image.Image, stellen: Sequence[Sequence[float]],
+              nummern: Sequence[int], radius: int) -> None:
+    """Nummernscheiben, die sich nie verdecken; eine verschobene Scheibe zeigt mit
+    einem dünnen Strich auf ihre Stelle."""
+    neu = auseinander(stellen, 2.2 * radius,
+                      (radius, radius, bild.width - 1 - radius, bild.height - 1 - radius))
+    zeichner = ImageDraw.Draw(bild)
+    for (u0, v0), (u, v) in zip(stellen, neu):
+        if math.hypot(u - u0, v - v0) > 0.5 * radius:
+            zeichner.line([u0, v0, u, v], fill=(0, 0, 0), width=max(3, radius // 5))
+            zeichner.line([u0, v0, u, v], fill=(255, 255, 255), width=max(1, radius // 10))
+    for (u, v), nr in zip(neu, nummern):
+        _scheibe(bild, u, v, nr, radius)
 
 
 def _schild(bild: Image.Image, text: str, hoehe: int) -> None:
@@ -127,9 +183,8 @@ def markiere(bild_bytes: bytes, marken: Sequence[dict],
             (u1, v1), (u2, v2) = marke['pfosten_uv']
             zeichner.line([u1, v1, u2, v2], fill=(0, 0, 0), width=max(5, radius // 3))
             zeichner.line([u1, v1, u2, v2], fill=(255, 255, 255), width=max(2, radius // 6))
-    for marke in marken:
-        v = min(marke['v'], bild.height - 1 - radius)
-        _scheibe(bild, marke['u'], max(v, radius), marke['nr'], radius)
+    _scheiben(bild, [(m['u'], max(min(m['v'], bild.height - 1 - radius), radius))
+                     for m in marken], [m['nr'] for m in marken], radius)
     if schild:
         _schild(bild, schild, max(14, bild.height // 14))
     return bild
@@ -187,9 +242,8 @@ def skizze(winkel_rad, entfernung_m, oeffnungen: Sequence[Oeffnung],
     for o in oeffnungen:
         zeichner.line([px(*o.pfosten[0]), px(*o.pfosten[1])], fill=(0, 0, 0),
                       width=max(3, groesse // 160))
-    for o in oeffnungen:
-        u, v = px(*o.marke_oder_mitte)
-        _scheibe(bild, u, v, o.nr, radius)
+    _scheiben(bild, [px(*o.marke_oder_mitte) for o in oeffnungen],
+              [o.nr for o in oeffnungen], radius)
     return bild
 
 

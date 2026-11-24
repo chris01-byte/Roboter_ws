@@ -100,7 +100,7 @@ def waehlen():
     else:
         print('Begründung der KI: Nr. 2 ist eine offene Tür.')
         print('Gefahren laut KI: Kabel am Boden')
-        print('Die KI wählt Nr. 2: offene Tür (sicher zu 90 %), 0,83 m breit, 2,4 m '
+        print('Die KI wählt Nr. 2: offene Tür, 0,83 m breit, 2,4 m '
               'entfernt, 25° links von seiner Blickrichtung.')
     print(f'Wahl-Datei: {datei}')
     print(f'Kennung der Wahl: {hashlib.sha256(datei.read_bytes()).hexdigest()[:6]}')

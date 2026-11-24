@@ -810,7 +810,50 @@ def test_entscheidung_zur_tuer():
     assert entscheidung(False, True, False) == 'nichts'
     # steht er passend, aber die Linie ist nicht frei, hilft keine Anfahrt
     assert entscheidung(True, False, True) == 'nichts'
+
+
+def test_durch_eine_oeffnung_mit_geschaetztem_pfosten_nie_gleich_hindurch():
+    """Bewertung nach KI-F9, §8: Schluss „lot“ heißt, der zweite Pfosten ist nur
+    geschätzt. Dann höchstens erst davor und neu messen, nie gleich hindurch."""
+    assert entscheidung(True, True, True, geschaetzt=True) == 'nichts'
+    assert entscheidung(False, True, True, geschaetzt=True) == 'anfahrt'
+    assert entscheidung(False, True, False, geschaetzt=True) == 'nichts'
+    assert entscheidung(True, True, True, geschaetzt=False) == 'durchfahrt'
     assert ENTSCHEIDUNG_TEXT['anfahrt'].startswith('Entscheidung: Anfahrt')
+
+
+def test_nur_geschaetzt_heisst_schluss_lot():
+    from fahrziel_senden import nur_geschaetzt
+    lot = Oeffnung(1, 0.85, (2.0, 0.0), ((2.0, -0.4), (2.0, 0.4)), 0.0, 2.0, 1.5, True,
+                   schluss='lot')
+    assert nur_geschaetzt(lot)
+    for schluss in ('sprung', 'linie', 'blatt'):
+        o = Oeffnung(1, 0.85, (2.0, 0.0), ((2.0, -0.4), (2.0, 0.4)), 0.0, 2.0, 1.5, True,
+                     schluss=schluss)
+        assert not nur_geschaetzt(o), schluss
+
+
+def test_jede_stelle_mit_durchfahrt_fragt_nach_dem_lot():
+    """Gegenprüfung Schritt 3: Die Regel gilt nur, wenn jede Stelle, die eine
+    Durchfahrt plant oder sendet, sie auch abfragt. Gezählt im Quelltext von
+    ``main``: Entscheidung von ``--zur-tuer``, Durchfahrt nach der Anfahrt,
+    ``--tuer`` und ``--tuer --nur-messen``. Wer eine davon entfernt, sieht
+    diesen Test fehlschlagen."""
+    import ast
+    import inspect
+
+    import fahrziel_senden
+    quelle = inspect.getsource(fahrziel_senden.main)
+    aufrufe = [k for k in ast.walk(ast.parse(quelle)) if isinstance(k, ast.Call)
+               and getattr(k.func, 'id', None) == 'nur_geschaetzt']
+    assert len(aufrufe) == 4
+    # und niemand fragt am Baustein vorbei direkt nach dem Schluss
+    assert 'SCHLUSS_LOT' not in quelle
+    funktionen = {k.name: k for k in ast.walk(ast.parse(quelle))
+                  if isinstance(k, ast.FunctionDef)}
+    for name in ('plan_zeilen', 'durchfahrt_nach_anfahrt'):
+        assert any(isinstance(k, ast.Call) and getattr(k.func, 'id', None) == 'nur_geschaetzt'
+                   for k in ast.walk(funktionen[name])), name
 
 
 def test_vorschlag_ist_die_tiefste_tuerbreite_oeffnung():

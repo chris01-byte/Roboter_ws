@@ -266,15 +266,29 @@ def test_tuer_hinter_einer_breiten_moebelluecke_wird_angeboten():
     assert not any(o.breite_m > 1.3 and abs(o.richtung_grad) < 20 for o in gefunden)
 
 
+TUER_DURCH_TUER = [(-2, -2, 2, -2), (-2, 2, 2, 2), (-2, -2, -2, 2),
+                   (2, -2, 2, -0.4), (2, 0.4, 2, 2),                     # nahe Tür, 80 cm
+                   (2, -2, 3.5, -2), (2, 2, 3.5, 2),
+                   (3.5, -2, 3.5, -0.3), (3.5, 0.35, 3.5, 2),            # ferne Tür, 65 cm
+                   (3.5, -2, 6, -2), (6, -2, 6, 2), (6, 2, 3.5, 2)]
+
+
 def test_tuer_durch_eine_tuer_gesehen_die_naehere_bleibt():
-    welt = [(-2, -2, 2, -2), (-2, 2, 2, 2), (-2, -2, -2, 2),
-            (2, -2, 2, -0.4), (2, 0.4, 2, 2),                     # nahe Tür, 80 cm
-            (2, -2, 3.5, -2), (2, 2, 3.5, 2),
-            (3.5, -2, 3.5, -0.3), (3.5, 0.35, 3.5, 2),            # ferne Tür, 65 cm
-            (3.5, -2, 6, -2), (6, -2, 6, 2), (6, 2, 3.5, 2)]
-    gefunden = oeffnungen(*profil(welt))
+    gefunden = oeffnungen(*profil(TUER_DURCH_TUER))
     assert len(gefunden) == 1
     assert gefunden[0].entfernung_m == pytest.approx(2.0, abs=0.05)
+    assert gefunden[0].breite_m == pytest.approx(0.8, abs=0.03)
+
+
+@pytest.mark.parametrize('x', [1.35, 1.4, 1.5, 1.6])
+def test_dicht_vor_der_tuer_bleibt_die_naehere_auch_ueber_60_grad(x):
+    """Gegenprüfung Schritt 3: 0,4 bis 0,65 m vor der 80-cm-Tür umspannt sie
+    mehr als 60°. Mit der Sperre nur bis 60° wurde dann ihre Kante nicht
+    übersprungen, die ferne Tür (schmaler) verdrängte sie, und der Fahrteil
+    hätte durch beide Türen hindurch geplant."""
+    gefunden = oeffnungen(*profil(TUER_DURCH_TUER, (x, 0.0)))
+    assert len(gefunden) == 1
+    assert gefunden[0].mitte[0] == pytest.approx(2.0 - x, abs=0.05)
     assert gefunden[0].breite_m == pytest.approx(0.8, abs=0.03)
 
 
@@ -336,3 +350,38 @@ def test_von_zwei_ueberdeckenden_tuergrossen_luecken_bleibt_die_schmalere():
     import inspect
     assert 'hinter_naeherer_tuer' not in inspect.getsource(kandidaten).replace(
         "'hinter_naeherer_tuer'", '', 0).split('gefunden: List[dict] = []')[1]
+
+
+# Zufallszimmer, in dem die Lot-Regel eine Lücke mit vertauschten Kanten baute
+# (Nachstellung zur Bewertung nach KI-F9, Zimmer 48): Ein Kasten steht frei vor der
+# Wand; das Lot von seiner Ecke fiel hinter den ersten Pfosten. Die alte Vermessung
+# bot nur diese Scheinlücke an (0,60 m), und sie verdrängte alles andere, auch die
+# Tür – wie die Lücke am Fenster in KI-F9, Lauf 2 (Kanten −166° → −180°, KI-F9N).
+ZIMMER_LOT_VERKEHRT = [
+    (0.0, 0.0, 1.328, 0.0), (2.173, 0.0, 3.715, 0.0),
+    (1.328, 0.0, 0.328, -2.729), (2.173, 0.0, 3.173, -2.729),
+    (0.328, -2.729, 3.173, -2.729), (3.715, 0.0, 3.715, 3.444),
+    (3.715, 3.444, 2.638, 3.444), (1.319, 3.444, 0.0, 3.444),
+    (2.638, 3.444, 2.638, 3.694), (1.319, 3.444, 1.319, 3.694),
+    (2.028, 3.694, 1.928, 3.694), (0.0, 3.444, 0.0, 0.0),
+    (2.679, 3.63, 3.318, 3.63), (3.318, 3.63, 3.318, 4.302),
+    (3.318, 4.302, 2.679, 4.302), (2.679, 4.302, 2.679, 3.63),
+]
+STAND_LOT_VERKEHRT = (1.457, 1.713)
+TUER_LOT_VERKEHRT = (1.75, 0.0)
+
+
+def test_lot_auf_der_falschen_seite_ergibt_keine_luecke_und_verdraengt_nichts():
+    winkel, r = profil(ZIMMER_LOT_VERKEHRT, STAND_LOT_VERKEHRT)
+    protokoll = []
+    gefunden = oeffnungen(winkel, lecks_schliessen(r), protokoll=protokoll)
+    # die Tür wird angeboten (alt: nur die Scheinlücke, sonst nichts)
+    tuer = (TUER_LOT_VERKEHRT[0] - STAND_LOT_VERKEHRT[0],
+            TUER_LOT_VERKEHRT[1] - STAND_LOT_VERKEHRT[1])
+    assert any(math.hypot(o.mitte[0] - tuer[0], o.mitte[1] - tuer[1]) < 0.25 for o in gefunden)
+    assert len(gefunden) >= 2
+    # das verkehrte Lot steht als Grund im Protokoll, nie als angebotene Lücke
+    assert any(str(z.get('blatt') or '').endswith('_verkehrt') for z in protokoll)
+    for o in gefunden:
+        (ax, ay), (bx, by) = o.pfosten
+        assert ax * by - ay * bx > 0.0, o           # zweiter Pfosten gegen den Uhrzeigersinn

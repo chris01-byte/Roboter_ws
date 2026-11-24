@@ -32,20 +32,24 @@ Für ``--tuer`` misst das Werkzeug die Öffnungen im Stand neu (zwei Sekunden
 Laser), nimmt die gewählte und legt die Fahrpunkte auf die **gerade Linie
 vom Standplatz durch die Türmitte**: einen 1,2 m vor und einen 0,6 m hinter
 der Türlinie. Es sendet nichts, wenn es die Öffnung nicht eindeutig findet,
-wenn sie nicht türbreit vermessen ist (0,65 bis 0,95 m), wenn der Roboter
-nicht passend vor der Tür steht oder wenn neben der Fahrlinie nicht
-beidseits 0,26 m frei sind (gemessen am selben Laserbild: Türblatt,
-Pfosten, alles, was im Weg steht); dann sagt es, was an der Aufstellung zu
-ändern ist. ``--tuer --nur-messen`` zeigt dasselbe, ohne zu senden, und dazu
-das Protokoll der Vermessung.
+wenn sie nicht türbreit vermessen ist (0,65 bis 0,95 m), wenn ihr zweiter
+Pfosten nur aus dem Lot geschätzt ist (keine gemessene Kante, seit KI-F9N),
+wenn der Roboter nicht passend vor der Tür steht oder wenn neben der
+Fahrlinie nicht beidseits 0,26 m frei sind (gemessen am selben Laserbild:
+Türblatt, Pfosten, alles, was im Weg steht); dann sagt es, was an der
+Aufstellung zu ändern ist. ``--tuer --nur-messen`` zeigt dasselbe, ohne zu
+senden, und dazu das Protokoll der Vermessung.
 
 ``--zur-tuer`` entscheidet selbst: Passen Aufstellung, Weg und Kostenkarte,
-sendet es die Durchfahrt; sonst die Anfahrt vor die Tür. **Alles in einem
-Aufruf und einer Mission:** Die Anfahrt trägt den Vermerk „es folgt ein
-Folgeziel“; danach misst das Werkzeug im Stand neu, findet die gemerkte
-Tür wieder und sendet die Durchfahrt. Sieht der Laser von dort die Wand
-neben der Tür nicht lang genug, nimmt es die Türachse aus der ersten
-Messung. Niemand muss den Roboter dafür umstellen. Passt etwas nicht,
+sendet es die Durchfahrt; sonst die Anfahrt vor die Tür. Ist der zweite
+Pfosten nur aus dem Lot geschätzt, nie gleich die Durchfahrt: höchstens die
+Anfahrt, und hindurch erst, wenn die neue Messung davor zwei gemessene
+Kanten zeigt. **Alles in einem Aufruf und einer Mission:** Die Anfahrt
+trägt den Vermerk „es folgt ein Folgeziel“; danach misst das Werkzeug im
+Stand neu, findet die gemerkte Tür wieder und sendet die Durchfahrt (nicht,
+wenn ihr zweiter Pfosten weiter nur geschätzt ist). Sieht der Laser von dort
+die Wand neben der Tür nicht lang genug, nimmt es die Türachse aus der
+ersten Messung. Niemand muss den Roboter dafür umstellen. Passt etwas nicht,
 schickt es dem Erkunder ein „Ende“; die Mission schließt dann sofort.
 
 ``--wahl DATEI`` nimmt statt Nummer oder Richtung die Wahl der KI: Die
@@ -112,7 +116,7 @@ from lotse.fahrziel import (  # noqa: E402
 )
 from lotse.fahrziel import blatt_text, tuer_hinter_blatt  # noqa: E402
 from lotse.geometrie import aus_tf  # noqa: E402
-from lotse.kandidaten import TUERBREIT_M, Oeffnung, oeffnungen  # noqa: E402
+from lotse.kandidaten import SCHLUSS_LOT, TUERBREIT_M, Oeffnung, oeffnungen  # noqa: E402
 from lotse.wahl import im_standpunktrahmen, wahl_lesen, zur_wahl  # noqa: E402
 from ros_ende import Ende, ros_beenden, ros_starten  # noqa: E402
 
@@ -312,19 +316,40 @@ def lage_text(o: Oeffnung, mit_hinweisen: bool = True, achse: Optional[dict] = N
                    else ' – Aufstellung passt nicht: ' + '; '.join(hinweise) + '.')
 
 
-def entscheidung(lage_passt: bool, weg_passt: bool, anfahrt_moeglich: bool) -> str:
+def nur_geschaetzt(o) -> bool:
+    """Ist der zweite Pfosten der Öffnung nur aus dem Lot geschätzt?
+
+    Dann gibt es dort keine gemessene Kante. Durch so eine Öffnung fährt er nie
+    direkt (seit KI-F9N): höchstens erst davor, neu messen und hindurch nur
+    mit zwei gemessenen Kanten. Jede Stelle, die eine Durchfahrt sendet,
+    fragt hier.
+    """
+    return getattr(o, 'schluss', None) == SCHLUSS_LOT
+
+
+def entscheidung(lage_passt: bool, weg_passt: bool, anfahrt_moeglich: bool,
+                 geschaetzt: bool = False) -> str:
     """Was ``--zur-tuer`` sendet: ``'durchfahrt'``, ``'anfahrt'`` oder ``'nichts'``.
 
     Steht der Roboter passend und ist die gerade Linie frei, fährt er gleich
     hindurch. Sonst stellt er sich zuerst selbst vor die Tür, wenn die
     Anfahrt geprüft möglich ist. Niemand muss ihn dafür umstellen.
+
+    ``geschaetzt``: Der zweite Pfosten ist nur geschätzt (Schluss „lot“). Dann
+    nie gleich hindurch, nur vorfahren und neu messen (Bewertung nach KI-F9,
+    §8); hindurch erst, wenn er danach zwei gemessene Kanten sieht.
     """
+    if geschaetzt:
+        return 'anfahrt' if not lage_passt and anfahrt_moeglich else 'nichts'
     if lage_passt and weg_passt:
         return 'durchfahrt'
     if not lage_passt and anfahrt_moeglich:
         return 'anfahrt'
     return 'nichts'
 
+
+GESCHAETZT_TEXT = ('Der zweite Pfosten ist nur geschätzt (Lot, keine gemessene Kante): '
+                   'Gleich hindurch fährt er nicht, höchstens erst davor und neu messen.')
 
 ENTSCHEIDUNG_TEXT = {
     'durchfahrt': 'Entscheidung: Durchfahrt – er steht passend, gerade durch die Türmitte.',
@@ -778,7 +803,11 @@ def main(argv=None) -> int:
                 zeilen += kz
                 if not anfahrt_frei:
                     weg_a = None
-        plan = entscheidung(lage_passt, weg_passt and kosten_frei, weg_a is not None)
+        geschaetzt = nur_geschaetzt(o)
+        if geschaetzt:
+            zeilen.append(GESCHAETZT_TEXT)
+        plan = entscheidung(lage_passt, weg_passt and kosten_frei, weg_a is not None,
+                            geschaetzt)
         zeilen.append(ENTSCHEIDUNG_TEXT[plan])
         return zeilen, plan, weg_a
 
@@ -892,6 +921,9 @@ def main(argv=None) -> int:
                                    'wiederzufinden')
         print(f'Wiedergefunden: Öffnung {o.nr}, {o.breite_m:.2f} m breit, '
               f'{o.richtung_grad:+.0f}°, {o.entfernung_m:.2f} m.')
+        if nur_geschaetzt(o):
+            return nichts_gesendet('Nach der Anfahrt ist der zweite Pfosten weiter nur '
+                                   'geschätzt (Lot); durch so eine Öffnung fährt er nicht')
         achse2 = tuerachse(o.pfosten, hindernisse2)
         if achse2['quelle'] != 'wand' and gemerkt['quelle'] == 'wand':
             achse2 = achse_aus_karte(gemerkt, pose2)
@@ -1011,6 +1043,9 @@ def main(argv=None) -> int:
                                     print('  ' + z)
                             continue
                         print('  ' + lage_text(o, achse=achsen[o.nr]))
+                        if nur_geschaetzt(o):
+                            print('  ' + GESCHAETZT_TEXT + ' Mit --tuer sendet es '
+                                  'hier nichts.')
                         print('  ' + achse_text(achsen[o.nr]))
                         print('  ' + weg_text(o, hindernisse, wahl.vor, wahl.hinter,
                                               achsen[o.nr])[0])
@@ -1117,6 +1152,9 @@ def main(argv=None) -> int:
                     return nichts_gesendet('Die Anfahrt passt nicht')
         if wahl.tuer:
             print(lage_text(gewaehlt, achse=achse))
+            if nur_geschaetzt(gewaehlt):
+                print(GESCHAETZT_TEXT)
+                return nichts_gesendet('Der zweite Pfosten ist nur geschätzt (Lot)')
             print(achse_text(achse))
             weg, weg_passt = weg_text(gewaehlt, hindernisse, wahl.vor, wahl.hinter, achse)
             print(weg)

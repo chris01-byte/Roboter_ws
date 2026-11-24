@@ -30,9 +30,9 @@ WAHL_EINDEUTIG_M = 0.15
 
 ARTEN_TEXT = {
     'tuer_offen': 'offene Tür', 'durchgang': 'Durchgang',
-    'tuer_geschlossen': 'geschlossene Tür', 'glas': 'Glas', 'spiegel': 'Spiegel',
-    'moebelspalt': 'Lücke an Möbeln', 'nische': 'Nische', 'wand': 'Wand',
-    'unklar': 'unklar',
+    'tuer_geschlossen': 'geschlossene Tür', 'fenster': 'Fenster', 'glas': 'Glas',
+    'spiegel': 'Spiegel', 'moebel': 'Möbel', 'moebelspalt': 'Lücke an Möbeln',
+    'nische': 'Nische', 'wand': 'Wand', 'unklar': 'unklar',
 }
 
 
@@ -180,9 +180,10 @@ def wahl_satz(wahl: dict) -> str:
              else f'{abs(richtung):.0f}° {"links" if richtung > 0 else "rechts"} '
                   'von seiner Blickrichtung')
     art = ARTEN_TEXT.get(wahl.get('einordnung'), str(wahl.get('einordnung')))
-    sicher = wahl.get('sicherheit')
+    # Ohne die Prozentangabe der KI: Sie bedeutete nichts (die Fehlwahl in
+    # KI-F9, Lauf 2, hatte 90 %, die richtigen 90 bis 95 %). Sie bleibt in der
+    # Wahl-Datei und im Protokoll (Bewertung nach KI-F9, §11).
     satz = (f'Die KI wählt Nr. {wahl["nr"]}: {art}'
-            + ('' if sicher is None else f' (sicher zu {round(100 * float(sicher)):d} %)')
             + f', {_komma(float(wahl["breite_m"]), 2)} m breit, '
             f'{_komma(float(wahl["entfernung_m"]), 1)} m entfernt, {seite}.')
     if not wahl.get('tuerbreit', True):

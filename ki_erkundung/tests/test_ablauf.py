@@ -157,7 +157,7 @@ def test_werkzeuge_von_der_aufnahme_bis_zum_bericht(beispielordner, tmp_path, ki
             '--json', str(tmp_path / 'auswertung.json')]) == 0
         text = capsys.readouterr().out
         assert 'richtig 1 von 1 (100 %)' in text
-        assert '0 Wahlen auf Glas oder Spiegel' in text
+        assert '0 Wahlen auf Glas, Spiegel oder Fenster' in text
         assert (tmp_path / 'bericht.md').read_text(encoding='utf-8').startswith('# Trockenlauf')
         kennzahlen = json.loads((tmp_path / 'auswertung.json').read_text(encoding='utf-8'))
         assert kennzahlen['modelle']['pruefmodell']['einordnung_richtig'] == 4
@@ -291,6 +291,6 @@ def test_wahrheit_eintragen_prueft_nummern_und_bewahrt_fruehere_angaben(beispiel
     assert trockenlauf_auswerten.lies_wahrheiten(runden)['beispiel_zimmer']['ausgaenge'] == []
     # falsche Angaben werden abgelehnt, die Datei bleibt
     assert wahrheit_eintragen.main(fest + ['--ausgaenge', '7']) == 2
-    assert wahrheit_eintragen.main(fest + ['--arten', '1=fenster']) == 2
+    assert wahrheit_eintragen.main(fest + ['--arten', '1=rollo']) == 2
     assert wahrheit_eintragen.main(fest[:-1] + ['gibt_es_nicht']) == 2
     assert json.loads(datei.read_text(encoding='utf-8')) == zweite

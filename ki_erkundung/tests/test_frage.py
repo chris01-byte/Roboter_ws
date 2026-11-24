@@ -1,7 +1,8 @@
 """Die Frage an den Lotsen."""
 import json
 
-from lotse.frage import (ARTEN, ARTEN_AUSGANG, antwortschema, baue_frage,
+from lotse.antwort import pruefe
+from lotse.frage import (ANTWORTMUSTER, ARTEN, ARTEN_AUSGANG, antwortschema, baue_frage,
                          richtung_text)
 from lotse.kandidaten import Oeffnung
 
@@ -42,13 +43,37 @@ def test_frage_ohne_oeffnung_im_uhrzeigersinn_mit_verlauf_und_mosaik():
     assert 'Nr. 2: zweimal nicht erreicht' in frage.text
 
 
-def test_antwortmuster_in_der_frage_ist_selbst_gueltiges_json():
+def test_antwortmuster_hat_nichts_zum_abschreiben_und_abgeschrieben_waehlt_es_nichts():
+    """KI-F9, Lauf 2: Die Antwort glich in Wahl, Arten und Zahlen dem alten Beispiel
+    (Wahl 2, Nr. 2 tuer_offen 0,9) – und war ein Fensterrollo."""
     frage = baue_frage([oeffnung(1, 0.8, 2.0, 0.0), oeffnung(2, 0.8, 2.0, 90.0)], 8,
                        {1: [1], 2: [3]})
     assert frage.waehlbar == [1, 2] and 'kennt nur der Laser' not in frage.text
-    muster = json.loads(frage.text.strip().splitlines()[-1])
-    assert set(muster) == set(frage.schema['required'])
-    assert all(k['art'] in ARTEN for k in muster['kandidaten'])
+    zeile = frage.text.strip().splitlines()[-1]
+    assert zeile == ANTWORTMUSTER
+    muster = json.loads(zeile)
+    assert list(muster) == list(frage.schema['properties']) == frage.schema['required']
+    assert muster['wahl'] is None
+    assert all(k['nr'] not in frage.angeboten and k['art'] not in ARTEN
+               for k in muster['kandidaten'])
+    # Schreibt ein Modell das Muster ab, wird nichts gewählt.
+    abgeschrieben = pruefe(zeile, frage.angeboten, frage.waehlbar)
+    assert abgeschrieben.gueltig and abgeschrieben.wahl is None
+
+
+def test_erst_einordnen_dann_waehlen_und_lieber_keine_wahl():
+    frage = baue_frage([oeffnung(1, 0.8, 2.0, 0.0)], 8, {1: [1]})
+    reihenfolge = list(frage.schema['properties'])
+    assert reihenfolge.index('kandidaten') < reihenfolge.index('begruendung') \
+        < reihenfolge.index('wahl')
+    assert 'sicherheit' in frage.schema['properties']['kandidaten']['items']['required']
+    for satz in ('Reicht die Öffnung bis zum Boden?', 'Lieber keine Wahl als eine falsche',
+                 'Ein Fenster ist nie ein Ausgang.', 'von 0 (geraten) bis 1 (eindeutig)',
+                 'fenster = Fenster, auch mit Rollo'):
+        assert satz in frage.text, satz
+    assert 'fenster' in ARTEN and 'moebel' in ARTEN
+    assert 'fenster' not in ARTEN_AUSGANG and 'moebel' not in ARTEN_AUSGANG
+    assert 'schlimmer als keine' in frage.system
 
 
 def test_schema_laesst_nur_angebotene_nummern_oder_null_zu():

@@ -1,6 +1,17 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 24.11.2026 (nachts): KI-F9N ausgeführt – die Werkzeuge halten am
+**Stand 24.11.2026 (spät nachts): Sehen ohne Roboter repariert, Auftrag
+KI-F9R erteilt.** Christopher: „Ja beginne“. Die Vermessung baut keine
+Lücke mit verkehrten Kanten mehr (die Ursache von Lauf 2), Nummern im Bild
+verdecken sich nicht mehr, und die Frage an die KI hat kein Beispiel zum
+Abschreiben mehr, ordnet erst ein und lässt „keine Wahl“ ausdrücklich zu
+(Abschnitt „Sehen repariert“ unten). Durch eine Öffnung mit nur
+geschätztem zweitem Pfosten fährt Amadeus nie direkt. Geprüft in Tests,
+an 9000 Zufallszimmern und in der Simulation, **nicht an echten
+Aufnahmen**. Das rechnet der Auftrag [KI-F9R](AUFTRAG.md) am Jetson nach,
+ohne Sensoren und ohne Motoren.
+
+**Davor, 24.11.2026 (nachts): KI-F9N ausgeführt – die Werkzeuge halten am
 Jetson, und die Ursache von Lauf 2 ist mit Zahlen belegt.** Nichts ist
 gefahren. Unter Humble 409 Tests bestanden; die neue Aufnahme schrieb 30 von
 30 Runden trotz Signal (die alte im Stand ebenfalls, der Absturz ließ sich
@@ -202,9 +213,10 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Kein offener Auftrag.** KI-F9N ist ausgeführt (Abschnitt unten). Die
-Reihenfolge aus der [Bewertung](BEWERTUNG_KIF9.md) §10; Schritt 1 und 2 sind
-erledigt, über die weiteren wird jetzt gesprochen:
+**Offener Auftrag: [KI-F9R](AUFTRAG.md)** (Nachrechnen am Jetson, ohne
+Sensoren und ohne Motoren). Die Reihenfolge aus der
+[Bewertung](BEWERTUNG_KIF9.md) §10, von Christopher am 24.11.2026 bestätigt
+(„Ja beginne“); Schritt 1 und 2 sind erledigt, Schritt 3 ist gebaut:
 1. **Werkzeuge robust machen** – **gebaut und gegengeprüft 24.11.2026**
    (Abschnitt „Werkzeuge robust gemacht“ unten; am Jetson noch nicht
    erprobt):
@@ -216,9 +228,11 @@ erledigt, über die weiteren wird jetzt gesprochen:
 2. **KI-F9N, Auswerteauftrag ohne Fahrt** – **ausgeführt 24.11.2026**
    (Abschnitt „KI-F9N“ unten): Werkzeuge halten im Stand; Ursache von Lauf 2
    belegt; Belege und `messen` am Jetson noch nicht erprobt.
-3. **Sehen ohne Roboter verbessern** an den gespeicherten Runden:
-   Vermessung, Darstellung der Nummern, Frage, Widerspruchsregel; dann
-   heutiges Modell gegen Qwen3.8-27B; dann eine zweite Meinung als Veto.
+3. **Sehen ohne Roboter verbessern** – **gebaut 24.11.2026** (Abschnitt
+   „Sehen repariert“ unten): Vermessung, Darstellung der Nummern, Frage
+   (Fassung 2), Lot nie direkt durchfahren. **Nachrechnen an den
+   gespeicherten Runden: Auftrag KI-F9R.** Danach, falls nötig: heutiges
+   Modell gegen Qwen3.8-27B; eine zweite Meinung als Veto.
 4. **KI-F10 „Nachfassen im Stand“**, eine Verhaltensänderung: die Regeln
    des Werkzeugs vor dem Senden (Wiederfinden in Stufen, Wegvarianten mit
    Ansage, durch die Tür nur nach frontaler Messung mit zwei Kanten).
@@ -293,6 +307,101 @@ auf dem KI-Rechner in Gebrauch · Sucher · Schalter „nur Rundblick“ im
 Erkunder (21.11., `6956252`) · Bestand der Türdurchfahrten · Etappenfahrt
 gebaut und simuliert (21.11., nachts) · KI-1: erste Drehung und Blickrunde
 am Roboter (21.11., nachts).
+
+## Sehen repariert (gebaut 24.11.2026, Schritt 3 nach KI-F9)
+
+Christopher zur vorgeschlagenen Reihenfolge nach KI-F9N: „Ja beginne“.
+Gebaut nur in `ki_erkundung/`, ohne Roboter; kein Build, nichts am Jetson.
+Konzept dazu v1.17 (§5, §6).
+
+**Vermessung (`lotse/kandidaten.py`):**
+- **Lot auf der falschen Seite wird verworfen** (Vermerk `lot_verkehrt`),
+  und keine Lücke darf mehr als 180° umspannen (Grund „Kanten verkehrt
+  herum“). Das war die Ursache von Lauf 2: Die Lücke am Fenster galt als
+  346° breit und verdrängte die Labortür. Nachgestellt in Zufallszimmern:
+  10 von 1500 hatten so eine Scheinlücke, alle mit vertauschten Kanten.
+- **Hinter einer breiten, nahen Lücke (über 1,0 m und über 60° im Blick)
+  werden Kanten nicht mehr übersprungen.** Mit der ersten Regel allein ging
+  in einem Zufallszimmer eine Tür verloren: Eine 1,29 m breite Lücke, die
+  vorher zufällig an der verkehrten Lot-Schätzung scheiterte, wurde nun
+  angenommen, und hinter ihr wurden die Kanten der Tür übersprungen. Zuerst
+  galt die Grenze nur nach Grad; die Gegenprüfung fand damit den
+  umgekehrten Fehler: Steht Amadeus dichter als etwa 0,7 m vor einer Tür
+  (sie umspannt dann über 60°) und liegt gegenüber eine zweite Tür, verdrängte
+  die ferne die nahe (in 348 von 493 nachgestellten Fällen). Eine Tür bis
+  1,0 m sperrt deshalb immer; damit bleibt die nahe Tür in allen 493 Fällen.
+- **Fast gleiche Mitten (unter 0,30 m) bekommen für die KI eine Nummer**
+  (in Lauf 2 standen zwei Nummern 0,13 m auseinander). Der Fahrteil sieht
+  weiter beide und prüft selbst, ob seine Wahl eindeutig ist.
+- Nachgerechnet an 9000 Zufallszimmern, alt gegen neu: Scheinlücken mit
+  verkehrten Kanten 64 → 0; Türen angeboten 5395 → 5426 (31 gewonnen,
+  keine verloren); Fenster 3698 → 3713; doppelte Nummern in der Liste an
+  die KI 1 → 0.
+
+**Fahrteil (`werkzeuge/fahrziel_senden.py`):** Ist der zweite Pfosten nur
+aus dem Lot geschätzt, fährt er nie direkt hindurch; höchstens stellt er
+sich erst davor, misst neu und fährt nur mit zwei gemessenen Kanten. Steht
+nach der Anfahrt wieder nur eine Lot-Öffnung da, sendet er nichts.
+
+**Darstellung (`lotse/markierung.py`):** Nummern, die sich in Foto oder
+Skizze verdecken würden, werden auseinandergeschoben und mit einer Linie mit
+ihrer Stelle verbunden; zwei Nummern an genau derselben Stelle sind beide zu
+lesen (Test schlägt mit dem alten Code fehl).
+
+**Frage an die KI (`lotse/frage.py`, Fassung 2):**
+- Muster ohne Werte statt Beispiel: Wer es abschreibt, wählt nichts (in
+  KI-F9, Lauf 2, glich die Antwort genau dem alten Beispiel).
+- Erst jede Nummer einordnen (mit Prüffragen: bis zum Boden? was ist
+  dahinter?), dann begründen, dann wählen; die Antwortform gibt diese
+  Reihenfolge vor.
+- Neue Arten `fenster` und `moebel`; „Lieber keine Wahl als eine falsche“,
+  „Ein Fenster ist nie ein Ausgang“.
+- Die Sicherheit der KI wird Christopher nicht mehr als Prozentzahl gezeigt
+  (sie war in KI-F9 abgeschrieben).
+
+**Gegenprüfung (vier unabhängige Prüfer: Vermessung, Fahrteil, Frage,
+Darstellung).** Gefunden und behoben:
+- **Nahe Tür verdrängt** (siehe oben, Regel nach Breite und Grad).
+- **Doppelt eingeordnete Nummer:** Nannte die KI eine Nummer erst „fenster“,
+  dann „tuer_offen“, galt die zweite Angabe, und die Wahl war gültig. Jetzt
+  gilt eine widersprüchlich eingeordnete Nummer als „unklar“ und ist nicht
+  wählbar (`lotse/antwort.py`).
+- **Auswertung:** Ein gewähltes Fenster zählt in K0-2 als gefährliche Wahl
+  (vorher hieß ein Fenster „glas“); das Lotsen-Fenster zeigt die neuen
+  Arten in Worten.
+- **Fahrwerkzeug:** `--tuer --nur-messen` sagte bei einer Lot-Öffnung nichts
+  vom Verbot, das `--tuer` dann anwendet; jetzt steht es dort. Alle vier
+  Stellen, die eine Durchfahrt planen oder senden, fragen denselben Baustein
+  (`nur_geschaetzt`); ein Test zählt sie und schlägt fehl, wenn eine fehlt
+  (an allen vier geprobt). Beschreibung oben im Werkzeug nachgezogen.
+- **Nummern auseinanderschieben:** Am Bildrand prüfte die Funktion den
+  Abstand nach dem Zurückholen nicht mehr (37 statt 44 Bildpunkte), und in
+  dichten Gruppen konnte sich die Reihenfolge vertauschen („1 3 2“). Jetzt
+  wirken alle Schübe einer Runde gemeinsam, und geprüft wird der Stand nach
+  dem Zurückholen.
+- **Auftrag:** Die Prüfzeile auf abgeschriebene Platzhalter erkannte die
+  Nummer 0 nie (die Prüfung nimmt sie gar nicht auf); jetzt zählt sie
+  „fremde Nummer“ getrennt.
+
+**Simulation (ganzer Stack), drei Läufe, alle in den Flur, keine Berührung:**
+- Ablaufkette über `ki_lauf.py` mit gespielter KI, neuer Vermessung und
+  Frage: Wahl der Labortür, „ja“, Anfahrt, neu gemessen (zwei gemessene
+  Kanten), hindurch.
+- Von der Seite des Türblatts: Zuerst nur eine Lot-Lücke (1,12 m), die Tür
+  hinter dem Blatt geschätzt; Entscheidung „Anfahrt“, davor neu gemessen
+  („sprung“ an beiden Kanten), hindurch. Engster Abstand 0,039 m wie vorher
+  (0,038 m).
+- Schräg von rechts, mit einer Lot-Lücke im Blick, die nicht die Tür ist:
+  die Tür gewählt, Anfahrt, hindurch.
+
+**Nachgerechnet mit dem fertigen Code (9000 Zufallszimmer):** wie oben,
+Scheinlücken 64 → 0, Türen 5395 → 5426, keine verloren; die nahe Tür mit
+Tür gegenüber bleibt in allen 493 Fällen über 60°.
+
+**Geprüft:** Tests 395 bestanden, 3 übersprungen (ohne ROS); 414 bestanden
+(ROS 2 Jazzy, abgeschottet); flake8 sauber; Quelltext auf Python 3.10
+lesbar. **An echten Aufnahmen ist das noch nicht geprüft**; das tut der
+Auftrag KI-F9R.
 
 ## KI-F9N – Auswerten und Erproben im Stand (Jetson, 24.11.2026, 20:56 bis 22:13)
 
@@ -1623,7 +1732,9 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Mit Christopher den nächsten Schritt nach KI-F9N besprechen. Vorschlag:
-zuerst das Sehen ohne Roboter reparieren (die verkehrten Kanten in der
-Vermessung, die übereinanderliegenden Nummern, die Frage an die KI), an den
-gespeicherten Runden am Jetson nachrechnen, dann das als nächsten Realtest.
+Christopher übergibt den Auftrag [KI-F9R](AUFTRAG.md) an den Jetson-Agenten
+(Nachrechnen alt gegen neu an allen gespeicherten Runden, ohne Sensoren und
+ohne Motoren). Danach wird der Bericht ausgewertet; trifft G-1 zu, folgt als
+nächster Realtest das verbesserte Sehen am Roboter, mit einem Vorlauf mit
+Blick auf die Tür (für `messen` und die Belege) und einem festen Platz für
+Christopher während des Rundblicks.
