@@ -21,6 +21,15 @@ Aufruf (Beispiel):
     python3 blickrunde_aufnehmen.py --name labor_mitte --dauer 120
     # Roboter einmal langsam ganz herumdrehen, dann Strg+C
 
+Mit ``--bis-wartephase SEK`` endet die Aufnahme von selbst: SEK Sekunden,
+nachdem der Erkunder nach seinem Rundblick auf ein Fahrziel wartet (Phase
+``stage_drive_wait_target`` auf ``/explore/status_json``, gelesen, nie
+gesendet). Endet die Mission vorher, endet auch die Aufnahme. Ein Signal
+(Strg+C, ``kill -INT``, SIGTERM) beendet sie ebenfalls; geschrieben wird in
+jedem Fall, was bis dahin da ist (Befund KI-F9, Lauf 2w). Am Ende steht eine
+Zeile ``ERGEBNIS grund=… runde=… aufnahmen=… …`` für die Ablaufhilfe, nach
+einigen Sekunden eine Zeile ``BEREIT …`` mit den gemessenen Bildraten.
+
 Die Aufnahme enthält Bilder und Maße der echten Wohnung. Sie wird außerhalb
 des Repositorys abgelegt (Vorgabe ``~/.local/share/amadeus/ki_erkundung/
 blickrunden``); ein Ziel innerhalb eines Git-Arbeitsverzeichnisses wird
@@ -29,6 +38,7 @@ abgelehnt.
 from __future__ import annotations
 
 import argparse
+import json
 import math
 import sys
 import time
@@ -37,11 +47,17 @@ from pathlib import Path
 from typing import Deque, List, Optional, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lotse.blickrunde import scan_als_dict, schreibe_runde  # noqa: E402
 from lotse.geometrie import Kamera, aus_tf  # noqa: E402
+from ros_ende import Ende, ros_beenden, ros_starten  # noqa: E402
 
 VORGABE_ZIEL = Path.home() / '.local/share/amadeus/ki_erkundung/blickrunden'
+# Phasen des Erkunders (explore_node.py, Etappenfahrt); dieselbe Wartephase
+# liest fahrziel_senden.py.
+RUNDBLICK = 'initial_scan'
+WARTEPHASE = 'stage_drive_wait_target'
 
 
 def im_repository(pfad: Path) -> bool:
@@ -139,6 +155,72 @@ class Sammler:
         return math.degrees(summe)
 
 
+class Rundblickende:
+    """Wann die Aufnahme von selbst endet: kurz nach dem Rundblick des Erkunders.
+
+    Reine Logik ohne ROS; gefüttert mit den Statusmeldungen des Erkunders.
+    Erst nachdem die Mission mit dem Rundblick begonnen hat (Zustand
+    ``running``, Phase ``initial_scan``), zählt die Wartephase als Ende des
+    Rundblicks. Die Aufnahme endet ``nachlauf_s`` danach; so kommen noch
+    Bilder im Stand und eine frische Lage in der Karte dazu. Endet die Mission
+    nach Beginn des Rundblicks ohne Wartephase, endet die Aufnahme sofort. Eine
+    Wartephase, vor der kein Rundblick zu sehen war (zum Beispiel der zuletzt
+    gehaltene Status einer früheren Mission), zählt nicht.
+    """
+
+    def __init__(self, nachlauf_s: float):
+        self.nachlauf_s = float(nachlauf_s)
+        self.rundblick_seit: Optional[float] = None
+        self.wartephase_seit: Optional[float] = None
+        self.wartephase_unix: Optional[float] = None
+        self.mission_ende: Optional[str] = None
+        self.gehoert = False
+
+    def melde(self, status: dict, jetzt: float, unix: Optional[float] = None) -> Optional[str]:
+        """Eine Statusmeldung verarbeiten; Rückgabe: ein Satz, wenn sich etwas ändert."""
+        self.gehoert = True
+        zustand, phase = status.get('state'), status.get('phase')
+        if self.rundblick_seit is None:
+            if zustand == 'running' and phase == RUNDBLICK:
+                self.rundblick_seit = jetzt
+                return 'Erkunder: Rundblick läuft.'
+            return None
+        if self.wartephase_seit is not None or self.mission_ende is not None:
+            return None
+        if zustand == 'running' and phase == WARTEPHASE:
+            self.wartephase_seit = jetzt
+            self.wartephase_unix = time.time() if unix is None else unix
+            uhr = time.strftime('%H:%M:%S', time.localtime(self.wartephase_unix))
+            return (f'Erkunder: Wartephase seit {uhr}, Aufnahme endet in '
+                    f'{self.nachlauf_s:.0f} s.')
+        if zustand not in ('running', None):
+            self.mission_ende = str(zustand)
+            return f'Erkunder: Mission beendet ({zustand}) ohne Wartephase; Aufnahme endet.'
+        return None
+
+    def grund(self, jetzt: float) -> Optional[str]:
+        """``wartephase`` oder ``mission_ende``, sobald die Aufnahme enden soll."""
+        if self.mission_ende is not None:
+            return 'mission_ende'
+        if self.wartephase_seit is not None and jetzt - self.wartephase_seit >= self.nachlauf_s:
+            return 'wartephase'
+        return None
+
+
+def ergebnis_zeile(grund: str, ordner: Optional[Path], sammler: 'Sammler',
+                   lage: bool, wartephase_unix: Optional[float]) -> str:
+    """Eine Zeile zum Weiterverarbeiten (Ablaufhilfe), ohne Koordinaten."""
+    gedreht = sammler.gedreht_grad()
+    return ('ERGEBNIS'
+            f' grund={grund}'
+            f' runde={ordner.name if ordner is not None else "-"}'
+            f' aufnahmen={len(sammler.aufnahmen)}'
+            f' verworfen={sammler.verworfen_ohne_scan}'
+            f' gedreht={"-" if gedreht is None else f"{gedreht:.0f}"}'
+            f' lage={"ja" if lage else "nein"}'
+            f' wartephase_unix={"-" if wartephase_unix is None else f"{wartephase_unix:.1f}"}')
+
+
 def schreibe(sammler: Sammler, ziel: Path, name: str, kamera: Optional[Kamera],
              boden_kamera, boden_lidar, quelle: dict,
              karte: Optional[dict] = None) -> Optional[Path]:
@@ -167,34 +249,46 @@ def schreibe(sammler: Sammler, ziel: Path, name: str, kamera: Optional[Kamera],
         quelle=quelle, karte=karte)
 
 
-def nehme_auf(wahl, halt=None) -> Optional[Path]:
-    """Mit ROS mithören und die Blickrunde schreiben. ``halt``: Funktion, die
-    True liefert, wenn die Aufnahme enden soll (für Tests)."""
+def nehme_auf(wahl, halt=None, ende: Optional[Ende] = None) -> Optional[Path]:
+    """Mit ROS mithören und die Blickrunde schreiben.
+
+    ``halt``: Funktion, die True liefert, wenn die Aufnahme enden soll
+    (Tests). ``ende``: Marke aus ``ros_ende`` (Strg+C, ``kill -INT``,
+    SIGTERM). Geschrieben wird bei jedem Ende, auch nach einem Fehler beim
+    Lesen; danach folgt die Zeile ``ERGEBNIS …``.
+    """
     import rclpy
     from rclpy.executors import ExternalShutdownException
     from rclpy.qos import (QoSDurabilityPolicy, QoSHistoryPolicy, QoSProfile,
                            QoSReliabilityPolicy)
     from nav_msgs.msg import Odometry
     from sensor_msgs.msg import CameraInfo, CompressedImage, LaserScan
+    from std_msgs.msg import String
     from tf2_ros import Buffer, TransformListener
 
     def sekunden(stempel) -> float:
         return stempel.sec + stempel.nanosec * 1e-9
 
-    eigener_kontext = not rclpy.ok()
-    if eigener_kontext:
-        rclpy.init()
+    bis_wartephase = getattr(wahl, 'bis_wartephase', None)
+    rundblick = Rundblickende(bis_wartephase) if bis_wartephase is not None else None
+    eigener_kontext = ros_starten()
     # Reiner Zuhörer: nur Abonnements, keine Parameterdienste, kein /rosout.
     knoten = rclpy.create_node('ki_blickrunde_aufnahme', enable_rosout=False,
                                start_parameter_services=False)
     sensor = QoSProfile(history=QoSHistoryPolicy.KEEP_LAST, depth=5,
                         reliability=QoSReliabilityPolicy.BEST_EFFORT,
                         durability=QoSDurabilityPolicy.VOLATILE)
+    letzter = QoSProfile(history=QoSHistoryPolicy.KEEP_LAST, depth=1,
+                         reliability=QoSReliabilityPolicy.RELIABLE,
+                         durability=QoSDurabilityPolicy.TRANSIENT_LOCAL)
     sammler = Sammler()
     stand = {'kamera': None, 'kamera_rahmen': None, 'lidar_rahmen': None,
              'boden_kamera': None, 'boden_lidar': None, 'karte': None}
+    zaehler = {'bild': 0, 'scan': 0, 'info': 0, 'status': 0}
+    meldungen: List[str] = []
 
     def auf_bild(nachricht):
+        zaehler['bild'] += 1
         stand['kamera_rahmen'] = stand['kamera_rahmen'] or nachricht.header.frame_id
         sammler.bild(sekunden(nachricht.header.stamp), bytes(nachricht.data))
 
@@ -202,6 +296,7 @@ def nehme_auf(wahl, halt=None) -> Optional[Path]:
         sammler.tiefe(sekunden(nachricht.header.stamp), bytes(nachricht.data))
 
     def auf_info(nachricht):
+        zaehler['info'] += 1
         if nachricht.k[0] > 0:
             stand['kamera'] = Kamera.aus_info({
                 'breite': nachricht.width, 'hoehe': nachricht.height,
@@ -209,6 +304,7 @@ def nehme_auf(wahl, halt=None) -> Optional[Path]:
             stand['kamera_rahmen'] = nachricht.header.frame_id or stand['kamera_rahmen']
 
     def auf_scan(nachricht):
+        zaehler['scan'] += 1
         stand['lidar_rahmen'] = nachricht.header.frame_id
         t = sekunden(nachricht.header.stamp)
         sammler.scan(t, scan_als_dict(nachricht.angle_min, nachricht.angle_increment,
@@ -220,11 +316,26 @@ def nehme_auf(wahl, halt=None) -> Optional[Path]:
         sammler.gier(sekunden(nachricht.header.stamp),
                      gier_aus_quaternion(q.x, q.y, q.z, q.w))
 
+    def auf_status(nachricht):
+        zaehler['status'] += 1
+        if rundblick is None:
+            return
+        try:
+            status = json.loads(nachricht.data)
+        except ValueError:
+            return
+        if isinstance(status, dict):
+            satz = rundblick.melde(status, time.monotonic())
+            if satz:
+                meldungen.append(satz)
+
     knoten.create_subscription(CompressedImage, wahl.bild_topic, auf_bild, sensor)
     knoten.create_subscription(CompressedImage, wahl.tiefe_topic, auf_tiefe, sensor)
     knoten.create_subscription(CameraInfo, wahl.info_topic, auf_info, sensor)
     knoten.create_subscription(LaserScan, wahl.scan_topic, auf_scan, sensor)
     knoten.create_subscription(Odometry, wahl.odom_topic, auf_odom, sensor)
+    knoten.create_subscription(String, getattr(wahl, 'status_topic', '/explore/status_json'),
+                               auf_status, letzter)
     tf_puffer = Buffer()
     TransformListener(tf_puffer, knoten)
 
@@ -254,40 +365,69 @@ def nehme_auf(wahl, halt=None) -> Optional[Path]:
     # Kurze Aufnahmen sind Ansichten im Stand (KI-0); zum Drehen ist keine Zeit.
     hinweis = ('Der Roboter bleibt stehen.' if wahl.dauer <= 20.0
                else 'Für eine Blickrunde dreht sich der Roboter einmal langsam ganz herum.')
-    print(f'Aufnahme „{wahl.name}“ läuft (höchstens {wahl.dauer:.0f} s). '
-          f'{hinweis} Ende mit Strg+C.')
+    print(f'Aufnahme „{wahl.name}“ läuft (höchstens {wahl.dauer:.0f} s). {hinweis} '
+          + ('Sie endet von selbst '
+             f'{bis_wartephase:.0f} s nach dem Rundblick des Erkunders oder mit Strg+C.'
+             if rundblick is not None else 'Ende mit Strg+C.'))
     beginn = time.monotonic()
     letzte_meldung = beginn
+    bereit_nach = float(getattr(wahl, 'bereit_nach', 8.0))
+    bereit_gemeldet = False
+    grund = 'dauer'
     try:
-        while rclpy.ok() and time.monotonic() - beginn < wahl.dauer:
+        while True:
+            if not rclpy.ok():
+                grund = 'ros'
+                break
+            if time.monotonic() - beginn >= wahl.dauer:
+                grund = 'dauer'
+                break
             rclpy.spin_once(knoten, timeout_sec=0.1)
             if stand['boden_kamera'] is None:
                 stand['boden_kamera'] = montage(stand['kamera_rahmen'])
             if stand['boden_lidar'] is None:
                 stand['boden_lidar'] = montage(stand['lidar_rahmen'])
-            if halt is not None and halt():
-                break
             # Die Lage am Ende der Runde: Mit ihr findet sich eine gewählte
             # Öffnung später in der Karte wieder (ki_tuer_waehlen.py).
             lage = lage_in_der_karte()
             if lage is not None:
                 stand['karte'] = lage
-            if time.monotonic() - letzte_meldung >= 5.0:
-                letzte_meldung = time.monotonic()
+            while meldungen:
+                print(meldungen.pop(0))
+            jetzt = time.monotonic()
+            if not bereit_gemeldet and jetzt - beginn >= bereit_nach:
+                bereit_gemeldet = True
+                dauer = jetzt - beginn
+                print(f'BEREIT bilder_hz={zaehler["bild"] / dauer:.1f} '
+                      f'scan_hz={zaehler["scan"] / dauer:.1f} '
+                      f'kamera_info={"ja" if stand["kamera"] else "nein"} '
+                      f'erkunder={"ja" if zaehler["status"] else "nein"}')
+            if ende is not None and ende.gesetzt():
+                grund = 'signal'
+                break
+            if halt is not None and halt():
+                grund = 'halt'
+                break
+            if rundblick is not None and rundblick.grund(jetzt):
+                grund = rundblick.grund(jetzt)
+                break
+            if jetzt - letzte_meldung >= 5.0:
+                letzte_meldung = jetzt
                 gedreht = sammler.gedreht_grad()
                 print(f'  {len(sammler.aufnahmen)} Aufnahmen'
                       + ('' if gedreht is None else f', gedreht etwa {gedreht:.0f}°')
                       + ('' if stand['kamera'] else ', noch keine Kameradaten')
                       + ('' if stand['lidar_rahmen'] else ', noch kein Scan'))
     except (KeyboardInterrupt, ExternalShutdownException):
-        # Strg+C oder kill -INT: Je nach ROS-Fassung kommt es als
-        # KeyboardInterrupt oder beendet rclpy selbst (ExternalShutdownException,
-        # Simulation 23.11.2026). Beides heißt: Aufnahme beenden und schreiben.
-        pass
+        # Nur ohne die Marke aus ros_ende möglich (eingebettete Nutzung):
+        # Strg+C heißt auch dann „Aufnahme beenden und schreiben“.
+        grund = 'signal'
+    except Exception as fehler:                # noqa: BLE001 (Runde nie verlieren)
+        grund = 'fehler'
+        print(f'Aufnahme unterbrochen ({type(fehler).__name__}: {fehler}); '
+              'geschrieben wird, was bis dahin da ist.', file=sys.stderr)
     finally:
-        knoten.destroy_node()
-        if eigener_kontext and rclpy.ok():
-            rclpy.shutdown()
+        ros_beenden([knoten], eigener_kontext=eigener_kontext)
 
     ziel = Path(wahl.ausgabe).expanduser() / f'{wahl.name}_{time.strftime("%Y%m%d_%H%M%S")}'
     ordner = schreibe(sammler, ziel, wahl.name, stand['kamera'],
@@ -296,7 +436,7 @@ def nehme_auf(wahl, halt=None) -> Optional[Path]:
                        'scan_topic': wahl.scan_topic, 'odom_topic': wahl.odom_topic,
                        'kamera_rahmen': stand['kamera_rahmen'],
                        'lidar_rahmen': stand['lidar_rahmen'],
-                       'basis_rahmen': wahl.basis_rahmen},
+                       'basis_rahmen': wahl.basis_rahmen, 'ende': grund},
                       karte=stand['karte'])
     if ordner is not None:
         gedreht = sammler.gedreht_grad()
@@ -309,6 +449,8 @@ def nehme_auf(wahl, halt=None) -> Optional[Path]:
               + ('\n  Lage in der Karte am Ende: festgehalten.' if stand['karte']
                  else '\n  Lage in der Karte: nicht gelesen (TF); die Wahl der KI lässt '
                       'sich dann nicht an den Fahrteil übergeben.'))
+    print(ergebnis_zeile(grund, ordner, sammler, bool(stand['karte']),
+                         rundblick.wartephase_unix if rundblick is not None else None))
     return ordner
 
 
@@ -331,6 +473,13 @@ def eingabe() -> argparse.ArgumentParser:
                        help='Rahmen der Karte (für die Lage am Ende der Runde)')
     leser.add_argument('--basis-hoehe', type=float, default=0.09,
                        help='Höhe von base_link über dem Boden in Metern')
+    leser.add_argument('--bis-wartephase', type=float, default=None, metavar='SEK',
+                       help='von selbst enden, SEK Sekunden nachdem der Erkunder nach '
+                            'seinem Rundblick auf ein Fahrziel wartet (nur lesend)')
+    leser.add_argument('--status-topic', default='/explore/status_json',
+                       help='Status des Erkunders (nur gelesen)')
+    leser.add_argument('--bereit-nach', type=float, default=8.0,
+                       help='nach so vielen Sekunden die Zeile BEREIT mit den Raten')
     return leser
 
 
@@ -349,7 +498,15 @@ def main(argv=None) -> int:
               'der Wohnung gehören nicht ins Repository; bitte ein Ziel außerhalb '
               'wählen.', file=sys.stderr)
         return 2
-    return 0 if nehme_auf(wahl) is not None else 1
+    if wahl.bis_wartephase is not None and not 0.0 <= wahl.bis_wartephase <= 60.0:
+        print('--bis-wartephase: 0 bis 60 s', file=sys.stderr)
+        return 2
+    # Zuerst die Marke, dann rclpy: Ein Signal setzt nur die Marke (ros_ende).
+    ende = Ende().anmelden()
+    try:
+        return 0 if nehme_auf(wahl, ende=ende) is not None else 1
+    finally:
+        ende.abmelden()
 
 
 if __name__ == '__main__':

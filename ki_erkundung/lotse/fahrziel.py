@@ -641,22 +641,31 @@ def achse_text(achse: dict) -> str:
 
 
 def tuer_merken(pfosten: Sequence[Sequence[float]], achse: dict,
-                pose: Sequence[float]) -> dict:
+                pose: Sequence[float], *, breite_m: Optional[float] = None,
+                schluss: Optional[str] = None) -> dict:
     """Die Tür im Kartenrahmen merken, um sie nach der Anfahrt wiederzufinden.
 
     ``pfosten`` und ``achse`` sind im Standpunktrahmen gemessen, ``pose`` ist
     die Lage des Roboters in der Karte dabei. Rückgabe: ``mitte`` und
-    ``normal`` im Kartenrahmen, dazu Quelle und Umfang der Achse.
+    ``normal`` im Kartenrahmen, dazu Quelle und Umfang der Achse. Für die
+    Meldung beim Wiederfinden außerdem Breite, Schluss der Vermessung und
+    wie schräg die Tür gesehen wurde (``schraeg_grad``: Winkel zwischen Blick
+    zur Türmitte und Türachse).
     """
     x, y, gier = float(pose[0]), float(pose[1]), float(pose[2])
     c, s = math.cos(gier), math.sin(gier)
     mx = 0.5 * (float(pfosten[0][0]) + float(pfosten[1][0]))
     my = 0.5 * (float(pfosten[0][1]) + float(pfosten[1][1]))
     nx, ny = achse['normal']
+    weite = math.hypot(mx, my)
+    schraeg = (math.degrees(math.acos(min(1.0, abs(mx * nx + my * ny) / weite)))
+               if weite > 1e-9 else 0.0)
     return {'mitte': (x + c * mx - s * my, y + s * mx + c * my),
             'normal': (c * nx - s * ny, s * nx + c * ny),
             'quelle': achse.get('quelle'), 'punkte': achse.get('punkte', 0),
-            'laenge_m': achse.get('laenge_m', 0.0)}
+            'laenge_m': achse.get('laenge_m', 0.0),
+            'breite_m': None if breite_m is None else float(breite_m),
+            'schluss': schluss, 'schraeg_grad': schraeg}
 
 
 def im_standpunktrahmen(ort: Sequence[float], pose: Sequence[float]) -> Tuple[float, float]:
@@ -682,6 +691,57 @@ def wiederfinden(tueren: Sequence, gemerkt: dict, pose: Sequence[float],
         if d <= abstand:
             beste, abstand = o, d
     return beste
+
+
+def abweichung(o, gemerkt: dict, pose: Sequence[float]) -> dict:
+    """Wie weit eine neu vermessene Öffnung neben der gemerkten Tür liegt.
+
+    Nur für die Meldung, die Regel des Wiederfindens bleibt ``wiederfinden``.
+    Zerlegt entlang der gemerkten Türachse, vom jetzigen Standplatz aus:
+    ``tiefer_m`` positiv = weiter weg, durch die Tür hindurch; ``links_m``
+    positiv = links mit Blick zur Tür. Dazu ``abstand_m`` der Mitten und
+    ``breiter_m`` gegen die gemerkte Breite (``None`` ohne sie).
+    """
+    zx, zy = im_standpunktrahmen(gemerkt['mitte'], pose)
+    mx = 0.5 * (o.pfosten[0][0] + o.pfosten[1][0])
+    my = 0.5 * (o.pfosten[0][1] + o.pfosten[1][1])
+    nx, ny = achse_aus_karte(gemerkt, pose)['normal']
+    if nx * zx + ny * zy < 0.0:                     # Achse zeigt durch die Tür
+        nx, ny = -nx, -ny
+    dx, dy = mx - zx, my - zy
+    return {'tiefer_m': dx * nx + dy * ny, 'links_m': -dx * ny + dy * nx,
+            'abstand_m': math.hypot(dx, dy),
+            'breiter_m': (None if gemerkt.get('breite_m') is None
+                          else float(o.breite_m) - float(gemerkt['breite_m']))}
+
+
+def wiederfinden_zeilen(tueren: Sequence, gemerkt: dict, pose: Sequence[float],
+                        max_abstand_m: float = 0.35) -> List[str]:
+    """Was das Wiederfinden sieht, in Zeilen: erwartete Lage, je Öffnung die Abweichung."""
+    zx, zy = im_standpunktrahmen(gemerkt['mitte'], pose)
+    gemerkt_text = ', '.join(teil for teil in (
+        None if gemerkt.get('breite_m') is None else f'{gemerkt["breite_m"]:.2f} m breit',
+        None if not gemerkt.get('schluss') else f'Schluss {gemerkt["schluss"]}',
+        None if gemerkt.get('schraeg_grad') is None
+        else f'{gemerkt["schraeg_grad"]:.0f}° schräg gesehen') if teil)
+    zeilen = [f'Wiederfinden: erwartet {math.hypot(zx, zy):.2f} m, '
+              f'{math.degrees(math.atan2(zy, zx)):+.0f}°'
+              + (f' (erste Messung: {gemerkt_text})' if gemerkt_text else '')
+              + f'; Grenze {max_abstand_m:.2f} m.']
+    if not tueren:
+        zeilen.append('  keine türbreite Öffnung neu vermessen.')
+    for o in tueren:
+        a = abweichung(o, gemerkt, pose)
+        teile = [f'{abs(a["tiefer_m"]):.2f} m {"tiefer" if a["tiefer_m"] >= 0 else "näher"}',
+                 f'{abs(a["links_m"]):.2f} m {"links" if a["links_m"] >= 0 else "rechts"}']
+        if a['breiter_m'] is not None:
+            teile.append(f'{abs(a["breiter_m"]):.2f} m '
+                         f'{"breiter" if a["breiter_m"] >= 0 else "schmaler"}')
+        zeilen.append(f'  Öffnung {o.nr}: {o.breite_m:.2f} m breit, {o.entfernung_m:.2f} m, '
+                      f'{o.richtung_grad:+.0f}°, Schluss {o.schluss}: ' + ', '.join(teile)
+                      + f'; Mitten {a["abstand_m"]:.2f} m auseinander'
+                      + (' – passt.' if a['abstand_m'] <= max_abstand_m else ' – zu weit.'))
+    return zeilen
 
 
 def achse_aus_karte(gemerkt: dict, pose: Sequence[float]) -> dict:
@@ -905,6 +965,59 @@ def _vor_dem_gehaeuse(voraus_m: float) -> str:
     return f'{100 * (voraus_m - GEHAEUSE_VORN_M):.0f} cm vor dem Gehäuse'
 
 
+def lage_vom_roboter(voraus_m: float, seitlich_m: float) -> str:
+    """Wo eine Stelle vom Roboter aus liegt, in Worten für ein Maßband.
+
+    Vor der gepolsterten Vorderkante: Abstand zu ihr und zum Gehäuse. Neben
+    oder hinter dem Roboter: seitlicher Abstand und wie weit vor oder hinter
+    der Antriebsmitte (KI-F9, 2w2: „-0.57 m vor der Vorderkante“ war für
+    einen Menschen nicht zu verstehen).
+    """
+    seite = 'links' if seitlich_m >= 0 else 'rechts'
+    if voraus_m >= VORDERKANTE_M:
+        return (f'{voraus_m - VORDERKANTE_M:.2f} m vor der gepolsterten Vorderkante '
+                f'({_vor_dem_gehaeuse(voraus_m)}), {abs(seitlich_m):.2f} m {seite} der Mitte')
+    laengs = (f'{voraus_m:.2f} m vor seiner Antriebsmitte' if voraus_m >= 0
+              else f'{-voraus_m:.2f} m hinter seiner Antriebsmitte')
+    return f'{abs(seitlich_m):.2f} m {seite} von ihm, {laengs}'
+
+
+def zellen_um(daten, breite: int, hoehe: int, zelle_m: float,
+              ursprung_xy: Sequence[float], pose: Sequence[float],
+              stelle: Sequence[float], *, radius_m: float = 0.15,
+              belegt: int = 100) -> np.ndarray:
+    """Belegte Zellen eines Rasters rings um eine Stelle, in jeder Richtung.
+
+    ``stelle`` und das Ergebnis (``N x 2``: voraus, seitlich) im Rahmen des
+    Roboters, ``pose`` seine Lage im Rahmen des Rasters. Für die Herkunft
+    einer belegten Stelle: Früher wurde die Karte nur in einem Streifen vor
+    dem Roboter abgefragt; eine Stelle seitlich daneben galt dann als „frei“,
+    obwohl die Karte dort belegt war (KI-F9, 2w2).
+    """
+    feld = np.asarray(daten, dtype=np.int16)
+    if feld.size != breite * hoehe or zelle_m <= 0.0:
+        raise ValueError('Raster: Größe passt nicht')
+    x0, y0, gier = float(pose[0]), float(pose[1]), float(pose[2])
+    c, s = math.cos(gier), math.sin(gier)
+    vx, vy = float(stelle[0]), float(stelle[1])
+    ox, oy = x0 + c * vx - s * vy, y0 + s * vx + c * vy
+    n = int(math.ceil(radius_m / zelle_m)) + 1
+    i0 = int(math.floor((ox - float(ursprung_xy[0])) / zelle_m))
+    j0 = int(math.floor((oy - float(ursprung_xy[1])) / zelle_m))
+    spalten = np.arange(max(0, i0 - n), min(breite, i0 + n + 1))
+    zeilen = np.arange(max(0, j0 - n), min(hoehe, j0 + n + 1))
+    if spalten.size == 0 or zeilen.size == 0:
+        return np.zeros((0, 2))
+    jj, ii = np.meshgrid(zeilen, spalten, indexing='ij')
+    werte = feld.reshape(hoehe, breite)[jj, ii]
+    drin = werte >= belegt
+    xs = float(ursprung_xy[0]) + (ii[drin] + 0.5) * zelle_m
+    ys = float(ursprung_xy[1]) + (jj[drin] + 0.5) * zelle_m
+    nah = np.hypot(xs - ox, ys - oy) <= radius_m
+    dx, dy = xs[nah] - x0, ys[nah] - y0
+    return np.column_stack([c * dx + s * dy, -s * dx + c * dy]) if dx.size else np.zeros((0, 2))
+
+
 def zellen_im_streifen(daten, breite: int, hoehe: int, zelle_m: float,
                        ursprung_xy: Sequence[float], start: Sequence[float],
                        richtung_rad: float, *, von_m: float, bis_m: float,
@@ -941,8 +1054,8 @@ def belegt_auf_dem_weg(daten, breite: int, hoehe: int, zelle_m: float,
     geprüft, den der Nahbereichs-Halt sieht: in Fahrzeugbreite von der
     Vorderkante bis 0,25 m davor, über die ganze Strecke und am Ende noch
     so weit voraus. Rückgabe ``None``, wenn der Weg frei ist, sonst Strecke,
-    Lage zur Linie (voraus ab Streckenbeginn, seitlich), Meter ab dem Start
-    und der Ort im Kartenrahmen.
+    Lage zur Linie (voraus ab Streckenbeginn, seitlich), Länge der Strecke
+    (``strecke_m``), Meter ab dem Start und der Ort im Kartenrahmen.
     """
     vorher = (float(pose[0]), float(pose[1]))
     zurueck = 0.0
@@ -959,7 +1072,7 @@ def belegt_auf_dem_weg(daten, breite: int, hoehe: int, zelle_m: float,
             voraus, seitlich = (float(v) for v in zellen[0])
             c, s = math.cos(richtung), math.sin(richtung)
             return {'strecke': nummer, 'voraus_m': voraus, 'seitlich_m': seitlich,
-                    'ab_start_m': zurueck + voraus,
+                    'strecke_m': laenge, 'ab_start_m': zurueck + voraus,
                     'ort': (vorher[0] + c * voraus - s * seitlich,
                             vorher[1] + s * voraus + c * seitlich)}
         zurueck += laenge
@@ -1064,11 +1177,15 @@ def herkunft_text(befund: dict) -> str:
         teile.append(f'Laser {"sieht dort etwas" if befund["laser"] else "sieht dort nichts"}')
     keiner = (not befund['karte'] and not befund['laser']
               and not any(w and w[0] for w in (befund['nah'] or {}).values()))
-    text = (f'Herkunft der Stelle {voraus - VORDERKANTE_M:.2f} m vor der Vorderkante '
-            f'({_vor_dem_gehaeuse(voraus)}), '
-            f'{abs(seitlich):.2f} m {"links" if seitlich >= 0 else "rechts"} der Mitte: '
-            + '; '.join(teile))
-    if keiner:
+    ohne_nahsensoren = all((befund['nah'] or {}).get(seite) is None
+                           for seite in ('links', 'rechts'))
+    text = f'Herkunft der Stelle {lage_vom_roboter(voraus, seitlich)}: ' + '; '.join(teile)
+    if keiner and ohne_nahsensoren:
+        # Ohne Nahsensoren kommt die Kostenkarte nur aus der Karte (SLAM).
+        text += (' – keine Quelle sieht dort jetzt etwas, und ohne Nahsensoren stammt die '
+                 'Kostenkarte nur aus der Karte (SLAM): Prüfung widersprüchlich, vermutlich '
+                 'verschiedene Zeitstände von Karte und Kostenkarte')
+    elif keiner:
         text += (' – keine Quelle sieht dort jetzt etwas: eine ältere Markierung, '
                  'vermutlich der Nahsensoren (die räumen erst ab 0,45 m)')
     return text + '.'
@@ -1104,10 +1221,20 @@ def weg_belegt_text(befund: Optional[dict], laenge_m: float) -> str:
     if befund is None:
         return (f'Kostenkarte auf dem ganzen Weg ({laenge_m:.2f} m und den Nahbereich '
                 'dahinter): frei – Kostenkarte passt.')
-    return (f'Kostenkarte auf dem Weg: belegt {befund["ab_start_m"]:.2f} m voraus '
+    text = (f'Kostenkarte auf dem Weg: belegt {befund["ab_start_m"]:.2f} m voraus '
             f'(Strecke {befund["strecke"]}), {abs(befund["seitlich_m"]):.2f} m '
-            f'{"links" if befund["seitlich_m"] >= 0 else "rechts"} der Linie – '
-            'Kostenkarte passt nicht: dort hielte der Erkunder an.')
+            f'{"links" if befund["seitlich_m"] >= 0 else "rechts"} der Linie')
+    strecke = befund.get('strecke_m')
+    if strecke is not None and befund['voraus_m'] > strecke:
+        # Hinter dem Ende der Strecke: nicht auf dem Weg, aber im Blick des
+        # Nahbereichs-Halts, der auch auf den letzten Zentimetern so weit schaut.
+        hinter = befund['voraus_m'] - strecke
+        text += (f'. Die Stelle liegt nicht auf der Strecke, sondern {hinter:.2f} m hinter '
+                 f'ihrem Ende, wo er sich dreht oder hält; dort läge sie '
+                 f'{hinter - GEHAEUSE_VORN_M:.2f} m vor seinem Gehäuse und '
+                 f'{hinter - VORDERKANTE_M:.2f} m vor der gepolsterten Vorderkante')
+    return text + (' – Kostenkarte passt nicht: dort könnte der Nahbereichs-Halt des '
+                   'Erkunders anhalten.')
 
 
 def durch_die_tuer(pfosten: Sequence[Sequence[float]], pose: Sequence[float], *,

@@ -19,13 +19,17 @@ from __future__ import annotations
 
 import argparse
 import json
-import signal
 import sys
 import threading
 import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Optional
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from ros_ende import Ende, ros_beenden, ros_starten  # noqa: E402
 
 # Die Seite ist nur von diesem Rechner aus erreichbar.
 ADRESSE = '127.0.0.1'
@@ -210,27 +214,27 @@ def main(argv=None) -> int:
         if not wahl.kein_browser:
             webbrowser.open(adresse)
         return 0
-    rclpy.init()
+    # Zuerst die Marke, dann rclpy ohne eigene Handler (ros_ende).
+    marke = Ende().anmelden()
+    eigener_kontext = ros_starten()
     knoten = rclpy.create_node('ki_sucher')
     knoten.create_subscription(CompressedImage, wahl.bild_topic,
                                lambda nachricht: sucher.nimm(bytes(nachricht.data)),
                                qos_profile_sensor_data)
     threading.Thread(target=server.serve_forever, daemon=True).start()
-    for zeichen in (signal.SIGINT, signal.SIGTERM):
-        signal.signal(zeichen, lambda *_: ende.set())
     print(f'Sucher: {adresse} (nur von diesem Rechner aus erreichbar; Ende mit Strg+C)')
     if not wahl.kein_browser:
         webbrowser.open(adresse)
     beginn = time.monotonic()
     try:
-        while rclpy.ok() and not ende.is_set() and time.monotonic() - beginn < wahl.dauer:
+        while (rclpy.ok() and not ende.is_set() and not marke.gesetzt()
+               and time.monotonic() - beginn < wahl.dauer):
             rclpy.spin_once(knoten, timeout_sec=0.1)
     finally:
         server.shutdown()
         server.server_close()
-        knoten.destroy_node()
-        if rclpy.ok():
-            rclpy.shutdown()
+        ros_beenden([knoten], eigener_kontext=eigener_kontext)
+        marke.abmelden()
     print(f'Sucher beendet ({sucher.bilder} Bilder gezeigt, keines gespeichert).')
     return 0
 

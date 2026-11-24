@@ -72,6 +72,18 @@ und nach einem Halt) sagt es, welche Quelle dort etwas sieht: die Karte des
 SLAM (Laser), einer der beiden Nahsensoren (mit Höhe über dem Boden) oder
 der Laser gerade jetzt.
 
+Was es zur Entscheidung gesehen hat, legt es als **Belege** auf dem Roboter
+ab (``--belege``, Vorgabe ``~/.local/share/amadeus/ki_erkundung/belege``):
+je Aufruf einen Ordner mit den Scans jeder Messung im Stand und den belegten
+Zellen von Karte und Kostenkarte um jede sperrende Stelle. Sie enthalten
+Maße der Wohnung und bleiben auf dem Jetson, nie im Repository, nie im
+Bericht.
+
+Strg+C, ``kill -INT`` oder SIGTERM beenden das Werkzeug geordnet (Rückgabe
+130): Nach dem Signal wird nichts mehr gesendet, auch kein „Ende“. Ein schon
+angenommenes Fahrziel fährt der Erkunder mit seiner Schutzkette zu Ende;
+sonst schließt er die Mission nach seiner Wartezeit von selbst.
+
 Ausgegeben werden nur Maße und Meldungen, keine Bilder und keine Koordinaten
 der Wohnung.
 """
@@ -95,14 +107,59 @@ from lotse.fahrziel import (  # noqa: E402
     aufstellung, aufstellung_hinweise, belegt_auf_dem_weg, botschaft, ende_botschaft, freiraum,
     freiraum_hinweise, gerade_durch_die_tuer, gerade_linie, geradeaus, herkunft, herkunft_text,
     in_den_boden, kostenkarte_text, kostenkarte_voraus, nah_text, pruefe_grenzen, punkt_relativ,
-    tuer_merken, tuerachse, weg_belegt_text, wiederfinden, wolke_xyz, zellen_im_streifen,
+    tuer_merken, tuerachse, weg_belegt_text, wiederfinden, wiederfinden_zeilen, wolke_xyz,
+    zellen_um,
 )
 from lotse.fahrziel import blatt_text, tuer_hinter_blatt  # noqa: E402
 from lotse.geometrie import aus_tf  # noqa: E402
 from lotse.kandidaten import TUERBREIT_M, Oeffnung, oeffnungen  # noqa: E402
 from lotse.wahl import im_standpunktrahmen, wahl_lesen, zur_wahl  # noqa: E402
+from ros_ende import Ende, ros_beenden, ros_starten  # noqa: E402
 
 WARTEPHASE = 'stage_drive_wait_target'
+RC_ABGEBROCHEN = 130
+VORGABE_BELEGE = Path.home() / '.local/share/amadeus/ki_erkundung/belege'
+
+
+def im_repository(pfad: Path) -> bool:
+    """Liegt ``pfad`` in einem Git-Arbeitsverzeichnis? Dort gehören keine Wohnungsdaten hin."""
+    pfad = Path(pfad).expanduser().resolve()
+    return any((eltern / '.git').exists() for eltern in [pfad, *pfad.parents])
+
+
+class Belege:
+    """Was das Werkzeug zur Entscheidung gesehen hat, auf dem Roboter abgelegt.
+
+    Je Aufruf ein Ordner: ``messung_N.json`` (Scans einer Messung im Stand,
+    Montage des LiDAR, Lage in der Karte) und ``sperre_N.json`` (belegte Zellen
+    von Karte und Kostenkarte um eine sperrende Stelle, mit dem Alter beider).
+    Für 2w2 fehlte genau dieser Beleg (Bewertung nach KI-F9, §3). Ein Fehler
+    beim Schreiben hält das Werkzeug nicht auf.
+    """
+
+    def __init__(self, wurzel: Optional[Path], art: str):
+        self.ordner = (None if wurzel is None
+                       else Path(wurzel) / f'{time.strftime("%Y%m%d_%H%M%S")}_{art}')
+        self.zaehler: dict = {}
+
+    def schreibe(self, art: str, daten: dict) -> Optional[Path]:
+        if self.ordner is None:
+            return None
+        try:
+            self.ordner.mkdir(parents=True, exist_ok=True)
+            self.zaehler[art] = self.zaehler.get(art, 0) + 1
+            pfad = self.ordner / f'{art}_{self.zaehler[art]}.json'
+            with open(pfad, 'w', encoding='utf-8') as datei:
+                json.dump(daten, datei, ensure_ascii=False)
+            return pfad
+        except (OSError, TypeError, ValueError) as fehler:
+            print(f'Belege nicht geschrieben ({fehler}); weiter ohne.', file=sys.stderr)
+            self.ordner = None
+            return None
+
+
+class Abbruch(Exception):
+    """Ein Signal kam (Strg+C, kill -INT, SIGTERM): nichts mehr senden, geordnet enden."""
 
 
 def waehle_oeffnung(liste: Sequence[Oeffnung], *, nummer: Optional[int] = None,
@@ -426,6 +483,11 @@ def eingabe() -> argparse.ArgumentParser:
     e.add_argument('--karten-rahmen', default='map')
     e.add_argument('--basis-rahmen', default='base_link')
     e.add_argument('--basis-hoehe', type=float, default=0.0)
+    e.add_argument('--belege', default=str(VORGABE_BELEGE),
+                   help='Ordner für die Belege jeder Entscheidung (auf dem Roboter, '
+                        'außerhalb des Repositorys)')
+    e.add_argument('--keine-belege', action='store_true',
+                   help='keine Belege ablegen')
     return e
 
 
@@ -461,16 +523,30 @@ def main(argv=None) -> int:
 
     from ki_verbindung_ros import Fahrzielsender
 
-    rclpy.init()
+    belege_wurzel = None if wahl.keine_belege else Path(wahl.belege).expanduser()
+    if belege_wurzel is not None and im_repository(belege_wurzel):
+        print(f'{belege_wurzel} liegt in einem Git-Arbeitsverzeichnis; die Belege enthalten '
+              'Maße der Wohnung und bleiben außerhalb. Nichts gesendet.', file=sys.stderr)
+        return 2
+    belege = Belege(belege_wurzel, 'ende' if wahl.ende else 'zur_tuer' if wahl.zur_tuer
+                    else 'vor_die_tuer' if wahl.vor_die_tuer else 'tuer' if wahl.tuer
+                    else 'fahrt')
+
+    # Zuerst die Marke, dann rclpy ohne eigene Handler (ros_ende).
+    marke = Ende().anmelden()
+    eigener_kontext = ros_starten()
     knoten = rclpy.create_node('ki_fahrziel')
     stand = {'status': None, 'scans': [], 'rahmen': None, 'sammeln': False,
-             'kostenkarte': None, 'karte': None, 'nah': {'links': [], 'rechts': []}}
+             'kostenkarte': None, 'karte': None, 'nah': {'links': [], 'rechts': []},
+             'kostenkarte_t': None, 'karte_t': None}
 
     def auf_kostenkarte(nachricht):
         stand['kostenkarte'] = nachricht
+        stand['kostenkarte_t'] = time.monotonic()
 
     def auf_karte(nachricht):
         stand['karte'] = nachricht
+        stand['karte_t'] = time.monotonic()
 
     def auf_wolke(seite):
         def merke(nachricht):
@@ -507,11 +583,15 @@ def main(argv=None) -> int:
     sender = Fahrzielsender(knoten)
 
     def drehe(sekunden: float, fertig=lambda: False) -> bool:
-        ende = time.monotonic() + sekunden
-        while rclpy.ok() and time.monotonic() < ende:
+        bis = time.monotonic() + sekunden
+        while rclpy.ok() and time.monotonic() < bis:
+            if marke.gesetzt():
+                raise Abbruch()
             rclpy.spin_once(knoten, timeout_sec=0.05)
             if fertig():
                 return True
+        if marke.gesetzt():
+            raise Abbruch()
         return fertig()
 
     def tf(ziel: str, quelle: str):
@@ -551,8 +631,12 @@ def main(argv=None) -> int:
         if not stand['scans'] or montage is None:
             return None, None
         v, q = montage.translation, montage.rotation
-        return list(stand['scans']), aus_tf([v.x, v.y, v.z], [q.x, q.y, q.z, q.w],
-                                            wahl.basis_hoehe)
+        boden = aus_tf([v.x, v.y, v.z], [q.x, q.y, q.z, q.w], wahl.basis_hoehe)
+        belege.schreibe('messung', {
+            'zeit_unix': round(time.time(), 2), 'dauer_s': dauer,
+            'lidar_rahmen': stand['rahmen'], 'boden_lidar': np.asarray(boden).tolist(),
+            'pose_karte': lage_in_der_karte(), 'scans': list(stand['scans'])})
+        return list(stand['scans']), boden
 
     def nah_jetzt(alter_s: float = 1.5):
         """Die frischen Punkte beider Nahsensoren: voraus, seitlich, Höhe über dem Boden."""
@@ -577,29 +661,38 @@ def main(argv=None) -> int:
             ergebnis[seite] = np.vstack(teile) if teile else None
         return ergebnis
 
-    def karte_vor_dem_roboter(pose):
-        """Belegte Zellen der SLAM-Karte vor dem Roboter (voraus, seitlich) oder None."""
-        karte = stand['karte']
-        if karte is None or pose is None:
+    def zellen_um_die_stelle(raster, pose, stelle, radius_m: float = 0.15):
+        """Belegte Zellen eines Rasters (Karte oder Kostenkarte) rings um eine Stelle."""
+        if raster is None or pose is None:
             return None
         try:
-            return zellen_im_streifen(
-                karte.data, karte.info.width, karte.info.height, karte.info.resolution,
-                (karte.info.origin.position.x, karte.info.origin.position.y),
-                pose[:2], pose[2], von_m=0.0, bis_m=4.0, halb_m=0.70)
+            return zellen_um(
+                raster.data, raster.info.width, raster.info.height, raster.info.resolution,
+                (raster.info.origin.position.x, raster.info.origin.position.y),
+                pose, stelle, radius_m=radius_m)
         except ValueError:
             return None
 
+    def alter(schluessel: str) -> str:
+        zeit = stand[schluessel]
+        return 'nie' if zeit is None else f'vor {time.monotonic() - zeit:.0f} s'
+
     def herkunft_zeile(stelle, pose, laser=None) -> str:
-        """Woher eine belegte Stelle (im Rahmen des Roboters) stammt, in einem Satz."""
+        """Woher eine belegte Stelle (im Rahmen des Roboters) stammt, in einem Satz.
+
+        Die Karte wird rings um die Stelle abgefragt, nicht nur vor dem Roboter
+        (vorher galt eine Stelle seitlich daneben fälschlich als „frei“, KI-F9).
+        """
         if laser is None:
             scans, boden_lidar = laserbild(1.0)
             if scans is not None:
                 laser = []
                 vermesse(scans, boden_lidar, None, laser)
-        return herkunft_text(herkunft(
-            stelle, karte=karte_vor_dem_roboter(pose), nah=nah_jetzt(),
+        text = herkunft_text(herkunft(
+            stelle, karte=zellen_um_die_stelle(stand['karte'], pose, stelle), nah=nah_jetzt(),
             laser=None if laser is None else np.asarray(laser, dtype=float).reshape(-1, 2)))
+        return (text[:-1] + f' (Karte {alter("karte_t")}, Kostenkarte '
+                f'{alter("kostenkarte_t")} empfangen).')
 
     def naechste_stelle(pose):
         """Die nächste belegte Zelle im Fahrstreifen bis 1,5 m (Rahmen des Roboters) oder None."""
@@ -634,7 +727,23 @@ def main(argv=None) -> int:
             return [f'Kostenkarte auf dem Weg: {grund} – Kostenkarte passt nicht.'], False
         zeilen = [weg_belegt_text(befund, laenge)]
         if befund is not None:
-            zeilen.append(herkunft_zeile(im_roboterrahmen(befund['ort'], pose), pose, laser))
+            stelle = im_roboterrahmen(befund['ort'], pose)
+            zeilen.append(herkunft_zeile(stelle, pose, laser))
+            umgebung = {name: zellen_um_die_stelle(stand[name], pose, stelle, 0.30)
+                        for name in ('kostenkarte', 'karte')}
+            belege.schreibe('sperre', {
+                'zeit_unix': round(time.time(), 2), 'pose_karte': list(pose),
+                'punkte_karte': [list(map(float, q)) for q in punkte],
+                'befund': {k: (list(v) if isinstance(v, tuple) else v)
+                           for k, v in befund.items()},
+                'stelle_roboter': list(stelle),
+                'zellen_kostenkarte': (None if umgebung['kostenkarte'] is None
+                                       else umgebung['kostenkarte'].round(3).tolist()),
+                'zellen_karte': (None if umgebung['karte'] is None
+                                 else umgebung['karte'].round(3).tolist()),
+                'alter_kostenkarte': alter('kostenkarte_t'), 'alter_karte': alter('karte_t'),
+                'laser_nahe': (None if laser is None else int(len(np.asarray(
+                    laser, dtype=float).reshape(-1, 2))))})
         return zeilen, befund is None
 
     def plan_zeilen(o, achse, hindernisse, sicht, pose):
@@ -677,6 +786,8 @@ def main(argv=None) -> int:
         """Dem wartenden Erkunder das Ende sagen; wahr, wenn er danach nicht mehr läuft."""
         if wahl.nur_messen or sender.empfaenger() == 0:
             return False
+        if marke.gesetzt():
+            raise Abbruch()
         sender.sende(ende_botschaft(kennung=f'ende-{int(time.time())}',
                                     quelle=wahl.quelle, zeit_s=time.time(),
                                     frame=wahl.karten_rahmen))
@@ -702,14 +813,18 @@ def main(argv=None) -> int:
                    else f'{art_name}-{int(time.time())}')
         text = botschaft(punkte, kennung=kennung, quelle=wahl.quelle, zeit_s=time.time(),
                          frame=wahl.karten_rahmen, bemerkung=bemerkung, weiter=weiter)
+        if marke.gesetzt():
+            raise Abbruch()
         sender.sende(text)
         print(f'Fahrziel gesendet: {len(punkte)} Punkt(e), zusammen {gesamt:.2f} m, '
               f'Quelle {wahl.quelle}, Kennung {kennung}'
               + ('; danach folgt die Durchfahrt in derselben Mission.' if weiter else '.'),
               flush=True)
         letzte = None
-        ende = time.monotonic() + wahl.beobachten
-        while rclpy.ok() and time.monotonic() < ende:
+        bis = time.monotonic() + wahl.beobachten
+        while rclpy.ok() and time.monotonic() < bis:
+            if marke.gesetzt():
+                raise Abbruch()
             rclpy.spin_once(knoten, timeout_sec=0.2)
             jetzt = (phase(), meldung())
             if jetzt != letzte and jetzt[0] != WARTEPHASE:
@@ -762,6 +877,9 @@ def main(argv=None) -> int:
             return nichts_gesendet('Die Lage des Roboters in der Karte fehlt (TF)', 4)
         tueren2 = [o for o in gefunden2
                    if o.befahrbar and wahl.breite_min <= o.breite_m <= wahl.breite_max]
+        # Nur zur Meldung: wie weit jede Öffnung neben der gemerkten Tür liegt.
+        for zeile in wiederfinden_zeilen(tueren2, gemerkt, pose2):
+            print(zeile)
         o = wiederfinden(tueren2, gemerkt, pose2)
         if o is None:
             return nichts_gesendet('Die Tür von vorhin ist nach der Anfahrt nicht '
@@ -790,8 +908,8 @@ def main(argv=None) -> int:
         for zeile in zeilen2:
             print(zeile)
         if not frei2:
-            return nichts_gesendet('Auf dem Weg ist die Kostenkarte belegt; dort hielte der '
-                                   'Erkunder an')
+            return nichts_gesendet('Auf dem Weg ist die Kostenkarte belegt; dort könnte der '
+                                   'Nahbereichs-Halt des Erkunders anhalten')
         bemerkung2 = (f'Öffnung {o.nr}, {o.breite_m:.2f} m breit, {o.richtung_grad:+.0f}°, '
                       f'{o.entfernung_m:.2f} m (nach der Anfahrt)')
         zustand2, _ = senden_und_beobachten(punkte2, 'tuer', bemerkung2, gesamt2)
@@ -1031,15 +1149,16 @@ def main(argv=None) -> int:
         for zeile in ([] if zur_tuer and frei else zeilen):
             print(zeile)
         if not frei and not wahl.aufstellung_egal:
-            return nichts_gesendet('Auf dem Weg ist die Kostenkarte belegt; dort hielte der '
-                                   'Erkunder an')
+            return nichts_gesendet('Auf dem Weg ist die Kostenkarte belegt; dort könnte der '
+                                   'Nahbereichs-Halt des Erkunders anhalten')
 
         art_name = ('anfahrt' if wahl.vor_die_tuer or plan == 'anfahrt'
                     else 'tuer' if wahl.tuer or plan == 'durchfahrt'
                     else 'punkt' if wahl.punkt else 'gerade')
         # --zur-tuer: Anfahrt und Durchfahrt in einer Mission
         weiter = zur_tuer and plan == 'anfahrt'
-        gemerkt = tuer_merken(gewaehlt.pfosten, achse, pose) if weiter else None
+        gemerkt = (tuer_merken(gewaehlt.pfosten, achse, pose, breite_m=gewaehlt.breite_m,
+                               schluss=gewaehlt.schluss) if weiter else None)
         zustand, angekommen = senden_und_beobachten(punkte, art_name, bemerkung, gesamt,
                                                     weiter=weiter)
         if weiter and angekommen:
@@ -1047,9 +1166,15 @@ def main(argv=None) -> int:
                   'hindurch.', flush=True)
             return durchfahrt_nach_anfahrt(gemerkt)
         return schluss(zustand, art_name)
+    except Abbruch:
+        print(f'Abgebrochen ({marke.signal}). Nach dem Signal wurde nichts mehr gesendet, '
+              'auch kein Ende. Ein schon angenommenes Fahrziel fährt der Erkunder mit seiner '
+              'Schutzkette zu Ende; sonst schließt er die Mission nach seiner Wartezeit von '
+              'selbst.', flush=True)
+        return RC_ABGEBROCHEN
     finally:
-        knoten.destroy_node()
-        rclpy.try_shutdown()
+        ros_beenden([knoten], eigener_kontext=eigener_kontext)
+        marke.abmelden()
 
 
 if __name__ == '__main__':

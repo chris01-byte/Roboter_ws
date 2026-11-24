@@ -81,11 +81,14 @@ class Fahrzielsender:
 class Verbindung:
     """Fragt den Lotsen-Dienst auf dem KI-Rechner. Seite des Roboters."""
 
-    def __init__(self, knoten=None, name: str = 'ki_lotse_frager'):
+    def __init__(self, knoten=None, name: str = 'ki_lotse_frager', abbruch=None):
+        """``abbruch``: Funktion, die True liefert, sobald nicht mehr gewartet werden
+        soll (zum Beispiel ``Ende.gesetzt`` aus ros_ende nach Strg+C)."""
         import rclpy
         from rclpy.executors import SingleThreadedExecutor
         from std_msgs.msg import String
         self._rclpy, self._String = rclpy, String
+        self._abbruch = abbruch
         self._eigener_knoten = knoten is None
         self.knoten = knoten or rclpy.create_node(
             name, enable_rosout=False, start_parameter_services=False)
@@ -116,10 +119,15 @@ class Verbindung:
         if isinstance(status, dict):
             self._status = status
 
+    def abgebrochen(self) -> bool:
+        return self._abbruch is not None and bool(self._abbruch())
+
     def _drehe(self, bis: float, fertig) -> bool:
         while time.monotonic() < bis:
             if fertig():
                 return True
+            if self.abgebrochen():
+                break
             self._ausfuehrer.spin_once(timeout_sec=0.05)
         return bool(fertig())
 
@@ -149,8 +157,11 @@ class Verbindung:
         if not verbunden():
             if not self._drehe(beginn + finden_s, verbunden):
                 return Rohantwort(None, time.monotonic() - beginn,
-                                  'lotse_nicht_erreichbar', denken=denken)
+                                  'abgebrochen' if self.abgebrochen()
+                                  else 'lotse_nicht_erreichbar', denken=denken)
             self._drehe(time.monotonic() + 0.3, lambda: False)   # kurz setzen lassen
+        if self.abgebrochen():              # nach einem Signal keine neue Frage
+            return Rohantwort(None, time.monotonic() - beginn, 'abgebrochen', denken=denken)
         frage_id = uuid.uuid4().hex
         self._sender.publish(self._String(
             data=packe_frage(frage_id, frage, bilder, zeitgrenze_s, optionen, denken)))
@@ -159,7 +170,9 @@ class Verbindung:
                     lambda: frage_id in self._antworten)
         roh = self._antworten.pop(frage_id, None)
         if roh is None:
-            return Rohantwort(None, time.monotonic() - beginn, 'zeitgrenze', denken=denken)
+            return Rohantwort(None, time.monotonic() - beginn,
+                              'abgebrochen' if self.abgebrochen() else 'zeitgrenze',
+                              denken=denken)
         roh.meta = dict(roh.meta, weg_s=round(time.monotonic() - beginn - roh.dauer_s, 2))
         roh.dauer_s = time.monotonic() - beginn        # Zeit aus Sicht des Roboters
         return roh

@@ -241,3 +241,76 @@ def test_dienst_legt_zustand_und_letzte_frage_fuer_das_fenster_ab(ros, ki_attrap
         faden.join(timeout=3.0)
         knoten.destroy_node()
     assert dienst.zustand()['ros_andere_knoten'] == 0     # nach dem Ende ohne Fehler lesbar
+
+
+def test_ki_wahl_endet_nach_einem_signal_geordnet(dienst, ki_attrappe, tmp_path):
+    """Die KI antwortet nicht; ein SIGINT beendet das Warten: rc 3, Protokoll, keine Wahl."""
+    import signal
+    import subprocess
+    import sys
+    from pathlib import Path
+    import beispielrunde_erzeugen
+    import ki_tuer_waehlen
+    beispielrunde_erzeugen.erzeuge(tmp_path / 'runden', 'labor_rundblick', mit_karte=True)
+    ki_attrappe.antworten.append({'warten_s': 20.0, 'text': '{}'})
+    skript = Path(ki_tuer_waehlen.__file__).resolve()
+    kind = subprocess.Popen([sys.executable, str(skript), '--runden', str(tmp_path / 'runden'),
+                             '--ausgabe', str(tmp_path / 'wahl'), '--ueber-ros',
+                             '--zeitgrenze', '15'],
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    try:
+        ende = time.monotonic() + 30.0
+        while not ki_attrappe.anfragen and time.monotonic() < ende:
+            time.sleep(0.1)
+        assert ki_attrappe.anfragen, 'die Frage kam nicht beim KI-Rechner an'
+        time.sleep(0.5)
+        signal_zeit = time.monotonic()
+        kind.send_signal(signal.SIGINT)
+        ausgabe, _ = kind.communicate(timeout=10)
+        nach_signal = time.monotonic() - signal_zeit
+    finally:
+        if kind.poll() is None:
+            kind.kill()
+    assert kind.returncode == ki_tuer_waehlen.RC_KEINE_ANTWORT, ausgabe
+    assert 'Abgebrochen (SIGINT)' in ausgabe and 'Traceback' not in ausgabe, ausgabe
+    assert nach_signal < 3.0
+    assert len(list((tmp_path / 'wahl').glob('*_protokoll.json'))) == 1
+    assert not list((tmp_path / 'wahl').glob('*_wahl.json'))
+
+
+def test_fahrziel_werkzeug_endet_nach_einem_signal_ohne_zu_senden(ros):
+    """Wartet das Werkzeug auf den Erkunder, beendet ein SIGINT es: rc 130, nichts gesendet."""
+    import signal
+    import subprocess
+    import sys
+    from pathlib import Path
+    from rclpy.executors import SingleThreadedExecutor
+    from std_msgs.msg import String
+    from ki_verbindung_ros import THEMA_FAHRZIEL
+    knoten = rclpy.create_node('ki_test_fahrziel_zaehler')
+    empfangen = []
+    knoten.create_subscription(String, THEMA_FAHRZIEL, lambda m: empfangen.append(m.data),
+                               qos_botschaft())
+    ausfuehrer = SingleThreadedExecutor()
+    ausfuehrer.add_node(knoten)
+    skript = Path(__file__).resolve().parents[1] / 'werkzeuge' / 'fahrziel_senden.py'
+    kind = subprocess.Popen([sys.executable, str(skript), '--ende', '--quelle', 'test',
+                             '--warten', '30'],
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    try:
+        ende = time.monotonic() + 2.0
+        while time.monotonic() < ende:
+            ausfuehrer.spin_once(timeout_sec=0.05)
+        kind.send_signal(signal.SIGINT)
+        ausgabe, _ = kind.communicate(timeout=10)
+        ende = time.monotonic() + 1.0
+        while time.monotonic() < ende:
+            ausfuehrer.spin_once(timeout_sec=0.05)
+    finally:
+        if kind.poll() is None:
+            kind.kill()
+        ausfuehrer.remove_node(knoten)
+        knoten.destroy_node()
+    assert kind.returncode == 130, ausgabe
+    assert 'Abgebrochen (SIGINT)' in ausgabe and 'Traceback' not in ausgabe, ausgabe
+    assert empfangen == []

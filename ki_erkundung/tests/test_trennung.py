@@ -45,7 +45,7 @@ def test_der_lotse_braucht_nur_standardbibliothek_numpy_und_pillow():
 def test_werkzeuge_haengen_von_keinem_paket_der_hauptlinie_ab():
     erlaubt = STANDARD | {'numpy', 'PIL', 'lotse', 'rclpy', 'sensor_msgs', 'nav_msgs',
                           'std_msgs', 'tf2_ros', 'beispielrunde_erzeugen',
-                          'ki_verbindung_ros'}
+                          'ki_verbindung_ros', 'ros_ende'}
     for datei in quelldateien('werkzeuge'):
         fremd = einfuhren(datei) - erlaubt
         assert not fremd, f'{datei.name} führt ein: {sorted(fremd)}'

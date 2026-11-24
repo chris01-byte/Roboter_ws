@@ -5,8 +5,9 @@ import subprocess
 import pytest
 
 import beispielrunde_erzeugen as welt
-from blickrunde_aufnehmen import (Sammler, VORGABE_ZIEL, gier_aus_quaternion,
-                                  im_repository, main, schreibe)
+from blickrunde_aufnehmen import (RUNDBLICK, Rundblickende, Sammler, VORGABE_ZIEL, WARTEPHASE,
+                                  ergebnis_zeile, gier_aus_quaternion, im_repository, main,
+                                  schreibe)
 from lotse.ablauf import bereite_vor
 from lotse.blickrunde import Blickrunde
 from lotse.geometrie import Kamera, kamera_montage, lidar_montage
@@ -135,3 +136,51 @@ def test_ziel_im_repository_wird_abgelehnt(tmp_path, capsys):
     assert 'gehören nicht ins Repository' in capsys.readouterr().err
     assert main(['--name', '../boese', '--ausgabe', str(tmp_path / 'x')]) == 2
     assert '.local/share/amadeus/ki_erkundung/blickrunden' in str(VORGABE_ZIEL)
+
+
+def test_die_aufnahme_endet_kurz_nach_dem_rundblick_des_erkunders():
+    ende = Rundblickende(nachlauf_s=5.0)
+    assert ende.melde({'state': 'idle', 'phase': None}, 0.0) is None
+    assert ende.melde({'state': 'running', 'phase': RUNDBLICK}, 1.0) == 'Erkunder: Rundblick läuft.'
+    assert ende.grund(50.0) is None
+    satz = ende.melde({'state': 'running', 'phase': WARTEPHASE}, 90.0, unix=1000.0)
+    assert satz.startswith('Erkunder: Wartephase seit ') and 'endet in 5 s' in satz
+    assert ende.grund(94.9) is None and ende.grund(95.0) == 'wartephase'
+    assert ende.wartephase_unix == 1000.0
+    # die Meldung „Fahrziel 1 erreicht … warte auf das Folgeziel“ ändert nichts mehr
+    assert ende.melde({'state': 'running', 'phase': WARTEPHASE}, 200.0) is None
+    assert ende.wartephase_seit == 90.0
+
+
+def test_eine_gehaltene_wartephase_ohne_rundblick_zaehlt_nicht():
+    """Der letzte Status einer früheren Mission (TRANSIENT_LOCAL) beendet nichts."""
+    ende = Rundblickende(nachlauf_s=0.0)
+    assert ende.melde({'state': 'running', 'phase': WARTEPHASE}, 0.0) is None
+    assert ende.melde({'state': 'failed', 'phase': WARTEPHASE}, 1.0) is None
+    assert ende.grund(100.0) is None
+
+
+def test_endet_die_mission_ohne_wartephase_endet_auch_die_aufnahme():
+    ende = Rundblickende(nachlauf_s=5.0)
+    ende.melde({'state': 'running', 'phase': RUNDBLICK}, 0.0)
+    assert 'Mission beendet (failed)' in ende.melde({'state': 'failed', 'phase': RUNDBLICK}, 3.0)
+    assert ende.grund(3.0) == 'mission_ende'
+
+
+def test_ergebnis_zeile_ohne_koordinaten(tmp_path):
+    sammler = Sammler()
+    sammler.scan(1.0, {'t': 1.0})
+    sammler.bild(1.0, b'x')
+    sammler.abschliessen()
+    zeile = ergebnis_zeile('signal', tmp_path / 'kif9_lauf2_20261124_002808', sammler, True,
+                           1732404488.25)
+    assert zeile == ('ERGEBNIS grund=signal runde=kif9_lauf2_20261124_002808 aufnahmen=1 '
+                     'verworfen=0 gedreht=- lage=ja wartephase_unix=1732404488.2')
+    assert ergebnis_zeile('fehler', None, Sammler(), False, None) == (
+        'ERGEBNIS grund=fehler runde=- aufnahmen=0 verworfen=0 gedreht=- lage=nein '
+        'wartephase_unix=-')
+
+
+def test_nachlauf_nach_der_wartephase_ist_begrenzt(tmp_path, capsys):
+    assert main(['--name', 'x', '--ausgabe', str(tmp_path / 'r'), '--bis-wartephase', '90']) == 2
+    assert '--bis-wartephase' in capsys.readouterr().err

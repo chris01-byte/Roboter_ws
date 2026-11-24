@@ -152,3 +152,36 @@ def test_wahl_datei_nie_in_einer_arbeitskopie(runden, tmp_path, ki_attrappe, cap
     rc = _aufruf(runden, tmp_path / 'wahl', ki_attrappe)
     assert rc == werkzeug.RC_RUNDE and not ki_attrappe.anfragen
     assert 'Git-Arbeitsverzeichnis' in capsys.readouterr().err
+
+
+def test_die_wahl_bekommt_eine_kennung_aus_der_pruefsumme(runden, tmp_path, ki_attrappe, capsys):
+    """Damit lässt sich das Ja des Menschen an genau diese Wahl binden (ki_lauf.py)."""
+    import hashlib
+    ki_attrappe.antworten.append(_antwort(2, 1, 2))
+    assert _aufruf(runden, tmp_path / 'wahl', ki_attrappe) == werkzeug.RC_WAHL
+    aus = capsys.readouterr().out
+    (datei,) = (tmp_path / 'wahl').glob('*_wahl.json')
+    kennung = hashlib.sha256(datei.read_bytes()).hexdigest()[:6]
+    assert f'Kennung der Wahl: {kennung}' in aus
+    assert werkzeug.kennung_der_wahl(datei) == kennung
+
+
+def test_ohne_ros_umgebung_kommt_die_meldung_sofort(runden, tmp_path):
+    """KI-F9, Lauf 2w3: ohne Umgebung kam der Fehler erst nach 8 s Aufbereitung."""
+    import subprocess
+    import sys
+    from pathlib import Path
+    skript = Path(werkzeug.__file__).resolve()
+    ohne_ros = {k: v for k, v in os.environ.items()
+                if k not in ('PYTHONPATH', 'AMENT_PREFIX_PATH', 'LD_LIBRARY_PATH')}
+    beginn = time.monotonic()
+    ergebnis = subprocess.run(
+        [sys.executable, str(skript), '--ueber-ros', '--runden', str(runden), '--name',
+         'mit_karte', '--ausgabe', str(tmp_path / 'wahl')],
+        env=ohne_ros, capture_output=True, text=True, timeout=30)
+    dauer = time.monotonic() - beginn
+    assert ergebnis.returncode == werkzeug.RC_UMGEBUNG, ergebnis.stdout + ergebnis.stderr
+    assert 'ROS-Umgebung fehlt' in ergebnis.stdout and 'aufbereitet' not in ergebnis.stdout
+    assert 'Traceback' not in ergebnis.stdout + ergebnis.stderr
+    assert dauer < 5.0
+    assert not (tmp_path / 'wahl').exists()

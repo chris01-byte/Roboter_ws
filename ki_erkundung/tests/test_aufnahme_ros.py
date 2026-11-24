@@ -202,3 +202,100 @@ def test_sucher_zeigt_das_laufende_kamerabild_und_endet_von_selbst(tmp_path):
     assert programm.returncode == 0
     assert 'keines gespeichert' in ausgabe
     assert list(tmp_path.iterdir()) == []
+
+
+def _aufnahme_mit_gespieltem_erkunder(tmp_path, status, dauer, nachlauf):
+    """Aufnahme im selben Prozess, Sensoren und Erkunder gespielt; gibt Ordner, Zeit, Ausgabe."""
+    from ros_spieler import Spieler, aufnahme_argumente
+    rclpy.init()
+    spieler = None
+    try:
+        spieler = Spieler(rclpy, status=status).start()
+        wahl = eingabe().parse_args(aufnahme_argumente(tmp_path, dauer=dauer)
+                                    + ['--bis-wartephase', str(nachlauf)])
+        beginn = time.monotonic()
+        ordner = nehme_auf(wahl)
+        return ordner, time.monotonic() - beginn
+    finally:
+        if spieler is not None:
+            spieler.stopp()
+        rclpy.shutdown()
+
+
+def test_aufnahme_endet_von_selbst_kurz_nach_dem_rundblick(tmp_path, capsys):
+    """Kein kill -INT nötig: 1 s nach der Wartephase des Erkunders ist Schluss."""
+    status = [(0.0, {'state': 'idle', 'phase': None}),
+              (1.0, {'state': 'running', 'phase': 'initial_scan'}),
+              (4.0, {'state': 'running', 'phase': 'stage_drive_wait_target'})]
+    ordner, dauer = _aufnahme_mit_gespieltem_erkunder(tmp_path, status, 40, 1)
+    ausgabe = capsys.readouterr().out
+    assert ordner is not None and 4.0 <= dauer <= 9.0, (dauer, ausgabe)
+    assert 'Erkunder: Rundblick läuft.' in ausgabe and 'Aufnahme endet in 1 s' in ausgabe
+    zeile = [z for z in ausgabe.splitlines() if z.startswith('ERGEBNIS')][-1]
+    assert f'grund=wartephase runde={ordner.name}' in zeile and 'lage=ja' in zeile
+    assert 'wartephase_unix=-' not in zeile
+    runde = Blickrunde.lade(ordner)
+    assert runde.karte['rahmen'] == 'map' and runde.meta['quelle']['ende'] == 'wartephase'
+
+
+def test_wartephase_ohne_rundblick_beendet_die_aufnahme_nicht(tmp_path, capsys):
+    status = [(0.0, {'state': 'running', 'phase': 'stage_drive_wait_target'})]
+    ordner, dauer = _aufnahme_mit_gespieltem_erkunder(tmp_path, status, 4, 0)
+    assert ordner is not None and dauer >= 3.9
+    assert 'ERGEBNIS grund=dauer' in capsys.readouterr().out
+
+
+def test_endet_die_mission_vor_der_wartephase_endet_die_aufnahme(tmp_path, capsys):
+    status = [(0.5, {'state': 'running', 'phase': 'initial_scan'}),
+              (2.0, {'state': 'failed', 'phase': 'initial_scan'})]
+    ordner, dauer = _aufnahme_mit_gespieltem_erkunder(tmp_path, status, 40, 5)
+    ausgabe = capsys.readouterr().out
+    assert ordner is not None and dauer < 6.0
+    assert 'ERGEBNIS grund=mission_ende' in ausgabe and 'Mission beendet (failed)' in ausgabe
+
+
+def test_signal_mitten_in_der_aufnahme_schreibt_trotzdem_die_runde(tmp_path):
+    """Wie am Roboter: eigener Prozess, genau ein Signal an seine PID (KI-F9, Lauf 2w)."""
+    import random
+    import signal
+    import subprocess
+    import sys
+    from pathlib import Path
+    from ros_spieler import Spieler, aufnahme_argumente
+    skript = Path(__file__).resolve().parents[1] / 'werkzeuge' / 'blickrunde_aufnehmen.py'
+    zufall = random.Random(11)
+    rclpy.init()
+    spieler = Spieler(rclpy, scan_hz=20.0, bild_hz=4.0, tf_hz=100.0, grad_je_s=20.0).start()
+    try:
+        for durchgang in range(6):
+            kind = subprocess.Popen(
+                [sys.executable, str(skript)]
+                + aufnahme_argumente(tmp_path / 'runden', name=f'signal{durchgang}', dauer=60)
+                + ['--bereit-nach', '1'],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            try:
+                zeilen = []
+                for _ in range(80):
+                    zeilen.append(kind.stdout.readline())
+                    if zeilen[-1].startswith('BEREIT') or not zeilen[-1]:
+                        break
+                assert zeilen[-1].startswith('BEREIT'), ''.join(zeilen)
+                try:
+                    kind.wait(timeout=zufall.uniform(0.5, 2.5))
+                except subprocess.TimeoutExpired:
+                    pass
+                kind.send_signal(signal.SIGTERM if durchgang == 2 else signal.SIGINT)
+                rest, _ = kind.communicate(timeout=30)
+            finally:
+                if kind.poll() is None:
+                    kind.kill()
+            ausgabe = ''.join(zeilen) + rest
+            assert kind.returncode == 0, ausgabe
+            assert 'Traceback' not in ausgabe and 'Blickrunde geschrieben' in ausgabe, ausgabe
+            assert 'ERGEBNIS grund=signal' in ausgabe, ausgabe
+    finally:
+        spieler.stopp()
+        rclpy.shutdown()
+    runden = sorted((tmp_path / 'runden').iterdir())
+    assert len(runden) == 6
+    assert all(len(Blickrunde.lade(r).aufnahmen) >= 1 for r in runden)

@@ -21,7 +21,12 @@ from __future__ import annotations
 import json
 import sys
 import time
+from pathlib import Path
 from typing import List, Optional
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from ros_ende import Ende, ros_beenden, ros_starten  # noqa: E402
 
 
 def _ms(wert) -> str:
@@ -79,7 +84,8 @@ def main(argv=None) -> int:
     import rclpy
     from std_msgs.msg import String
 
-    rclpy.init()
+    ende = Ende().anmelden()
+    eigener_kontext = ros_starten()
     knoten = rclpy.create_node('ki_radsensor_zustand')
     stand = {'zustand': None}
 
@@ -91,15 +97,16 @@ def main(argv=None) -> int:
 
     knoten.create_subscription(String, '/base_hardware/state_json', auf_zustand, 10)
     try:
-        ende = time.monotonic() + warten
-        while rclpy.ok() and time.monotonic() < ende and stand['zustand'] is None:
+        bis = time.monotonic() + warten
+        while (rclpy.ok() and not ende.gesetzt() and time.monotonic() < bis
+               and stand['zustand'] is None):
             rclpy.spin_once(knoten, timeout_sec=0.1)
         for zeile in radsensor_zeilen(stand['zustand']):
             print(zeile)
         return 0 if stand['zustand'] is not None else 1
     finally:
-        knoten.destroy_node()
-        rclpy.try_shutdown()
+        ros_beenden([knoten], eigener_kontext=eigener_kontext)
+        ende.abmelden()
 
 
 if __name__ == '__main__':

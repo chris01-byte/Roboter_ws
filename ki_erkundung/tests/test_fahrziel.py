@@ -675,7 +675,7 @@ def test_kif3b_die_stelle_vor_der_tuer_lag_jenseits_der_alten_15_m():
     assert befund['ort'] == pytest.approx((1.615, 0.065), abs=0.01)
     assert weg_belegt_text(befund, 2.32) == (
         'Kostenkarte auf dem Weg: belegt 1.62 m voraus (Strecke 2), 0.06 m links der Linie '
-        '– Kostenkarte passt nicht: dort hielte der Erkunder an.')
+        '– Kostenkarte passt nicht: dort könnte der Nahbereichs-Halt des Erkunders anhalten.')
     # frei, wenn die Stelle neben dem Streifen oder hinter dem letzten Nahbereich liegt
     for ort in ((1.61, 0.30), (2.32 + 0.60, 0.0), (0.20, 0.0)):
         daten, b, h, z, u = raster([ort])
@@ -728,9 +728,9 @@ def test_herkunft_nennt_die_quelle_mit_hoehe():
     assert befund['karte'] == 0 and befund['laser'] == 0
     assert befund['nah']['links'][0] == 2 and befund['nah']['rechts'][0] == 0
     text = herkunft_text(befund)
-    assert text.startswith('Herkunft der Stelle 0.25 m vor der Vorderkante (31 cm vor dem '
-                           'Gehäuse), 0.09 m links der Mitte: Karte (SLAM) frei; Nahsensor '
-                           'links 2 Punkt(e), 20 bis 23 cm')
+    assert text.startswith('Herkunft der Stelle 0.25 m vor der gepolsterten Vorderkante (31 cm '
+                           'vor dem Gehäuse), 0.09 m links der Mitte: Karte (SLAM) frei; '
+                           'Nahsensor links 2 Punkt(e), 20 bis 23 cm')
     assert 'Nahsensor rechts sieht dort nichts; Laser sieht dort nichts.' in text
     assert 'ältere Markierung' not in text
     # sieht keine Quelle etwas, ist es eine ältere Markierung
@@ -739,6 +739,9 @@ def test_herkunft_nennt_die_quelle_mit_hoehe():
     # Karte belegt
     karte = herkunft_text(herkunft(stelle, karte=[(0.59, 0.09)], nah=None, laser=None))
     assert 'Karte (SLAM) belegt' in karte and 'Laser nicht empfangen' in karte
+    # ohne Nahsensoren stammt die Kostenkarte nur aus der Karte: dann ist es ein Widerspruch
+    ohne = herkunft_text(herkunft(stelle, karte=[], nah=None, laser=[]))
+    assert 'Prüfung widersprüchlich' in ohne and 'ab 0,45 m' not in ohne
 
 
 def test_nahsensoren_im_fahrstreifen_in_einem_satz():
@@ -1040,3 +1043,79 @@ def test_wahl_und_ende_nur_in_sinnvoller_verbindung(argumente, grund, capsys):
     with pytest.raises(SystemExit) as ende:
         fahrziel_senden.main(argumente)
     assert ende.value.code == 2 and grund in capsys.readouterr().err
+
+
+# --- Meldungen nach KI-F9 (Bewertung §3 und §4) -----------------------------
+
+from lotse.fahrziel import (  # noqa: E402
+    GEHAEUSE_VORN_M, VORDERKANTE_M, abweichung, lage_vom_roboter, wiederfinden_zeilen, zellen_um,
+)
+
+
+def test_kif9_2w2_die_stelle_lag_hinter_dem_ende_der_ersten_strecke():
+    """Erst 1,35 m geradeaus, dann nach rechts; die Stelle 0,52 m hinter dem Wendepunkt."""
+    daten, b, h, z, u = raster([(1.866, -0.135)])
+    befund = belegt_auf_dem_weg(daten, b, h, z, u, (0.0, 0.0, 0.0), [(1.35, 0.0), (1.35, -0.45)])
+    assert befund['strecke'] == 1 and befund['strecke_m'] == pytest.approx(1.35)
+    assert befund['voraus_m'] - befund['strecke_m'] == pytest.approx(0.52, abs=0.006)
+    text = weg_belegt_text(befund, 1.80)
+    assert 'Die Stelle liegt nicht auf der Strecke, sondern 0.52 m hinter ihrem Ende' in text
+    assert 'dort läge sie 0.25 m vor seinem Gehäuse und 0.19 m vor der gepolsterten' in text
+    assert text.endswith('dort könnte der Nahbereichs-Halt des Erkunders anhalten.')
+    assert VORDERKANTE_M - GEHAEUSE_VORN_M == pytest.approx(0.06)
+
+
+def test_lage_einer_stelle_neben_oder_hinter_dem_roboter_in_worten():
+    assert lage_vom_roboter(-0.236, 1.860) == (
+        '1.86 m links von ihm, 0.24 m hinter seiner Antriebsmitte')
+    assert lage_vom_roboter(0.10, -0.40) == '0.40 m rechts von ihm, 0.10 m vor seiner Antriebsmitte'
+    assert lage_vom_roboter(0.58, 0.09).startswith('0.25 m vor der gepolsterten Vorderkante (31 cm')
+
+
+def test_herkunft_fragt_die_karte_rings_um_die_stelle_ab_nicht_nur_davor():
+    """KI-F9, 2w2: Die Karte war belegt, die alte Abfrage (Streifen voraus) sagte „frei“."""
+    pose = (1.0, 0.5, math.radians(30.0))
+    # Ort der Stelle 1,86 m links und 0,24 m hinter der Antriebsmitte, in der Karte
+    c, s = math.cos(pose[2]), math.sin(pose[2])
+    ort = (pose[0] + c * -0.24 - s * 1.86, pose[1] + s * -0.24 + c * 1.86)
+    daten, b, h, z, u = raster([ort], breite=600, hoehe=600, ursprung=(-2.0, -1.0))
+    zellen = zellen_um(daten, b, h, z, u, pose, (-0.24, 1.86))
+    assert len(zellen) == 1 and zellen[0] == pytest.approx((-0.24, 1.86), abs=0.012)
+    assert len(zellen_um(daten, b, h, z, u, pose, (-0.24, 1.40))) == 0     # 0,46 m daneben
+    befund = herkunft((-0.24, 1.86), karte=zellen, nah=None, laser=[(-0.25, 1.85)])
+    text = herkunft_text(befund)
+    assert text.startswith('Herkunft der Stelle 1.86 m links von ihm, 0.24 m hinter seiner '
+                           'Antriebsmitte: Karte (SLAM) belegt')
+    assert 'Laser sieht dort etwas' in text and 'widersprüchlich' not in text
+    # Rand des Rasters: keine Zellen, kein Fehler
+    assert len(zellen_um(daten, b, h, z, u, (50.0, 50.0, 0.0), (0.0, 0.0))) == 0
+
+
+def test_kif9_2w3_wiederfinden_nennt_wie_weit_die_tuer_daneben_lag():
+    """Erste Messung schräg (29°), 0,87 m, „linie“; danach die Tür 0,36 m tiefer."""
+    pose1 = (0.0, 0.0, 0.0)
+    mitte1 = (2.203, 0.846)
+    achse = -math.radians(8.38)
+    n = (math.cos(achse), math.sin(achse))
+    quer = (-n[1], n[0])
+    pfosten1 = ((mitte1[0] + 0.435 * quer[0], mitte1[1] + 0.435 * quer[1]),
+                (mitte1[0] - 0.435 * quer[0], mitte1[1] - 0.435 * quer[1]))
+    gemerkt = tuer_merken(pfosten1, {'normal': n, 'quelle': 'wand', 'punkte': 28,
+                                     'laenge_m': 0.45}, pose1, breite_m=0.87, schluss='linie')
+    assert gemerkt['schraeg_grad'] == pytest.approx(29.4, abs=0.5)
+    # nach der Anfahrt: 1,7 m vor der gemerkten Mitte auf der Achse, Blick entlang der Achse
+    pose2 = (mitte1[0] - 1.7 * n[0], mitte1[1] - 1.7 * n[1], achse)
+    # die echte Tür liegt 0,36 m tiefer (vom jetzigen Platz aus 2,06 m voraus)
+    echt = Oeffnung(1, 0.77, (2.06, 0.0), ((2.06, 0.385), (2.06, -0.385)), 0.0, 2.06, 1.3, True,
+                    schluss='sprung')
+    a = abweichung(echt, gemerkt, pose2)
+    assert a['tiefer_m'] == pytest.approx(0.36, abs=0.005)
+    assert a['links_m'] == pytest.approx(0.0, abs=0.005)
+    assert a['breiter_m'] == pytest.approx(-0.10, abs=0.005)
+    assert wiederfinden([echt], gemerkt, pose2) is None          # die Regel ist unverändert
+    zeilen = wiederfinden_zeilen([echt], gemerkt, pose2)
+    assert zeilen[0] == ('Wiederfinden: erwartet 1.70 m, +0° (erste Messung: 0.87 m breit, '
+                         'Schluss linie, 29° schräg gesehen); Grenze 0.35 m.')
+    assert zeilen[1] == ('  Öffnung 1: 0.77 m breit, 2.06 m, +0°, Schluss sprung: 0.36 m tiefer, '
+                         '0.00 m links, 0.10 m schmaler; Mitten 0.36 m auseinander – zu weit.')
+    assert wiederfinden_zeilen([], gemerkt, pose2)[1] == '  keine türbreite Öffnung neu vermessen.'

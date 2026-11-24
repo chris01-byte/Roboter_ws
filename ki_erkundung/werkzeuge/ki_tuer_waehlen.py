@@ -20,14 +20,21 @@ der KI und der Pfad der Wahl-Datei. Wahl-Datei und Protokoll liegen unter
 Koordinaten der Wohnung, aber keine Bilder, und gehören nicht ins
 Repository.
 
+Nach dem Schreiben steht da „Kennung der Wahl: xxxxxx“ (die ersten sechs
+Zeichen der Prüfsumme der Wahl-Datei, ohne Koordinaten). Damit lässt sich
+die Antwort des Menschen an genau diese Wahl binden (``ki_lauf.py``).
+
 Rückgabe: 0 Wahl geschrieben; 2 die KI nennt keinen geeigneten Ausgang oder
-die Vermessung spricht gegen die Wahl; 3 keine gültige Antwort; 4
-Blickrunde, ihre Lage in der Karte oder eine wählbare Öffnung fehlt;
-5 KI-Rechner nicht erreichbar.
+die Vermessung spricht gegen die Wahl; 3 keine gültige Antwort (auch nach
+Strg+C oder ``kill -INT``: Das Protokoll wird geschrieben, eine Wahl nicht);
+4 Blickrunde, ihre Lage in der Karte oder eine wählbare Öffnung fehlt;
+5 KI-Rechner nicht erreichbar; 6 ROS-Umgebung fehlt (mit ``--ueber-ros``,
+geprüft vor dem Aufbereiten).
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import sys
@@ -44,11 +51,28 @@ from lotse.blickrunde import Blickrunde, runden_finden  # noqa: E402
 from lotse.ki_rechner import STANDARD_URL, modelle  # noqa: E402
 from lotse.wahl import (ARTEN_TEXT, standpunkt_in_der_karte, wahl_aufschreiben,  # noqa: E402
                         wahl_satz)
+from ros_ende import Ende, ros_beenden, ros_starten  # noqa: E402
 
 VORGABE_RUNDEN = Path.home() / '.local/share/amadeus/ki_erkundung/blickrunden'
 VORGABE_AUSGABE = Path.home() / '.local/share/amadeus/ki_erkundung/wahl'
 
 RC_WAHL, RC_KEINE_WAHL, RC_KEINE_ANTWORT, RC_RUNDE, RC_KI_RECHNER = 0, 2, 3, 4, 5
+RC_UMGEBUNG = 6
+
+
+def kennung_der_wahl(pfad: Path) -> str:
+    """Die ersten sechs Zeichen der SHA-256-Prüfsumme der Wahl-Datei."""
+    return hashlib.sha256(Path(pfad).read_bytes()).hexdigest()[:6]
+
+
+def ros_umgebung_fehlt() -> Optional[str]:
+    """Grund, wenn rclpy oder std_msgs nicht zu laden sind; sonst None."""
+    try:
+        import rclpy  # noqa: F401
+        from std_msgs.msg import String  # noqa: F401
+    except ImportError as fehler:
+        return str(fehler)
+    return None
 
 
 def im_repository(pfad: Path) -> bool:
@@ -148,6 +172,24 @@ def main(argv=None) -> int:
         eingabe().error('--ueber-ros oder --modell angeben')
     if not 1 <= wahl.versuche <= 3:
         eingabe().error('--versuche: 1 bis 3')
+    if wahl.ueber_ros:
+        # Zuerst: Fehlt die ROS-Umgebung, gleich sagen – nicht erst nach dem
+        # Aufbereiten der Runde (KI-F9, Lauf 2w3: Fehler nach 8 s).
+        grund = ros_umgebung_fehlt()
+        if grund is not None:
+            print(f'ROS-Umgebung fehlt ({grund}). Über ki_lauf.py aufrufen oder vorher die '
+                  'Umgebung der Kamera sourcen (zum Beispiel source '
+                  '~/ki_trockenlauf_ki0/umgebung_we1.bash).')
+            return RC_UMGEBUNG
+    # Ein Signal setzt nur eine Marke (ros_ende); danach wird nicht weiter gefragt.
+    ende = Ende().anmelden()
+    try:
+        return _waehle(wahl, ende)
+    finally:
+        ende.abmelden()
+
+
+def _waehle(wahl, ende: Ende) -> int:
     ausgabe = Path(wahl.ausgabe).expanduser()
     if im_repository(ausgabe):
         print(f'{ausgabe} liegt in einem Git-Arbeitsverzeichnis; die Wahl-Datei enthält '
@@ -197,32 +239,35 @@ def main(argv=None) -> int:
 
     # ---- KI-Rechner ------------------------------------------------------
     verbindung, weg, modell = None, None, wahl.modell
-    if wahl.ueber_ros:
-        import rclpy
-        from ki_verbindung_ros import Verbindung
-        if not rclpy.ok():
-            rclpy.init()
-        verbindung = Verbindung()
-        status = verbindung.status(warten_s=8.0)
-        if not status or not status.get('bereit'):
-            print('Der Lotsen-Dienst auf dem KI-Rechner ist nicht zu hören oder nicht '
-                  f'bereit (Status: {status}).')
-            verbindung.schliessen()
-            return RC_KI_RECHNER
-        modell, weg = str(status.get('modell')), verbindung.frage_stellen
-    else:
-        vorhanden = modelle(wahl.url)
-        if vorhanden is None:
-            print(f'Der KI-Rechner antwortet nicht unter {wahl.url}.')
-            return RC_KI_RECHNER
-        if modell not in vorhanden and f'{modell}:latest' not in vorhanden:
-            print(f'Das Modell {modell} ist dort nicht vorhanden: {vorhanden}.')
-            return RC_KI_RECHNER
-
+    eigener_kontext = False
     denken = {'an': True, 'aus': False}[wahl.denken]
     antworten: List[dict] = []
     try:
+        if wahl.ueber_ros:
+            from ki_verbindung_ros import Verbindung
+            eigener_kontext = ros_starten()
+            verbindung = Verbindung(abbruch=ende.gesetzt)
+            status = verbindung.status(warten_s=8.0)
+            if ende.gesetzt():
+                print(f'Abgebrochen ({ende.signal}); die KI wird nicht gefragt.')
+                return RC_KEINE_ANTWORT
+            if not status or not status.get('bereit'):
+                print('Der Lotsen-Dienst auf dem KI-Rechner ist nicht zu hören oder nicht '
+                      f'bereit (Status: {status}).')
+                return RC_KI_RECHNER
+            modell, weg = str(status.get('modell')), verbindung.frage_stellen
+        else:
+            vorhanden = modelle(wahl.url)
+            if vorhanden is None:
+                print(f'Der KI-Rechner antwortet nicht unter {wahl.url}.')
+                return RC_KI_RECHNER
+            if modell not in vorhanden and f'{modell}:latest' not in vorhanden:
+                print(f'Das Modell {modell} ist dort nicht vorhanden: {vorhanden}.')
+                return RC_KI_RECHNER
+
         for versuch in range(wahl.versuche):
+            if ende.gesetzt():
+                break
             eintrag = befrage(vorbereitung, modell, url=wahl.url, zeitgrenze_s=wahl.zeitgrenze,
                               wiederholung=versuch, optionen={'num_ctx': wahl.kontext},
                               denken=denken, weg=weg)
@@ -234,8 +279,14 @@ def main(argv=None) -> int:
     finally:
         if verbindung is not None:
             verbindung.schliessen()
+        if wahl.ueber_ros:
+            ros_beenden(eigener_kontext=eigener_kontext)
 
     # ---- Ergebnis --------------------------------------------------------
+    if ende.gesetzt():
+        print(f'Abgebrochen ({ende.signal}); es wird keine Wahl geschrieben.')
+        # Die echten Antworten bleiben im Protokoll; der Vermerk kommt dazu.
+        antworten.append({'fehler': 'abgebrochen', 'pruefung': None, 'dauer_s': 0.0})
     letzte = antworten[-1]
     jetzt = time.time()
     stempel = time.strftime('%Y%m%d_%H%M%S', time.localtime(jetzt))
@@ -280,6 +331,7 @@ def main(argv=None) -> int:
         json.dump(daten, datei, indent=1, ensure_ascii=False)
     print(wahl_satz(daten))
     print(f'Wahl-Datei: {wahl_pfad}')
+    print(f'Kennung der Wahl: {kennung_der_wahl(wahl_pfad)}')
     print('Gefahren wird erst nach einem Ja des Menschen: fahrziel_senden.py --zur-tuer '
           '--wahl DATEI; bei Nein: fahrziel_senden.py --ende --quelle mensch.')
     return RC_WAHL

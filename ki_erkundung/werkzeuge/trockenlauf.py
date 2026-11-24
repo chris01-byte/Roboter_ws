@@ -29,11 +29,13 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lotse import SCHEMA_VERSION  # noqa: E402
 from lotse.ablauf import befrage, bereite_vor  # noqa: E402
 from lotse.blickrunde import Blickrunde, runden_finden  # noqa: E402
 from lotse.ki_rechner import STANDARD_URL, modelle, umgebung  # noqa: E402
+from ros_ende import Ende, ros_beenden, ros_starten  # noqa: E402
 
 
 def _speichere_ansicht(vorbereitung, ordner: Path) -> None:
@@ -80,6 +82,15 @@ def main(argv=None) -> int:
         eingabe.error('--modell, --ueber-ros oder --nur-markieren angeben')
     if wahl.ueber_ros and wahl.modell:
         eingabe.error('mit --ueber-ros bestimmt der Lotsen-Dienst das Modell')
+    # Ein Signal setzt nur eine Marke (ros_ende); begonnene Runden bleiben im Ergebnis.
+    ende = Ende().anmelden()
+    try:
+        return _trockenlauf(wahl, ende)
+    finally:
+        ende.abmelden()
+
+
+def _trockenlauf(wahl, ende: Ende) -> int:
     denken = {'an': True, 'aus': False, None: None}[wahl.denken]
     ordner = runden_finden(wahl.runden)
     if not ordner:
@@ -89,17 +100,17 @@ def main(argv=None) -> int:
     ausgabe.mkdir(parents=True, exist_ok=True)
 
     verbindung, weg, umgebungen = None, None, {}
+    eigener_kontext = False
     if wahl.ueber_ros:
-        import rclpy
         from ki_verbindung_ros import Verbindung
-        if not rclpy.ok():
-            rclpy.init()
-        verbindung = Verbindung()
+        eigener_kontext = ros_starten()
+        verbindung = Verbindung(abbruch=ende.gesetzt)
         status = verbindung.status(warten_s=8.0)
         if not status or not status.get('bereit'):
             print('Der Lotsen-Dienst auf dem KI-Rechner ist nicht zu hören oder '
                   f'nicht bereit (Status: {status}).', file=sys.stderr)
             verbindung.schliessen()
+            ros_beenden(eigener_kontext=eigener_kontext)
             return 3
         wahl.modell = [str(status.get('modell'))]
         umgebungen = {wahl.modell[0]: status.get('umgebung') or {}}
@@ -132,6 +143,10 @@ def main(argv=None) -> int:
         'runden': [],
     }
     for pfad in ordner:
+        if ende.gesetzt():
+            print(f'Abgebrochen ({ende.signal}); weitere Runden werden nicht befragt.',
+                  file=sys.stderr)
+            break
         try:
             vorbereitung = bereite_vor(Blickrunde.lade(pfad), wahl.bilder,
                                        mosaik=wahl.mosaik)
@@ -149,6 +164,8 @@ def main(argv=None) -> int:
         if not wahl.nur_markieren:
             for modell in wahl.modell:
                 for nummer in range(wahl.wiederholungen):
+                    if ende.gesetzt():
+                        break
                     antwort = befrage(vorbereitung, modell, url=wahl.url,
                                       zeitgrenze_s=wahl.zeitgrenze,
                                       wiederholung=nummer, mosaik=wahl.mosaik,
@@ -175,8 +192,10 @@ def main(argv=None) -> int:
             json.dump(ergebnis, datei, indent=1, ensure_ascii=False)
     if verbindung is not None:
         verbindung.schliessen()
+    if wahl.ueber_ros:
+        ros_beenden(eigener_kontext=eigener_kontext)
     print(f'Ergebnis: {ausgabe / "ergebnis.json"}')
-    return 0
+    return 1 if ende.gesetzt() else 0
 
 
 if __name__ == '__main__':

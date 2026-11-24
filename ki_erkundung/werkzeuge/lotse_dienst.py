@@ -41,6 +41,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from ki_verbindung_ros import (THEMA_ANTWORT, THEMA_FRAGE, THEMA_STATUS,  # noqa: E402
                                qos_botschaft, qos_status)
 from lotse import SCHEMA_VERSION  # noqa: E402
+from ros_ende import Ende, ros_beenden, ros_starten  # noqa: E402
 from lotse.antwort import pruefe  # noqa: E402
 from lotse.botschaft import entpacke_frage, packe_antwort  # noqa: E402
 from lotse.ki_rechner import (STANDARD_URL, Rohantwort, frage_stellen,  # noqa: E402
@@ -235,8 +236,10 @@ def main(argv=None) -> int:
     wahl = eingabe.parse_args(argv)
 
     import rclpy
-    from rclpy.executors import ExternalShutdownException
-    rclpy.init()
+    # Zuerst die Marke, dann rclpy ohne eigene Handler (ros_ende): Das
+    # Lotsen-Fenster beendet den Dienst mit SIGINT; er endet dann geordnet.
+    ende = Ende().anmelden()
+    eigener_kontext = ros_starten()
     knoten = rclpy.create_node('ki_lotse_dienst')
     dienst = Dienst(knoten, wahl.modell, wahl.url, wahl.kontext,
                     zustand_ordner=wahl.zustand)
@@ -246,13 +249,12 @@ def main(argv=None) -> int:
         f'{bekannt.get("dienst_fassung") or "nicht erreichbar"}'
         + ('' if bekannt.get('modell_kennung') else '; das Modell ist dort NICHT vorhanden'))
     try:
-        rclpy.spin(knoten)
-    except (KeyboardInterrupt, ExternalShutdownException):
-        pass                    # Strg+C, je nach ROS-Fassung so oder so
+        # Kurz warten statt dauerhaft blockieren: So wird die Marke gesehen.
+        while not ende.gesetzt() and rclpy.ok():
+            rclpy.spin_once(knoten, timeout_sec=0.2)
     finally:
-        knoten.destroy_node()
-        if rclpy.ok():
-            rclpy.shutdown()
+        ros_beenden([knoten], eigener_kontext=eigener_kontext)
+        ende.abmelden()
     return 0
 
 
