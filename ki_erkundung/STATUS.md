@@ -1,6 +1,17 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 23.11.2026 (nachts): Die KI wählt die Tür – gebaut, in der
+**Stand 24.11.2026 (nach KI-F9): Die KI hat am Roboter gewählt – einer von
+zwei Läufen kam durch die Tür.** Lauf 1: Die KI wählte die Labortür,
+Christopher sagte ja, Amadeus fuhr in einem Ablauf hindurch (3,49 m). Lauf
+2 und drei Wiederholungen nicht: Die KI hielt ein Fensterrollo für eine
+offene Tür (Christophers Nein wirkte, nichts gefahren); die Aufnahme stürzte
+beim Beenden ab; einmal war die Kostenkarte auf der Anfahrt belegt („da war
+aber nichts“); einmal fand das Werkzeug die Tür nach der Anfahrt nicht
+wieder. Christopher: „Das Grundkonzept funktioniert.“ Die Ursachen werden
+untersucht; es gibt keinen offenen Auftrag. Archiv:
+[archiv/20261124-kif9-ki-waehlt/](archiv/20261124-kif9-ki-waehlt/).
+
+**Davor, 23.11.2026 (nachts): Die KI wählt die Tür – gebaut, in der
 Simulation erprobt, Auftrag KI-F9 erteilt.** Entscheidung des
 Projektinhabers nach KI-F8 („Ja“): Die KI wählt nach dem Rundblick die Tür;
 zuerst sieht Christopher ihre Wahl und sagt vor der Fahrt ja oder nein. Die
@@ -144,9 +155,9 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Offener Auftrag: KI-F9 – die KI wählt die Tür** ([AUFTRAG.md](AUFTRAG.md)),
-zweimal von zwei Plätzen, je mit Christophers Ja oder Nein vor der Fahrt;
-kein Build.
+**Kein offener Auftrag.** KI-F9 ist ausgeführt: einer von zwei. Zuerst
+die Ursachen untersuchen (Fensterrollo, Kostenkarte, Wiederfinden der Tür,
+Absturz der Aufnahme), dann der nächste Auftrag.
 
 **Danach, je nach Ergebnis:**
 - Zweimal gelungen: Christophers Ja entfällt (die KI wählt, die Vermessung

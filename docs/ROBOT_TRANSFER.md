@@ -497,9 +497,23 @@ Durchgang ein Vorlauf ohne Motorfreigabe und drei scharfe Läufe mit
 Bericht auf dem Jetson (nicht im Repository). `kif7.env` und frühere
 Releases unverändert. Rückfall: `kif8.env` und die Ordner `kif8-…` löschen.
 
-Stand 23.11.2026 (nachts), **noch keine weitere Jetson-Wirkung:** Auftrag
-**KI-F9** (`ki_erkundung/AUFTRAG.md`, die KI wählt die Tür) ist erteilt und
-wartet auf die Übergabe. Er baut nichts: Release `kif8-20261123_2138` und
+Nachtrag 24.11.2026, tatsächliche Wirkung von KI-F9 (Bericht des
+Jetson-Agenten): Arbeitskopie auf `30e72a4`, **kein Build**, Release
+`kif8-20261123_2138` und `kif8.env` unverändert. Neu angelegt nur Daten:
+Blickrunden, Wahl-Dateien und Protokolle unter
+`~/.local/share/amadeus/ki_erkundung/`, Prüfdateien unter
+`kif8-20261123_2138/pruefung/kif9/` (dort auch der Berichtsgenerator
+`make_kif9.py`) und `~/ki_trockenlauf_kif9/`. Ein Vorlauf ohne
+Motorfreigabe und fünf scharfe Stackstarts, alle mit
+`initial_scan_only:=true stage_drive_only:=true nahsensoren:=false`. Je Lauf
+ein Rundblick auf der Stelle (363°); **eine Durchfahrt durch die Labortür**
+(Lauf 1, 3,49 m) und **eine Anfahrt ohne Durchfahrt** (Lauf 2w3, 1,57 m);
+höchstens 0,050 m/s und 0,100 rad/s; nichts berührt (wo gefragt). Rückfall:
+die genannten Datenordner löschen.
+
+Davor, Stand 23.11.2026 (nachts), ohne Jetson-Wirkung: Auftrag
+**KI-F9** (`ki_erkundung/AUFTRAG.md`, die KI wählt die Tür) war erteilt und
+wartete auf die Übergabe. Er baut nichts: Release `kif8-20261123_2138` und
 `kif8.env` bleiben unverändert, unter `src/` gibt es seit `d61453c` keine
 Änderung. Er holt den neuen Stand in die Arbeitskopie (nur Python-Werkzeuge
 der KI-Linie) und legt an: Blickrunden unter
