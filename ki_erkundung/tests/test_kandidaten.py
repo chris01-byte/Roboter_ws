@@ -283,9 +283,10 @@ def test_tuer_durch_eine_tuer_gesehen_die_naehere_bleibt():
 @pytest.mark.parametrize('x', [1.35, 1.4, 1.5, 1.6])
 def test_dicht_vor_der_tuer_bleibt_die_naehere_auch_ueber_60_grad(x):
     """Gegenprüfung Schritt 3: 0,4 bis 0,65 m vor der 80-cm-Tür umspannt sie
-    mehr als 60°. Mit der Sperre nur bis 60° wurde dann ihre Kante nicht
+    mehr als 60°. Mit einer Sperre nur bis 60° wurde dann ihre Kante nicht
     übersprungen, die ferne Tür (schmaler) verdrängte sie, und der Fahrteil
-    hätte durch beide Türen hindurch geplant."""
+    hätte durch beide Türen hindurch geplant. Hinter einer türgroßen Lücke
+    werden ihre Kanten deshalb immer übersprungen, wie vor Schritt 3."""
     gefunden = oeffnungen(*profil(TUER_DURCH_TUER, (x, 0.0)))
     assert len(gefunden) == 1
     assert gefunden[0].mitte[0] == pytest.approx(2.0 - x, abs=0.05)
@@ -385,3 +386,49 @@ def test_lot_auf_der_falschen_seite_ergibt_keine_luecke_und_verdraengt_nichts():
     for o in gefunden:
         (ax, ay), (bx, by) = o.pfosten
         assert ax * by - ay * bx > 0.0, o           # zweiter Pfosten gegen den Uhrzeigersinn
+
+
+def _durchgang_mit_tuer_gegenueber(breite, flur_m=2.0, ferne_m=0.8, halb=1.6):
+    """Zimmer (y < 0) mit Durchgang in der Wand y = 0, Flur, gegenüber eine Tür."""
+    return [(-2, -3, 2, -3), (2, -3, 2, 0), (-2, 0, -2, -3),
+            (-2, 0, -breite / 2, 0), (breite / 2, 0, 2, 0),
+            (-halb, 0, -halb, flur_m), (halb, 0, halb, flur_m),
+            (-halb, flur_m, -ferne_m / 2, flur_m), (ferne_m / 2, flur_m, halb, flur_m),
+            (-ferne_m / 2, flur_m, -ferne_m / 2 - 1, flur_m + 3),
+            (ferne_m / 2, flur_m, ferne_m / 2 + 1, flur_m + 3),
+            (-ferne_m / 2 - 1, flur_m + 3, ferne_m / 2 + 1, flur_m + 3)]
+
+
+@pytest.mark.parametrize('breite,abstand', [(1.1, 0.5), (1.1, 0.7), (1.25, 0.5), (1.25, 0.9)])
+def test_dicht_vor_einem_breiten_durchgang_bleibt_er(breite, abstand):
+    """Zweite Gegenprüfung Schritt 3: Eine Ausnahme für Lücken über 1,0 m und
+    über 60° verdrängte nahe Doppeltüren und Durchgänge durch die Tür gegenüber
+    (in nachgestellten Fällen 860 von 876)."""
+    gefunden = oeffnungen(*profil(_durchgang_mit_tuer_gegenueber(breite), (0.0, -abstand)))
+    assert len(gefunden) == 1
+    assert gefunden[0].mitte[1] == pytest.approx(abstand, abs=0.05)
+    assert gefunden[0].breite_m == pytest.approx(breite, abs=0.04)
+
+
+@pytest.mark.parametrize('blatt_grad', [110, 120])
+def test_hinter_der_tuer_mit_offenem_blatt_bleibt_die_tuer(blatt_grad):
+    """Zweite Gegenprüfung Schritt 3: 0,6 m hinter einer 0,82-m-Tür (dort steht
+    er nach einer Durchfahrt), das Blatt 110° bis 120° in den alten Raum offen,
+    hinten im alten Raum eine zweite Tür. Ein Suchlauf misst bis zur
+    Blattspitze 1,20 m; mit der Ausnahme über 1,0 m verdrängte die ferne Tür
+    die eben durchfahrene."""
+    tb, tiefe, fx = 0.82, 2.0, -1.0
+    welt = [(-2, 0, -tb / 2, 0), (tb / 2, 0, 2, 0), (-2, 0, -2, 3), (2, 0, 2, 3), (-2, 3, 2, 3),
+            (-2, 0, -2, -tiefe), (2, 0, 2, -tiefe),
+            (-2, -tiefe, fx - 0.375, -tiefe), (fx + 0.375, -tiefe, 2, -tiefe),
+            (fx - 0.375, -tiefe, fx - 0.375, -tiefe - 2),
+            (fx + 0.375, -tiefe, fx + 0.375, -tiefe - 2),
+            (fx - 0.375, -tiefe - 2, fx + 0.375, -tiefe - 2)]
+    laenge, g = tb - 0.04, math.radians(blatt_grad)
+    welt.append((tb / 2, 0, tb / 2 - laenge * math.cos(g), -laenge * math.sin(g)))
+    stand = (0.1, 0.6)
+    gefunden = oeffnungen(*profil(welt, stand))
+    assert len(gefunden) == 1
+    o = gefunden[0]
+    assert (o.mitte[0] + stand[0], o.mitte[1] + stand[1]) == pytest.approx((0.0, 0.0), abs=0.06)
+    assert o.breite_m == pytest.approx(0.83, abs=0.04)

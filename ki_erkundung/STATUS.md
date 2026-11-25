@@ -320,23 +320,31 @@ Konzept dazu v1.17 (§5, §6).
   herum“). Das war die Ursache von Lauf 2: Die Lücke am Fenster galt als
   346° breit und verdrängte die Labortür. Nachgestellt in Zufallszimmern:
   10 von 1500 hatten so eine Scheinlücke, alle mit vertauschten Kanten.
-- **Hinter einer breiten, nahen Lücke (über 1,0 m und über 60° im Blick)
-  werden Kanten nicht mehr übersprungen.** Mit der ersten Regel allein ging
-  in einem Zufallszimmer eine Tür verloren: Eine 1,29 m breite Lücke, die
-  vorher zufällig an der verkehrten Lot-Schätzung scheiterte, wurde nun
-  angenommen, und hinter ihr wurden die Kanten der Tür übersprungen. Zuerst
-  galt die Grenze nur nach Grad; die Gegenprüfung fand damit den
-  umgekehrten Fehler: Steht Amadeus dichter als etwa 0,7 m vor einer Tür
-  (sie umspannt dann über 60°) und liegt gegenüber eine zweite Tür, verdrängte
-  die ferne die nahe (in 348 von 493 nachgestellten Fällen). Eine Tür bis
-  1,0 m sperrt deshalb immer; damit bleibt die nahe Tür in allen 493 Fällen.
+- **Hinter einer türgroßen Lücke werden ihre Kanten weiter übersprungen,
+  wie vor Schritt 3.** Mit der ersten Regel allein gehen 3 von 9000
+  Zufallszimmern ihre Tür verloren: Eine nahe Lücke an Möbeln (1,18 m in
+  0,74 m, 1,24 m in 0,34 m, 1,29 m in 0,83 m), die vorher zufällig an der
+  verkehrten Lot-Schätzung scheiterte, wird nun angenommen, und hinter ihr
+  werden die Kanten der Tür übersprungen. Die KI bekommt dann die Lücke an
+  Möbeln statt der Tür. Ordnet sie die richtig ein, bleibt Amadeus stehen.
+  Zwei Ausnahmen dagegen wurden erprobt und wieder verworfen:
+  - nur bis 60° im Blick sperren: Steht Amadeus dichter als etwa 0,7 m vor
+    einer Tür und liegt gegenüber eine zweite, verdrängte die ferne die nahe
+    (348 von 493 nachgestellten Fällen);
+  - Lücken bis 1,0 m immer sperren, breitere nur bis 60°: Die zweite
+    Gegenprüfung fand nahe Doppeltüren und Durchgänge von 1,0 bis 1,3 m
+    verdrängt (860 von 876 Fällen über 60°), dazu Türen mit offenem Blatt,
+    bei denen ein Suchlauf bis zur Blattspitze über 1,0 m misst (0,6 m
+    hinter einer 0,82-m-Tür: 34 von 450 Fällen).
+  Der Fahrteil hätte in solchen Fällen durch beide Öffnungen geplant. Tests
+  halten jetzt beide Fälle fest (sie schlagen mit der Ausnahme fehl).
 - **Fast gleiche Mitten (unter 0,30 m) bekommen für die KI eine Nummer**
   (in Lauf 2 standen zwei Nummern 0,13 m auseinander). Der Fahrteil sieht
   weiter beide und prüft selbst, ob seine Wahl eindeutig ist.
 - Nachgerechnet an 9000 Zufallszimmern, alt gegen neu: Scheinlücken mit
-  verkehrten Kanten 64 → 0; Türen angeboten 5395 → 5426 (31 gewonnen,
-  keine verloren); Fenster 3698 → 3713; doppelte Nummern in der Liste an
-  die KI 1 → 0.
+  verkehrten Kanten 64 → 0; Türen angeboten 5395 → 5419 (27 gewonnen,
+  3 verloren, siehe oben); Fenster 3698 → 3707; doppelte Nummern in der
+  Liste an die KI 1 → 0.
 
 **Fahrteil (`werkzeuge/fahrziel_senden.py`):** Ist der zweite Pfosten nur
 aus dem Lot geschätzt, fährt er nie direkt hindurch; höchstens stellt er
@@ -361,7 +369,7 @@ lesen (Test schlägt mit dem alten Code fehl).
 
 **Gegenprüfung (vier unabhängige Prüfer: Vermessung, Fahrteil, Frage,
 Darstellung).** Gefunden und behoben:
-- **Nahe Tür verdrängt** (siehe oben, Regel nach Breite und Grad).
+- **Nahe Tür verdrängt** (siehe oben: die Ausnahme nur bis 60° ist verworfen).
 - **Doppelt eingeordnete Nummer:** Nannte die KI eine Nummer erst „fenster“,
   dann „tuer_offen“, galt die zweite Angabe, und die Wahl war gültig. Jetzt
   gilt eine widersprüchlich eingeordnete Nummer als „unklar“ und ist nicht
@@ -394,12 +402,22 @@ Darstellung).** Gefunden und behoben:
 - Schräg von rechts, mit einer Lot-Lücke im Blick, die nicht die Tür ist:
   die Tür gewählt, Anfahrt, hindurch.
 
-**Nachgerechnet mit dem fertigen Code (9000 Zufallszimmer):** wie oben,
-Scheinlücken 64 → 0, Türen 5395 → 5426, keine verloren; die nahe Tür mit
-Tür gegenüber bleibt in allen 493 Fällen über 60°.
+**Zweite Gegenprüfung (drei Prüfer, nach den Nachbesserungen):** fand die
+verworfenen Ausnahmen der Sperre (oben) und drei Punkte im Auftrag KI-F9R,
+alle behoben:
+- **Verworfene Fensterwahl unsichtbar:** Wählte die KI das Fenster und
+  verwarf die Prüfung die Antwort, ging die Nummer verloren; K-1 und K-2
+  hätten „trifft zu“ gezeigt. Jetzt hält die Prüfung die genannte Nummer
+  fest (`genannt`), und K-1/K-2 zählen sie.
+- Schritt 5 nannte den Ordnernamen statt des Rundennamens aus `meta.json`.
+- Schritt 6 zählte jeden Stacklauf doppelt (er steht in zwei Logs); jetzt
+  einmal je PID.
+Der Prüfer für Markierung und Fahrwerkzeug fand nichts.
 
-**Geprüft:** Tests 407 bestanden, 3 übersprungen (ohne ROS); 426 bestanden
-(ROS 2 Jazzy, abgeschottet); flake8 sauber; Quelltext auf Python 3.10
+**Geprüft:** Tests 414 bestanden, 3 übersprungen (ohne ROS); 433 bestanden
+(ROS 2 Jazzy, abgeschottet); flake8 sauber; an den acht gespeicherten Runden
+der Simulation misst die Vermessung nach der Rückkehr zur alten Sperre genau
+wie davor; Quelltext auf Python 3.10
 lesbar. **An echten Aufnahmen ist das noch nicht geprüft**; das tut der
 Auftrag KI-F9R.
 
@@ -1639,7 +1657,7 @@ KONZEPT §13.
 | 22.11.2026 | Fahrten ohne Nahsensoren | Simulation | siehe Abschnitt „Laborprobe ohne Nahsensoren“: Durchfahrt gelungen; gegen einen 20 cm hohen Gegenstand ungebremst gefahren |
 | 23.11.2026 | **KI-F5** | Jetson, Laborraum, mit Christopher | Build `kif5-20261123_0950`, Tests 350 und 264; ohne Nahsensoren im Stand wie vorgesehen; fünf Messungen „Aufstellung passt nicht“ (0,30 bis 0,33 m) bei mittig stehendem Roboter, Ursache das Werkzeug; keine Fahrt |
 | 23.11.2026 | Türachse aus der Wand, `--zur-tuer` | Entwicklungsumgebung, Simulation | Test mit den Zahlen aus KI-F5 (Kanten: 0,296 m, 7,3°; Wand: mittig); KI-Linie 258 bestanden, 2 übersprungen; 268 mit ROS; Simulation siehe Abschnitt KI-F5 |
-| 24.11.2026 | Sehen ohne Roboter repariert (Schritt 3 nach KI-F9) | Entwicklungsumgebung, 9000 Zufallszimmer, 1500 Fälle „nahe Tür“, Simulation | `8a15a11` und Nachtrag; Tests 407 bestanden, 3 übersprungen (ohne ROS), 426 (ROS 2 Jazzy); Scheinlücken 64 → 0, Türen 5395 → 5426, keine verloren; nahe Tür 493 von 493; drei Simulationen bis in den Flur ohne Berührung; Abschnitt „Sehen repariert“ |
+| 24.11.2026 | Sehen ohne Roboter repariert (Schritt 3 nach KI-F9) | Entwicklungsumgebung, 9000 Zufallszimmer, nachgestellte Fälle „nahe Tür“, „naher Durchgang“, „offenes Blatt“, Simulation | `8a15a11`, `7bb2deb` und Nachtrag; Scheinlücken 64 → 0, Türen 5395 → 5419 (27 gewonnen, 3 verloren); nahe Türen, Durchgänge und Türen mit Blatt wie vor Schritt 3; zwei Gegenprüfungen; drei Simulationen bis in den Flur ohne Berührung; Abschnitt „Sehen repariert“ |
 
 **Gemessen an der künstlichen Beispielwelt** (ausgedachtes Zimmer mit
 80-cm-Tür, 90-cm-Glastür zum Balkon, Schränken, Kiste; LiDAR-Rauschen 1 cm):

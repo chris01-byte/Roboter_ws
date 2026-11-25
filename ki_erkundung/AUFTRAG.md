@@ -10,10 +10,9 @@ Minuten, Fotos ansehen) und falls der Lotse nicht bereit ist.
 **Warum es ihn gibt:** Das Sehen ist ohne Roboter repariert (Schritt 3 der
 Reihenfolge, Abschnitt „Sehen repariert“ im [STATUS](STATUS.md)):
 1. **Vermessung:** keine Lücke über 180° und keine Lot-Schätzung mit
-   vertauschten Kanten mehr (die Ursache von Lauf 2 in KI-F9); hinter einer
-   breiten, nahen Lücke (über 1,0 m und über 60°) werden Kanten nicht mehr
-   übersprungen; zwei Lücken mit fast derselben Mitte (unter 0,30 m)
-   bekommen für die KI nur eine Nummer.
+   vertauschten Kanten mehr (die Ursache von Lauf 2 in KI-F9); zwei Lücken
+   mit fast derselben Mitte (unter 0,30 m) bekommen für die KI nur eine
+   Nummer.
 2. **Darstellung:** Nummern, die sich im Foto verdecken würden, werden
    auseinandergeschoben und mit einer Linie mit ihrer Stelle verbunden.
 3. **Frage an die KI (Fassung 2):** kein Beispiel mehr zum Abschreiben, erst
@@ -78,16 +77,16 @@ mit zweiter Kante „lot“ (so in KI-F9N gefunden).
 
 | Kennung | Erwartung |
 |---|---|
-| T-1 Tests | Tests der KI-Linie unter Humble: `0 failed` (hier unter ROS 2 Jazzy: 426 bestanden) |
+| T-1 Tests | Tests der KI-Linie unter Humble: `0 failed` (hier unter ROS 2 Jazzy: 433 bestanden) |
 | V-1 Tür in Lauf 2 | `vermessung_neu.md`, Lauf 2: angeboten ist eine Öffnung 0,78 bis 0,92 m breit bei +25° bis +40° (die Labortür) |
 | V-2 Scheinlücke weg | `vermessung_neu.md`, Lauf 2: keine angebotene Öffnung mehr 0,82 m bei −174° (±3°); in `vermessung_neu_alle.md`, Lauf 2, steht dort der Vermerk `lot_verkehrt` oder der Grund „Kanten verkehrt herum“ |
 | V-3 nichts verloren | Jede Öffnung, die `vermessung_alt.md` in einer Runde anbietet und `vermessung_neu.md` in derselben Runde nicht (gleiche Öffnung heißt: Richtung ±3°, Breite ±0,10 m), ist entweder (a) die Scheinlücke aus V-2 oder (b) eine zweite Nummer an fast derselben Stelle (in `vermessung_neu.md` gibt es eine Öffnung mit Richtung ±5° und Entfernung ±0,3 m). Jede andere verschwundene Öffnung ist ein Befund. Neu hinzugekommene Öffnungen werden nur aufgezählt |
-| K-1 KI in Lauf 2 | `ki_nummern.txt`, „neu“, Lauf 2: Die KI wählt die Nummer der Labortür (0,78 bis 0,92 m bei +25° bis +40°) oder keine; nie eine Nummer, deren Richtung mehr als 150° von vorn abweicht (Fenster) |
-| K-2 keine falsche Wahl | `auswertung_neu.md`: K0-1 „falsch“ ist 0 und K0-2 hat keine gefährliche Wahl |
+| K-1 KI in Lauf 2 | `ki_nummern.txt`, „neu“, Lauf 2: Die KI nennt als Wahl (Spalte „genannt“, zählt auch, wenn die Prüfung die Antwort verwarf) die Nummer der Labortür (0,78 bis 0,92 m bei +25° bis +40°) oder keine; nie eine Nummer, deren Richtung mehr als 150° von vorn abweicht (Fenster) |
+| K-2 keine falsche Wahl | `auswertung_neu.md`: K0-1 „falsch“ ist 0 und K0-2 hat keine gefährliche Wahl; dazu in `ki_nummern.txt`, „neu“: in keiner KI-F9-Runde nennt die KI als Wahl eine Nummer, die Christopher in Schritt 5 nicht als offenen Ausgang nennt (auch nicht in einer verworfenen Antwort; die Auswertung zählt verworfene Antworten nicht) |
 | K-3 nicht vorsichtiger als nötig | `auswertung_neu.md`: K0-1 „richtig“ ist höchstens um 1 kleiner als in `auswertung_alt.md` |
 | K-4 nichts abgeschrieben | in `ki_neu/ergebnis.json` keine Antwort mit den Platzhaltern SATZ oder RAUM aus dem Muster (Prüfzeile in Schritt 4); Antworten mit einer Nummer, die nicht angeboten war (etwa der 0 aus dem Muster), werden nur gezählt |
 | K-5 Form und Zeit | `auswertung_neu.md`: K0-3 (verworfene Antworten) höchstens 10 %; K0-4 wird nur berichtet |
-| E-1 Torwächter | keine Erwartung: gezählt wird je altem Log, wie `cmd_vel_mission_gate` endete |
+| E-1 Torwächter | keine Erwartung: gezählt wird je Stacklauf (an der PID erkannt, nicht je Logdatei; derselbe Lauf steht oft in zwei Logs), wie `cmd_vel_mission_gate` endete |
 
 Gesamt: **G-1: T-1, V-1, V-2, V-3, K-1, K-2 und K-4 treffen zu.** K-3 und
 K-5 sind Hinweise für die nächste Entscheidung, keine Bedingung.
@@ -212,15 +211,21 @@ for pfad, fassung in zip(sys.argv[1:], ('alt', 'neu')):
                   f"im Foto: {'ja' if im_foto.get(str(o['nr'])) else 'nein'}")
         for a in r.get('antworten', []):
             p = a.get('pruefung') or {}
-            print(f"  KI: Wahl {p.get('wahl')}, Einordnung {p.get('arten')}, "
-                  f"gültig {p.get('gueltig')}, Fehler {a.get('fehler') or p.get('fehler') or '-'}")
+            # genannt: die Nummer, die die KI als Wahl nannte, auch wenn die
+            # Prüfung die Antwort verwarf (nur die neue Fassung kennt das Feld)
+            print(f"  KI: Wahl {p.get('wahl')}, genannt {p.get('genannt', '-')}, "
+                  f"Einordnung {p.get('arten')}, gültig {p.get('gueltig')}, "
+                  f"Fehler {a.get('fehler') or p.get('fehler') or '-'}")
 PY
 ```
 
 ## Schritt 5 – Christophers Angaben zu den KI-F9-Runden (neue Nummern)
 
-Für jede Runde in `auswahl.txt`, die mit `kif9_` beginnt und noch keine
-`wahrheit.json` hat: das Blatt `$KI/ki_neu/<Runde>/uebersicht.jpg` in einem
+Für jede KI-F9-Runde, die noch keine `wahrheit.json` hat. **Name der Runde**
+ist der Name, den `ki_neu.txt` und `ki_nummern.txt` nennen (aus `meta.json`,
+zum Beispiel `kif9_lauf2`); der Ordnername in `auswahl.txt` hat zusätzlich
+Datum und Uhrzeit und passt hier nicht. Das Blatt
+`$KI/ki_neu/<Name der Runde>/uebersicht.jpg` in einem
 gewöhnlichen Fenster zeigen (siehe Regeln), dazu die Zeilen dieser Runde aus
 `ki_neu.txt` **ohne** die Wahl der KI. Dann fragen, je einzeln, als Text,
 Antworten wörtlich notieren:
@@ -243,7 +248,7 @@ python3 ki_erkundung/werkzeuge/wahrheit_eintragen.py --ergebnis "$KI/ki_neu/erge
   --name RUNDE --ausgaenge NR … --arten NR=ART … --ausgang-ohne-nummer JA_ODER_NEIN --bemerkung "WÖRTLICH"
 ```
 
-Die Großbuchstaben sind Platzhalter: `RUNDE` der Name der Runde, `NR` die
+Die Großbuchstaben sind Platzhalter: `RUNDE` der Name der Runde (siehe oben, ohne Datum und Uhrzeit), `NR` die
 Nummern (bei keinem Ausgang `--ausgaenge` ohne Nummer), `JA_ODER_NEIN`
 entweder `ja` oder `nein`, `WÖRTLICH` Christophers Antworten im Wortlaut.
 
@@ -267,14 +272,18 @@ done; cat "$KI/auswertung_alt.md" "$KI/auswertung_neu.md"
 source ~/roboter_worktrees/kif8.env; KI=~/ki_trockenlauf_kif9r
 { find "$SH_PR" -name launch.log; find ~/.ros/log -maxdepth 2 -name launch.log -newermt 2026-11-01; } 2>/dev/null \
   | sort -u > "$KI/logs.txt"; wc -l < "$KI/logs.txt"
+# Derselbe Stacklauf steht oft in zwei Logs (umgeleitet und unter ~/.ros/log).
+# Jedes Ende zählt deshalb einmal, erkannt an Name und PID des Prozesses.
+xargs -r -d '\n' grep -ohE "\[[A-Za-z0-9_]+-[0-9]+\]: process has (died \[pid [0-9]+, exit code -?[0-9]+|finished cleanly \[pid [0-9]+)" \
+  < "$KI/logs.txt" 2>/dev/null \
+  | sed -E -e 's/^\[([A-Za-z0-9_]+)-[0-9]+\]: process has died \[pid ([0-9]+), exit code (-?[0-9]+)$/\1 \2 exit=\3/' \
+           -e 's/^\[([A-Za-z0-9_]+)-[0-9]+\]: process has finished cleanly \[pid ([0-9]+)$/\1 \2 sauber/' \
+  | sort -u > "$KI/enden.txt"
+awk '{print $1, $3}' "$KI/enden.txt" | sort | uniq -c | sort -rn | tee "$KI/gestorben.txt"
 while read -r f; do
-  sauber=$(grep -cE "cmd_vel_mission_gate[^]]*\]: process has finished cleanly" "$f")
-  m11=$(grep -cE "cmd_vel_mission_gate[^]]*\]: process has died .*exit code -11" "$f")
-  tot=$(grep -cE "cmd_vel_mission_gate[^]]*\]: process has died" "$f")
-  [ $((sauber + tot)) -gt 0 ] && echo "$(date -r "$f" '+%F %T') sauber=$sauber exit-11=$m11 anders=$((tot - m11)) ${f#$HOME/}"
-done < "$KI/logs.txt" | sort | tee "$KI/gate_ende.txt"
-xargs -r -d '\n' grep -ohE "\[[A-Za-z0-9_]+-[0-9]+\]: process has died \[pid [0-9]+, exit code -?[0-9]+" < "$KI/logs.txt" 2>/dev/null \
-  | sed -E 's/^\[([A-Za-z0-9_]+)-[0-9]+\].*exit code (-?[0-9]+)$/\1 exit=\2/' | sort | uniq -c | sort -rn | tee "$KI/gestorben.txt"
+  p=$(grep -ohE "cmd_vel_mission_gate-[0-9]+\]: process has (died|finished)[^]]*\[pid [0-9]+" "$f" | grep -oE "[0-9]+$" | tr '\n' ' ')
+  [ -n "$p" ] && echo "$(date -r "$f" '+%F %T') PID $p${f#$HOME/}"
+done < "$KI/logs.txt" | sort | tee "$KI/gate_logs.txt"
 ```
 
 Nur zählen, nichts deuten, nichts ändern.
@@ -305,7 +314,8 @@ Koordinaten und Adressen, ohne den Inhalt der Wahl-Dateien:
    `muster_pruefung.txt`, `ki_nummern.txt` ganz.
 4. Schritt 5: je Runde Christophers Antworten wörtlich und der Befehl.
 5. `auswertung_alt.md` und `auswertung_neu.md` ganz.
-6. `gate_ende.txt` und `gestorben.txt` ganz.
+6. `gestorben.txt`, `gate_logs.txt` und die Zeilen `cmd_vel_mission_gate`
+   aus `enden.txt` ganz.
 7. Die Tabelle T-1, V-1, V-2, V-3, K-1 bis K-5, E-1 mit dem Gemessenen und
    „trifft zu“ oder „trifft nicht zu“, dazu G-1.
 8. Alles, was nicht lief oder abwich, mit Meldung. Keine Deutung.

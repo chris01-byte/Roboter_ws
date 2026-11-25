@@ -28,15 +28,6 @@ TUERBREIT_M = 1.3
 # Nur für die Liste an die KI; der Fahrteil sieht beide und prüft selbst, ob
 # seine Wahl eindeutig ist.
 MITTEN_GLEICH_M = 0.30
-# Hinter einer türgroßen Lücke werden ihre Kanten übersprungen: So verdrängt eine
-# Tür, die man durch eine nahe Tür hindurch sieht, die nahe nicht. Ausnahme: eine
-# breite Lücke (über SPERRE_BREIT_M), die im Blickwinkel mehr als SPERRE_MAX_GRAD
-# umspannt. Eine so nahe Lücke zu einem frei stehenden Möbel verdeckte sonst die
-# Tür dahinter (Bewertung nach KI-F9, §2; Zufallszimmer 589). Eine nahe Tür bis
-# 1,0 m sperrt immer; mit der Grenze allein nach Grad verdrängte die Tür
-# gegenüber die nahe in 348 von 493 Fällen (Gegenprüfung Schritt 3).
-SPERRE_MAX_GRAD = 60.0
-SPERRE_BREIT_M = 1.0
 
 # Wie die zweite Kante einer Öffnung gefunden wurde.
 SCHLUSS_SPRUNG = 'sprung'      # die Entfernung springt wieder nach vorn
@@ -93,8 +84,7 @@ def _suche(w: np.ndarray, r: np.ndarray, *, min_breite_m: float,
            max_abstand_m: float, weit_m: float, max_spanne_grad: float,
            anteil_frei: float, anteil_frei_linie: float,
            linie_toleranz_m: float, tuerbreit_m: float, blatt_min_m: float,
-           blatt_max_m: float, sperre_max_grad: float = SPERRE_MAX_GRAD,
-           sperre_breit_m: float = SPERRE_BREIT_M) -> Tuple[List[dict], List[dict]]:
+           blatt_max_m: float) -> Tuple[List[dict], List[dict]]:
     """Öffnungen in aufsteigender Winkelrichtung suchen (eine Durchlaufrichtung).
 
     Rückgabe: (angenommene Lücken, abgelehnte Lücken mit Grund). Abgelehnt
@@ -421,9 +411,10 @@ def _suche(w: np.ndarray, r: np.ndarray, *, min_breite_m: float,
         # weitersuchen: Dort kann die eigentliche Tür liegen. Am 21.11.2026
         # wurde eine offene Tür in 4–5 m nicht angeboten, nur die 2,25 m
         # breite Möbellücke davor.
-        if beste['breite'] <= tuerbreit_m and (
-                beste['breite'] <= sperre_breit_m
-                or versatz * schritt <= math.radians(sperre_max_grad)):
+        # Bleibt so, auch hinter einer nahen, breiten Lücke (Schritt 3 nach KI-F9):
+        # Eine Ausnahme nach Grad und Breite verdrängte nahe Türen und Durchgänge
+        # durch die Tür dahinter (Gegenprüfungen; Zahlen im STATUS).
+        if beste['breite'] <= tuerbreit_m:
             gesperrt_bis = a + versatz
     return gefunden, abgelehnt
 
@@ -487,9 +478,7 @@ def oeffnungen(winkel_rad, entfernung_m, *,
                anteil_frei_linie: float = 0.6, linie_toleranz_m: float = 0.06,
                tuerbreit_m: float = TUERBREIT_M, blatt_min_m: float = 0.5,
                blatt_max_m: float = 1.1, max_anzahl: int = 8,
-               mitten_gleich_m: float = 0.0,
-               sperre_max_grad: float = SPERRE_MAX_GRAD,
-               sperre_breit_m: float = SPERRE_BREIT_M) -> List[Oeffnung]:
+               mitten_gleich_m: float = 0.0) -> List[Oeffnung]:
     """Öffnungen in einem Rundum-Profil finden.
 
     ``winkel_rad``: aufsteigende, gleichmäßige Richtungen, gesehen vom Punkt
@@ -518,9 +507,6 @@ def oeffnungen(winkel_rad, entfernung_m, *,
     ``mitten_gleich_m``: Lücken, deren Mitten näher liegen, gelten als
     dieselbe Öffnung (die schmalere bleibt). Für die Liste an die KI
     ``MITTEN_GLEICH_M``; der Fahrteil lässt 0 und prüft Eindeutigkeit selbst.
-    ``sperre_max_grad``, ``sperre_breit_m``: Kanten hinter einer türgroßen
-    Lücke werden übersprungen, wenn sie höchstens ``sperre_breit_m`` breit ist
-    oder im Blickwinkel höchstens ``sperre_max_grad`` umspannt.
 
     Rückgabe: höchstens ``max_anzahl`` Öffnungen im Standpunktrahmen,
     nummeriert ab 1 in Drehrichtung gegen den Uhrzeigersinn, beginnend bei
@@ -538,8 +524,7 @@ def oeffnungen(winkel_rad, entfernung_m, *,
                  weit_m=weit_m, max_spanne_grad=max_spanne_grad,
                  anteil_frei=anteil_frei, anteil_frei_linie=anteil_frei_linie,
                  linie_toleranz_m=linie_toleranz_m, tuerbreit_m=tuerbreit_m,
-                 blatt_min_m=blatt_min_m, blatt_max_m=blatt_max_m,
-                 sperre_max_grad=sperre_max_grad, sperre_breit_m=sperre_breit_m)
+                 blatt_min_m=blatt_min_m, blatt_max_m=blatt_max_m)
     alle, abgelehnt = _suche(w, r, **werte)
     rueck, rueck_abgelehnt = _suche(-w[::-1], r[::-1], **werte)   # gespiegelt, also rückwärts
     alle += [_gespiegelt(g) for g in rueck]

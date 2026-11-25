@@ -35,6 +35,10 @@ class Pruefung:
     gefahren: List[str] = field(default_factory=list)
     fehler: List[str] = field(default_factory=list)       # Gründe für „verworfen“
     toleriert: List[str] = field(default_factory=list)    # hingenommene Abweichungen
+    # Die Nummer, die die KI als Wahl nannte, auch wenn die Antwort verworfen
+    # wird: Sonst ist eine verworfene Fensterwahl in der Auswertung nicht mehr
+    # zu sehen (zweite Gegenprüfung Schritt 3).
+    genannt: Optional[int] = None
 
     def als_dict(self) -> dict:
         return {
@@ -43,7 +47,7 @@ class Pruefung:
             'sicherheit': {str(k): round(v, 2) for k, v in sorted(self.sicherheit.items())},
             'raum': self.raum, 'begruendung': self.begruendung,
             'gefahren': self.gefahren, 'fehler': self.fehler,
-            'toleriert': self.toleriert,
+            'toleriert': self.toleriert, 'genannt': self.genannt,
         }
 
 
@@ -154,9 +158,10 @@ def pruefe(antwort_text, angeboten: Sequence[int],
         if nr is None:
             return Pruefung(gueltig=False, fehler=['wahl_unlesbar'])
         if nr not in angeboten:
-            return Pruefung(gueltig=False, fehler=['wahl_nicht_angeboten'])
+            return Pruefung(gueltig=False, fehler=['wahl_nicht_angeboten'], genannt=nr)
         if waehlbar is not None and nr not in [int(n) for n in waehlbar]:
-            return Pruefung(gueltig=False, fehler=['wahl_nicht_im_foto'])
+            return Pruefung(gueltig=False, fehler=['wahl_nicht_im_foto'], genannt=nr)
+        ergebnis.genannt = nr
         if isinstance(roh, str):
             ergebnis.toleriert.append('wahl_als_text')
         elif isinstance(roh, float):

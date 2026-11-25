@@ -203,12 +203,14 @@ Seit dem ersten echten Lauf (21.11.2026) gilt dazu:
   Die „Lücke“ umspannte fast die ganze Runde (in KI-F9, Lauf 2, 346°) und
   verdrängte die echte Tür. Solche Lot-Schätzungen werden verworfen, Lücken
   über 180° ebenso. Hinter einer türgroßen Lücke werden ihre Kanten weiter
-  übersprungen (so verdrängt eine Tür, die man durch eine nahe Tür sieht,
-  die nahe nicht), außer hinter einer Lücke über 1,0 m Breite, die mehr als
-  60° umspannt: Eine so nahe Lücke zu einem Möbel verdeckte sonst die Tür
-  dahinter. Nachgerechnet an 9000 zufälligen Zimmern: 64
-  solche Phantome vorher, keines nachher; 31 Türen mehr gefunden, keine
-  verloren. Liegen zwei Öffnungen mit fast derselben Mitte (unter 0,30 m)
+  übersprungen, wie vorher: So verdrängt eine Tür, die man durch eine nahe
+  Tür oder einen nahen Durchgang sieht, die nahe nicht. Eine Ausnahme für
+  nahe, breite Lücken wurde erprobt und wieder verworfen (sie verdrängte nahe
+  Durchgänge und Türen mit offenem Blatt). Nachgerechnet an 9000 zufälligen
+  Zimmern: 64 solche Phantome vorher, keines nachher; 27 Türen mehr
+  gefunden, 3 verloren. In den 3 Fällen bekommt die KI statt der Tür eine
+  nahe Lücke an Möbeln oder eine Lot-Lücke; ordnet sie die richtig ein,
+  bleibt Amadeus stehen. Liegen zwei Öffnungen mit fast derselben Mitte (unter 0,30 m)
   übereinander, bekommt die KI nur eine Nummer.
 - **Nicht direkt durch eine geschätzte Öffnung (seit 24.11.2026).** Ist der
   zweite Pfosten nur aus dem Lot geschätzt, fährt der Fahrteil höchstens
@@ -743,8 +745,8 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
 - 24.11.2026, v1.17 (Zustimmung des Projektinhabers zur Reihenfolge nach
   KI-F9N, „Ja beginne“): Sehen ohne Roboter repariert. §5: keine Lücke über
   180° und keine Lot-Schätzung mit vertauschten Kanten (Ursache des
-  346°-Phantoms aus KI-F9, Lauf 2); hinter einer breiten, nahen Lücke
-  (über 1,0 m, über 60°) werden Kanten nicht mehr übersprungen; fast gleiche Mitten bekommen eine Nummer; Nummern im Bild
+  346°-Phantoms aus KI-F9, Lauf 2); fast gleiche Mitten bekommen eine
+  Nummer; Nummern im Bild
   verdecken sich nicht mehr; durch eine Lot-Öffnung nie direkt. §6: Frage
   in Fassung 2 (Muster ohne Werte, erst einordnen, dann wählen, Arten
   `fenster` und `moebel`, lieber keine Wahl als eine falsche); die

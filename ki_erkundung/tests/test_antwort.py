@@ -160,6 +160,8 @@ def test_doppelt_eingeordnete_nummer_gilt_als_unklar_und_ist_nicht_waehlbar():
     p = pruefe(antwort(wahl=2, kandidaten=kandidaten), ANGEBOTEN)
     assert not p.gueltig and p.fehler == ['wahl_widerspricht_einordnung'] and p.wahl is None
     assert p.arten[2] == 'unklar' and 'nummer_doppelt_eingeordnet' in p.toleriert
+    # die genannte Nummer bleibt sichtbar, obwohl die Wahl verworfen ist
+    assert p.genannt == 2 and p.als_dict()['genannt'] == 2
     # dieselbe Art zweimal ist kein Widerspruch
     gleich = [{'nr': 2, 'art': 'tuer_offen'}, {'nr': 2, 'art': 'tuer_offen'}]
     p = pruefe(antwort(wahl=2, kandidaten=gleich), ANGEBOTEN)
@@ -172,3 +174,14 @@ def test_fenster_und_moebel_sind_nie_ein_ausgang(art):
     p = pruefe(antwort(wahl=2, kandidaten=kandidaten), ANGEBOTEN)
     assert not p.gueltig and p.fehler == ['wahl_widerspricht_einordnung']
     assert pruefe(antwort(wahl=None, kandidaten=kandidaten), ANGEBOTEN).arten[2] == art
+
+
+def test_genannte_nummer_bleibt_auch_bei_verworfener_wahl_sichtbar():
+    """Zweite Gegenprüfung Schritt 3: Ohne sie sah der Auftrag KI-F9R eine
+    verworfene Fensterwahl als „keine Wahl“."""
+    assert pruefe(antwort(wahl=3), ANGEBOTEN).genannt == 3            # Glas, verworfen
+    assert pruefe(antwort(wahl=7), ANGEBOTEN).genannt == 7            # nicht angeboten
+    assert pruefe(antwort(wahl=2), ANGEBOTEN, waehlbar=[1]).genannt == 2
+    p = pruefe(antwort(wahl=2), ANGEBOTEN)
+    assert p.gueltig and p.wahl == p.genannt == 2
+    assert pruefe(antwort(wahl=None), ANGEBOTEN).genannt is None
