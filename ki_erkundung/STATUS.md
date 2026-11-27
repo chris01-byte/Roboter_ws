@@ -1,6 +1,17 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 24.11.2026 (spät nachts): Sehen ohne Roboter repariert, Auftrag
+**Stand 27.11.2026: KI-F9R ausgeführt – das reparierte Sehen hält an den
+echten Aufnahmen.** Nichts ist gefahren, kein Sensor lief. In Lauf 2 aus
+KI-F9 hat die Labortür jetzt eine Nummer, und die KI wählt sie; mit dem
+alten Stand wiederholte sich der Fehler genau (Wahl der Fensterlücke). In
+keiner der 19 Runden ging eine Öffnung verloren. G-1 trifft trotzdem nicht
+zu: Eine Erwartung (V-2) war falsch gefasst, und die KI wählt mit der neuen
+Frage in einer alten Seitenansicht die Nummer auf dem Mauerwerk neben einer
+halb geschlossenen Tür (K-2). Der Torwächter endete in 88 Stackläufen nur
+einmal mit dem Speicherzugriffsfehler (Abschnitt „KI-F9R“ unten). Kein
+offener Auftrag; der nächste Schritt wird mit Christopher besprochen.
+
+**Davor, 24.11.2026 (spät nachts): Sehen ohne Roboter repariert, Auftrag
 KI-F9R erteilt.** Christopher: „Ja beginne“. Die Vermessung baut keine
 Lücke mit verkehrten Kanten mehr (die Ursache von Lauf 2), Nummern im Bild
 verdecken sich nicht mehr, und die Frage an die KI hat kein Beispiel zum
@@ -213,10 +224,10 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Offener Auftrag: [KI-F9R](AUFTRAG.md)** (Nachrechnen am Jetson, ohne
-Sensoren und ohne Motoren). Die Reihenfolge aus der
-[Bewertung](BEWERTUNG_KIF9.md) §10, von Christopher am 24.11.2026 bestätigt
-(„Ja beginne“); Schritt 1 und 2 sind erledigt, Schritt 3 ist gebaut:
+**Kein offener Auftrag.** KI-F9R ist ausgeführt (Abschnitt unten). Die
+Reihenfolge aus der [Bewertung](BEWERTUNG_KIF9.md) §10, von Christopher am
+24.11.2026 bestätigt („Ja beginne“), mit dem Realtest des neuen Sehens vor
+dem Nachfassen; Schritt 1 bis 3 sind erledigt:
 1. **Werkzeuge robust machen** – **gebaut und gegengeprüft 24.11.2026**
    (Abschnitt „Werkzeuge robust gemacht“ unten; am Jetson noch nicht
    erprobt):
@@ -230,17 +241,22 @@ Sensoren und ohne Motoren). Die Reihenfolge aus der
    belegt; Belege und `messen` am Jetson noch nicht erprobt.
 3. **Sehen ohne Roboter verbessern** – **gebaut 24.11.2026** (Abschnitt
    „Sehen repariert“ unten): Vermessung, Darstellung der Nummern, Frage
-   (Fassung 2), Lot nie direkt durchfahren. **Nachrechnen an den
-   gespeicherten Runden: Auftrag KI-F9R.** Danach, falls nötig: heutiges
-   Modell gegen Qwen3.8-27B; eine zweite Meinung als Veto.
-4. **KI-F10 „Nachfassen im Stand“**, eine Verhaltensänderung: die Regeln
+   (Fassung 2), Lot nie direkt durchfahren. **Nachgerechnet an den
+   gespeicherten Runden: KI-F9R, 27.11.2026** (Lauf 2 behoben, nichts
+   verloren, eine neue Fehlwahl in einer Seitenansicht). Falls nötig:
+   heutiges Modell gegen Qwen3.8-27B; eine zweite Meinung als Veto.
+4. **KI-F11 – das neue Sehen am Roboter** (vorgeschlagen, nicht
+   beauftragt): wie KI-F9, die KI wählt und Christopher sagt ja oder nein;
+   eine Verhaltensänderung, das neue Sehen. Dazu ein Vorlauf mit Blick auf
+   die Tür (für `messen` und die Belege) und ein fester Platz für
+   Christopher während des Rundblicks.
+5. **KI-F10 „Nachfassen im Stand“**, eine Verhaltensänderung: die Regeln
    des Werkzeugs vor dem Senden (Wiederfinden in Stufen, Wegvarianten mit
    Ansage, durch die Tür nur nach frontaler Messung mit zwei Kanten).
    Erkunder und Schutzkette bleiben unverändert. Danach ein bis zwei Starts
    auf der Seite des Türblatts: gebaut am 23.11., am Roboter noch nie
    geprüft, kein neuer Code.
-5. Danach KI-F11 (das verbesserte Sehen am Roboter), Nahsensoren wieder an,
-   „Pause statt Ende“ im Erkunder, Flur.
+6. Danach Nahsensoren wieder an, „Pause statt Ende“ im Erkunder, Flur.
 
 **Christophers Ja bleibt vor jeder Fahrt.** Die frühere Zeile „Zweimal
 gelungen: Christophers Ja entfällt“ ist überholt. Vorschlag der Bewertung:
@@ -307,6 +323,56 @@ auf dem KI-Rechner in Gebrauch · Sucher · Schalter „nur Rundblick“ im
 Erkunder (21.11., `6956252`) · Bestand der Türdurchfahrten · Etappenfahrt
 gebaut und simuliert (21.11., nachts) · KI-1: erste Drehung und Blickrunde
 am Roboter (21.11., nachts).
+
+## KI-F9R – Nachrechnen nach der Reparatur des Sehens (Jetson, 27.11.2026, 18:01 bis 18:29)
+
+Auftrag und Ergebnis im Archiv:
+[archiv/20261127-kif9r-nachrechnen/](archiv/20261127-kif9r-nachrechnen/).
+Kein Stack, kein Sensor, kein Motor, kein Build; 19 gespeicherte Runden,
+davon 17 mit Angaben Christophers an die KI (`qwen3.5:9b`), alt (`282ae29`)
+gegen neu (`9e2cb17`). Tests unter Humble: 433 bestanden.
+
+**Vermessung:**
+- Lauf 2: angeboten sind jetzt die Labortür (0,84 m bei +33,8° in 2,33 m,
+  „linie“), eine 1,75-m-Lücke an einer Pflanze und die zweite Fensterlücke
+  (0,83 m, „lot“). Die Scheinlücke (0,82 m bei −173,7°) ist weg (V-1 trifft
+  zu).
+- In keiner der 19 Runden ging eine angebotene Öffnung verloren (V-3).
+- V-2 trifft nicht zu, weil die Erwartung falsch gefasst war: Eine
+  Lot-Schätzung mit verkehrten Kanten wird verworfen, bevor eine Lücke
+  entsteht, und bekommt keine eigene Zeile im Prüftext. Ihr Vermerk
+  `lot_verkehrt` steht an einer anderen Lücke derselben Kante, falls diese
+  anders geschlossen wird; so tragen jetzt 13 Zeilen den Vermerk, auch
+  angebotene Türen (vorher stand dort meist `tuer_…`). Das Netz „über 180°“
+  hat an echten Daten nie gegriffen.
+
+**Die KI (neue Frage):**
+- In allen fünf KI-F9-Runden wählt sie Nr. 1, die Christopher jedes Mal als
+  offene Labortür nennt, auch in Lauf 2 (K-1). Mit der alten Frage und
+  Vermessung wählte sie in Lauf 2 wie in KI-F9 die Fensterlücke als „offene
+  Tür“.
+- K0-1 richtig: alt 13, neu 14 von 16 (81 % → 88 %); K0-2: alt eine Wahl auf
+  ein Fenster, neu keine; nichts abgeschrieben, keine Antwort verworfen,
+  Median 1,8 s.
+- **Neue Fehlwahl (K-2):** In `labor_tuer_seite_nah` (Tür halb zu; Nr. 1 laut
+  Christopher am 21.11. „Mauerwerk neben der Tür“) ordnet sie Nr. 1 als
+  offene Tür ein und wählt sie; mit der alten Frage hieß es „wand“. In der
+  zweiten Aufnahme derselben Ansicht gilt dieselbe Wahl als richtig.
+- Einordnung: In Lauf 2 nennt sie die Lücke an der Pflanze „durchgang“
+  (nicht gewählt; zum Fahren wäre sie zu breit).
+
+**Christophers Angaben zu den KI-F9-Runden** (jetzt als `wahrheit.json`
+eingetragen): Nr. 1 überall die offene Labortür; sonst Stuhl, Hängeregal,
+Pflanze, Stuhl und Hängeschrank, in Lauf 2 Nr. 3 das Fenster mit Rollo;
+kein Ausgang ohne Nummer. Zu Lauf 1, Nr. 2: „kommt zwei mal vor einmal ein
+Stuhl und einmal ein Hängeregal“ (die Nummer steht in zwei Fotos; offen, ob
+an derselben Stelle).
+
+**Torwächter (`cmd_vel_mission_gate`):** In 88 Stackläufen seit 02.11.
+86-mal sauber beendet, einmal `exit code -11` (KI-F9N, 24.11.), einmal
+`-9` (15.11.). Kein regelmäßiges Muster; der Baustein gehört zur Hauptlinie
+und wird von der KI-Linie nicht geändert. Damit ist der offene Punkt aus
+KI-F9N beantwortet.
 
 ## Sehen repariert (gebaut 24.11.2026, Schritt 3 nach KI-F9)
 
@@ -445,7 +511,7 @@ Nichts gefahren, keine Motorsteuerung im Stack, kein Build.
 - Beim Beenden des Stacks (nach Strg+C) endete `cmd_vel_mission_gate` mit
   „exit code -11“ (Speicherzugriffsfehler beim Herunterfahren). Das ist ein
   Baustein der Hauptlinie im Sicherheitsbereich; die KI-Linie ändert ihn
-  nicht. Offen: ob das bei jedem Beenden geschieht (alte Logs lesen).
+  nicht. Ob das bei jedem Beenden geschieht: nein, beantwortet in KI-F9R (einmal in 88 Läufen).
 
 **Lauf 2 (Fensterrollo): Ursache mit Zahlen belegt.** Angeboten waren nur
 zwei Lücken am Fenster, beide mit geschätztem zweitem Pfosten („lot“):
@@ -1658,6 +1724,7 @@ KONZEPT §13.
 | 23.11.2026 | **KI-F5** | Jetson, Laborraum, mit Christopher | Build `kif5-20261123_0950`, Tests 350 und 264; ohne Nahsensoren im Stand wie vorgesehen; fünf Messungen „Aufstellung passt nicht“ (0,30 bis 0,33 m) bei mittig stehendem Roboter, Ursache das Werkzeug; keine Fahrt |
 | 23.11.2026 | Türachse aus der Wand, `--zur-tuer` | Entwicklungsumgebung, Simulation | Test mit den Zahlen aus KI-F5 (Kanten: 0,296 m, 7,3°; Wand: mittig); KI-Linie 258 bestanden, 2 übersprungen; 268 mit ROS; Simulation siehe Abschnitt KI-F5 |
 | 24.11.2026 | Sehen ohne Roboter repariert (Schritt 3 nach KI-F9) | Entwicklungsumgebung, 9000 Zufallszimmer, nachgestellte Fälle „nahe Tür“, „naher Durchgang“, „offenes Blatt“, Simulation | `8a15a11`, `7bb2deb` und Nachtrag; Scheinlücken 64 → 0, Türen 5395 → 5419 (27 gewonnen, 3 verloren); nahe Türen, Durchgänge und Türen mit Blatt wie vor Schritt 3; zwei Gegenprüfungen; drei Simulationen bis in den Flur ohne Berührung; Abschnitt „Sehen repariert“ |
+| 27.11.2026 | **KI-F9R** | Jetson, 19 gespeicherte Runden, KI-Rechner (`qwen3.5:9b`), ohne Sensoren und Motoren | Tests 433; Lauf 2: Tür angeboten und gewählt (alt: Fensterlücke gewählt); nichts verloren; K0-1 richtig 13 → 14 von 16; eine neue Fehlwahl in `labor_tuer_seite_nah`; Torwächter 86 von 88 sauber; G-1 trifft nicht zu (V-2, K-2); Einzelheiten im Archiv |
 
 **Gemessen an der künstlichen Beispielwelt** (ausgedachtes Zimmer mit
 80-cm-Tür, 90-cm-Glastür zum Balkon, Schränken, Kiste; LiDAR-Rauschen 1 cm):
@@ -1751,9 +1818,10 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Christopher übergibt den Auftrag [KI-F9R](AUFTRAG.md) an den Jetson-Agenten
-(Nachrechnen alt gegen neu an allen gespeicherten Runden, ohne Sensoren und
-ohne Motoren). Danach wird der Bericht ausgewertet; trifft G-1 zu, folgt als
-nächster Realtest das verbesserte Sehen am Roboter, mit einem Vorlauf mit
-Blick auf die Tür (für `messen` und die Belege) und einem festen Platz für
-Christopher während des Rundblicks.
+Mit Christopher entscheiden, ob als Nächstes der Realtest KI-F11 (das neue
+Sehen am Roboter, Arbeitsliste Punkt 4) vorbereitet wird oder zuerst im
+Stand ein zweites Modell an denselben 17 Runden verglichen wird (wegen der
+Fehlwahl in `labor_tuer_seite_nah`). Vorschlag: KI-F11, denn die Fehlwahl
+lag an einer alten Seitenansicht einer halb geschlossenen Tür, aus den
+Aufstellungen von KI-F9 wählt die KI jetzt immer die Tür, und Christophers
+Ja bleibt vor jeder Fahrt.

@@ -191,7 +191,10 @@ Seit dem ersten echten Lauf (21.11.2026) gilt dazu:
   gesehen hat, darf nicht als frei gelten.
 - **Jede geprüfte Lücke wird vermerkt,** mit Maßen und dem Grund, aus dem
   sie angeboten oder verworfen wurde. Ohne das ist an echten Aufnahmen nicht
-  zu sehen, warum eine Tür fehlt.
+  zu sehen, warum eine Tür fehlt. Ausnahme (seit 24.11.2026, gesehen in
+  KI-F9R): Eine Lot-Schätzung mit verkehrten Kanten wird verworfen, bevor
+  eine Lücke entsteht; ihr Vermerk `lot_verkehrt` steht dann an einer
+  anderen Lücke derselben Kante, falls es eine gibt.
 - **Im Stand wird direkt gemessen (seit KI-0N).** Je Richtung zählt der
   Median aller Messungen. Ein Raster verschiebt bei echtem Messrauschen die
   Wandpunkte um einige Zentimeter; gerade Wände gelten dann als krumm, und
@@ -742,6 +745,10 @@ standardmäßig aus ist. Rückfall der ganzen Linie: README.
   entschieden hat. Der Fahrteil soll aus vorhandenem, real bewährtem Code
   entstehen; Bestand und Vorschlag stehen im STATUS, entschieden ist dazu
   noch nichts.
+- 27.11.2026, Nachtrag zu v1.17, nach KI-F9R: keine Änderung an Rollen,
+  Grenzen, Stufen oder Kriterien. An den gespeicherten Runden bestätigt: Lauf 2
+  aus KI-F9 ist behoben. In §5 vermerkt, dass eine verworfene Lot-Schätzung
+  keine eigene Zeile im Prüftext bekommt.
 - 24.11.2026, v1.17 (Zustimmung des Projektinhabers zur Reihenfolge nach
   KI-F9N, „Ja beginne“): Sehen ohne Roboter repariert. §5: keine Lücke über
   180° und keine Lot-Schätzung mit vertauschten Kanten (Ursache des
