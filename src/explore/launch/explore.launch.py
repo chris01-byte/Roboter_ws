@@ -19,6 +19,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -29,16 +30,44 @@ def generate_launch_description():
         pkg, 'behavior_trees', 'navigate_to_pose_no_recovery.xml')
 
     return LaunchDescription([
+        DeclareLaunchArgument('require_hwt601_fusion', default_value='false'),
+        DeclareLaunchArgument('hwt601_active_drive', default_value='false'),
+        DeclareLaunchArgument('hwt_development_contract', default_value='false'),
+        DeclareLaunchArgument(
+            'behavior_tree', default_value=safe_bt,
+            description='Nav2-Baum fuer Explorer-Kindziele. Standard: '
+                        'recovery-frei; self_healing nutzt leichte Recovery.'),
         DeclareLaunchArgument(
             'explore_params_overlay', default_value=params,
             description='Optionales zweites Parameterprofil; Standard '
                         'wiederholt die normalen Explorer-Parameter.'),
+        DeclareLaunchArgument(
+            'initial_scan_only', default_value='false',
+            description='true = nur Rundblick: einmal auf der Stelle drehen '
+                        'und stehen bleiben, kein Ziel. Gilt vor jedem Profil.'),
+        DeclareLaunchArgument(
+            'stage_drive_only', default_value='false',
+            description='true = Etappenfahrt: auf genau ein Fahrziel warten '
+                        'und es ohne Nav2 in kurzen geraden Etappen anfahren. '
+                        'Ohne Ziel bewegt sich nichts. Gilt vor jedem Profil.'),
         Node(
             package='explore',
             executable='explore',
             name='explore_node',
             output='screen',
             parameters=[
-                params, params_overlay, {'behavior_tree': safe_bt}],
+                params, params_overlay, {
+                    'behavior_tree': LaunchConfiguration('behavior_tree'),
+                    'require_hwt601_fusion': ParameterValue(
+                        LaunchConfiguration('require_hwt601_fusion'), value_type=bool),
+                    'hwt601_active_drive': ParameterValue(
+                        LaunchConfiguration('hwt601_active_drive'), value_type=bool),
+                    'hwt_development_contract': ParameterValue(
+                        LaunchConfiguration('hwt_development_contract'), value_type=bool),
+                    'initial_scan_only': ParameterValue(
+                        LaunchConfiguration('initial_scan_only'), value_type=bool),
+                    'stage_drive_only': ParameterValue(
+                        LaunchConfiguration('stage_drive_only'), value_type=bool),
+                }],
         )
     ])

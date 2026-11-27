@@ -1,0 +1,78 @@
+{
+  "kind": "offline_measured_same_raw_pose_geometry_new_native_costmap",
+  "source_run": "product-c-05",
+  "probes": [
+    {
+      "forward_distance_m": 0.3,
+      "accepted": false,
+      "rejection": "goal_orientation_invalid",
+      "route": null
+    },
+    {
+      "forward_distance_m": 0.33,
+      "accepted": false,
+      "rejection": "goal_orientation_invalid",
+      "route": null
+    },
+    {
+      "forward_distance_m": 0.36,
+      "accepted": false,
+      "rejection": "goal_orientation_invalid",
+      "route": null
+    },
+    {
+      "forward_distance_m": 0.39,
+      "accepted": true,
+      "rejection": null,
+      "route": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.39,
+          0.0
+        ]
+      ]
+    },
+    {
+      "forward_distance_m": 0.42,
+      "accepted": true,
+      "rejection": null,
+      "route": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.42,
+          0.0
+        ]
+      ]
+    },
+    {
+      "forward_distance_m": 0.45,
+      "accepted": false,
+      "rejection": "goal_orientation_invalid",
+      "route": null
+    },
+    {
+      "forward_distance_m": 0.48,
+      "accepted": false,
+      "rejection": "goal_orientation_invalid",
+      "route": null
+    },
+    {
+      "forward_distance_m": 0.51,
+      "accepted": false,
+      "rejection": "goal_orientation_invalid",
+      "route": null
+    },
+    {
+      "forward_distance_m": 0.54,
+      "accepted": false,
+      "rejection": "goal_orientation_invalid",
+      "route": null
+    }
+  ]
+}

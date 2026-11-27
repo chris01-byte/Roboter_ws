@@ -1,0 +1,104 @@
+FFFFFFFF                                                                 [100%]
+=================================== FAILURES ===================================
+_ test_distinct_current_boundary_keeps_original_cooldown_on_both_sides_of_radius[-1e-05] _
+
+delta = -1e-05
+
+    @pytest.mark.parametrize('delta', [-.00001, .00001])
+    def test_distinct_current_boundary_keeps_original_cooldown_on_both_sides_of_radius(delta):
+        policy,old = served()
+        goal = (0.,2.1+delta); frontier=(0.,3.1); points=((0.,3.1),)
+>       task = policy.identify(frontier,goal,observation_points=points)
+E       TypeError: MetricTaskPolicy.identify() got an unexpected keyword argument 'observation_points'
+
+src/explore/test/test_metric_public_cooldown.py:19: TypeError
+_ test_distinct_current_boundary_keeps_original_cooldown_on_both_sides_of_radius[1e-05] _
+
+delta = 1e-05
+
+    @pytest.mark.parametrize('delta', [-.00001, .00001])
+    def test_distinct_current_boundary_keeps_original_cooldown_on_both_sides_of_radius(delta):
+        policy,old = served()
+        goal = (0.,2.1+delta); frontier=(0.,3.1); points=((0.,3.1),)
+>       task = policy.identify(frontier,goal,observation_points=points)
+E       TypeError: MetricTaskPolicy.identify() got an unexpected keyword argument 'observation_points'
+
+src/explore/test/test_metric_public_cooldown.py:19: TypeError
+___ test_missing_aliased_or_invalid_view_keeps_served_pose_identity[points0] ___
+
+points = ()
+
+    @pytest.mark.parametrize('points', [(), ((0.,1.4),), ((0.,1.40001),(0.,.1)),
+                                       ((0.,float('nan')),), ((0.,),)])
+    def test_missing_aliased_or_invalid_view_keeps_served_pose_identity(points):
+        policy,old=served()
+>       assert policy.identify((0.,3.1),(0.,2.),observation_points=points)==old
+E       TypeError: MetricTaskPolicy.identify() got an unexpected keyword argument 'observation_points'
+
+src/explore/test/test_metric_public_cooldown.py:32: TypeError
+___ test_missing_aliased_or_invalid_view_keeps_served_pose_identity[points1] ___
+
+points = ((0.0, 1.4),)
+
+    @pytest.mark.parametrize('points', [(), ((0.,1.4),), ((0.,1.40001),(0.,.1)),
+                                       ((0.,float('nan')),), ((0.,),)])
+    def test_missing_aliased_or_invalid_view_keeps_served_pose_identity(points):
+        policy,old=served()
+>       assert policy.identify((0.,3.1),(0.,2.),observation_points=points)==old
+E       TypeError: MetricTaskPolicy.identify() got an unexpected keyword argument 'observation_points'
+
+src/explore/test/test_metric_public_cooldown.py:32: TypeError
+___ test_missing_aliased_or_invalid_view_keeps_served_pose_identity[points2] ___
+
+points = ((0.0, 1.40001), (0.0, 0.1))
+
+    @pytest.mark.parametrize('points', [(), ((0.,1.4),), ((0.,1.40001),(0.,.1)),
+                                       ((0.,float('nan')),), ((0.,),)])
+    def test_missing_aliased_or_invalid_view_keeps_served_pose_identity(points):
+        policy,old=served()
+>       assert policy.identify((0.,3.1),(0.,2.),observation_points=points)==old
+E       TypeError: MetricTaskPolicy.identify() got an unexpected keyword argument 'observation_points'
+
+src/explore/test/test_metric_public_cooldown.py:32: TypeError
+___ test_missing_aliased_or_invalid_view_keeps_served_pose_identity[points3] ___
+
+points = ((0.0, nan),)
+
+    @pytest.mark.parametrize('points', [(), ((0.,1.4),), ((0.,1.40001),(0.,.1)),
+                                       ((0.,float('nan')),), ((0.,),)])
+    def test_missing_aliased_or_invalid_view_keeps_served_pose_identity(points):
+        policy,old=served()
+>       assert policy.identify((0.,3.1),(0.,2.),observation_points=points)==old
+E       TypeError: MetricTaskPolicy.identify() got an unexpected keyword argument 'observation_points'
+
+src/explore/test/test_metric_public_cooldown.py:32: TypeError
+___ test_missing_aliased_or_invalid_view_keeps_served_pose_identity[points4] ___
+
+points = ((0.0,),)
+
+    @pytest.mark.parametrize('points', [(), ((0.,1.4),), ((0.,1.40001),(0.,.1)),
+                                       ((0.,float('nan')),), ((0.,),)])
+    def test_missing_aliased_or_invalid_view_keeps_served_pose_identity(points):
+        policy,old=served()
+>       assert policy.identify((0.,3.1),(0.,2.),observation_points=points)==old
+E       TypeError: MetricTaskPolicy.identify() got an unexpected keyword argument 'observation_points'
+
+src/explore/test/test_metric_public_cooldown.py:32: TypeError
+__ test_finite_new_view_cannot_renew_a_capped_neighbour_or_the_same_boundary ___
+
+    def test_finite_new_view_cannot_renew_a_capped_neighbour_or_the_same_boundary():
+        policy,old=served(); points=((0.,3.1),)
+>       assert policy.identify((0.,.1),(0.,2.),observation_points=points)==old
+E       TypeError: MetricTaskPolicy.identify() got an unexpected keyword argument 'observation_points'
+
+src/explore/test/test_metric_public_cooldown.py:37: TypeError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_public_cooldown.py::test_distinct_current_boundary_keeps_original_cooldown_on_both_sides_of_radius[-1e-05]
+FAILED src/explore/test/test_metric_public_cooldown.py::test_distinct_current_boundary_keeps_original_cooldown_on_both_sides_of_radius[1e-05]
+FAILED src/explore/test/test_metric_public_cooldown.py::test_missing_aliased_or_invalid_view_keeps_served_pose_identity[points0]
+FAILED src/explore/test/test_metric_public_cooldown.py::test_missing_aliased_or_invalid_view_keeps_served_pose_identity[points1]
+FAILED src/explore/test/test_metric_public_cooldown.py::test_missing_aliased_or_invalid_view_keeps_served_pose_identity[points2]
+FAILED src/explore/test/test_metric_public_cooldown.py::test_missing_aliased_or_invalid_view_keeps_served_pose_identity[points3]
+FAILED src/explore/test/test_metric_public_cooldown.py::test_missing_aliased_or_invalid_view_keeps_served_pose_identity[points4]
+FAILED src/explore/test/test_metric_public_cooldown.py::test_finite_new_view_cannot_renew_a_capped_neighbour_or_the_same_boundary
+8 failed in 0.17s

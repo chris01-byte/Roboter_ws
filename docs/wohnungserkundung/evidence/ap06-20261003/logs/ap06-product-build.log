@@ -1,0 +1,20 @@
+Starting >>> amadeus_map_identity
+Finished <<< amadeus_map_identity [0.55s]
+Starting >>> base_hardware
+Finished <<< base_hardware [0.55s]
+Starting >>> robot_interfaces
+Finished <<< robot_interfaces [20.5s]
+Starting >>> bt_orchestrator
+Finished <<< bt_orchestrator [32.7s]
+Starting >>> mission_manager
+Finished <<< mission_manager [0.62s]
+Starting >>> robot_state_estimation
+Finished <<< robot_state_estimation [0.59s]
+Starting >>> explore
+Finished <<< explore [0.70s]
+Starting >>> robot_navigation
+Finished <<< robot_navigation [0.67s]
+Starting >>> robot_map_manager
+Finished <<< robot_map_manager [0.64s]
+
+Summary: 9 packages finished [57.7s]

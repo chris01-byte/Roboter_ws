@@ -1,0 +1,954 @@
+{
+  "schema_version": 1,
+  "user_published_baseline": "d2c6cfe018564b9bc59ff43dd49808e3293169c2",
+  "common_source": "a4b4e355d54f17b4195331faf0ad6be413f56a50",
+  "release": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011",
+  "source_clean_at_build": true,
+  "architecture": "aarch64",
+  "build_stages": [
+    {
+      "stage": "common-build",
+      "exit_code": 0,
+      "elapsed_s": 170.90646567899967,
+      "log": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/candidate-v13-build.log"
+    },
+    {
+      "stage": "capture-exact-build",
+      "exit_code": 0,
+      "elapsed_s": 2.8873153680033283,
+      "log": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/candidate-v13-capture.log"
+    },
+    {
+      "stage": "full-product-tests",
+      "exit_code": 0,
+      "elapsed_s": 439.8129310410004,
+      "log": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/product-test-v13-driver.log"
+    },
+    {
+      "stage": "original-ABC",
+      "exit_code": 0,
+      "elapsed_s": 631.0461209440036,
+      "log": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/original-v13-correction-matrix-driver.log"
+    }
+  ],
+  "packages": {
+    "amadeus_map_identity": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/amadeus_map_identity",
+    "base_hardware": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/base_hardware",
+    "robot_interfaces": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/robot_interfaces",
+    "bt_orchestrator": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/bt_orchestrator",
+    "mission_manager": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/mission_manager",
+    "robot_state_estimation": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/robot_state_estimation",
+    "explore": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/explore",
+    "robot_navigation": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/robot_navigation",
+    "robot_map_manager": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/robot_map_manager",
+    "vl53_near_field": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/vl53_near_field",
+    "safety_monitor": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/safety_monitor",
+    "amadeus_lidar_bringup": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/amadeus_lidar_bringup",
+    "robot_bringup": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/robot_bringup",
+    "semantic_map_manager": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/semantic_map_manager"
+  },
+  "source_install_equal_files": 157,
+  "install_hashes_count": 756,
+  "module_resolution": {
+    "base_hardware.encoder_publication": {
+      "path": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/base_hardware/lib/python3.10/site-packages/base_hardware/encoder_publication.py",
+      "sha256": "2fa0b72f1c92c5bbbc021b7c8f3fb9d412197e65a51cdc6093536c8c4d21ac5a",
+      "version": null
+    },
+    "base_hardware.base_hardware_node": {
+      "path": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/base_hardware/lib/python3.10/site-packages/base_hardware/base_hardware_node.py",
+      "sha256": "95bdc3127d496ec0d8cced372ad421e520602083c695c2899f6b8e832feb2a8e",
+      "version": null
+    },
+    "robot_state_estimation.hwt601_fusion_guard": {
+      "path": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_fusion_guard.py",
+      "sha256": "2f7a20ec1e1a505a2741dd9be8738f457d6c087db5acb0f09079f7b54b4573af",
+      "version": null
+    },
+    "robot_navigation.stage3_motion_diagnostic": {
+      "path": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/robot_navigation/lib/python3.10/site-packages/robot_navigation/stage3_motion_diagnostic.py",
+      "sha256": "caae3ec4653d94d6f21f91772083f93827d2493e955283e36aa07cdcf9d76e6f",
+      "version": null
+    },
+    "robot_navigation.cmd_vel_mission_gate": {
+      "path": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/robot_navigation/lib/python3.10/site-packages/robot_navigation/cmd_vel_mission_gate.py",
+      "sha256": "e602f610a407e33a8702697573816e7504267f6354b8913648f98d75f1f5f467",
+      "version": null
+    },
+    "explore.metric_frontier_runtime": {
+      "path": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+      "sha256": "d45173d2e178d4543610e7c34ecc2b13d73bab9cf19ca6e6cb8b7927c59404fc",
+      "version": null
+    },
+    "explore.explore_node": {
+      "path": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/explore/lib/python3.10/site-packages/explore/explore_node.py",
+      "sha256": "07e27f603cb857a77b6e6ff0da9c6f1f715735a1f428594c510f6c20f94676cb",
+      "version": null
+    },
+    "amadeus_map_identity.fingerprint": {
+      "path": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py",
+      "sha256": "61c2ee882e3e25dbc8d6b1b25573152d3c271b817b4d81f074333c99a1ed0759",
+      "version": null
+    },
+    "numpy": {
+      "path": "/usr/lib/python3/dist-packages/numpy/__init__.py",
+      "sha256": "02e54b39a5825a5eb95c74639b22593a8af816212f9bb1fdcb78f17112a5d27f",
+      "version": "1.21.5"
+    },
+    "scipy": {
+      "path": "/usr/lib/python3/dist-packages/scipy/__init__.py",
+      "sha256": "60ed47e9b610957b899d4b97a9760c4b9f7532fd67954897a322cb00aeb65122",
+      "version": "1.8.0"
+    },
+    "shapely": {
+      "path": "/home/p/.local/share/amadeus/releases/ap06-20261010T070231Z/python/shapely/__init__.py",
+      "sha256": "2583d14cbf81227a49233692d894a9501d97f8ef05010c58116248858439c916",
+      "version": "2.0.7"
+    },
+    "serial": {
+      "path": "/home/p/.local/share/amadeus/releases/ap06-20261010T070231Z/python/serial/__init__.py",
+      "sha256": "5dec897fdef45a0eaf63eacda1e01d62e1e75490302584ae0238f75376592344",
+      "version": "3.5"
+    },
+    "smbus2": {
+      "path": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/python-hardware/smbus2/__init__.py",
+      "sha256": "1cd1baca024450b1f12fc3d0ee22581224471b66fdf71ccdd67d206f6faf9ae5",
+      "version": "0.6.1"
+    },
+    "vl53l5cx.vl53l5cx": {
+      "path": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/python-hardware/vl53l5cx/vl53l5cx.py",
+      "sha256": "82d5d6c35cae7f1c6ed86e9a552398f19baa6239219e9964063f23601cab7925",
+      "version": null
+    },
+    "rclpy.action.client": {
+      "path": "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/action/client.py",
+      "sha256": "12aefe1c3e356513ea2fd670d58bcac704a6ac6d09977cdcba6eaf2d93c7c9d4",
+      "version": null
+    },
+    "robot_state_estimation.hwt601_imu_node": {
+      "path": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_imu_node.py",
+      "sha256": "78aedb38762db800bc05269c253d9158458b150d094f0421e9c550fca6d2ab09",
+      "version": null
+    },
+    "explore.metric_tf_receipt": {
+      "path": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/explore/lib/python3.10/site-packages/explore/metric_tf_receipt.py",
+      "sha256": "6e5a4df5bac020d6e7e3fdc2cbc61de2cfdf900e428302e390713154735c45bf",
+      "version": null
+    },
+    "explore._reserved_sweep": {
+      "path": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/explore/lib/python3.10/site-packages/explore/_reserved_sweep.cpython-310-aarch64-linux-gnu.so",
+      "sha256": "486ba89c2dd60ed520d18187a19f9f9422c669fedb23b882547eccf801cdf83d"
+    }
+  },
+  "full_regression": {
+    "source_head": "a4b4e355d54f17b4195331faf0ad6be413f56a50",
+    "packages": [
+      {
+        "package": "amadeus_lidar_bringup",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "package": "amadeus_map_identity",
+        "tests": 36,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "package": "base_hardware",
+        "tests": 128,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "package": "bt_orchestrator",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "package": "explore",
+        "tests": 2155,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "package": "mission_manager",
+        "tests": 52,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "package": "robot_bringup",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "package": "robot_map_manager",
+        "tests": 53,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "package": "robot_navigation",
+        "tests": 146,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "package": "robot_state_estimation",
+        "tests": 287,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "package": "safety_monitor",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "package": "semantic_map_manager",
+        "tests": 51,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "package": "vl53_near_field",
+        "tests": 19,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "totals": {
+      "tests": 2946,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "original_missions_passed": 0,
+  "original_missions_total": 3,
+  "original_guard_cases_passed": 2,
+  "original_guard_cases_total": 2,
+  "cases": [
+    {
+      "case": "door68_start_a",
+      "passed": false,
+      "manifest_compatible": true,
+      "travel_m": 1.2016210762537112,
+      "rear_cleared": false,
+      "arrivals": 2,
+      "observations": 2,
+      "reason": "hwt_terminal",
+      "first_trigger": {
+        "phase": "departure_rejected",
+        "reason": "native_stop_has_no_candidate_view",
+        "at": 50653.999677957,
+        "task": "metric-task-15",
+        "native_sight": {
+          "predicted_pose": [
+            0.7221287195460272,
+            0.002006137531229691,
+            -0.0016019189745838966
+          ],
+          "original_points": 7,
+          "potential_points": 0
+        }
+      },
+      "reactions": [
+        {
+          "phase": "departure_rejected",
+          "reason": "native_stop_has_no_candidate_view",
+          "at": 50653.999677957,
+          "task": "metric-task-15",
+          "native_sight": {
+            "predicted_pose": [
+              0.7221287195460272,
+              0.002006137531229691,
+              -0.0016019189745838966
+            ],
+            "original_points": 7,
+            "potential_points": 0
+          }
+        },
+        {
+          "phase": "scan_interrupted",
+          "reason": "map_status_join_pending",
+          "at": 50770.172804696,
+          "scan": {
+            "started_at": 50655.40836239,
+            "elapsed_s": 114.76442492900242,
+            "target_angle_rad": 6.283185307179586,
+            "achieved_angle_rad": 5.387770481943004,
+            "commanded_rate_radps": 0.08,
+            "result": "interrupted"
+          }
+        },
+        {
+          "phase": "scan_interrupted",
+          "reason": "scan_task_budget_exhausted",
+          "at": 50806.197748389,
+          "scan": {
+            "started_at": 50655.40836239,
+            "elapsed_s": 150.78936670300027,
+            "target_angle_rad": 6.283185307179586,
+            "achieved_angle_rad": 6.104091828932752,
+            "commanded_rate_radps": 0.08,
+            "result": "interrupted"
+          }
+        },
+        {
+          "phase": "navigation_guard",
+          "reason": "hwt_hold",
+          "at": 50881.810487938,
+          "task": "metric-task-4",
+          "attempt": 6,
+          "route_reason": null,
+          "timing": {
+            "started_at": 50881.658785608,
+            "completed_at": 50881.707237966,
+            "elapsed_s": 0.04845235800166847,
+            "map_received_age_s": 1.028430506004952,
+            "map_source_age_s": 1.08438691,
+            "costmap_received_age_s": 0.6331748610027716,
+            "costmap_source_age_s": 0.63949391,
+            "pose_age_s": 0.15601221200631699,
+            "scan_received_age_s": 0.17663659500249196,
+            "wheel_ages_s": null,
+            "wheel_source_key": null
+          }
+        },
+        {
+          "phase": "terminal",
+          "reason": "hwt_terminal",
+          "at": 50883.814702443,
+          "state": "failed"
+        }
+      ],
+      "terminal_reason": "hwt_terminal",
+      "candidate_timing": {
+        "started_at": 50867.078628638,
+        "completed_at": 50869.196975925,
+        "elapsed_s": 2.1183474469944485,
+        "cpu_s": 0.8353466880000013,
+        "budget_s": 5.0,
+        "error": null,
+        "map_fingerprint": "ca9c4604d5c8ce07947bd0cfc375149d5b5adccbb7e2e055eae38373d3fce6ed",
+        "map_source_stamp_ns": 1791702972693121457
+      },
+      "candidate_optional_geometry": {
+        "allocation_s": 2.0,
+        "elapsed_s": 2.0643120649983757,
+        "remaining_s": 0.0
+      },
+      "scan_attempt": {
+        "started_at": 50655.40836239,
+        "elapsed_s": 150.78936670300027,
+        "target_angle_rad": 6.283185307179586,
+        "achieved_angle_rad": 6.104091828932752,
+        "commanded_rate_radps": 0.08,
+        "result": "interrupted"
+      },
+      "source_fault": null,
+      "action_active_at_terminal": {
+        "/explore_area/_action/status": [],
+        "/navigate_to_pose/_action/status": []
+      },
+      "command_values_at_terminal": {
+        "/cmd_vel_nav": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel_smoothed": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel_nav_raw": [
+          0.0,
+          0.0
+        ]
+      },
+      "injection_to_standstill_s": null,
+      "hold_to_standstill_s": null,
+      "hold_resume_qualified": null,
+      "result_sha256": "2614336973e127a30bde59344ca02d5b5d40cc4a669d6d562ab849ea22590d47",
+      "command_sha256": "28c3955a6ff0528a3e74084b3a981bbbaacb0fe13d49fd0825233db44f9b235d",
+      "proof_sha256": "4dc04b106afb6c0b49e490f58c8d8470312471011631d25b1d7e6de8c7ee4848",
+      "local_result": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/original-v13-correction-door68_start_a/result.json"
+    },
+    {
+      "case": "door68_start_b",
+      "passed": false,
+      "manifest_compatible": true,
+      "travel_m": 0.35384301865814505,
+      "rear_cleared": false,
+      "arrivals": 1,
+      "observations": 1,
+      "reason": "frontier_candidate_processing_budget_exhausted",
+      "first_trigger": {
+        "phase": "departure_rejected",
+        "reason": "native_stop_has_no_candidate_view",
+        "at": 50983.705363164,
+        "task": "metric-task-12",
+        "native_sight": {
+          "predicted_pose": [
+            0.8062765474440813,
+            0.00568932879357346,
+            0.014486769268812138
+          ],
+          "original_points": 9,
+          "potential_points": 0
+        }
+      },
+      "reactions": [
+        {
+          "phase": "departure_rejected",
+          "reason": "native_stop_has_no_candidate_view",
+          "at": 50983.705363164,
+          "task": "metric-task-12",
+          "native_sight": {
+            "predicted_pose": [
+              0.8062765474440813,
+              0.00568932879357346,
+              0.014486769268812138
+            ],
+            "original_points": 9,
+            "potential_points": 0
+          }
+        },
+        {
+          "phase": "departure_rejected",
+          "reason": "native_stop_has_no_candidate_view",
+          "at": 51022.388096789,
+          "task": "metric-task-12",
+          "native_sight": {
+            "predicted_pose": [
+              0.7962768652645638,
+              0.005612832475704482,
+              0.014290702574045753
+            ],
+            "original_points": 5,
+            "potential_points": 0
+          }
+        },
+        {
+          "phase": "departure_rejected",
+          "reason": "native_stop_has_no_candidate_view",
+          "at": 51059.689532155,
+          "task": "metric-task-12",
+          "native_sight": {
+            "predicted_pose": [
+              0.8062765474440813,
+              0.00568932879357346,
+              0.014486769268812138
+            ],
+            "original_points": 9,
+            "potential_points": 0
+          }
+        },
+        {
+          "phase": "terminal",
+          "reason": "frontier_candidate_processing_budget_exhausted",
+          "at": 51066.411899953,
+          "state": "failed"
+        }
+      ],
+      "terminal_reason": "frontier_candidate_processing_budget_exhausted",
+      "candidate_timing": {
+        "started_at": 51060.871085,
+        "completed_at": 51066.410725132,
+        "elapsed_s": 5.539640388000407,
+        "cpu_s": 2.1858570240000006,
+        "budget_s": 5.0,
+        "error": "frontier_candidate_processing_budget_exhausted",
+        "map_fingerprint": "96f3826aaba909529a45fbf1c2506c327083ababae8f63c140d0632df618fc6f",
+        "map_source_stamp_ns": 1791703166153638910
+      },
+      "candidate_optional_geometry": {
+        "allocation_s": 2.0,
+        "elapsed_s": 0.014378889994986821,
+        "remaining_s": 1.9856211100050132
+      },
+      "scan_attempt": null,
+      "source_fault": null,
+      "action_active_at_terminal": {
+        "/explore_area/_action/status": [],
+        "/navigate_to_pose/_action/status": []
+      },
+      "command_values_at_terminal": {
+        "/cmd_vel_nav": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel_smoothed": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel_nav_raw": [
+          0.0,
+          0.0
+        ]
+      },
+      "injection_to_standstill_s": null,
+      "hold_to_standstill_s": null,
+      "hold_resume_qualified": null,
+      "result_sha256": "382118c0bd276692a9eb5bc45c37ffb610844ef656553b997f6d611b0d944ec6",
+      "command_sha256": "9072eea0f6d8efd4c427584e91360a8d9568f5a1a14a0f1d94204d99a32e14d3",
+      "proof_sha256": "304e0844bf99f85e31f56406018575bfb4816294f7c027e737b307984877be4c",
+      "local_result": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/original-v13-correction-door68_start_b/result.json"
+    },
+    {
+      "case": "door80_start_c",
+      "passed": false,
+      "manifest_compatible": true,
+      "travel_m": 0.7029710772932948,
+      "rear_cleared": false,
+      "arrivals": 1,
+      "observations": 1,
+      "reason": "frontier_candidate_processing_budget_exhausted",
+      "first_trigger": {
+        "phase": "departure_rejected",
+        "reason": "known_space_departure_unavailable",
+        "at": 51153.933694444,
+        "task": "metric-task-14",
+        "native_sight": {
+          "predicted_pose": [
+            2.6252791889160028,
+            -0.10753389682899656,
+            -0.4232855882216802
+          ],
+          "original_points": 128,
+          "potential_points": 108
+        }
+      },
+      "reactions": [
+        {
+          "phase": "departure_rejected",
+          "reason": "known_space_departure_unavailable",
+          "at": 51153.933694444,
+          "task": "metric-task-14",
+          "native_sight": {
+            "predicted_pose": [
+              2.6252791889160028,
+              -0.10753389682899656,
+              -0.4232855882216802
+            ],
+            "original_points": 128,
+            "potential_points": 108
+          }
+        },
+        {
+          "phase": "terminal",
+          "reason": "frontier_candidate_processing_budget_exhausted",
+          "at": 51160.058718469,
+          "state": "failed"
+        }
+      ],
+      "terminal_reason": "frontier_candidate_processing_budget_exhausted",
+      "candidate_timing": {
+        "started_at": 51155.057633488,
+        "completed_at": 51160.057952332,
+        "elapsed_s": 5.000319067999953,
+        "cpu_s": 1.970832896000001,
+        "budget_s": 5.0,
+        "error": "frontier_candidate_processing_budget_exhausted",
+        "map_fingerprint": "e691b9ac51716cf74bfd6a25f0d3c5f73779359ed5d5612a83d5bf4dca0bbcca",
+        "map_source_stamp_ns": 1791703260784392791
+      },
+      "candidate_optional_geometry": {
+        "allocation_s": 2.0,
+        "elapsed_s": 2.0140627779983333,
+        "remaining_s": 0.0
+      },
+      "scan_attempt": null,
+      "source_fault": null,
+      "action_active_at_terminal": {
+        "/explore_area/_action/status": [],
+        "/navigate_to_pose/_action/status": []
+      },
+      "command_values_at_terminal": {
+        "/cmd_vel_smoothed": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel_nav": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel_nav_raw": [
+          0.0,
+          0.0
+        ]
+      },
+      "injection_to_standstill_s": null,
+      "hold_to_standstill_s": null,
+      "hold_resume_qualified": null,
+      "result_sha256": "c20af2e34d2258cb527fb6ecf5d2422ad087154bbdf3dff31ce2e6706bbfe0af",
+      "command_sha256": "78f51c575d2cf2f64264ad1e1846de846e4c57e34bb300a080eea5e59f55c9d2",
+      "proof_sha256": "09566f94fe1619eada02362e2dbe2cf6ae4b642d5d764a8be078b3a3bf0ae5e3",
+      "local_result": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/original-v13-correction-door80_start_c/result.json"
+    },
+    {
+      "case": "cancel",
+      "passed": true,
+      "manifest_compatible": true,
+      "travel_m": 0.04311342038640738,
+      "rear_cleared": false,
+      "arrivals": 0,
+      "observations": 0,
+      "reason": "user_canceled",
+      "first_trigger": {
+        "phase": "navigation_guard",
+        "reason": "user_canceled",
+        "at": 51228.962006605,
+        "task": "metric-task-7",
+        "attempt": 1,
+        "route_reason": null,
+        "timing": {
+          "started_at": 51227.611350272,
+          "completed_at": 51227.695549238,
+          "elapsed_s": 0.08419896599662025,
+          "map_received_age_s": 0.9024926069978392,
+          "map_source_age_s": 0.992046015,
+          "costmap_received_age_s": 0.5422707500038086,
+          "costmap_source_age_s": 0.550630248,
+          "pose_age_s": 0.11079680400143843,
+          "scan_received_age_s": 0.17938429700006964,
+          "wheel_ages_s": [
+            0.11036302999855252,
+            0.11709660500491736
+          ],
+          "wheel_source_key": 1791703333.7494867
+        }
+      },
+      "reactions": [
+        {
+          "phase": "navigation_guard",
+          "reason": "user_canceled",
+          "at": 51228.962006605,
+          "task": "metric-task-7",
+          "attempt": 1,
+          "route_reason": null,
+          "timing": {
+            "started_at": 51227.611350272,
+            "completed_at": 51227.695549238,
+            "elapsed_s": 0.08419896599662025,
+            "map_received_age_s": 0.9024926069978392,
+            "map_source_age_s": 0.992046015,
+            "costmap_received_age_s": 0.5422707500038086,
+            "costmap_source_age_s": 0.550630248,
+            "pose_age_s": 0.11079680400143843,
+            "scan_received_age_s": 0.17938429700006964,
+            "wheel_ages_s": [
+              0.11036302999855252,
+              0.11709660500491736
+            ],
+            "wheel_source_key": 1791703333.7494867
+          }
+        },
+        {
+          "phase": "terminal",
+          "reason": "user_canceled",
+          "at": 51229.012199594,
+          "state": "canceled"
+        }
+      ],
+      "terminal_reason": "user_canceled",
+      "candidate_timing": {
+        "started_at": 51219.425379968,
+        "completed_at": 51222.022493033,
+        "elapsed_s": 2.5971132569975452,
+        "cpu_s": 1.0032873919999998,
+        "budget_s": 5.0,
+        "error": null,
+        "map_fingerprint": "6c2d88e81ec14ddc12c6e77829b618db19cbf5b6379e803f15bfa305414902cf",
+        "map_source_stamp_ns": 1791703324876803988
+      },
+      "candidate_optional_geometry": {
+        "allocation_s": 2.0,
+        "elapsed_s": 0.0,
+        "remaining_s": 2.0
+      },
+      "scan_attempt": null,
+      "source_fault": null,
+      "action_active_at_terminal": {
+        "/explore_area/_action/status": [],
+        "/navigate_to_pose/_action/status": []
+      },
+      "command_values_at_terminal": {
+        "/cmd_vel_smoothed": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel_nav": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel_nav_raw": [
+          0.0,
+          0.0
+        ]
+      },
+      "injection_to_standstill_s": 0.35444275999907404,
+      "hold_to_standstill_s": null,
+      "hold_resume_qualified": null,
+      "result_sha256": "67070e2dd1958eba173d251726f9348aff2429d9a67e6171d5427ea3733d18ea",
+      "command_sha256": "3fe2feb53008b795a042ef29c6d0d0345c9cb3b1f3ca05c53549ca21520f5fac",
+      "proof_sha256": "e5c155bd56dd4148864a25bf86ba33852b7e4312823d721b294fed6b2d8351c8",
+      "local_result": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/original-v13-guard-cancel/result.json"
+    },
+    {
+      "case": "gyro_hold",
+      "passed": true,
+      "manifest_compatible": true,
+      "travel_m": 0.059753363181289036,
+      "rear_cleared": false,
+      "arrivals": 0,
+      "observations": 0,
+      "reason": "hwt_terminal",
+      "first_trigger": {
+        "phase": "navigation_guard",
+        "reason": "hwt_hold",
+        "at": 51283.240860941,
+        "task": "metric-task-7",
+        "attempt": 1,
+        "route_reason": null,
+        "timing": {
+          "started_at": 51282.088140184,
+          "completed_at": 51282.178907231,
+          "elapsed_s": 0.09076704699691618,
+          "map_received_age_s": 0.2264069449956878,
+          "map_source_age_s": 0.339871385,
+          "costmap_received_age_s": 1.0038708719948772,
+          "costmap_source_age_s": 1.008972217,
+          "pose_age_s": 0.11668863999511814,
+          "scan_received_age_s": 0.12417406199529069,
+          "wheel_ages_s": [
+            0.07392356699710945,
+            0.0849918709936901
+          ],
+          "wheel_source_key": 1791703388.264958
+        }
+      },
+      "reactions": [
+        {
+          "phase": "navigation_guard",
+          "reason": "hwt_hold",
+          "at": 51283.240860941,
+          "task": "metric-task-7",
+          "attempt": 1,
+          "route_reason": null,
+          "timing": {
+            "started_at": 51282.088140184,
+            "completed_at": 51282.178907231,
+            "elapsed_s": 0.09076704699691618,
+            "map_received_age_s": 0.2264069449956878,
+            "map_source_age_s": 0.339871385,
+            "costmap_received_age_s": 1.0038708719948772,
+            "costmap_source_age_s": 1.008972217,
+            "pose_age_s": 0.11668863999511814,
+            "scan_received_age_s": 0.12417406199529069,
+            "wheel_ages_s": [
+              0.07392356699710945,
+              0.0849918709936901
+            ],
+            "wheel_source_key": 1791703388.264958
+          }
+        },
+        {
+          "phase": "terminal",
+          "reason": "hwt_terminal",
+          "at": 51289.131957102,
+          "state": "failed"
+        }
+      ],
+      "terminal_reason": "hwt_terminal",
+      "candidate_timing": {
+        "started_at": 51273.489944005,
+        "completed_at": 51276.219771753,
+        "elapsed_s": 2.72982797199802,
+        "cpu_s": 1.0148456960000003,
+        "budget_s": 5.0,
+        "error": null,
+        "map_fingerprint": "6c2d88e81ec14ddc12c6e77829b618db19cbf5b6379e803f15bfa305414902cf",
+        "map_source_stamp_ns": 1791703379009785945
+      },
+      "candidate_optional_geometry": {
+        "allocation_s": 2.0,
+        "elapsed_s": 0.0,
+        "remaining_s": 2.0
+      },
+      "scan_attempt": null,
+      "source_fault": null,
+      "action_active_at_terminal": {
+        "/explore_area/_action/status": [],
+        "/navigate_to_pose/_action/status": []
+      },
+      "command_values_at_terminal": {
+        "/cmd_vel_nav": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel_smoothed": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel_nav_raw": [
+          0.0,
+          0.0
+        ]
+      },
+      "injection_to_standstill_s": 0.6036654389972682,
+      "hold_to_standstill_s": 0.2598839779966511,
+      "hold_resume_qualified": false,
+      "result_sha256": "094d7523caae99c9540d4bcdbd87f0b017e060738848731c321a7e4159824ae2",
+      "command_sha256": "b638b2bd0b767a7c8970856fbbe7eb20849bdb684c8cf80bb5164f3e6e37d3af",
+      "proof_sha256": "4e6a26c03f757cb3163713352a52e9ecfb9d0c2fd52c162e3a5a13c1501358d6",
+      "local_result": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/original-v13-guard-gyro_hold/result.json"
+    }
+  ],
+  "hardware_test": false,
+  "real_passive_prerun": false,
+  "software_qualified": false,
+  "original_install_preservation": {
+    "checked_utc": "2026-10-11T07:05:03.833750+00:00",
+    "files": 1048,
+    "changed": [],
+    "original_head": "23928d92f411473ed2644692a04aebdff0ffe803",
+    "original_status": ""
+  },
+  "publication": {
+    "remote_head": "a4b4e355d54f17b4195331faf0ad6be413f56a50",
+    "branch": "refs/heads/feature/ap06-closed-product-validation",
+    "verified_utc": "2026-10-11T07:03:57.879177+00:00",
+    "force": false,
+    "main_merge": false
+  },
+  "a_terminal_detail": {
+    "observer": "cmd_vel_mission_gate",
+    "reason": "wheel_missing_stale_or_invalid",
+    "fault_at": 50881.736815803,
+    "wheel_age_s": 0.18494881299557164,
+    "wheel_limit_s": 0.18,
+    "raw_and_yaw_fresh_at_first_fault": true,
+    "device_process_pause_s": 0.21515257200371707,
+    "device_thread_cpu_s": 0.0021485760000032883,
+    "causal_limit": "Parallel source delay measured; root of device-process pause not proven; no real encoder bus failure inferred."
+  },
+  "next_step": "Reduce measured mandatory signature/digest work on captured capped-history inputs with exact content/geometry equivalence; both full-comparison experiments were slower and discarded. Diagnose measured source-process pause separately. Only rerun original matrix after a proven product correction; real autonomous gate remains original 3/3.",
+  "rollback": "Do not source private v13 overlay; preserve original installation; revert only own small fixes.",
+  "sha256": {
+    "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/candidate-manifest.json": "911b30c9f1630e604bdfbbd4815f711cbef553dcb83a72e788f5c44a009466e2",
+    "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/source-proof.json": "2080076e8eaa13a1ab6be28a5aface8d4b6b069f46406e6230583a15717cc1c8",
+    "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/build.bash": "e58c6db3ed099cdb66f83d04bb9df0acf60282d03d095fd4ad6cc2db80f7590e",
+    "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/runtime.bash": "488e782c322815fd77a02ef2499140601547838beea006f93e0953ff06eee6dd",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/original-v13-a-health-transitions.json": "7503277b7a32e0a2f1743f5c27dbf9d4eb69b02aebb591b81adb970534773ba7",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/original-v13-a-source-delivery.json": "170f7f5c06a50022f02679780cffd5425f3555865580967c4ba17f5d57414e24",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/product-tests-v13/summary.json": "66356af6e05b911c49b3c0c273a06a2ae4c2edbf9648e3c1bdb92a4a51c15a49",
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/tools/simulation/ap06_product_scenarios.json": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/budget-current-product-b3/failed-selection-object.pickle": "028335bb8f7c7b400f9c8d76e1e11347b3422dde79f053269a078b466938e970",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/budget-current-product-b3/failed-selection-receipt.json": "28a2b6554cbefe9cdcc3c75fc200a13129799a4fbbc131214359e8370e9fa7fb",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/budget-current-product-b3/result.json": "667f8b9c5e4a979b55d253495edd3afe3fd81541867e5d84b1fe35e4704f8748",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/budget-current-product-b3-proof.json": "731fadd202f6c08e67e3f5cb79d6502682ec17c7fed825b9abe3a368d0e00b0b",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/diagnostic-v13-failed-budget-v3.py": "777fdcb351ef151739d8eb6b02f5c6186f4c2cc75cee5c147352e54fd0459e63",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/capture_failed_selection.py": "f0cbe8f6c8972bd376ee841e4589e6e183441809d23c2f2608b13e5644e98b4c",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/frozen-v13-terminal-b-profile/selection.prof": "0891ff9350bc9be7fe9f778373c5e851052fc877c3f123dc013b6c9912c6260a",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/frozen-v13-terminal-b-profile/result.json": "7def93ed8be439855126be6b5f1a3a123f7817e42fc28a0594a31268150c5ee0",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/frozen-v13-terminal-b-native-signature-experiment/result.json": "bbfad457858802b407dd57126e9920db03a87712ff6fcc6257f5e9e520e5c3e6",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/frozen-v13-terminal-b-signature-experiment/result.json": "e2ffa594e2b92837f41da7fddc3d95022e10162149fcdcc7c3a7207a946d5c1d"
+  },
+  "budget_diagnostic": {
+    "manifest_qualified": false,
+    "reason": "frontier_candidate_processing_budget_exhausted",
+    "copy_overhead_s": 0.03823107199423248,
+    "live_elapsed_s": 5.390468763995159,
+    "live_thread_cpu_s": 2.1899385280000025,
+    "frozen_replay": {
+      "diagnostic_only": true,
+      "geometry_only_no_health_or_mission_authority": true,
+      "actual_original_frozen_input": true,
+      "python_binding": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+      "native_binding": "/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/install/explore/lib/python3.10/site-packages/explore/_reserved_sweep.cpython-310-aarch64-linux-gnu.so",
+      "elapsed_s": 3.594411743004457,
+      "error": null,
+      "selected": [
+        {
+          "goal": [
+            1.4849999668076634,
+            -0.48499998915940523,
+            0.0
+          ],
+          "requires_native_plan": true,
+          "observation_points": 90,
+          "evidence_key": "5c36088224972a4448398e223180b698796d450a5eeffa3dcc02bc9e85478365"
+        }
+      ],
+      "ranking": {
+        "raw": 15,
+        "unsafe": 9,
+        "deferred_or_served": 3,
+        "accepted": 1,
+        "route_rejections": {
+          "goal_orientation_invalid": 8,
+          "no_visible_frontier": 1
+        },
+        "proposal_search_stopped_on_eligible_task": true
+      },
+      "original_deadline_s": 5.0
+    },
+    "measured_signature_calls": 2254,
+    "signature_cumulative_s": 0.754,
+    "local_digest_calls": 8,
+    "local_digest_cumulative_s": 0.704,
+    "experiments": {
+      "numpy_full_content_comparison": {
+        "elapsed_s": 5.187600197998108,
+        "error": "candidate budget exhausted",
+        "retained": false
+      },
+      "native_full_byte_comparison": {
+        "elapsed_s": 3.7389219379983842,
+        "same_candidate_90_points": true,
+        "retained": false
+      }
+    },
+    "wrapper_limit": "First two private wrappers failed before graph creation, not product mission failures; repaired argparse preflight then actual negative diagnostic captured.",
+    "local_frozen_input": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/budget-current-product-b3/failed-selection-object.pickle"
+  }
+}

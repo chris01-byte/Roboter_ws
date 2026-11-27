@@ -1,0 +1,23 @@
+{
+  "experiment": "finite_unmasked_lidar_control",
+  "purpose": "Test full mission with finite unmasked lidar while retaining all product guards; discriminate start visibility from other integrated failures.",
+  "candidate_product": "2e5e1fd8d8f3241cbb3dfa9c2ee29988b036372f",
+  "repository_head": "05cfcf357d33b5e8de51abb28e3b6598394b4ecc",
+  "case": "door68_start_a",
+  "change": "existing --ideal-lidar only",
+  "cpu_affinity": [
+    0,
+    1,
+    3,
+    4
+  ],
+  "ap06_qualification": false,
+  "hardware_qualified": false,
+  "original_budgets_preserved": true,
+  "hashes": {
+    "tools/simulation/ap06_closed_product.py": "c415a1f39282a6501c08a19082dae334e4a6e7b2632efd50467b3a329b7e31f3",
+    "tools/simulation/ap06_product_scenarios.json": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da",
+    "src/explore/explore/metric_frontier.py": "47d770a122116390415a598642d016830d0cb0b3947edd6f4d4ac9471537592b",
+    "src/explore/explore/metric_frontier_runtime.py": "fac8f44088149049336cb48c12b0a74fc8724053246606bf664aa638e4e3a9af"
+  }
+}

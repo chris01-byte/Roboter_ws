@@ -1,0 +1,5 @@
+# Experiment X2: globaler NavFn-Radius 0,30 statt 0,28 m (2 cm mehr Planabstand).
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      robot_radius: 0.30

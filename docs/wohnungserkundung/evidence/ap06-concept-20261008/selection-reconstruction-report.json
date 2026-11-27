@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "diagnostic_only": true,
+  "original_mission_qualification": "0/3",
+  "tested_product_candidate": "c5d2a9c00d146851799a907ba725ef0d0f30c815",
+  "offline_reconstruction": {
+    "calls": {
+      "unprofiled": 2,
+      "profiled": 1,
+      "total": 3
+    },
+    "outcomes": [
+      {
+        "index": 1,
+        "profiled": false,
+        "elapsed_s": 1.9599632810277399,
+        "outcome": "returned",
+        "selected": [
+          {
+            "task_id": "metric-task-5",
+            "goal": [
+              1.71914209719791,
+              0.5308578525106712,
+              -0.006745881442615022
+            ],
+            "route_length": 2,
+            "requires_nav2_plan": false,
+            "observation_points": 11
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "profiled": false,
+        "elapsed_s": 1.9296255100052804,
+        "outcome": "returned",
+        "selected": [
+          {
+            "task_id": "metric-task-5",
+            "goal": [
+              1.71914209719791,
+              0.5308578525106712,
+              -0.006745881442615022
+            ],
+            "route_length": 2,
+            "requires_nav2_plan": false,
+            "observation_points": 11
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "profiled": true,
+        "elapsed_s": 2.3064424879848957,
+        "outcome": "returned",
+        "selected": [
+          {
+            "task_id": "metric-task-5",
+            "goal": [
+              1.71914209719791,
+              0.5308578525106712,
+              -0.006745881442615022
+            ],
+            "route_length": 2,
+            "requires_nav2_plan": false,
+            "observation_points": 11
+          }
+        ]
+      }
+    ],
+    "limitations": [
+      "Component reconstruction, not exact failed selector entry or a mission.",
+      "Saved final policy is after failed pass; newly identified task IDs may already exist.",
+      "Saved cooldown remaining retained independently in each call; entry-pass cooldowns unavailable.",
+      "Saved final common-time TF pose and final CDR may differ from discarded failing input object.",
+      "Empty private inventory is reconstructed and asserted from final status; original ledger was not saved.",
+      "Frozen recorded finite lidar view is geometric component data, never a new sensor freshness receipt.",
+      "The final LaserScan predates final TF and fails the original observation stamp guard; only the finite geometry adapter is used offline.",
+      "Monotonic selection clock is real, original 5 s budget unchanged. Source receipt refreshed for offline component only.",
+      "No competing mission/DDS load; cProfile adds overhead and can change which budget check throws.",
+      "Map revision label reconstructed as 1; fingerprint/context/source stamp exactly bound to checkpoint."
+    ],
+    "result_sha256": "9c83ca5f902d51d8b2efbd996a95f0d61d4e4529054444fa199224b279ee4b53"
+  },
+  "live_selection_capture": {
+    "run": "selection-capture-a",
+    "calls": 23,
+    "exceptions": 0,
+    "timing_s": {
+      "wall_s": {
+        "min": 0.6040517050132621,
+        "max": 1.1624540640041232
+      },
+      "process_cpu_s": {
+        "min": 0.39901568599998427,
+        "max": 0.8542751329999998
+      },
+      "thread_cpu_s": {
+        "min": 0.16317362200000218,
+        "max": 0.41958450700000005
+      }
+    },
+    "original_five_second_failure_reproduced": false,
+    "capture_overhead": "Pickle/NPZ capture runs only in the explicit diagnostic driver; it changes timing and is not a production optimization.",
+    "raw_objects": "local-diagnostic-captures.json in collected evidence and raw evidence tar; do not load untrusted pickle files."
+  },
+  "conclusion": [
+    "The five-second candidate-selection failure was not reproduced at either the reconstructed final state or the captured live entry states.",
+    "No speculative route cache, altered deadline, source-age relaxation or optional-proof bypass was adopted as a performance fix.",
+    "The live run exercised one processing-age recovery followed by successful arrival, then stopped on exhausted original per-task retries after pose expiry.",
+    "CPU/wait attribution of actual geometry processing and exact original failing selector entry remain unresolved."
+  ]
+}

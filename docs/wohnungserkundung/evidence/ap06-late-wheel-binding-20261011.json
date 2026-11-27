@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "baseline": "7c07641",
+  "live_geometry_comparison": {
+    "path": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-input-geometry-source-a",
+    "accepted": false,
+    "ended_normally": true,
+    "signals_sent": false,
+    "travel_m": 0.5260846427593118,
+    "arrivals": 1,
+    "observations": 1,
+    "input_count": 578,
+    "input_p50_s": 0.08535690599819645,
+    "input_p95_s": 0.11629318400082411,
+    "input_max_s": 0.3981414690060774,
+    "expired_wheel_count": 1,
+    "terminal": "frontier_candidate_processing_budget_exhausted",
+    "active_children_at_terminal": [],
+    "all_four_command_outputs_zero": true
+  },
+  "cause": {
+    "first_pass_egress_s": 0.13421605499752332,
+    "rebind_withdrawal_s": 0.04848701700393576,
+    "second_pass_egress_s": 0.14841964800143614,
+    "rebound_wheel_final_ages_s": [
+      0.20073510200018063,
+      0.20913496900175232
+    ],
+    "unchanged_wheel_limit_s": 0.18
+  },
+  "counter": {
+    "actual_DDS_wheel_TF": true,
+    "before_source": "original complete method from 7c07641, no successful decision stub",
+    "before_path": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/late-wheel-before-counter",
+    "before_failed": 1,
+    "after_path": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/late-wheel-after-counter",
+    "after_passed": 3,
+    "relevant_regression_path": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/late-wheel-after",
+    "relevant_passed": 149
+  },
+  "change": "Select one genuine newer wheel after pure body withdrawal against same actual TF; retain agreement and final age guards",
+  "hardware_test": false,
+  "rollback": "Revert only rebind ordering hunk",
+  "sha256": {
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-input-geometry-source-a/result.json": "b6e6eea1d833e8bfe7d55df54476e63a21ef004957566058653aa8747ae03e8c",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-input-geometry-source-a/input-stage-timings.jsonl": "8900eaeb38835596afd87ce08765e43dd010f90986ef423e2122f138eb82b818",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/rebind-original.py": "af13eb22f8b23257e88507b6672dc61f354b79bb6fd1bea0fe35e072e56513a1",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/late-wheel-before-counter/results.xml": "1fd49b10de2244cb414cb9fd8c0260ee279ae40e50041dabc8fa4f1d77729743",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/late-wheel-after-counter/results.xml": "924cfb577af3593d02647723176d82be0b8f49b0eac6ecee443c119e862fc7f1",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/late-wheel-after/results.xml": "ff93a8ff9c6711bb325fc024a13bc4ac0427977220b1793950d18e2148170098"
+  }
+}

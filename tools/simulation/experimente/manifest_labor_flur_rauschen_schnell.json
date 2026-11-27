@@ -1,0 +1,157 @@
+{
+ "schema": 5,
+ "zweck": "Fahrplan MASTERPLAN §9 Schritt 2 (Erkundungstempo): möblierter Raum mit Tür und Flur. Gemessen wird, wie schnell der Startraum zu 85/90/95 % frei kartiert ist, wann der Roboter den Nachbarraum betritt und wie die Anläufe ausfallen. Experiment, keine Abnahme. Variante mit LiDAR-Messrauschen (Standardabweichung 1 cm; STL-27L laut Datenblatt ±15 mm), weil echte 1-cm-Karten rauer sind als die der Simulation.",
+ "qualifikation": "nur_software_cloud_ros2_jazzy",
+ "festgelegt": "2026-11-14 nach Nutzerentscheidung, Schritt 2 parallel zu SH-8b in der Simulation vorzubereiten. Maße nach SH-6/SH-7: Laborraum etwa 18,6 m², Tür 0,80 m ohne Schwelle, Flur etwa 4 x 1,5 m mit Garderobe. Die Möbel sind angenommen (nicht vermessen): raumhohe Stücke sieht der LiDAR, niedrige (unter 0,75 m) nur die VL53. | 16.11.2026: Antrieb folgt den Befehlen (AT-2, Anfahrzeit 100 ms, Bremsen 400 ms): Zeitkonstante 0,15 s in beide Richtungen statt 1,3 s beim Anfahren.",
+ "welt": {
+  "quelle": "tools/simulation/sh_robustheit_welt.py GrundrissWelt",
+  "door_m": 0.8,
+  "start": [
+   1.5,
+   1.2,
+   0.6
+  ],
+  "odometrie_drift": {
+   "gier_skala": 0.03,
+   "laenge_skala": -0.02
+  },
+  "antrieb": {
+   "tau_auf_s": 0.15,
+   "tau_ab_s": 0.15
+  },
+  "grundriss": {
+   "raeume": {
+    "labor": [
+     0.0,
+     4.3,
+     0.0,
+     4.3
+    ],
+    "flur": [
+     4.35,
+     5.85,
+     0.2,
+     4.2
+    ]
+   },
+   "durchgaenge": [
+    [
+     4.3,
+     4.35,
+     1.6,
+     2.4
+    ]
+   ],
+   "moebel": [
+    [
+     0.0,
+     0.4,
+     0.6,
+     2.2
+    ],
+    [
+     1.3,
+     3.0,
+     3.65,
+     4.3
+    ],
+    [
+     3.3,
+     4.3,
+     0.0,
+     0.45
+    ],
+    [
+     2.0,
+     2.42,
+     3.05,
+     3.1
+    ],
+    [
+     0.85,
+     0.89,
+     3.3,
+     3.34
+    ],
+    [
+     5.55,
+     5.85,
+     2.7,
+     3.9
+    ]
+   ],
+   "niedrig": [
+    [
+     2.0,
+     2.42,
+     3.1,
+     3.52,
+     0.45
+    ],
+    [
+     2.6,
+     2.89,
+     1.3,
+     1.59,
+     0.38
+    ],
+    [
+     2.99,
+     3.28,
+     1.3,
+     1.59,
+     0.38
+    ],
+    [
+     0.9,
+     1.4,
+     0.0,
+     0.35,
+     0.3
+    ],
+    [
+     0.75,
+     1.1,
+     2.35,
+     2.7,
+     0.45
+    ]
+   ],
+   "legende": "moebel: Regal, Werkbank, Schrank, Stuhllehne, Stativ, Garderobe (Flur); niedrig: Stuhlsitz, zwei Mülleimer (10 cm Lücke), Kiste, Hocker"
+  }
+ },
+ "sensor": {
+  "lidar_hz": 10,
+  "lidar_beams": 2160,
+  "mastmaske": true,
+  "vl53_hz": 10,
+  "odometrie": "ideal aus dem Fahrmodell (Standardweg); HWT601 ist hier nicht modelliert",
+  "lidar_rauschen_m": 0.01,
+  "rauschen_saat": 1
+ },
+ "budgets": {
+  "start_s": 180,
+  "mission_s": 1200,
+  "nachlauf_s": 5,
+  "ueberzug_s": 60
+ },
+ "abnahme": {
+  "erlaubte_enden": [
+   "exploration_complete",
+   "usable_partial"
+  ],
+  "min_abdeckung_erreichbar": 0.95,
+  "max_kartenfehler_m": 0.1,
+  "keine_kollision": true,
+  "kein_prozessabsturz": true,
+  "erlaeuterung": "Bestanden mit sauberem Ende, mindestens 95 % der vom Start aus erreichbaren Fläche frei kartiert (ohne Ausnahme für Teilenden), keine belegte Kartenzelle weiter als 0,10 m von einer Wand der Welt (wie das frühere AP06-Kriterium), kein Kontakt, kein Absturz, Störung ausgelöst und, wo erwartet, Heilung beobachtet. v2 ließ einen Lauf mit verbogener Karte (3,3 m) über die Teilende-Klausel bestehen."
+ },
+ "szenarien": [
+  {
+   "id": "erkundung",
+   "beschreibung": "Ohne Störung; Start im Laborraum.",
+   "stoerung": null,
+   "erwartet": {}
+  }
+ ]
+}

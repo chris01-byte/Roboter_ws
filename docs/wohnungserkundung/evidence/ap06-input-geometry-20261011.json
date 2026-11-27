@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "baseline": "9fb28f6",
+  "scope": "pure raster work and age timing",
+  "measured_live_before": {
+    "input_count": 53,
+    "elapsed_p50_s": 0.135763,
+    "elapsed_p95_s": 0.276637,
+    "elapsed_max_s": 0.3837,
+    "source_wheel_limit_s": 0.18,
+    "expired_count": 1,
+    "rebound_wheel_final_ages_s": [
+      0.20145632500498323,
+      0.21241458800068358
+    ]
+  },
+  "frozen_geometry": {
+    "diagnostic_only": true,
+    "no_health_or_movement_authority": true,
+    "actual_captured_geometry": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-order-source-a/selection-object-1.pickle",
+    "native_prefix": "/home/p/.local/share/amadeus/releases/ap06-qualified-v10-20261011/install/explore",
+    "before_steady_approx_s": 0.0525,
+    "after_steady_approx_s": 0.028,
+    "reused": "exact known/safe raster arithmetic only",
+    "cropped": "unmodified body-cell arithmetic within conservative circumscribed window"
+  },
+  "tests": {
+    "path": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/geometry-complete",
+    "passed": 298,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "intermediate_test_failure": {
+    "path": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/geometry-after",
+    "failures": 2,
+    "reason": "old time injector patched a function bypassed by a pure geometry cache hit",
+    "correction": "inject delay at current geometry boundary; both hit/miss still reject original expired ages"
+  },
+  "limits_unchanged": true,
+  "selection_and_map_age_distinct_names": true,
+  "hardware_test": false,
+  "closed_loop_after_pending": true,
+  "rollback": "revert this pure geometry/timing diff; select previous private overlay",
+  "sha256": {
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-order-source-a/input-stage-timings.jsonl": "3a772719086c7703a4aa27746d3f2778e97f532908800e510296a49765eb32e3",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/profile-full-input-before.txt": "7a075b53fd22d7eb6300613d695307b4d8a29e25688e3f92654caacc1e71ff63",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/profile-full-input-after.txt": "a8a28dfbe408c42c6ff51ad776d2afd36d5f0a87ee023aa864fdac7c02dd50c2",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/profile-input-native-before.txt": "f3af2020c4f8e2f28f6b3133ea528b8ec1ce8dccf93a2856420e9b8a50d08a8d",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/geometry-complete/results.xml": "9bef7aba62396cd5b7a9b733baab133be08012c081317b494ed32d787d78c9dd"
+  }
+}

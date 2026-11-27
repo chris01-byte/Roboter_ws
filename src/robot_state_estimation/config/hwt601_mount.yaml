@@ -1,0 +1,15 @@
+# User measurements, 2026-09-08. This describes the footplate reference,
+# NOT the unknown internal accelerometer/gyro measurement point.
+parent_frame: base_link
+mount_frame: hwt601_mount
+housing_center_forward_of_axle_m: 0.084
+housing_center_left_of_centerline_m: 0.0
+footplate_height_above_ground_m: 0.034
+# Existing OAK/VL53 and dummy URDF convention; not a new physical measurement.
+base_link_height_above_ground_m: 0.090
+sensor_x_direction: right
+sensor_y_direction: forward
+sensor_z_direction: up
+position_uncertainty_m: null  # User explicitly reports uncertain access/measurement.
+sensor_origin_offset_mount_m: null  # Not specified in manufacturer drawing.
+fusion_approved: false

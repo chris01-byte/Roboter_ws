@@ -1,0 +1,493 @@
+{
+  "schema": 1,
+  "created_utc": "2026-10-08T07:00:41.533154+00:00",
+  "result_sha256": "5e2d5f189cc52fc2be1494f8677ead9787f60954fb0279af34d7d2672b59a5fa",
+  "trace": {
+    "path": "/workspace/scratch/ap06-concept-20261008/joined-a/door68_start_a/events.jsonl.gz",
+    "uncompressed_bytes": 134820785,
+    "uncompressed_sha256": "b2aba0e561ab8ddaab758e47fa35e7e41666dcb7683310f5e44aa5bb7ef15106",
+    "compressed_bytes": 17946277,
+    "verified": true
+  },
+  "inspected_sources": {
+    "src/explore/explore/metric_frontier_runtime.py": {
+      "inspected_sha256": "aa5f18db87891793a749d59e2940542d4336e12b3864727e0059d238332ba8ca",
+      "executed_manifest_sha256": "aa5f18db87891793a749d59e2940542d4336e12b3864727e0059d238332ba8ca",
+      "matches": true
+    },
+    "src/explore/explore/explore_node.py": {
+      "inspected_sha256": "07e27f603cb857a77b6e6ff0da9c6f1f715735a1f428594c510f6c20f94676cb",
+      "executed_manifest_sha256": "07e27f603cb857a77b6e6ff0da9c6f1f715735a1f428594c510f6c20f94676cb",
+      "matches": true
+    },
+    "src/explore/config/explore_params.yaml": {
+      "inspected_sha256": "83ba002c74421513ee849a1a5728b13f79acdbb1cba298650a5d277ee409109c",
+      "executed_manifest_sha256": "83ba002c74421513ee849a1a5728b13f79acdbb1cba298650a5d277ee409109c",
+      "matches": true
+    }
+  },
+  "topics": {
+    "/base_hardware/state_json": 12207,
+    "/tf": 479,
+    "/fusion/hwt601/status_json": 1044,
+    "/mission_manager/status_json": 3246,
+    "/explore/status_json": 235,
+    "/explore_area/_action/status": 2,
+    "/plan": 6,
+    "/navigate_to_pose/_action/status": 6,
+    "/received_global_plan": 1345
+  },
+  "status_transitions": [
+    {
+      "at": 171907.283202131,
+      "published_unix_s": 1791442255.3081934,
+      "phase": "idle",
+      "state": "idle",
+      "attempt": null,
+      "reason": null,
+      "chain_entries": 0,
+      "active_goal": null
+    },
+    {
+      "at": 171928.284196179,
+      "published_unix_s": 1791442276.3082783,
+      "phase": "idle",
+      "state": "running",
+      "attempt": null,
+      "reason": null,
+      "chain_entries": 0,
+      "active_goal": null
+    },
+    {
+      "at": 171930.282511378,
+      "published_unix_s": 1791442278.3082027,
+      "phase": "metric_prealign",
+      "state": "running",
+      "attempt": 1,
+      "reason": null,
+      "chain_entries": 0,
+      "active_goal": {
+        "task_id": "metric-task-1",
+        "x": 0.44999999999999996,
+        "y": 0.0,
+        "route_length_m": 0.44999999999999996,
+        "cost": 0.06000002883374678,
+        "revision": 27
+      }
+    },
+    {
+      "at": 171931.282673902,
+      "published_unix_s": 1791442279.3081899,
+      "phase": "metric_navigation",
+      "state": "running",
+      "attempt": 1,
+      "reason": null,
+      "chain_entries": 0,
+      "active_goal": {
+        "task_id": "metric-task-1",
+        "x": 0.44999999999999996,
+        "y": 0.0,
+        "route_length_m": 0.44999999999999996,
+        "cost": 0.06000002883374678,
+        "revision": 27
+      }
+    },
+    {
+      "at": 171952.291437451,
+      "published_unix_s": 1791442300.3159533,
+      "phase": "we_initial_scan",
+      "state": "waiting_new_observation",
+      "attempt": 1,
+      "reason": null,
+      "chain_entries": 1,
+      "active_goal": {
+        "task_id": "metric-task-1",
+        "x": 0.44999999999999996,
+        "y": 0.0,
+        "route_length_m": 0.44999999999999996,
+        "cost": 0.06000002883374678,
+        "revision": 27
+      }
+    },
+    {
+      "at": 172050.331637747,
+      "published_unix_s": 1791442398.3554742,
+      "phase": "metric_prealign",
+      "state": "running",
+      "attempt": 3,
+      "reason": null,
+      "chain_entries": 1,
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.9209084802781249,
+        "y": 0.06532423103645249,
+        "route_length_m": 0.6,
+        "cost": 3.4298559137532556,
+        "revision": 147
+      }
+    },
+    {
+      "at": 172053.3020955,
+      "published_unix_s": 1791442401.3088942,
+      "phase": "metric_navigation",
+      "state": "running",
+      "attempt": 3,
+      "reason": null,
+      "chain_entries": 1,
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.9209084802781249,
+        "y": 0.06532423103645249,
+        "route_length_m": 0.6,
+        "cost": 3.4298559137532556,
+        "revision": 147
+      }
+    },
+    {
+      "at": 172102.299279004,
+      "published_unix_s": 1791442450.3177953,
+      "phase": "metric_replanning",
+      "state": "waiting_new_observation",
+      "attempt": 3,
+      "reason": null,
+      "chain_entries": 2,
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.9209084802781249,
+        "y": 0.06532423103645249,
+        "route_length_m": 0.6,
+        "cost": 3.4298559137532556,
+        "revision": 147
+      }
+    },
+    {
+      "at": 172104.299177715,
+      "published_unix_s": 1791442452.3246274,
+      "phase": "metric_waiting_tasks",
+      "state": "waiting",
+      "attempt": 3,
+      "reason": null,
+      "chain_entries": 2,
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.9209084802781249,
+        "y": 0.06532423103645249,
+        "route_length_m": 0.6,
+        "cost": 3.4298559137532556,
+        "revision": 147
+      }
+    },
+    {
+      "at": 172133.320519365,
+      "published_unix_s": 1791442481.3417723,
+      "phase": "metric_prealign",
+      "state": "running",
+      "attempt": 4,
+      "reason": null,
+      "chain_entries": 2,
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.7836085363371389,
+        "y": 0.6682801743418818,
+        "route_length_m": 0.6000000000000001,
+        "cost": 1.818962847670243,
+        "revision": 230
+      }
+    },
+    {
+      "at": 172135.315594677,
+      "published_unix_s": 1791442483.3117163,
+      "phase": "metric_navigation",
+      "state": "running",
+      "attempt": 4,
+      "reason": null,
+      "chain_entries": 2,
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.7836085363371389,
+        "y": 0.6682801743418818,
+        "route_length_m": 0.6000000000000001,
+        "cost": 1.818962847670243,
+        "revision": 230
+      }
+    },
+    {
+      "at": 172138.47238905,
+      "published_unix_s": 1791442486.4951558,
+      "phase": "failed",
+      "state": "failed",
+      "attempt": 4,
+      "reason": "self_body_scan_stale_after_processing",
+      "chain_entries": 2,
+      "active_goal": {
+        "task_id": "metric-task-2",
+        "x": 0.7836085363371389,
+        "y": 0.6682801743418818,
+        "route_length_m": 0.6000000000000001,
+        "cost": 1.818962847670243,
+        "revision": 230
+      }
+    }
+  ],
+  "action_transitions": [
+    {
+      "at": 171927.85024016,
+      "topic": "/explore_area/_action/status",
+      "active": [
+        [
+          16,
+          129,
+          131,
+          213,
+          48,
+          166,
+          117,
+          252,
+          207,
+          204,
+          68,
+          230,
+          83,
+          242,
+          88,
+          32
+        ]
+      ]
+    },
+    {
+      "at": 171931.094852004,
+      "topic": "/navigate_to_pose/_action/status",
+      "active": [
+        [
+          102,
+          136,
+          236,
+          253,
+          104,
+          40,
+          74,
+          218,
+          178,
+          127,
+          96,
+          241,
+          224,
+          63,
+          44,
+          123
+        ]
+      ]
+    },
+    {
+      "at": 171949.796341698,
+      "topic": "/navigate_to_pose/_action/status",
+      "active": []
+    },
+    {
+      "at": 172053.194999373,
+      "topic": "/navigate_to_pose/_action/status",
+      "active": [
+        [
+          151,
+          82,
+          30,
+          15,
+          172,
+          31,
+          79,
+          91,
+          163,
+          49,
+          67,
+          232,
+          222,
+          155,
+          33,
+          188
+        ]
+      ]
+    },
+    {
+      "at": 172100.357534216,
+      "topic": "/navigate_to_pose/_action/status",
+      "active": []
+    },
+    {
+      "at": 172135.112396865,
+      "topic": "/navigate_to_pose/_action/status",
+      "active": [
+        [
+          150,
+          124,
+          64,
+          232,
+          24,
+          34,
+          73,
+          127,
+          172,
+          4,
+          61,
+          141,
+          164,
+          52,
+          91,
+          128
+        ]
+      ]
+    },
+    {
+      "at": 172136.566999113,
+      "topic": "/navigate_to_pose/_action/status",
+      "active": []
+    },
+    {
+      "at": 172138.469670511,
+      "topic": "/explore_area/_action/status",
+      "active": []
+    }
+  ],
+  "alignment_receipts": [
+    {
+      "task": "metric-task-1",
+      "attempt": 1,
+      "checked_at": 171930.822206971,
+      "status": "controller_owned",
+      "result": [
+        "controller_owned",
+        0.0,
+        0.0,
+        0.0
+      ],
+      "achieved_angle_rad": 0.0,
+      "initial_error_rad": 0.0,
+      "residual_error_rad": 0.0
+    },
+    {
+      "task": "metric-task-2",
+      "attempt": 3,
+      "checked_at": 172052.590766856,
+      "status": "controller_owned",
+      "result": [
+        "controller_owned",
+        0.0,
+        0.0,
+        0.0
+      ],
+      "achieved_angle_rad": 0.0,
+      "initial_error_rad": 0.0,
+      "residual_error_rad": 0.0
+    },
+    {
+      "task": "metric-task-2",
+      "attempt": 4,
+      "checked_at": 172134.497362016,
+      "status": "controller_owned",
+      "result": [
+        "controller_owned",
+        0.0,
+        0.0,
+        0.0
+      ],
+      "achieved_angle_rad": 0.0,
+      "initial_error_rad": 0.0,
+      "residual_error_rad": 0.0
+    }
+  ],
+  "join_rejections": [
+    {
+      "branch": "no_active_child",
+      "checked_at": 172022.187545235,
+      "pending_age_s": 0.0010480350174475461,
+      "active": true,
+      "active_child": false,
+      "private_permit": false,
+      "raw": {
+        "fingerprint": "b4fc056b6a40fdfcbab6c80ee5d99b35a7c3be51e1ac2d75c84ad0d9fc299a3e",
+        "source_stamp_ns": 1791442370152887904,
+        "frame_id": "map"
+      },
+      "status": {
+        "fingerprint": "1bf13ac087599dd84bf73d5e7a3c8c785e34bbde7d83e061b62742a654891a1c",
+        "source_stamp_ns": 1791442369053111916,
+        "frame_id": "map"
+      },
+      "joined_raw": {
+        "fingerprint": "1bf13ac087599dd84bf73d5e7a3c8c785e34bbde7d83e061b62742a654891a1c",
+        "source_stamp_ns": 1791442369053111916,
+        "frame_id": "map"
+      },
+      "joined_status": {
+        "fingerprint": "1bf13ac087599dd84bf73d5e7a3c8c785e34bbde7d83e061b62742a654891a1c",
+        "source_stamp_ns": 1791442369053111916,
+        "frame_id": "map"
+      },
+      "context_matches_joined": true,
+      "egress": [
+        {
+          "kind": "ReferencedStartEgress",
+          "valid": true,
+          "projected_cells": 0,
+          "retained_cells": 0,
+          "retained_area_m2": 0.0
+        },
+        {
+          "kind": "ReferencedStartEgress",
+          "valid": true,
+          "projected_cells": 0,
+          "retained_cells": 0,
+          "retained_area_m2": 0.0
+        }
+      ]
+    }
+  ],
+  "join_stops": [],
+  "terminal": {
+    "state": "failed",
+    "reason": "self_body_scan_stale_after_processing",
+    "arrivals": 2,
+    "observations": 2,
+    "attempts": 4,
+    "failures": 0
+  },
+  "terminal_decision_snapshot": {
+    "time_monotonic": 172138.281969407,
+    "safe": true,
+    "first_rejecting_predicate": null,
+    "standstill": true,
+    "hwt_state": "HEALTHY"
+  },
+  "sensor_result": {
+    "published": 2442,
+    "withheld_stale_plant": 0,
+    "actual_cpu_affinity": [
+      3
+    ],
+    "separate_process": true,
+    "writes_registers": false,
+    "plant_integration": false
+  },
+  "source_semantics": {
+    "scan_timeout_s": 0.5,
+    "selected_at_entry": "One immutable _door_lidar_scan_snapshot selected before body, mask and egress processing; its callback received_at must already be within [0,0.5] seconds.",
+    "rejected_at_exit": "completed - the SAME selected scan.received_at exceeds the unchanged 0.5 second limit.",
+    "timestamp_origin": "explore_node._on_door_lidar_scan sets received_at=time.monotonic() in the callback, not the LaserScan source stamp.",
+    "processing_bound": "processing elapsed > 0.5 - selected initial receipt age; not necessarily processing elapsed > 0.5 seconds."
+  },
+  "established_findings": [
+    "No map_join_stop was recorded and neither completed child was canceled for a map join.",
+    "The one join rejection is an earlier optional-scan no_active_child transition with private_permit=false and pending_age_s=0.0010480350174475461.",
+    "That old join rejection is not the terminal cause; first_rejecting_predicate retained its older map_status_join_pending value.",
+    "All three observed departure alignments were controller_owned. The new external rotation branch was not exercised.",
+    "The last Navigate child was active from 172135.112396865 through 172136.566999113; Explorer became terminal at 172138.469670511.",
+    "The final operating snapshot at 172138.281969407 reports safe, standstill and HWT HEALTHY. This later snapshot does not recover the rejected immutable scan timestamps."
+  ],
+  "evidence_limits": [
+    "The trace has no LaserScan messages, scan callback receipts or per-call geometry timing.",
+    "Exact selected scan age, exact processing duration, latest concurrently received scan and callback-delivery gaps are unobserved.",
+    "The 2442 produced sensor messages and zero withheld_stale_plant count do not prove Explorer DDS receipt freshness at the rejecting call.",
+    "Do not infer a LiDAR outage, a >0.5 second geometry duration, or a specific hot function from this trace alone.",
+    "The terminal reason alone does not distinguish the stop callback rejection from a subsequent post-stop input recheck of the same kind.",
+    "This finite-unmasked concept run is not an original masked-sensor mission or hardware qualification."
+  ]
+}

@@ -1,0 +1,31 @@
+...F..                                                                   [100%]
+=================================== FAILURES ===================================
+___ test_cached_start_connections_match_uncached_targets_and_reject_new_wall ___
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f004523ee30>
+
+    def test_cached_start_connections_match_uncached_targets_and_reject_new_wall(monkeypatch):
+        node, inputs = egress_fixture()
+        targets = ((.75, .35), (.85, .4))
+        expected = [node._metric_route(inputs, target) for target in targets]
+        node._metric_selection_cache = threading.local()
+        node._metric_selection_cache.memo = {'inputs': inputs}
+        calls = []
+        original = node._metric_grid_line_clear
+        def checked(*args):
+            calls.append(1)
+            return original(*args)
+        monkeypatch.setattr(node, '_metric_grid_line_clear', checked)
+        first = node._metric_route(inputs, targets[0])
+        count = len(calls)
+        assert count > 0
+        second = node._metric_route(inputs, targets[1])
+        assert (first, second) == tuple(expected)
+>       assert len(calls) == count
+E       assert 2 == 1
+E        +  where 2 = len([1, 1])
+
+evidence/ap06-repo/src/explore/test/test_metric_selection_pass.py:69: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_selection_pass.py::test_cached_start_connections_match_uncached_targets_and_reject_new_wall
+1 failed, 5 passed in 0.52s

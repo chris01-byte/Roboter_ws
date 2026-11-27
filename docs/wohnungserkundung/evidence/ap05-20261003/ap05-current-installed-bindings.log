@@ -1,0 +1,26 @@
+3.10.12 (main, Aug 31 2026, 10:18:17) [GCC 11.4.0]
+explore.explore_node /evidence/ap05-current-install/explore/lib/python3.10/site-packages/explore/explore_node.py
+explore.metric_frontier_runtime /evidence/ap05-current-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py
+explore.metric_frontier /evidence/ap05-current-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py
+explore.metric_frontier_candidates /evidence/ap05-current-install/explore/lib/python3.10/site-packages/explore/metric_frontier_candidates.py
+explore.metric_progress /evidence/ap05-current-install/explore/lib/python3.10/site-packages/explore/metric_progress.py
+explore.metric_checkpoint /evidence/ap05-current-install/explore/lib/python3.10/site-packages/explore/metric_checkpoint.py
+amadeus_map_identity.fingerprint /evidence/ap05-current-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py
+robot_map_manager.robot_map_manager_node /evidence/ap05-current-install/robot_map_manager/lib/python3.10/site-packages/robot_map_manager/robot_map_manager_node.py
+robot_state_estimation.hwt601_imu_node /evidence/ap05-current-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_imu_node.py
+robot_state_estimation._hwt601_clock /evidence/ap05-current-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/_hwt601_clock.py
+robot_navigation.cmd_vel_mission_gate /evidence/ap05-current-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/cmd_vel_mission_gate.py
+base_hardware.encoder_shadow_node /evidence/ap05-current-install/base_hardware/lib/python3.10/site-packages/base_hardware/encoder_shadow_node.py
+nav2_msgs.action /evidence/ap05-current-install/nav2_msgs/local/lib/python3.10/dist-packages/nav2_msgs/action/__init__.py
+robot_interfaces.action /evidence/ap05-current-install/robot_interfaces/local/lib/python3.10/dist-packages/robot_interfaces/action/__init__.py
+nav_msgs.msg /opt/ros/humble/local/lib/python3.10/dist-packages/nav_msgs/msg/__init__.py
+rclpy /opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py
+prefix explore /evidence/ap05-current-install/explore
+prefix robot_navigation /evidence/ap05-current-install/robot_navigation
+prefix robot_map_manager /evidence/ap05-current-install/robot_map_manager
+prefix amadeus_map_identity /evidence/ap05-current-install/amadeus_map_identity
+prefix robot_state_estimation /evidence/ap05-current-install/robot_state_estimation
+prefix base_hardware /evidence/ap05-current-install/base_hardware
+prefix robot_interfaces /evidence/ap05-current-install/robot_interfaces
+prefix nav2_msgs /evidence/ap05-current-install/nav2_msgs
+actual actions robot_interfaces.action._explore_area nav2_msgs.action._compute_path_to_pose

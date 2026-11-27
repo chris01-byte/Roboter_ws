@@ -1,0 +1,56 @@
+[
+  {
+    "run": "complete-a",
+    "sequence": 1,
+    "map_id": "map-204d9c529cc80fa5975366bdd6403c6dfa84aad94fdfe5a6a9f28863bddb461b",
+    "outcome": "blocked_help_required",
+    "map_pair_valid": true,
+    "resume_authorizes_motion": false,
+    "active_resume_tested": false,
+    "arrivals": 0,
+    "observations": 0
+  },
+  {
+    "run": "complete-b",
+    "sequence": 1,
+    "map_id": "map-ea12f79c761b5fbf6c7acce219621fac9acb5a649d366b3957b1d84a14fccfc9",
+    "outcome": "blocked_help_required",
+    "map_pair_valid": true,
+    "resume_authorizes_motion": false,
+    "active_resume_tested": false,
+    "arrivals": 0,
+    "observations": 0
+  },
+  {
+    "run": "complete-c",
+    "sequence": 1,
+    "map_id": "map-43b850c83bfa9d36f577c274b2148f600c6329260ccb1953e967f1e0302c7a41",
+    "outcome": "blocked_help_required",
+    "map_pair_valid": true,
+    "resume_authorizes_motion": false,
+    "active_resume_tested": false,
+    "arrivals": 0,
+    "observations": 0
+  },
+  {
+    "run": "complete-cancel",
+    "sequence": 1,
+    "map_id": "map-ec16ee520df76e897402399559d98984ae5a1ba1370872831e47f802a8eea9f9",
+    "outcome": "user_canceled",
+    "map_pair_valid": true,
+    "resume_authorizes_motion": false,
+    "active_resume_tested": false,
+    "arrivals": 0,
+    "observations": 0
+  },
+  {
+    "run": "complete-gyro-hold",
+    "map_pair_valid": false,
+    "checkpoint": {
+      "state": "unavailable",
+      "reason": "metric_checkpoint_exact_saved_snapshot_unavailable",
+      "motion_authorized": false
+    },
+    "active_resume_tested": false
+  }
+]

@@ -1,0 +1,8 @@
+[INFO] [1791280013.732088206] [slam_toolbox]: Node using stack size 40000000
+[INFO] [1791280013.821377526] [slam_toolbox]: Using solver plugin solver_plugins::CeresSolver
+[INFO] [1791280013.829367790] [slam_toolbox]: CeresSolver: Using SCHUR_JACOBI preconditioner.
+[WARN] [1791280014.090265707] [slam_toolbox]: minimum laser range setting (0.0 m) exceeds the capabilities of the used Lidar (0.1 m)
+Info: clipped range threshold to be within minimum and maximum range!
+Registering sensor: [Custom Described Lidar]
+[INFO] [1791280340.890520865] [rclcpp]: signal_handler(signum=2)
+terminate called after throwing an instance of 'karto::Exception'

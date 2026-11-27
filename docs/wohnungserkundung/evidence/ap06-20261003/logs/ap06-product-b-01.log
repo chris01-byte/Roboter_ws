@@ -1,0 +1,45 @@
+[WARN] [1791070197.420950414] [base_hardware]: RS485 verbunden auf /dev/ttyUSB_BASE @ 115200; Fahrfreigabe erst nach bestaetigtem Stop, Rampen und Feedback.
+[INFO] [1791070197.421588476] [base_hardware]: Anfahrverhalten bestaetigt: Beschleunigen 2000 ms, Bremsen 400 ms, Startdrehzahl 5 rpm.
+[WARN] [1791070197.422472682] [base_hardware]: RS485 Initialisierung vollstaendig bestaetigt. Raeder muessen frei drehen, Not-Aus bereithalten.
+[INFO] [1791070197.422784893] [base_hardware]: base_hardware bereit: dry_run=False, cmd_vel=/cmd_vel, wheel_radius=0.062 m, separation=0.385 m
+[INFO] [1791070197.431426610] [base_hardware]: CMD: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070197.432125999] [hwt601_imu]: HWT601 passiv vorbereitet: /dev/ttyUSB_HWT601 bei 115200 Baud, Adresse 80; nur Modbus-Lesefunktion 0x03
+[INFO] [1791070197.446342674] [hwt601_imu]: HWT601 verbunden: /dev/ttyUSB_HWT601
+[INFO] [1791070198.436959258] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070199.456987745] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070200.457673034] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070201.458741089] [base_hardware]: CMD: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=-0.0 rpm | Motor L=+0 R=-0 rpm
+[INFO] [1791070202.476624187] [base_hardware]: CMD: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=-0.0 rpm | Motor L=+0 R=-0 rpm
+[INFO] [1791070203.477873585] [base_hardware]: CMD: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=-0.0 rpm | Motor L=+0 R=-0 rpm
+[INFO] [1791070204.498105237] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070205.518304814] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070206.539009450] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070207.558289904] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070208.577387688] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070209.597644483] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070210.603618024] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070211.617033246] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070212.636596308] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070213.636615922] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070214.637783318] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070215.658342901] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070216.676955395] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070217.698823681] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070218.716928440] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070219.737026020] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070220.758338813] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070221.777871105] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070222.797402317] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070223.818348969] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070224.837824558] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070225.857898537] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070226.876983644] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070227.900071593] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+Traceback (most recent call last):
+  File "/evidence/ap06-repo/tools/simulation/ap06_closed_product.py", line 582, in run
+    raise RuntimeError('AP06 acceptance not met: '+str(observer.metric().get('reason', observer.metric().get('state'))))
+RuntimeError: AP06 acceptance not met: completion_raw_pose_not_observed_free
+[INFO] [1791070228.899860566] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070229.916606773] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791070230.916621463] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+{"case": {"id": "door68_start_b", "door_m": 0.68, "start": [-2.1, 0.45, 0.0]}, "passed": false, "error": "AP06 acceptance not met: completion_raw_pose_not_observed_free", "travel_m": 0.0, "map_oracle": {"reference_free_cells": 14230, "reference_observed_cells": 7463, "reference_observed_fraction": 0.5244553759662685, "maximum_occupied_wall_error_m": 0.024999742931498425}}

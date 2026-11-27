@@ -1,0 +1,81 @@
+[WARN] [1791063733.604106101] [base_hardware]: RS485 verbunden auf /dev/ttyUSB_BASE @ 115200; Fahrfreigabe erst nach bestaetigtem Stop, Rampen und Feedback.
+[INFO] [1791063733.607220340] [base_hardware]: Anfahrverhalten bestaetigt: Beschleunigen 2000 ms, Bremsen 400 ms, Startdrehzahl 5 rpm.
+[WARN] [1791063733.609445386] [base_hardware]: RS485 Initialisierung vollstaendig bestaetigt. Raeder muessen frei drehen, Not-Aus bereithalten.
+[INFO] [1791063733.609667374] [base_hardware]: base_hardware bereit: dry_run=False, cmd_vel=/cmd_vel, wheel_radius=0.062 m, separation=0.385 m
+[INFO] [1791063733.618362665] [base_hardware]: CMD: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063733.618772801] [hwt601_imu]: HWT601 passiv vorbereitet: /dev/ttyUSB_HWT601 bei 115200 Baud, Adresse 80; nur Modbus-Lesefunktion 0x03
+[INFO] [1791063733.630840513] [hwt601_imu]: HWT601 verbunden: /dev/ttyUSB_HWT601
+[INFO] [1791063734.626074027] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063735.645987210] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063736.666211644] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063737.686504545] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063738.686051290] [base_hardware]: CMD: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=-0.0 rpm | Motor L=+0 R=-0 rpm
+[INFO] [1791063739.706026036] [base_hardware]: CMD: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=-0.0 rpm | Motor L=+0 R=-0 rpm
+[INFO] [1791063740.725406322] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063741.745935195] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063742.769470463] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063743.786075070] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063744.806027478] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063745.825821257] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063746.845187941] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063747.866106191] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063748.886049700] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063749.905908498] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063750.925176171] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063751.926073901] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063752.944624132] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063753.964482962] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063754.964537567] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063755.966568570] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063756.966516670] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063757.984667468] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063758.985109074] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063759.985767254] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063761.005516704] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063762.026196923] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063763.046151882] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063764.065864772] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063765.085889419] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063766.105174363] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063767.125218363] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063768.145830366] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063769.146134506] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063770.164553752] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063771.166560531] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063772.184537404] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063773.186469227] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063774.205922074] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063775.225502294] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063776.246181342] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063777.265109131] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063778.285116085] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063779.305283560] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063780.327560787] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063781.345553311] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063782.366141607] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063783.386600087] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063784.405894984] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063785.425800597] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063786.445148112] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063787.465088387] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063788.485791814] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063789.505102203] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063790.525188629] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063791.545095149] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063792.565905886] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063793.585177080] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063794.606345676] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063795.625117947] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063796.646198635] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063797.665062699] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+Traceback (most recent call last):
+  File "/evidence/ap06-repo/tools/simulation/ap06_closed_product.py", line 443, in run
+    wait(lambda: observer.metric().get('scope_bound') is True and observer.fusion and
+  File "/evidence/ap06-repo/tools/simulation/ap06_closed_product.py", line 329, in wait
+    raise TimeoutError(label)
+TimeoutError: real scope and HWT readiness
+[INFO] [1791063798.670291240] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063799.684597689] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063800.698579174] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791063801.688113728] [base_hardware]: TIMEOUT-STOP: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+{"case": {"id": "door80_start_c", "door_m": 0.8, "start": [-1.6, 0.0, 0.0]}, "passed": false, "error": "real scope and HWT readiness"}

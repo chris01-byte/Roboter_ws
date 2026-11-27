@@ -1,0 +1,33 @@
+--- a/nav2_navfn_planner/src/navfn_planner.cpp
++++ b/nav2_navfn_planner/src/navfn_planner.cpp
+@@ -485,14 +485,16 @@
+ bool
+ NavfnPlanner::worldToMap(double wx, double wy, unsigned int & mx, unsigned int & my)
+ {
+-  if (wx < costmap_->getOriginX() || wy < costmap_->getOriginY()) {
++  if (!std::isfinite(wx) || !std::isfinite(wy) ||
++    wx < costmap_->getOriginX() || wy < costmap_->getOriginY())
++  {
+     return false;
+   }
+ 
+   mx = static_cast<int>(
+-    std::round((wx - costmap_->getOriginX()) / costmap_->getResolution()));
++    std::floor((wx - costmap_->getOriginX()) / costmap_->getResolution()));
+   my = static_cast<int>(
+-    std::round((wy - costmap_->getOriginY()) / costmap_->getResolution()));
++    std::floor((wy - costmap_->getOriginY()) / costmap_->getResolution()));
+ 
+   if (mx < costmap_->getSizeInCellsX() && my < costmap_->getSizeInCellsY()) {
+     return true;
+@@ -509,8 +511,8 @@
+ void
+ NavfnPlanner::mapToWorld(double mx, double my, double & wx, double & wy)
+ {
+-  wx = costmap_->getOriginX() + mx * costmap_->getResolution();
+-  wy = costmap_->getOriginY() + my * costmap_->getResolution();
++  wx = costmap_->getOriginX() + (mx + 0.5) * costmap_->getResolution();
++  wy = costmap_->getOriginY() + (my + 0.5) * costmap_->getResolution();
+ }
+ 
+ void

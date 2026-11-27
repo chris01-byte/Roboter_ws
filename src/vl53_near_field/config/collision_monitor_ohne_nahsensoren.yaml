@@ -1,0 +1,23 @@
+# =====================================================================
+#  Overlay fuer den collision_monitor in der Laborprobe OHNE Nahsensoren
+#  Nur mit nav_mapping.launch.py / app_mapping.launch.py nahsensoren:=false;
+#  wird als letztes Profil geladen. Ohne den Schalter wird an seiner Stelle
+#  die Basisdatei erneut geladen (wirkungslos).
+#
+#  Entscheidung Projektinhaber 22.11.2026: "Die Nahbereichssensoren machen
+#  gerade Probleme. Deswegen schreibe jetzt einen Testlauf, wo diese komplett
+#  deaktiviert werden." Der VL53-Knoten startet dann nicht. Im
+#  Kartierprofil sind die beiden VL53 die einzigen Quellen des
+#  collision_monitor; ohne sie sieht er nichts, er reicht die Fahrbefehle
+#  nur noch durch (er bleibt im Pfad cmd_vel_smoothed -> cmd_vel). Damit
+#  eine Quelle ohne Daten nicht als "ungueltig" einen Halt erzwingt (Jazzy),
+#  werden beide Quellen ausdruecklich abgeschaltet. Bremsen und Anhalten vor
+#  niedrigen Dingen gibt es in diesem Betrieb nicht.
+#  Rueckfall: nahsensoren:=true (Vorgabe).
+# =====================================================================
+collision_monitor:
+  ros__parameters:
+    vl53_left:
+      enabled: False
+    vl53_right:
+      enabled: False

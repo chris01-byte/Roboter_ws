@@ -1,0 +1,8 @@
+# Experiment X11: map->odom 0,5 s statt 0,2 s vordatiert (slam_toolbox transform_timeout).
+# Hypothese: Der Zeitstempel von map->odom ist "zuletzt empfangener Scan + transform_timeout".
+# Blockiert die Scanverarbeitung unter Last länger als ~0,2 s, liegt die neueste Korrektur
+# hinter "jetzt" und RPP bricht mit "extrapolation into the future" ab (v4-Läufe 23.10.2026:
+# 54-77 Abbrüche je Lauf, Ursache fast aller Heilungen).
+slam_toolbox:
+  ros__parameters:
+    transform_timeout: 0.5

@@ -1,0 +1,11 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+___ test_real_parent_loop_revalidates_child_and_ignores_late_success[growth] ___
+evidence/ap05-repo/src/explore/test/test_metric_map_lifecycle.py:503: in test_real_parent_loop_revalidates_child_and_ignores_late_success
+    assert n._metric_status['chain'][0]['decision'] == 'arrival_without_observation'
+E   AssertionError: assert 'observed' == 'arrival_without_observation'
+E     - arrival_without_observation
+E     + observed
+=========================== short test summary info ============================
+FAILED evidence/ap05-repo/src/explore/test/test_metric_map_lifecycle.py::test_real_parent_loop_revalidates_child_and_ignores_late_success[growth]
+1 failed in 0.32s

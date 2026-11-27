@@ -1,0 +1,31 @@
+F...                                                                     [100%]
+=================================== FAILURES ===================================
+__ test_safe_round_scan_precedes_only_unproved_queries[query-True-full_scan] ___
+
+kind = 'query', pending = True, expected = 'full_scan'
+
+    @pytest.mark.parametrize('kind,pending,expected', [
+        ('query', True, 'full_scan'), ('proved', True, 'observation_goal'),
+        ('query', False, 'observation_goal')])
+    def test_safe_round_scan_precedes_only_unproved_queries(kind, pending, expected):
+        node, inputs, _ = fixture('ap06_a48_selection')
+        policy = MetricTaskPolicy(.6, 30., 2)
+        actual = node._metric_select(inputs, policy, .3)
+        assert actual and actual[0].observation_points
+        # Candidate peer only: geometry, scope, map contents and scan checks are
+        # production code on actual rasters. Declared query grants no movement.
+        query = replace(actual[0], requires_nav2_plan=kind == 'query')
+        node._metric_select = lambda *_: [query]
+        before = [list(inputs[i].data) for i in (0, 5)]
+        counters = [(a.tries, a.failures) for a in policy.attempts.values()]
+        decision, candidates = node._metric_start_decision(inputs, policy, .3, pending)
+        assert decision['scan_admissible'] and decision['scan_useful']
+>       assert decision['selected_motion'] == expected
+E       AssertionError: assert 'observation_goal' == 'full_scan'
+E         - full_scan
+E         + observation_goal
+
+evidence/ap06-repo/src/explore/test/test_metric_scan_before_queries.py:26: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_scan_before_queries.py::test_safe_round_scan_precedes_only_unproved_queries[query-True-full_scan]
+1 failed, 3 passed in 3.86s

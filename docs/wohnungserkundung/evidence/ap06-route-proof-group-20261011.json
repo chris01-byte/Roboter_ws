@@ -1,0 +1,248 @@
+{
+  "baseline_source": "a6d5bbd34f7150a1c5b1f6bd6f363de60662086b",
+  "actual_selector_counter": {
+    "before_grid_signature_reads": 4484,
+    "after_maximum_grid_signature_reads": 2399,
+    "selected_goal_unchanged": true,
+    "selected_points": 90,
+    "successful_selection_stub": false
+  },
+  "targeted": {
+    "original_suite": 164,
+    "additional_suite": 11,
+    "overlap": 9,
+    "unique": 166
+  },
+  "paired_profiles": {
+    "diagnostic_only": true,
+    "no_health_or_motion_authority": true,
+    "pairs": [
+      {
+        "pair": 0,
+        "before": {
+          "diagnostic_only": true,
+          "geometry_only_no_health_or_mission_authority": true,
+          "actual_original_frozen_input": true,
+          "python_binding": "/home/p/.local/share/amadeus/releases/ap06-correction-v14-20261011/install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "native_binding": "/home/p/.local/share/amadeus/releases/ap06-correction-v14-20261011/install/explore/lib/python3.10/site-packages/explore/_reserved_sweep.cpython-310-aarch64-linux-gnu.so",
+          "elapsed_s": 3.08441338299599,
+          "error": null,
+          "selected": [
+            {
+              "goal": [
+                1.4849999668076634,
+                -0.48499998915940523,
+                0.0
+              ],
+              "requires_native_plan": true,
+              "observation_points": 90,
+              "evidence_key": "5c36088224972a4448398e223180b698796d450a5eeffa3dcc02bc9e85478365"
+            }
+          ],
+          "ranking": {
+            "raw": 15,
+            "unsafe": 9,
+            "deferred_or_served": 3,
+            "accepted": 1,
+            "route_rejections": {
+              "goal_orientation_invalid": 8,
+              "no_visible_frontier": 1
+            },
+            "proposal_search_stopped_on_eligible_task": true
+          },
+          "original_deadline_s": 5.0,
+          "native_sha256": "486ba89c2dd60ed520d18187a19f9f9422c669fedb23b882547eccf801cdf83d"
+        },
+        "after": {
+          "diagnostic_only": true,
+          "geometry_only_no_health_or_mission_authority": true,
+          "actual_original_frozen_input": true,
+          "python_binding": "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/explore/metric_frontier_runtime.py",
+          "native_binding": "/home/p/.local/share/amadeus/releases/ap06-correction-v14-20261011/install/explore/lib/python3.10/site-packages/explore/_reserved_sweep.cpython-310-aarch64-linux-gnu.so",
+          "elapsed_s": 2.7422837460035225,
+          "error": null,
+          "selected": [
+            {
+              "goal": [
+                1.4849999668076634,
+                -0.48499998915940523,
+                0.0
+              ],
+              "requires_native_plan": true,
+              "observation_points": 90,
+              "evidence_key": "5c36088224972a4448398e223180b698796d450a5eeffa3dcc02bc9e85478365"
+            }
+          ],
+          "ranking": {
+            "raw": 15,
+            "unsafe": 9,
+            "deferred_or_served": 3,
+            "accepted": 1,
+            "route_rejections": {
+              "goal_orientation_invalid": 8,
+              "no_visible_frontier": 1
+            },
+            "proposal_search_stopped_on_eligible_task": true
+          },
+          "original_deadline_s": 5.0,
+          "native_sha256": "486ba89c2dd60ed520d18187a19f9f9422c669fedb23b882547eccf801cdf83d"
+        }
+      },
+      {
+        "pair": 1,
+        "before": {
+          "diagnostic_only": true,
+          "geometry_only_no_health_or_mission_authority": true,
+          "actual_original_frozen_input": true,
+          "python_binding": "/home/p/.local/share/amadeus/releases/ap06-correction-v14-20261011/install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "native_binding": "/home/p/.local/share/amadeus/releases/ap06-correction-v14-20261011/install/explore/lib/python3.10/site-packages/explore/_reserved_sweep.cpython-310-aarch64-linux-gnu.so",
+          "elapsed_s": 3.0133413020012085,
+          "error": null,
+          "selected": [
+            {
+              "goal": [
+                1.4849999668076634,
+                -0.48499998915940523,
+                0.0
+              ],
+              "requires_native_plan": true,
+              "observation_points": 90,
+              "evidence_key": "5c36088224972a4448398e223180b698796d450a5eeffa3dcc02bc9e85478365"
+            }
+          ],
+          "ranking": {
+            "raw": 15,
+            "unsafe": 9,
+            "deferred_or_served": 3,
+            "accepted": 1,
+            "route_rejections": {
+              "goal_orientation_invalid": 8,
+              "no_visible_frontier": 1
+            },
+            "proposal_search_stopped_on_eligible_task": true
+          },
+          "original_deadline_s": 5.0,
+          "native_sha256": "486ba89c2dd60ed520d18187a19f9f9422c669fedb23b882547eccf801cdf83d"
+        },
+        "after": {
+          "diagnostic_only": true,
+          "geometry_only_no_health_or_mission_authority": true,
+          "actual_original_frozen_input": true,
+          "python_binding": "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/explore/metric_frontier_runtime.py",
+          "native_binding": "/home/p/.local/share/amadeus/releases/ap06-correction-v14-20261011/install/explore/lib/python3.10/site-packages/explore/_reserved_sweep.cpython-310-aarch64-linux-gnu.so",
+          "elapsed_s": 2.655653142996016,
+          "error": null,
+          "selected": [
+            {
+              "goal": [
+                1.4849999668076634,
+                -0.48499998915940523,
+                0.0
+              ],
+              "requires_native_plan": true,
+              "observation_points": 90,
+              "evidence_key": "5c36088224972a4448398e223180b698796d450a5eeffa3dcc02bc9e85478365"
+            }
+          ],
+          "ranking": {
+            "raw": 15,
+            "unsafe": 9,
+            "deferred_or_served": 3,
+            "accepted": 1,
+            "route_rejections": {
+              "goal_orientation_invalid": 8,
+              "no_visible_frontier": 1
+            },
+            "proposal_search_stopped_on_eligible_task": true
+          },
+          "original_deadline_s": 5.0,
+          "native_sha256": "486ba89c2dd60ed520d18187a19f9f9422c669fedb23b882547eccf801cdf83d"
+        }
+      },
+      {
+        "pair": 2,
+        "before": {
+          "diagnostic_only": true,
+          "geometry_only_no_health_or_mission_authority": true,
+          "actual_original_frozen_input": true,
+          "python_binding": "/home/p/.local/share/amadeus/releases/ap06-correction-v14-20261011/install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "native_binding": "/home/p/.local/share/amadeus/releases/ap06-correction-v14-20261011/install/explore/lib/python3.10/site-packages/explore/_reserved_sweep.cpython-310-aarch64-linux-gnu.so",
+          "elapsed_s": 3.0345061689949944,
+          "error": null,
+          "selected": [
+            {
+              "goal": [
+                1.4849999668076634,
+                -0.48499998915940523,
+                0.0
+              ],
+              "requires_native_plan": true,
+              "observation_points": 90,
+              "evidence_key": "5c36088224972a4448398e223180b698796d450a5eeffa3dcc02bc9e85478365"
+            }
+          ],
+          "ranking": {
+            "raw": 15,
+            "unsafe": 9,
+            "deferred_or_served": 3,
+            "accepted": 1,
+            "route_rejections": {
+              "goal_orientation_invalid": 8,
+              "no_visible_frontier": 1
+            },
+            "proposal_search_stopped_on_eligible_task": true
+          },
+          "original_deadline_s": 5.0,
+          "native_sha256": "486ba89c2dd60ed520d18187a19f9f9422c669fedb23b882547eccf801cdf83d"
+        },
+        "after": {
+          "diagnostic_only": true,
+          "geometry_only_no_health_or_mission_authority": true,
+          "actual_original_frozen_input": true,
+          "python_binding": "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/explore/metric_frontier_runtime.py",
+          "native_binding": "/home/p/.local/share/amadeus/releases/ap06-correction-v14-20261011/install/explore/lib/python3.10/site-packages/explore/_reserved_sweep.cpython-310-aarch64-linux-gnu.so",
+          "elapsed_s": 2.793571021000389,
+          "error": null,
+          "selected": [
+            {
+              "goal": [
+                1.4849999668076634,
+                -0.48499998915940523,
+                0.0
+              ],
+              "requires_native_plan": true,
+              "observation_points": 90,
+              "evidence_key": "5c36088224972a4448398e223180b698796d450a5eeffa3dcc02bc9e85478365"
+            }
+          ],
+          "ranking": {
+            "raw": 15,
+            "unsafe": 9,
+            "deferred_or_served": 3,
+            "accepted": 1,
+            "route_rejections": {
+              "goal_orientation_invalid": 8,
+              "no_visible_frontier": 1
+            },
+            "proposal_search_stopped_on_eligible_task": true
+          },
+          "original_deadline_s": 5.0,
+          "native_sha256": "486ba89c2dd60ed520d18187a19f9f9422c669fedb23b882547eccf801cdf83d"
+        }
+      }
+    ]
+  },
+  "median_before_s": 3.0345061689949944,
+  "median_after_s": 2.7422837460035225,
+  "contract": "One pure route shares a complete content key only until its final exact audit. Changed raster, masks, reference, physical motion, escape evidence, scope or contour/route parameters discards the complete selection. Actual dispatch and native motion guard remain fresh. No route/health/motion authority cached.",
+  "hardware_qualified": false,
+  "next": "clean common v15 build, complete relevant regression and unchanged original five cases",
+  "file_hashes": {
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/explore/metric_frontier_runtime.py": "f07b4811f1ff907416b8a368110f71002cff68674e48724fb29608dbcd5541a8",
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/test/test_metric_route_proof_group.py": "b7c8ff6b34bc20385559ff373fddb50b64bb43a3146d81a18a18b082dc570087",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/route-proof-group-red/results.xml": "dfe42aa5fbf8ede8e3011f4847756cb83893277853b99b4e9b0ebfb25ffe5d60",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/route-proof-group-targeted/results.xml": "cc228778649581f26ddae39d9a4bde6f2f29505d4042f213618b59e0bd290d00",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/route-proof-group-protection/results.xml": "9fbeaf1870937c14791dcc2ef6490ffe023d652bd1a91e913f82b962d272bbab",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/route-key-paired-profile.json": "11978b8288eb72f1f2cc2639b88c550eb7c37512e0b0459375bbe47e91bb59ad"
+  }
+}

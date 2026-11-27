@@ -1,0 +1,3469 @@
+[
+  {
+    "case": {
+      "id": "door68_start_a",
+      "door_m": 0.68,
+      "start": [
+        -1.9,
+        -0.45,
+        0.0
+      ]
+    },
+    "passed": false,
+    "hardware_qualified": false,
+    "manifest_compatible": true,
+    "actual_lidar_beams": 2160,
+    "sensor_profile": "native_mast_mask",
+    "reference_geometry_provided_to_product": false,
+    "truth_map_publisher": false,
+    "truth_tf_publisher": false,
+    "manual_navigation_goals": 0,
+    "prefixes": {
+      "explore": "/evidence/ap06-product-install/explore",
+      "mission_manager": "/evidence/ap06-product-install/mission_manager",
+      "bt_orchestrator": "/evidence/ap06-product-install/bt_orchestrator",
+      "robot_navigation": "/evidence/ap06-product-install/robot_navigation",
+      "robot_state_estimation": "/evidence/ap06-product-install/robot_state_estimation",
+      "base_hardware": "/evidence/ap06-product-install/base_hardware",
+      "robot_map_manager": "/evidence/ap06-product-install/robot_map_manager",
+      "robot_localization": "/evidence/ap06-support-install/robot_localization",
+      "slam_toolbox": "/evidence/ap06-support-install/slam_toolbox",
+      "nav2_bt_navigator": "/evidence/ap06-support-install/nav2_bt_navigator",
+      "nav2_controller": "/evidence/ap03-nav2-install/nav2_controller",
+      "nav2_planner": "/evidence/ap03-nav2-install/nav2_planner",
+      "nav2_velocity_smoother": "/evidence/ap06-support-install/nav2_velocity_smoother",
+      "nav2_collision_monitor": "/evidence/ap06-support-install/nav2_collision_monitor",
+      "vl53_near_field": "/evidence/ap06-product-install/vl53_near_field",
+      "safety_monitor": "/evidence/ap06-product-install/safety_monitor",
+      "amadeus_lidar_bringup": "/evidence/ap06-product-install/amadeus_lidar_bringup"
+    },
+    "initial_map": {
+      "fingerprint": "c43197d2634af665cfe0afdaf0b3627db0e320294179b097f28e74749f047f04",
+      "width": 187,
+      "height": 93
+    },
+    "tf_owners": {
+      "odom->base_link": [
+        "hwt601_mapping_ekf"
+      ],
+      "map->odom": [
+        "slam_toolbox"
+      ]
+    },
+    "action_maximum_active": {
+      "/explore_area/_action/status": 1,
+      "/navigate_to_pose/_action/status": 1
+    },
+    "action_active_at_terminal": {
+      "/explore_area/_action/status": [],
+      "/navigate_to_pose/_action/status": []
+    },
+    "command_values_at_terminal": {
+      "/cmd_vel_nav": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_smoothed": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_nav_raw": [
+        0.0,
+        0.0
+      ]
+    },
+    "map_save": {
+      "success": true,
+      "message": "Karte 'amadeus' als Version 20261005T093833166573Z-d72d80bcfea1 gespeichert."
+    },
+    "checkpoint_after_save": {
+      "state": "unavailable",
+      "reason": "metric_checkpoint_exact_saved_snapshot_unavailable",
+      "motion_authorized": false
+    },
+    "metric": {
+      "schema_version": 1,
+      "state": "failed",
+      "outcome": "error",
+      "started_wall_time": 1791193104.7950234,
+      "arrivals": 0,
+      "observations": 0,
+      "observed_area_m2": 0.0,
+      "full_apartment_complete": false,
+      "semantic_complete": false,
+      "floor_coverage_verified": false,
+      "chain": [],
+      "decision_snapshot": {
+        "time_monotonic": 159063.694278611,
+        "safe": false,
+        "first_rejecting_predicate": "hwt601_wheel_missing_stale_or_invalid",
+        "standstill": false,
+        "encoder_state": {
+          "dry_run": false,
+          "allow_rs485": true,
+          "timed_out": false,
+          "cmd_v_mps": 0.05,
+          "cmd_w_radps": 3.6063660193786856e-05,
+          "invalid_cmd_count": 0,
+          "v_left_mps": 0.04999306676132775,
+          "v_right_mps": -0.05000693323867226,
+          "rpm_left": 7.650618937873502,
+          "rpm_right": -7.652740974808744,
+          "motor_rpm_left": 76.50618937873502,
+          "motor_rpm_right": -76.52740974808744,
+          "gear_ratio": 10.0,
+          "x": 0.18162678033588997,
+          "y": 3.9829138157196225e-06,
+          "yaw": 0.00010196898912041492,
+          "odometry_source": "encoder_position",
+          "encoder_initialized": true,
+          "encoder_feedback_ok": true,
+          "encoder_stale": false,
+          "encoder_feedback_age_s": 0.04011778699350543,
+          "encoder_counts_per_motor_revolution": 1000.0,
+          "encoder_expected_segment": 1000,
+          "encoder_expected_resolution": 4000,
+          "encoder_connection_initialized": true,
+          "encoder_config_fault_latched": false,
+          "encoder_position_left_u32": 4632,
+          "encoder_position_right_u32": 4294962663,
+          "encoder_position_left_i32": 4632,
+          "encoder_position_right_i32": -4633,
+          "encoder_delta_left": 77,
+          "encoder_delta_right": 78,
+          "encoder_sample_dt_s": 0.05994492251193151,
+          "encoder_pair_read_duration_s": 0.000630170019576326,
+          "encoder_maximum_pair_read_duration_s": 0.02253680900321342,
+          "encoder_pair_left_first": true,
+          "encoder_last_reason": "ok",
+          "encoder_consecutive_failures": 0,
+          "modbus_read_failures": 0,
+          "encoder_rejected_updates": 0,
+          "encoder_rebases": 0,
+          "encoder_word_order_left": true,
+          "encoder_word_order_right": true,
+          "encoder_segment_left": 1000,
+          "encoder_segment_right": 1000,
+          "encoder_resolution_left": 4000,
+          "encoder_resolution_right": 4000,
+          "feedback_ok": true,
+          "meas_motor_rpm_left": 77.0,
+          "meas_motor_rpm_right": -77.0,
+          "meas_v_mps": 0.0506890039593804,
+          "meas_w_radps": 0.0017010446397711548,
+          "rs485_port": "/dev/ttyUSB_BASE",
+          "rs485_ready": true,
+          "left_motor_id": 1,
+          "right_motor_id": 2,
+          "stamp_sec": 1791193112.8215158,
+          "encoder_timing_recovery": {
+            "state": "ready",
+            "ready": true,
+            "timing_recovery_pending": false,
+            "timing_recovery_count": 0,
+            "timing_recovery_budget_s": 2.0,
+            "timing_recovery_attempt_limit": 2,
+            "timing_recovery_deadline_s": null,
+            "odometry_continuity_valid": true,
+            "first_timing_rejection": null,
+            "last_timing_rejection": null,
+            "current_reason": "ok",
+            "diagnostic_pair_count": 0,
+            "timing_recovered_count": 0,
+            "timing_recovery_valid_pairs": 0,
+            "continuity_max_gap_s": 0.18,
+            "source": "ess23_absolute_fc03",
+            "synthetic": false,
+            "command_derived": false,
+            "shadow_only": true,
+            "fusion_ready": false,
+            "read_only": false,
+            "modbus_function_code": 3,
+            "sensor_write_commands": false,
+            "actuator_output": true,
+            "cmd_vel_subscription": false,
+            "publishes_tf": false,
+            "connected": true,
+            "configuration_valid": true,
+            "fault_latched": false,
+            "fault_reason": null,
+            "port": "/dev/ttyUSB_BASE",
+            "resolved_port": "/dev/ttyUSB_BASE",
+            "left_motor_id": 1,
+            "right_motor_id": 2,
+            "complete_pair_count": 581,
+            "rejected_pair_count": 0,
+            "published_count": 580,
+            "baseline_count": 1,
+            "rejected": 0,
+            "successful_connections": 0,
+            "reconnects": 0,
+            "fc03_pair_error_count": 0,
+            "rebases": 0,
+            "x_m": 0.18162678033588997,
+            "y_m": 3.9829138157196225e-06,
+            "yaw_rad": 0.00010196898912041492,
+            "last_attempt_gap_s": 0.05994492251193151,
+            "last_pair_duration_s": 0.000630170019576326,
+            "maximum_pair_duration_s": 0.02253680900321342,
+            "last_rejected_pair_duration_s": null,
+            "maximum_attempted_pair_duration_s": 0.02253680900321342,
+            "startup_overrun_retries": 0,
+            "last_feedback_age_s": 0.04013205799856223,
+            "max_feedback_age_s": 0.18,
+            "last_reason": "ok",
+            "sample_dt_s": 0.05994492251193151,
+            "linear_velocity_mps": 0.0506890039593804,
+            "angular_velocity_radps": 0.0017010446397711548,
+            "left_delta_counts": 77,
+            "right_delta_counts": 78,
+            "left_position_u32": 4632,
+            "right_position_u32": 4294962663,
+            "left_speed_rpm": 77.0,
+            "right_speed_rpm": -77.0
+          }
+        },
+        "hwt_state": "TERMINAL_FAULT"
+      },
+      "start_reference": {
+        "current": [
+          1.7347234759768077e-17,
+          -2.875888614165163e-17,
+          1.661810879877157e-16
+        ],
+        "initial": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "retained": [
+          85,
+          1
+        ],
+        "projected": [
+          61,
+          1
+        ],
+        "valid": [
+          false,
+          true
+        ],
+        "reasons": [
+          "start_egress_new_unknown_or_obstacle",
+          ""
+        ]
+      },
+      "start_decision": {
+        "strategy": "adaptive",
+        "selected_motion": "observation_goal",
+        "scan_admissible": false,
+        "scan_useful": true,
+        "unobserved_cells_in_scope": 9844,
+        "initial_contour_missing_cells": {
+          "raw": 34,
+          "costmap": 1
+        },
+        "start_egress_enabled": true,
+        "first_rejecting_predicate": null,
+        "scan_rejection": "initial_scan_footprint_invalid"
+      },
+      "candidates": 1,
+      "ranking": {
+        "raw": 17,
+        "unsafe": 16,
+        "deferred_or_served": 0,
+        "accepted": 1,
+        "route_rejections": {
+          "goal_orientation_invalid": 15,
+          "no_visible_frontier": 1
+        },
+        "bounded_start_observation": true
+      },
+      "active_goal": {
+        "task_id": "metric-task-1",
+        "x": 0.3899999979883432,
+        "y": 0.0,
+        "route_length_m": 0.3899999979883432,
+        "cost": 0.7500000033527612,
+        "revision": 27
+      },
+      "attempt": 1,
+      "controller_geometry_contract": {
+        "FollowPath.use_rotate_to_heading": true,
+        "FollowPath.rotate_to_heading_min_angle": 0.35,
+        "FollowPath.lookahead_dist": 0.4,
+        "FollowPath.use_velocity_scaled_lookahead_dist": false,
+        "FollowPath.allow_reversing": false,
+        "FollowPath.use_collision_detection": true,
+        "FollowPath.use_interpolation": true,
+        "general_goal_checker.xy_goal_tolerance": 0.15,
+        "general_goal_checker.yaw_goal_tolerance": 0.4,
+        "goal_checker_plugins": [
+          "general_goal_checker"
+        ],
+        "controller_plugins": [
+          "FollowPath"
+        ],
+        "FollowPath.plugin": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+        "general_goal_checker.plugin": "nav2_controller::SimpleGoalChecker",
+        "controller_frequency": 20.0,
+        "FollowPath.desired_linear_vel": 0.1,
+        "FollowPath.rotate_to_heading_angular_vel": 0.2,
+        "FollowPath.max_angular_accel": 2.0
+      },
+      "reason": "post_child_state_or_standstill_unconfirmed",
+      "attempts": 1,
+      "failures": 0,
+      "observation_window_s": 3.0,
+      "scope_bound": true,
+      "source_fault": null,
+      "child_terminal": true,
+      "partial_map_ready_to_save": true,
+      "persistence": {
+        "state": "unavailable",
+        "reason": "metric_checkpoint_exact_saved_snapshot_unavailable",
+        "motion_authorized": false
+      }
+    },
+    "manager": {
+      "state": "failed",
+      "phase": "fehler",
+      "message": "Mission fehlgeschlagen (BT FAILURE)",
+      "progress": 0.0,
+      "active_command": {
+        "type": "explore"
+      },
+      "rooms": [
+        "Wohnzimmer",
+        "Kueche",
+        "Flur",
+        "Schlafzimmer",
+        "Werkstatt"
+      ],
+      "pick_and_place_rooms": [
+        "Wohnzimmer",
+        "Kueche",
+        "Flur",
+        "Schlafzimmer",
+        "Werkstatt"
+      ],
+      "targets": [
+        "Tisch",
+        "Arbeitsplatte",
+        "Regal",
+        "Ladestation_Naehe",
+        "Benutzer"
+      ],
+      "objects": [
+        "Tasse",
+        "Flasche",
+        "Fernbedienung",
+        "Werkzeug",
+        "Schluessel"
+      ],
+      "offboard_available": null,
+      "cancel_pending": false,
+      "last_rejection": "",
+      "semantic_map": {
+        "available": false,
+        "error": "Noch kein gueltiger Semantik-Status empfangen",
+        "status_age_seconds": null,
+        "stale_timeout_seconds": 6.0
+      },
+      "localization": {
+        "required_for_real_go_to_room": true,
+        "ready": false,
+        "last_signal": false,
+        "status_age_seconds": null,
+        "stale_timeout_seconds": 1.0,
+        "loss_age_seconds": null,
+        "mission_cancel_grace_seconds": 0.8
+      },
+      "resolved_room_goal": null,
+      "go_to_room_execution": "simulation_only_no_navigation",
+      "explore_execution": "bt_explicit_opt_in",
+      "metric_exploration_result": {
+        "schema_version": 1,
+        "state": "failed",
+        "outcome": "error",
+        "started_wall_time": 1791193104.7950234,
+        "arrivals": 0,
+        "observations": 0,
+        "observed_area_m2": 0.0,
+        "full_apartment_complete": false,
+        "semantic_complete": false,
+        "floor_coverage_verified": false,
+        "chain": [],
+        "decision_snapshot": {
+          "time_monotonic": 159063.694278611,
+          "safe": false,
+          "first_rejecting_predicate": "hwt601_wheel_missing_stale_or_invalid",
+          "standstill": false,
+          "encoder_state": {
+            "dry_run": false,
+            "allow_rs485": true,
+            "timed_out": false,
+            "cmd_v_mps": 0.05,
+            "cmd_w_radps": 3.6063660193786856e-05,
+            "invalid_cmd_count": 0,
+            "v_left_mps": 0.04999306676132775,
+            "v_right_mps": -0.05000693323867226,
+            "rpm_left": 7.650618937873502,
+            "rpm_right": -7.652740974808744,
+            "motor_rpm_left": 76.50618937873502,
+            "motor_rpm_right": -76.52740974808744,
+            "gear_ratio": 10.0,
+            "x": 0.18162678033588997,
+            "y": 3.9829138157196225e-06,
+            "yaw": 0.00010196898912041492,
+            "odometry_source": "encoder_position",
+            "encoder_initialized": true,
+            "encoder_feedback_ok": true,
+            "encoder_stale": false,
+            "encoder_feedback_age_s": 0.04011778699350543,
+            "encoder_counts_per_motor_revolution": 1000.0,
+            "encoder_expected_segment": 1000,
+            "encoder_expected_resolution": 4000,
+            "encoder_connection_initialized": true,
+            "encoder_config_fault_latched": false,
+            "encoder_position_left_u32": 4632,
+            "encoder_position_right_u32": 4294962663,
+            "encoder_position_left_i32": 4632,
+            "encoder_position_right_i32": -4633,
+            "encoder_delta_left": 77,
+            "encoder_delta_right": 78,
+            "encoder_sample_dt_s": 0.05994492251193151,
+            "encoder_pair_read_duration_s": 0.000630170019576326,
+            "encoder_maximum_pair_read_duration_s": 0.02253680900321342,
+            "encoder_pair_left_first": true,
+            "encoder_last_reason": "ok",
+            "encoder_consecutive_failures": 0,
+            "modbus_read_failures": 0,
+            "encoder_rejected_updates": 0,
+            "encoder_rebases": 0,
+            "encoder_word_order_left": true,
+            "encoder_word_order_right": true,
+            "encoder_segment_left": 1000,
+            "encoder_segment_right": 1000,
+            "encoder_resolution_left": 4000,
+            "encoder_resolution_right": 4000,
+            "feedback_ok": true,
+            "meas_motor_rpm_left": 77.0,
+            "meas_motor_rpm_right": -77.0,
+            "meas_v_mps": 0.0506890039593804,
+            "meas_w_radps": 0.0017010446397711548,
+            "rs485_port": "/dev/ttyUSB_BASE",
+            "rs485_ready": true,
+            "left_motor_id": 1,
+            "right_motor_id": 2,
+            "stamp_sec": 1791193112.8215158,
+            "encoder_timing_recovery": {
+              "state": "ready",
+              "ready": true,
+              "timing_recovery_pending": false,
+              "timing_recovery_count": 0,
+              "timing_recovery_budget_s": 2.0,
+              "timing_recovery_attempt_limit": 2,
+              "timing_recovery_deadline_s": null,
+              "odometry_continuity_valid": true,
+              "first_timing_rejection": null,
+              "last_timing_rejection": null,
+              "current_reason": "ok",
+              "diagnostic_pair_count": 0,
+              "timing_recovered_count": 0,
+              "timing_recovery_valid_pairs": 0,
+              "continuity_max_gap_s": 0.18,
+              "source": "ess23_absolute_fc03",
+              "synthetic": false,
+              "command_derived": false,
+              "shadow_only": true,
+              "fusion_ready": false,
+              "read_only": false,
+              "modbus_function_code": 3,
+              "sensor_write_commands": false,
+              "actuator_output": true,
+              "cmd_vel_subscription": false,
+              "publishes_tf": false,
+              "connected": true,
+              "configuration_valid": true,
+              "fault_latched": false,
+              "fault_reason": null,
+              "port": "/dev/ttyUSB_BASE",
+              "resolved_port": "/dev/ttyUSB_BASE",
+              "left_motor_id": 1,
+              "right_motor_id": 2,
+              "complete_pair_count": 581,
+              "rejected_pair_count": 0,
+              "published_count": 580,
+              "baseline_count": 1,
+              "rejected": 0,
+              "successful_connections": 0,
+              "reconnects": 0,
+              "fc03_pair_error_count": 0,
+              "rebases": 0,
+              "x_m": 0.18162678033588997,
+              "y_m": 3.9829138157196225e-06,
+              "yaw_rad": 0.00010196898912041492,
+              "last_attempt_gap_s": 0.05994492251193151,
+              "last_pair_duration_s": 0.000630170019576326,
+              "maximum_pair_duration_s": 0.02253680900321342,
+              "last_rejected_pair_duration_s": null,
+              "maximum_attempted_pair_duration_s": 0.02253680900321342,
+              "startup_overrun_retries": 0,
+              "last_feedback_age_s": 0.04013205799856223,
+              "max_feedback_age_s": 0.18,
+              "last_reason": "ok",
+              "sample_dt_s": 0.05994492251193151,
+              "linear_velocity_mps": 0.0506890039593804,
+              "angular_velocity_radps": 0.0017010446397711548,
+              "left_delta_counts": 77,
+              "right_delta_counts": 78,
+              "left_position_u32": 4632,
+              "right_position_u32": 4294962663,
+              "left_speed_rpm": 77.0,
+              "right_speed_rpm": -77.0
+            }
+          },
+          "hwt_state": "TERMINAL_FAULT"
+        },
+        "start_reference": {
+          "current": [
+            1.7347234759768077e-17,
+            -2.875888614165163e-17,
+            1.661810879877157e-16
+          ],
+          "initial": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "retained": [
+            85,
+            1
+          ],
+          "projected": [
+            61,
+            1
+          ],
+          "valid": [
+            false,
+            true
+          ],
+          "reasons": [
+            "start_egress_new_unknown_or_obstacle",
+            ""
+          ]
+        },
+        "start_decision": {
+          "strategy": "adaptive",
+          "selected_motion": "observation_goal",
+          "scan_admissible": false,
+          "scan_useful": true,
+          "unobserved_cells_in_scope": 9844,
+          "initial_contour_missing_cells": {
+            "raw": 34,
+            "costmap": 1
+          },
+          "start_egress_enabled": true,
+          "first_rejecting_predicate": null,
+          "scan_rejection": "initial_scan_footprint_invalid"
+        },
+        "candidates": 1,
+        "ranking": {
+          "raw": 17,
+          "unsafe": 16,
+          "deferred_or_served": 0,
+          "accepted": 1,
+          "route_rejections": {
+            "goal_orientation_invalid": 15,
+            "no_visible_frontier": 1
+          },
+          "bounded_start_observation": true
+        },
+        "active_goal": {
+          "task_id": "metric-task-1",
+          "x": 0.3899999979883432,
+          "y": 0.0,
+          "route_length_m": 0.3899999979883432,
+          "cost": 0.7500000033527612,
+          "revision": 27
+        },
+        "attempt": 1,
+        "controller_geometry_contract": {
+          "FollowPath.use_rotate_to_heading": true,
+          "FollowPath.rotate_to_heading_min_angle": 0.35,
+          "FollowPath.lookahead_dist": 0.4,
+          "FollowPath.use_velocity_scaled_lookahead_dist": false,
+          "FollowPath.allow_reversing": false,
+          "FollowPath.use_collision_detection": true,
+          "FollowPath.use_interpolation": true,
+          "general_goal_checker.xy_goal_tolerance": 0.15,
+          "general_goal_checker.yaw_goal_tolerance": 0.4,
+          "goal_checker_plugins": [
+            "general_goal_checker"
+          ],
+          "controller_plugins": [
+            "FollowPath"
+          ],
+          "FollowPath.plugin": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+          "general_goal_checker.plugin": "nav2_controller::SimpleGoalChecker",
+          "controller_frequency": 20.0,
+          "FollowPath.desired_linear_vel": 0.1,
+          "FollowPath.rotate_to_heading_angular_vel": 0.2,
+          "FollowPath.max_angular_accel": 2.0
+        },
+        "reason": "post_child_state_or_standstill_unconfirmed",
+        "attempts": 1,
+        "failures": 0,
+        "observation_window_s": 3.0,
+        "scope_bound": true,
+        "source_fault": null,
+        "child_terminal": true,
+        "partial_map_ready_to_save": true,
+        "persistence": {
+          "state": "waiting_for_saved_map"
+        }
+      },
+      "time": 1791193114.0720637
+    },
+    "map_oracle": {
+      "reference_free_cells": 14230,
+      "reference_observed_cells": 7831,
+      "reference_observed_fraction": 0.5503162333099086,
+      "maximum_occupied_wall_error_m": 0.024887073021961692
+    },
+    "travel_m": 0.19559530811498707,
+    "minimum_padded_clearance_m": 0.6999795689906283,
+    "rear_cleared": false,
+    "plant_tick_gaps": [
+      0.05972427999950014,
+      0.15787420500419103,
+      0.10573589301202446,
+      0.1260244699951727
+    ],
+    "map_growth": true,
+    "simulated_register_writes": 74,
+    "error": "AP06 acceptance not met: post_child_state_or_standstill_unconfirmed",
+    "consumer_first_fault_compact": {
+      "reason": "wheel_missing_stale_or_invalid",
+      "evaluation_monotonic_s": 159063.585236583,
+      "sources": [
+        {
+          "source": "raw",
+          "sample_age_s": 0.04726150899659842,
+          "callback_receive_age_s": 0.0009941679891198874,
+          "status_receive_age_s": 2.8642244179791305,
+          "first_rejecting_predicate": null
+        },
+        {
+          "source": "yaw",
+          "sample_age_s": 0.04725594099727459,
+          "callback_receive_age_s": 0.0007787799986544997,
+          "status_receive_age_s": 2.654338997002924,
+          "first_rejecting_predicate": null
+        },
+        {
+          "source": "wheel",
+          "sample_age_s": 2.539340313989669,
+          "callback_receive_age_s": 2.5338038569898345,
+          "status_receive_age_s": 2.533652563986834,
+          "first_rejecting_predicate": "callback_receive_age_out_of_bounds"
+        }
+      ]
+    },
+    "label": "reference-a",
+    "gate_first_after_explorer_fault": {
+      "at": 159063.61708111,
+      "after_first_fault_s": 0.03184452699497342,
+      "sources_ready": true,
+      "state": "HEALTHY",
+      "reason": "raw_sources_ready"
+    }
+  },
+  {
+    "case": {
+      "id": "door68_start_b",
+      "door_m": 0.68,
+      "start": [
+        -2.1,
+        0.45,
+        0.0
+      ]
+    },
+    "passed": false,
+    "hardware_qualified": false,
+    "manifest_compatible": true,
+    "actual_lidar_beams": 2160,
+    "sensor_profile": "native_mast_mask",
+    "reference_geometry_provided_to_product": false,
+    "truth_map_publisher": false,
+    "truth_tf_publisher": false,
+    "manual_navigation_goals": 0,
+    "prefixes": {
+      "explore": "/evidence/ap06-product-install/explore",
+      "mission_manager": "/evidence/ap06-product-install/mission_manager",
+      "bt_orchestrator": "/evidence/ap06-product-install/bt_orchestrator",
+      "robot_navigation": "/evidence/ap06-product-install/robot_navigation",
+      "robot_state_estimation": "/evidence/ap06-product-install/robot_state_estimation",
+      "base_hardware": "/evidence/ap06-product-install/base_hardware",
+      "robot_map_manager": "/evidence/ap06-product-install/robot_map_manager",
+      "robot_localization": "/evidence/ap06-support-install/robot_localization",
+      "slam_toolbox": "/evidence/ap06-support-install/slam_toolbox",
+      "nav2_bt_navigator": "/evidence/ap06-support-install/nav2_bt_navigator",
+      "nav2_controller": "/evidence/ap03-nav2-install/nav2_controller",
+      "nav2_planner": "/evidence/ap03-nav2-install/nav2_planner",
+      "nav2_velocity_smoother": "/evidence/ap06-support-install/nav2_velocity_smoother",
+      "nav2_collision_monitor": "/evidence/ap06-support-install/nav2_collision_monitor",
+      "vl53_near_field": "/evidence/ap06-product-install/vl53_near_field",
+      "safety_monitor": "/evidence/ap06-product-install/safety_monitor",
+      "amadeus_lidar_bringup": "/evidence/ap06-product-install/amadeus_lidar_bringup"
+    },
+    "initial_map": {
+      "fingerprint": "d83a859d7f10753fbbef056a14f99f2991d6288d88d2243cd0dd7c93f22b5c3a",
+      "width": 187,
+      "height": 93
+    },
+    "tf_owners": {
+      "odom->base_link": [
+        "hwt601_mapping_ekf"
+      ],
+      "map->odom": [
+        "slam_toolbox"
+      ]
+    },
+    "action_maximum_active": {
+      "/explore_area/_action/status": 1,
+      "/navigate_to_pose/_action/status": 1
+    },
+    "action_active_at_terminal": {
+      "/explore_area/_action/status": [],
+      "/navigate_to_pose/_action/status": []
+    },
+    "command_values_at_terminal": {
+      "/cmd_vel_nav": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_smoothed": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_nav_raw": [
+        0.0,
+        0.0
+      ]
+    },
+    "map_save": {
+      "success": true,
+      "message": "Karte 'amadeus' als Version 20261005T093916110272Z-f3e35c13fefa gespeichert."
+    },
+    "checkpoint_after_save": {
+      "state": "unavailable",
+      "reason": "metric_checkpoint_exact_saved_snapshot_unavailable",
+      "motion_authorized": false
+    },
+    "metric": {
+      "schema_version": 1,
+      "state": "failed",
+      "outcome": "error",
+      "started_wall_time": 1791193146.620305,
+      "arrivals": 0,
+      "observations": 0,
+      "observed_area_m2": 0.0,
+      "full_apartment_complete": false,
+      "semantic_complete": false,
+      "floor_coverage_verified": false,
+      "chain": [],
+      "decision_snapshot": {
+        "time_monotonic": 159106.568195505,
+        "safe": false,
+        "first_rejecting_predicate": "hwt601_raw_missing_stale_or_invalid",
+        "standstill": false,
+        "encoder_state": {
+          "dry_run": false,
+          "allow_rs485": true,
+          "timed_out": false,
+          "cmd_v_mps": 0.05,
+          "cmd_w_radps": 5.512353691570028e-05,
+          "invalid_cmd_count": 0,
+          "v_left_mps": 0.04998940250002796,
+          "v_right_mps": -0.05001059749997205,
+          "rpm_left": 7.650058182778655,
+          "rpm_right": -7.653301729903593,
+          "motor_rpm_left": 76.50058182778655,
+          "motor_rpm_right": -76.53301729903592,
+          "gear_ratio": 10.0,
+          "x": 0.1653950507210987,
+          "y": 4.997367575203302e-09,
+          "yaw": -0.00010196898912041955,
+          "odometry_source": "encoder_position",
+          "encoder_initialized": true,
+          "encoder_feedback_ok": true,
+          "encoder_stale": false,
+          "encoder_feedback_age_s": 0.019666392996441573,
+          "encoder_counts_per_motor_revolution": 1000.0,
+          "encoder_expected_segment": 1000,
+          "encoder_expected_resolution": 4000,
+          "encoder_connection_initialized": true,
+          "encoder_config_fault_latched": false,
+          "encoder_position_left_u32": 4219,
+          "encoder_position_right_u32": 4294963078,
+          "encoder_position_left_i32": 4219,
+          "encoder_position_right_i32": -4218,
+          "encoder_delta_left": 78,
+          "encoder_delta_right": 76,
+          "encoder_sample_dt_s": 0.059859239496290684,
+          "encoder_pair_read_duration_s": 0.0007045500096864998,
+          "encoder_maximum_pair_read_duration_s": 0.012338314001681283,
+          "encoder_pair_left_first": false,
+          "encoder_last_reason": "ok",
+          "encoder_consecutive_failures": 0,
+          "modbus_read_failures": 0,
+          "encoder_rejected_updates": 0,
+          "encoder_rebases": 0,
+          "encoder_word_order_left": true,
+          "encoder_word_order_right": true,
+          "encoder_segment_left": 1000,
+          "encoder_segment_right": 1000,
+          "encoder_resolution_left": 4000,
+          "encoder_resolution_right": 4000,
+          "feedback_ok": true,
+          "meas_motor_rpm_left": 77.0,
+          "meas_motor_rpm_right": -77.0,
+          "meas_v_mps": 0.05043406668373599,
+          "meas_w_radps": -0.003406959058567274,
+          "rs485_port": "/dev/ttyUSB_BASE",
+          "rs485_ready": true,
+          "left_motor_id": 1,
+          "right_motor_id": 2,
+          "stamp_sec": 1791193155.6916988,
+          "encoder_timing_recovery": {
+            "state": "ready",
+            "ready": true,
+            "timing_recovery_pending": false,
+            "timing_recovery_count": 0,
+            "timing_recovery_budget_s": 2.0,
+            "timing_recovery_attempt_limit": 2,
+            "timing_recovery_deadline_s": null,
+            "odometry_continuity_valid": true,
+            "first_timing_rejection": null,
+            "last_timing_rejection": null,
+            "current_reason": "ok",
+            "diagnostic_pair_count": 0,
+            "timing_recovered_count": 0,
+            "timing_recovery_valid_pairs": 0,
+            "continuity_max_gap_s": 0.18,
+            "source": "ess23_absolute_fc03",
+            "synthetic": false,
+            "command_derived": false,
+            "shadow_only": true,
+            "fusion_ready": false,
+            "read_only": false,
+            "modbus_function_code": 3,
+            "sensor_write_commands": false,
+            "actuator_output": true,
+            "cmd_vel_subscription": false,
+            "publishes_tf": false,
+            "connected": true,
+            "configuration_valid": true,
+            "fault_latched": false,
+            "fault_reason": null,
+            "port": "/dev/ttyUSB_BASE",
+            "resolved_port": "/dev/ttyUSB_BASE",
+            "left_motor_id": 1,
+            "right_motor_id": 2,
+            "complete_pair_count": 600,
+            "rejected_pair_count": 0,
+            "published_count": 599,
+            "baseline_count": 1,
+            "rejected": 0,
+            "successful_connections": 0,
+            "reconnects": 0,
+            "fc03_pair_error_count": 0,
+            "rebases": 0,
+            "x_m": 0.1653950507210987,
+            "y_m": 4.997367575203302e-09,
+            "yaw_rad": -0.00010196898912041955,
+            "last_attempt_gap_s": 0.059859239496290684,
+            "last_pair_duration_s": 0.0007045500096864998,
+            "maximum_pair_duration_s": 0.012338314001681283,
+            "last_rejected_pair_duration_s": null,
+            "maximum_attempted_pair_duration_s": 0.012338314001681283,
+            "startup_overrun_retries": 0,
+            "last_feedback_age_s": 0.01967910199891776,
+            "max_feedback_age_s": 0.18,
+            "last_reason": "ok",
+            "sample_dt_s": 0.059859239496290684,
+            "linear_velocity_mps": 0.05043406668373599,
+            "angular_velocity_radps": -0.003406959058567274,
+            "left_delta_counts": 78,
+            "right_delta_counts": 76,
+            "left_position_u32": 4219,
+            "right_position_u32": 4294963078,
+            "left_speed_rpm": 77.0,
+            "right_speed_rpm": -77.0
+          }
+        },
+        "hwt_state": "TERMINAL_FAULT"
+      },
+      "start_reference": {
+        "current": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "initial": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "retained": [
+          97,
+          2
+        ],
+        "projected": [
+          71,
+          2
+        ],
+        "valid": [
+          false,
+          true
+        ],
+        "reasons": [
+          "start_egress_new_unknown_or_obstacle",
+          ""
+        ]
+      },
+      "start_decision": {
+        "strategy": "adaptive",
+        "selected_motion": "observation_goal",
+        "scan_admissible": false,
+        "scan_useful": true,
+        "unobserved_cells_in_scope": 9587,
+        "initial_contour_missing_cells": {
+          "raw": 36,
+          "costmap": 2
+        },
+        "start_egress_enabled": true,
+        "first_rejecting_predicate": null,
+        "scan_rejection": "initial_scan_footprint_invalid"
+      },
+      "candidates": 1,
+      "ranking": {
+        "raw": 17,
+        "unsafe": 17,
+        "deferred_or_served": 0,
+        "accepted": 1,
+        "route_rejections": {
+          "goal_orientation_invalid": 16,
+          "no_visible_frontier": 1
+        },
+        "bounded_start_observation": true
+      },
+      "active_goal": {
+        "task_id": "metric-task-1",
+        "x": 0.3599999986588955,
+        "y": 0.0,
+        "route_length_m": 0.3599999986588955,
+        "cost": 0.6600000053644179,
+        "revision": 27
+      },
+      "attempt": 1,
+      "controller_geometry_contract": {
+        "FollowPath.use_rotate_to_heading": true,
+        "FollowPath.rotate_to_heading_min_angle": 0.35,
+        "FollowPath.lookahead_dist": 0.4,
+        "FollowPath.use_velocity_scaled_lookahead_dist": false,
+        "FollowPath.allow_reversing": false,
+        "FollowPath.use_collision_detection": true,
+        "FollowPath.use_interpolation": true,
+        "general_goal_checker.xy_goal_tolerance": 0.15,
+        "general_goal_checker.yaw_goal_tolerance": 0.4,
+        "goal_checker_plugins": [
+          "general_goal_checker"
+        ],
+        "controller_plugins": [
+          "FollowPath"
+        ],
+        "FollowPath.plugin": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+        "general_goal_checker.plugin": "nav2_controller::SimpleGoalChecker",
+        "controller_frequency": 20.0,
+        "FollowPath.desired_linear_vel": 0.1,
+        "FollowPath.rotate_to_heading_angular_vel": 0.2,
+        "FollowPath.max_angular_accel": 2.0
+      },
+      "reason": "post_child_state_or_standstill_unconfirmed",
+      "attempts": 1,
+      "failures": 0,
+      "observation_window_s": 3.0,
+      "scope_bound": true,
+      "source_fault": null,
+      "child_terminal": true,
+      "partial_map_ready_to_save": true,
+      "persistence": {
+        "state": "unavailable",
+        "reason": "metric_checkpoint_exact_saved_snapshot_unavailable",
+        "motion_authorized": false
+      }
+    },
+    "manager": {
+      "state": "failed",
+      "phase": "fehler",
+      "message": "Mission fehlgeschlagen (BT FAILURE)",
+      "progress": 0.0,
+      "active_command": {
+        "type": "explore"
+      },
+      "rooms": [
+        "Wohnzimmer",
+        "Kueche",
+        "Flur",
+        "Schlafzimmer",
+        "Werkstatt"
+      ],
+      "pick_and_place_rooms": [
+        "Wohnzimmer",
+        "Kueche",
+        "Flur",
+        "Schlafzimmer",
+        "Werkstatt"
+      ],
+      "targets": [
+        "Tisch",
+        "Arbeitsplatte",
+        "Regal",
+        "Ladestation_Naehe",
+        "Benutzer"
+      ],
+      "objects": [
+        "Tasse",
+        "Flasche",
+        "Fernbedienung",
+        "Werkzeug",
+        "Schluessel"
+      ],
+      "offboard_available": null,
+      "cancel_pending": false,
+      "last_rejection": "",
+      "semantic_map": {
+        "available": false,
+        "error": "Noch kein gueltiger Semantik-Status empfangen",
+        "status_age_seconds": null,
+        "stale_timeout_seconds": 6.0
+      },
+      "localization": {
+        "required_for_real_go_to_room": true,
+        "ready": false,
+        "last_signal": false,
+        "status_age_seconds": null,
+        "stale_timeout_seconds": 1.0,
+        "loss_age_seconds": null,
+        "mission_cancel_grace_seconds": 0.8
+      },
+      "resolved_room_goal": null,
+      "go_to_room_execution": "simulation_only_no_navigation",
+      "explore_execution": "bt_explicit_opt_in",
+      "metric_exploration_result": {
+        "schema_version": 1,
+        "state": "failed",
+        "outcome": "error",
+        "started_wall_time": 1791193146.620305,
+        "arrivals": 0,
+        "observations": 0,
+        "observed_area_m2": 0.0,
+        "full_apartment_complete": false,
+        "semantic_complete": false,
+        "floor_coverage_verified": false,
+        "chain": [],
+        "decision_snapshot": {
+          "time_monotonic": 159106.568195505,
+          "safe": false,
+          "first_rejecting_predicate": "hwt601_raw_missing_stale_or_invalid",
+          "standstill": false,
+          "encoder_state": {
+            "dry_run": false,
+            "allow_rs485": true,
+            "timed_out": false,
+            "cmd_v_mps": 0.05,
+            "cmd_w_radps": 5.512353691570028e-05,
+            "invalid_cmd_count": 0,
+            "v_left_mps": 0.04998940250002796,
+            "v_right_mps": -0.05001059749997205,
+            "rpm_left": 7.650058182778655,
+            "rpm_right": -7.653301729903593,
+            "motor_rpm_left": 76.50058182778655,
+            "motor_rpm_right": -76.53301729903592,
+            "gear_ratio": 10.0,
+            "x": 0.1653950507210987,
+            "y": 4.997367575203302e-09,
+            "yaw": -0.00010196898912041955,
+            "odometry_source": "encoder_position",
+            "encoder_initialized": true,
+            "encoder_feedback_ok": true,
+            "encoder_stale": false,
+            "encoder_feedback_age_s": 0.019666392996441573,
+            "encoder_counts_per_motor_revolution": 1000.0,
+            "encoder_expected_segment": 1000,
+            "encoder_expected_resolution": 4000,
+            "encoder_connection_initialized": true,
+            "encoder_config_fault_latched": false,
+            "encoder_position_left_u32": 4219,
+            "encoder_position_right_u32": 4294963078,
+            "encoder_position_left_i32": 4219,
+            "encoder_position_right_i32": -4218,
+            "encoder_delta_left": 78,
+            "encoder_delta_right": 76,
+            "encoder_sample_dt_s": 0.059859239496290684,
+            "encoder_pair_read_duration_s": 0.0007045500096864998,
+            "encoder_maximum_pair_read_duration_s": 0.012338314001681283,
+            "encoder_pair_left_first": false,
+            "encoder_last_reason": "ok",
+            "encoder_consecutive_failures": 0,
+            "modbus_read_failures": 0,
+            "encoder_rejected_updates": 0,
+            "encoder_rebases": 0,
+            "encoder_word_order_left": true,
+            "encoder_word_order_right": true,
+            "encoder_segment_left": 1000,
+            "encoder_segment_right": 1000,
+            "encoder_resolution_left": 4000,
+            "encoder_resolution_right": 4000,
+            "feedback_ok": true,
+            "meas_motor_rpm_left": 77.0,
+            "meas_motor_rpm_right": -77.0,
+            "meas_v_mps": 0.05043406668373599,
+            "meas_w_radps": -0.003406959058567274,
+            "rs485_port": "/dev/ttyUSB_BASE",
+            "rs485_ready": true,
+            "left_motor_id": 1,
+            "right_motor_id": 2,
+            "stamp_sec": 1791193155.6916988,
+            "encoder_timing_recovery": {
+              "state": "ready",
+              "ready": true,
+              "timing_recovery_pending": false,
+              "timing_recovery_count": 0,
+              "timing_recovery_budget_s": 2.0,
+              "timing_recovery_attempt_limit": 2,
+              "timing_recovery_deadline_s": null,
+              "odometry_continuity_valid": true,
+              "first_timing_rejection": null,
+              "last_timing_rejection": null,
+              "current_reason": "ok",
+              "diagnostic_pair_count": 0,
+              "timing_recovered_count": 0,
+              "timing_recovery_valid_pairs": 0,
+              "continuity_max_gap_s": 0.18,
+              "source": "ess23_absolute_fc03",
+              "synthetic": false,
+              "command_derived": false,
+              "shadow_only": true,
+              "fusion_ready": false,
+              "read_only": false,
+              "modbus_function_code": 3,
+              "sensor_write_commands": false,
+              "actuator_output": true,
+              "cmd_vel_subscription": false,
+              "publishes_tf": false,
+              "connected": true,
+              "configuration_valid": true,
+              "fault_latched": false,
+              "fault_reason": null,
+              "port": "/dev/ttyUSB_BASE",
+              "resolved_port": "/dev/ttyUSB_BASE",
+              "left_motor_id": 1,
+              "right_motor_id": 2,
+              "complete_pair_count": 600,
+              "rejected_pair_count": 0,
+              "published_count": 599,
+              "baseline_count": 1,
+              "rejected": 0,
+              "successful_connections": 0,
+              "reconnects": 0,
+              "fc03_pair_error_count": 0,
+              "rebases": 0,
+              "x_m": 0.1653950507210987,
+              "y_m": 4.997367575203302e-09,
+              "yaw_rad": -0.00010196898912041955,
+              "last_attempt_gap_s": 0.059859239496290684,
+              "last_pair_duration_s": 0.0007045500096864998,
+              "maximum_pair_duration_s": 0.012338314001681283,
+              "last_rejected_pair_duration_s": null,
+              "maximum_attempted_pair_duration_s": 0.012338314001681283,
+              "startup_overrun_retries": 0,
+              "last_feedback_age_s": 0.01967910199891776,
+              "max_feedback_age_s": 0.18,
+              "last_reason": "ok",
+              "sample_dt_s": 0.059859239496290684,
+              "linear_velocity_mps": 0.05043406668373599,
+              "angular_velocity_radps": -0.003406959058567274,
+              "left_delta_counts": 78,
+              "right_delta_counts": 76,
+              "left_position_u32": 4219,
+              "right_position_u32": 4294963078,
+              "left_speed_rpm": 77.0,
+              "right_speed_rpm": -77.0
+            }
+          },
+          "hwt_state": "TERMINAL_FAULT"
+        },
+        "start_reference": {
+          "current": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "initial": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "retained": [
+            97,
+            2
+          ],
+          "projected": [
+            71,
+            2
+          ],
+          "valid": [
+            false,
+            true
+          ],
+          "reasons": [
+            "start_egress_new_unknown_or_obstacle",
+            ""
+          ]
+        },
+        "start_decision": {
+          "strategy": "adaptive",
+          "selected_motion": "observation_goal",
+          "scan_admissible": false,
+          "scan_useful": true,
+          "unobserved_cells_in_scope": 9587,
+          "initial_contour_missing_cells": {
+            "raw": 36,
+            "costmap": 2
+          },
+          "start_egress_enabled": true,
+          "first_rejecting_predicate": null,
+          "scan_rejection": "initial_scan_footprint_invalid"
+        },
+        "candidates": 1,
+        "ranking": {
+          "raw": 17,
+          "unsafe": 17,
+          "deferred_or_served": 0,
+          "accepted": 1,
+          "route_rejections": {
+            "goal_orientation_invalid": 16,
+            "no_visible_frontier": 1
+          },
+          "bounded_start_observation": true
+        },
+        "active_goal": {
+          "task_id": "metric-task-1",
+          "x": 0.3599999986588955,
+          "y": 0.0,
+          "route_length_m": 0.3599999986588955,
+          "cost": 0.6600000053644179,
+          "revision": 27
+        },
+        "attempt": 1,
+        "controller_geometry_contract": {
+          "FollowPath.use_rotate_to_heading": true,
+          "FollowPath.rotate_to_heading_min_angle": 0.35,
+          "FollowPath.lookahead_dist": 0.4,
+          "FollowPath.use_velocity_scaled_lookahead_dist": false,
+          "FollowPath.allow_reversing": false,
+          "FollowPath.use_collision_detection": true,
+          "FollowPath.use_interpolation": true,
+          "general_goal_checker.xy_goal_tolerance": 0.15,
+          "general_goal_checker.yaw_goal_tolerance": 0.4,
+          "goal_checker_plugins": [
+            "general_goal_checker"
+          ],
+          "controller_plugins": [
+            "FollowPath"
+          ],
+          "FollowPath.plugin": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+          "general_goal_checker.plugin": "nav2_controller::SimpleGoalChecker",
+          "controller_frequency": 20.0,
+          "FollowPath.desired_linear_vel": 0.1,
+          "FollowPath.rotate_to_heading_angular_vel": 0.2,
+          "FollowPath.max_angular_accel": 2.0
+        },
+        "reason": "post_child_state_or_standstill_unconfirmed",
+        "attempts": 1,
+        "failures": 0,
+        "observation_window_s": 3.0,
+        "scope_bound": true,
+        "source_fault": null,
+        "child_terminal": true,
+        "partial_map_ready_to_save": true,
+        "persistence": {
+          "state": "waiting_for_saved_map"
+        }
+      },
+      "time": 1791193156.5104337
+    },
+    "map_oracle": {
+      "reference_free_cells": 14230,
+      "reference_observed_cells": 8180,
+      "reference_observed_fraction": 0.5748418833450457,
+      "maximum_occupied_wall_error_m": 0.024895900794030257
+    },
+    "travel_m": 0.18230325682779666,
+    "minimum_padded_clearance_m": 0.5699999999972136,
+    "rear_cleared": false,
+    "plant_tick_gaps": [
+      0.08537529199384153,
+      0.04891539298114367,
+      0.12095035900711082,
+      0.05649267099215649,
+      0.046607897005742416
+    ],
+    "map_growth": true,
+    "simulated_register_writes": 62,
+    "error": "AP06 acceptance not met: post_child_state_or_standstill_unconfirmed",
+    "consumer_first_fault_compact": {
+      "reason": "raw_missing_stale_or_invalid",
+      "evaluation_monotonic_s": 159106.484616095,
+      "sources": [
+        {
+          "source": "raw",
+          "sample_age_s": 2.753047531004995,
+          "callback_receive_age_s": 2.7444770660076756,
+          "status_receive_age_s": 2.9869173349870834,
+          "first_rejecting_predicate": "callback_receive_age_out_of_bounds"
+        },
+        {
+          "source": "yaw",
+          "sample_age_s": 2.7530451670172624,
+          "callback_receive_age_s": 2.744297019991791,
+          "status_receive_age_s": 3.2385758349846583,
+          "first_rejecting_predicate": "callback_receive_age_out_of_bounds"
+        },
+        {
+          "source": "wheel",
+          "sample_age_s": 2.788261734007392,
+          "callback_receive_age_s": 2.7847685079905204,
+          "status_receive_age_s": 2.7440529399900697,
+          "first_rejecting_predicate": "callback_receive_age_out_of_bounds"
+        }
+      ]
+    },
+    "label": "reference-b",
+    "gate_first_after_explorer_fault": {
+      "at": 159106.506152229,
+      "after_first_fault_s": 0.021536134008783847,
+      "sources_ready": true,
+      "state": "HEALTHY",
+      "reason": "raw_sources_ready"
+    }
+  },
+  {
+    "case": {
+      "id": "door80_start_c",
+      "door_m": 0.8,
+      "start": [
+        -1.6,
+        0.0,
+        0.0
+      ]
+    },
+    "passed": false,
+    "hardware_qualified": false,
+    "manifest_compatible": true,
+    "actual_lidar_beams": 2160,
+    "sensor_profile": "native_mast_mask",
+    "reference_geometry_provided_to_product": false,
+    "truth_map_publisher": false,
+    "truth_tf_publisher": false,
+    "manual_navigation_goals": 0,
+    "prefixes": {
+      "explore": "/evidence/ap06-product-install/explore",
+      "mission_manager": "/evidence/ap06-product-install/mission_manager",
+      "bt_orchestrator": "/evidence/ap06-product-install/bt_orchestrator",
+      "robot_navigation": "/evidence/ap06-product-install/robot_navigation",
+      "robot_state_estimation": "/evidence/ap06-product-install/robot_state_estimation",
+      "base_hardware": "/evidence/ap06-product-install/base_hardware",
+      "robot_map_manager": "/evidence/ap06-product-install/robot_map_manager",
+      "robot_localization": "/evidence/ap06-support-install/robot_localization",
+      "slam_toolbox": "/evidence/ap06-support-install/slam_toolbox",
+      "nav2_bt_navigator": "/evidence/ap06-support-install/nav2_bt_navigator",
+      "nav2_controller": "/evidence/ap03-nav2-install/nav2_controller",
+      "nav2_planner": "/evidence/ap03-nav2-install/nav2_planner",
+      "nav2_velocity_smoother": "/evidence/ap06-support-install/nav2_velocity_smoother",
+      "nav2_collision_monitor": "/evidence/ap06-support-install/nav2_collision_monitor",
+      "vl53_near_field": "/evidence/ap06-product-install/vl53_near_field",
+      "safety_monitor": "/evidence/ap06-product-install/safety_monitor",
+      "amadeus_lidar_bringup": "/evidence/ap06-product-install/amadeus_lidar_bringup"
+    },
+    "initial_map": {
+      "fingerprint": "05a177bf39d2e0eb6d51ac3de9c486e0517cda0cfc6c3673c2e3fadaa2dfee4b",
+      "width": 187,
+      "height": 93
+    },
+    "tf_owners": {
+      "odom->base_link": [
+        "hwt601_mapping_ekf"
+      ],
+      "map->odom": [
+        "slam_toolbox"
+      ]
+    },
+    "action_maximum_active": {
+      "/explore_area/_action/status": 1,
+      "/navigate_to_pose/_action/status": 1
+    },
+    "action_active_at_terminal": {
+      "/explore_area/_action/status": [],
+      "/navigate_to_pose/_action/status": []
+    },
+    "command_values_at_terminal": {
+      "/cmd_vel_nav": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_smoothed": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_nav_raw": [
+        0.0,
+        0.0
+      ]
+    },
+    "map_save": {
+      "success": true,
+      "message": "Karte 'amadeus' als Version 20261005T093452884593Z-58913f72fc01 gespeichert."
+    },
+    "checkpoint_after_save": {
+      "state": "unavailable",
+      "reason": "metric_checkpoint_exact_saved_snapshot_unavailable",
+      "motion_authorized": false
+    },
+    "metric": {
+      "schema_version": 1,
+      "state": "failed",
+      "outcome": "error",
+      "started_wall_time": 1791192879.8627217,
+      "arrivals": 0,
+      "observations": 0,
+      "observed_area_m2": 0.0,
+      "full_apartment_complete": false,
+      "semantic_complete": false,
+      "floor_coverage_verified": false,
+      "chain": [
+        {
+          "task": "metric-task-1",
+          "result": "hwt_hold",
+          "terminal_child": true
+        }
+      ],
+      "decision_snapshot": {
+        "time_monotonic": 158831.092818413,
+        "safe": true,
+        "first_rejecting_predicate": null,
+        "standstill": true,
+        "encoder_state": {
+          "dry_run": false,
+          "allow_rs485": true,
+          "timed_out": true,
+          "cmd_v_mps": 0.0,
+          "cmd_w_radps": 0.0,
+          "invalid_cmd_count": 0,
+          "v_left_mps": 0.0,
+          "v_right_mps": 0.0,
+          "rpm_left": 0.0,
+          "rpm_right": 0.0,
+          "motor_rpm_left": 0.0,
+          "motor_rpm_right": 0.0,
+          "gear_ratio": 10.0,
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0,
+          "odometry_source": "encoder_position",
+          "encoder_initialized": true,
+          "encoder_feedback_ok": true,
+          "encoder_stale": false,
+          "encoder_feedback_age_s": 0.00042601447785273194,
+          "encoder_counts_per_motor_revolution": 1000.0,
+          "encoder_expected_segment": 1000,
+          "encoder_expected_resolution": 4000,
+          "encoder_connection_initialized": true,
+          "encoder_config_fault_latched": false,
+          "encoder_position_left_u32": 0,
+          "encoder_position_right_u32": 0,
+          "encoder_position_left_i32": 0,
+          "encoder_position_right_i32": 0,
+          "encoder_delta_left": 0,
+          "encoder_delta_right": 0,
+          "encoder_sample_dt_s": 0.058988074015360326,
+          "encoder_pair_read_duration_s": 0.00012100898311473429,
+          "encoder_maximum_pair_read_duration_s": 0.00389619599445723,
+          "encoder_pair_left_first": true,
+          "encoder_last_reason": "ok",
+          "encoder_consecutive_failures": 0,
+          "modbus_read_failures": 0,
+          "encoder_rejected_updates": 0,
+          "encoder_rebases": 0,
+          "encoder_word_order_left": true,
+          "encoder_word_order_right": true,
+          "encoder_segment_left": 1000,
+          "encoder_segment_right": 1000,
+          "encoder_resolution_left": 4000,
+          "encoder_resolution_right": 4000,
+          "feedback_ok": true,
+          "meas_motor_rpm_left": 0.0,
+          "meas_motor_rpm_right": 0.0,
+          "meas_v_mps": 0.0,
+          "meas_w_radps": 0.0,
+          "rs485_port": "/dev/ttyUSB_BASE",
+          "rs485_ready": true,
+          "left_motor_id": 1,
+          "right_motor_id": 2,
+          "stamp_sec": 1791192880.3560581,
+          "encoder_timing_recovery": {
+            "state": "ready",
+            "ready": true,
+            "timing_recovery_pending": false,
+            "timing_recovery_count": 0,
+            "timing_recovery_budget_s": 2.0,
+            "timing_recovery_attempt_limit": 2,
+            "timing_recovery_deadline_s": null,
+            "odometry_continuity_valid": true,
+            "first_timing_rejection": null,
+            "last_timing_rejection": null,
+            "current_reason": "ok",
+            "diagnostic_pair_count": 0,
+            "timing_recovered_count": 0,
+            "timing_recovery_valid_pairs": 0,
+            "continuity_max_gap_s": 0.18,
+            "source": "ess23_absolute_fc03",
+            "synthetic": false,
+            "command_derived": false,
+            "shadow_only": true,
+            "fusion_ready": false,
+            "read_only": false,
+            "modbus_function_code": 3,
+            "sensor_write_commands": false,
+            "actuator_output": true,
+            "cmd_vel_subscription": false,
+            "publishes_tf": false,
+            "connected": true,
+            "configuration_valid": true,
+            "fault_latched": false,
+            "fault_reason": null,
+            "port": "/dev/ttyUSB_BASE",
+            "resolved_port": "/dev/ttyUSB_BASE",
+            "left_motor_id": 1,
+            "right_motor_id": 2,
+            "complete_pair_count": 459,
+            "rejected_pair_count": 0,
+            "published_count": 458,
+            "baseline_count": 1,
+            "rejected": 0,
+            "successful_connections": 0,
+            "reconnects": 0,
+            "fc03_pair_error_count": 0,
+            "rebases": 0,
+            "x_m": 0.0,
+            "y_m": 0.0,
+            "yaw_rad": 0.0,
+            "last_attempt_gap_s": 0.058988074015360326,
+            "last_pair_duration_s": 0.00012100898311473429,
+            "maximum_pair_duration_s": 0.00389619599445723,
+            "last_rejected_pair_duration_s": null,
+            "maximum_attempted_pair_duration_s": 0.00389619599445723,
+            "startup_overrun_retries": 0,
+            "last_feedback_age_s": 0.0004362394683994353,
+            "max_feedback_age_s": 0.18,
+            "last_reason": "ok",
+            "sample_dt_s": 0.058988074015360326,
+            "linear_velocity_mps": 0.0,
+            "angular_velocity_radps": 0.0,
+            "left_delta_counts": 0,
+            "right_delta_counts": 0,
+            "left_position_u32": 0,
+            "right_position_u32": 0,
+            "left_speed_rpm": 0.0,
+            "right_speed_rpm": 0.0
+          }
+        },
+        "hwt_state": "HEALTHY"
+      },
+      "start_reference": {
+        "current": [
+          -1.3877787807814452e-16,
+          1.1658053266239842e-16,
+          -3.2059858240396366e-16
+        ],
+        "initial": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "retained": [
+          82,
+          0
+        ],
+        "projected": [
+          0,
+          0
+        ],
+        "valid": [
+          false,
+          true
+        ],
+        "reasons": [
+          "start_egress_new_unknown_or_obstacle",
+          ""
+        ]
+      },
+      "start_decision": {
+        "strategy": "adaptive",
+        "selected_motion": "observation_goal",
+        "scan_admissible": false,
+        "scan_useful": true,
+        "unobserved_cells_in_scope": 9474,
+        "initial_contour_missing_cells": {
+          "raw": 33,
+          "costmap": 1
+        },
+        "start_egress_enabled": true,
+        "first_rejecting_predicate": null,
+        "scan_rejection": "initial_scan_footprint_invalid"
+      },
+      "candidates": 1,
+      "ranking": {
+        "raw": 14,
+        "unsafe": 13,
+        "deferred_or_served": 0,
+        "accepted": 1,
+        "route_rejections": {
+          "goal_orientation_invalid": 13
+        },
+        "bounded_start_observation": true
+      },
+      "active_goal": {
+        "task_id": "metric-task-1",
+        "x": 0.3899999979883432,
+        "y": 0.0,
+        "route_length_m": 0.3899999979883432,
+        "cost": 0.5700000073760747,
+        "revision": 27
+      },
+      "attempt": 1,
+      "controller_geometry_contract": {
+        "FollowPath.use_rotate_to_heading": true,
+        "FollowPath.rotate_to_heading_min_angle": 0.35,
+        "FollowPath.lookahead_dist": 0.4,
+        "FollowPath.use_velocity_scaled_lookahead_dist": false,
+        "FollowPath.allow_reversing": false,
+        "FollowPath.use_collision_detection": true,
+        "FollowPath.use_interpolation": true,
+        "general_goal_checker.xy_goal_tolerance": 0.15,
+        "general_goal_checker.yaw_goal_tolerance": 0.4,
+        "goal_checker_plugins": [
+          "general_goal_checker"
+        ],
+        "controller_plugins": [
+          "FollowPath"
+        ],
+        "FollowPath.plugin": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+        "general_goal_checker.plugin": "nav2_controller::SimpleGoalChecker",
+        "controller_frequency": 20.0,
+        "FollowPath.desired_linear_vel": 0.1,
+        "FollowPath.rotate_to_heading_angular_vel": 0.2,
+        "FollowPath.max_angular_accel": 2.0
+      },
+      "reason": "hwt_terminal",
+      "attempts": 1,
+      "failures": 0,
+      "observation_window_s": 3.0,
+      "scope_bound": true,
+      "source_fault": null,
+      "child_terminal": true,
+      "partial_map_ready_to_save": true,
+      "persistence": {
+        "state": "unavailable",
+        "reason": "metric_checkpoint_exact_saved_snapshot_unavailable",
+        "motion_authorized": false
+      }
+    },
+    "manager": {
+      "state": "failed",
+      "phase": "fehler",
+      "message": "Mission fehlgeschlagen (BT FAILURE)",
+      "progress": 0.0,
+      "active_command": {
+        "type": "explore"
+      },
+      "rooms": [
+        "Wohnzimmer",
+        "Kueche",
+        "Flur",
+        "Schlafzimmer",
+        "Werkstatt"
+      ],
+      "pick_and_place_rooms": [
+        "Wohnzimmer",
+        "Kueche",
+        "Flur",
+        "Schlafzimmer",
+        "Werkstatt"
+      ],
+      "targets": [
+        "Tisch",
+        "Arbeitsplatte",
+        "Regal",
+        "Ladestation_Naehe",
+        "Benutzer"
+      ],
+      "objects": [
+        "Tasse",
+        "Flasche",
+        "Fernbedienung",
+        "Werkzeug",
+        "Schluessel"
+      ],
+      "offboard_available": null,
+      "cancel_pending": false,
+      "last_rejection": "",
+      "semantic_map": {
+        "available": false,
+        "error": "Noch kein gueltiger Semantik-Status empfangen",
+        "status_age_seconds": null,
+        "stale_timeout_seconds": 6.0
+      },
+      "localization": {
+        "required_for_real_go_to_room": true,
+        "ready": false,
+        "last_signal": false,
+        "status_age_seconds": null,
+        "stale_timeout_seconds": 1.0,
+        "loss_age_seconds": null,
+        "mission_cancel_grace_seconds": 0.8
+      },
+      "resolved_room_goal": null,
+      "go_to_room_execution": "simulation_only_no_navigation",
+      "explore_execution": "bt_explicit_opt_in",
+      "metric_exploration_result": {
+        "schema_version": 1,
+        "state": "failed",
+        "outcome": "error",
+        "started_wall_time": 1791192879.8627217,
+        "arrivals": 0,
+        "observations": 0,
+        "observed_area_m2": 0.0,
+        "full_apartment_complete": false,
+        "semantic_complete": false,
+        "floor_coverage_verified": false,
+        "chain": [
+          {
+            "task": "metric-task-1",
+            "result": "hwt_hold",
+            "terminal_child": true
+          }
+        ],
+        "decision_snapshot": {
+          "time_monotonic": 158831.092818413,
+          "safe": true,
+          "first_rejecting_predicate": null,
+          "standstill": true,
+          "encoder_state": {
+            "dry_run": false,
+            "allow_rs485": true,
+            "timed_out": true,
+            "cmd_v_mps": 0.0,
+            "cmd_w_radps": 0.0,
+            "invalid_cmd_count": 0,
+            "v_left_mps": 0.0,
+            "v_right_mps": 0.0,
+            "rpm_left": 0.0,
+            "rpm_right": 0.0,
+            "motor_rpm_left": 0.0,
+            "motor_rpm_right": 0.0,
+            "gear_ratio": 10.0,
+            "x": 0.0,
+            "y": 0.0,
+            "yaw": 0.0,
+            "odometry_source": "encoder_position",
+            "encoder_initialized": true,
+            "encoder_feedback_ok": true,
+            "encoder_stale": false,
+            "encoder_feedback_age_s": 0.00042601447785273194,
+            "encoder_counts_per_motor_revolution": 1000.0,
+            "encoder_expected_segment": 1000,
+            "encoder_expected_resolution": 4000,
+            "encoder_connection_initialized": true,
+            "encoder_config_fault_latched": false,
+            "encoder_position_left_u32": 0,
+            "encoder_position_right_u32": 0,
+            "encoder_position_left_i32": 0,
+            "encoder_position_right_i32": 0,
+            "encoder_delta_left": 0,
+            "encoder_delta_right": 0,
+            "encoder_sample_dt_s": 0.058988074015360326,
+            "encoder_pair_read_duration_s": 0.00012100898311473429,
+            "encoder_maximum_pair_read_duration_s": 0.00389619599445723,
+            "encoder_pair_left_first": true,
+            "encoder_last_reason": "ok",
+            "encoder_consecutive_failures": 0,
+            "modbus_read_failures": 0,
+            "encoder_rejected_updates": 0,
+            "encoder_rebases": 0,
+            "encoder_word_order_left": true,
+            "encoder_word_order_right": true,
+            "encoder_segment_left": 1000,
+            "encoder_segment_right": 1000,
+            "encoder_resolution_left": 4000,
+            "encoder_resolution_right": 4000,
+            "feedback_ok": true,
+            "meas_motor_rpm_left": 0.0,
+            "meas_motor_rpm_right": 0.0,
+            "meas_v_mps": 0.0,
+            "meas_w_radps": 0.0,
+            "rs485_port": "/dev/ttyUSB_BASE",
+            "rs485_ready": true,
+            "left_motor_id": 1,
+            "right_motor_id": 2,
+            "stamp_sec": 1791192880.3560581,
+            "encoder_timing_recovery": {
+              "state": "ready",
+              "ready": true,
+              "timing_recovery_pending": false,
+              "timing_recovery_count": 0,
+              "timing_recovery_budget_s": 2.0,
+              "timing_recovery_attempt_limit": 2,
+              "timing_recovery_deadline_s": null,
+              "odometry_continuity_valid": true,
+              "first_timing_rejection": null,
+              "last_timing_rejection": null,
+              "current_reason": "ok",
+              "diagnostic_pair_count": 0,
+              "timing_recovered_count": 0,
+              "timing_recovery_valid_pairs": 0,
+              "continuity_max_gap_s": 0.18,
+              "source": "ess23_absolute_fc03",
+              "synthetic": false,
+              "command_derived": false,
+              "shadow_only": true,
+              "fusion_ready": false,
+              "read_only": false,
+              "modbus_function_code": 3,
+              "sensor_write_commands": false,
+              "actuator_output": true,
+              "cmd_vel_subscription": false,
+              "publishes_tf": false,
+              "connected": true,
+              "configuration_valid": true,
+              "fault_latched": false,
+              "fault_reason": null,
+              "port": "/dev/ttyUSB_BASE",
+              "resolved_port": "/dev/ttyUSB_BASE",
+              "left_motor_id": 1,
+              "right_motor_id": 2,
+              "complete_pair_count": 459,
+              "rejected_pair_count": 0,
+              "published_count": 458,
+              "baseline_count": 1,
+              "rejected": 0,
+              "successful_connections": 0,
+              "reconnects": 0,
+              "fc03_pair_error_count": 0,
+              "rebases": 0,
+              "x_m": 0.0,
+              "y_m": 0.0,
+              "yaw_rad": 0.0,
+              "last_attempt_gap_s": 0.058988074015360326,
+              "last_pair_duration_s": 0.00012100898311473429,
+              "maximum_pair_duration_s": 0.00389619599445723,
+              "last_rejected_pair_duration_s": null,
+              "maximum_attempted_pair_duration_s": 0.00389619599445723,
+              "startup_overrun_retries": 0,
+              "last_feedback_age_s": 0.0004362394683994353,
+              "max_feedback_age_s": 0.18,
+              "last_reason": "ok",
+              "sample_dt_s": 0.058988074015360326,
+              "linear_velocity_mps": 0.0,
+              "angular_velocity_radps": 0.0,
+              "left_delta_counts": 0,
+              "right_delta_counts": 0,
+              "left_position_u32": 0,
+              "right_position_u32": 0,
+              "left_speed_rpm": 0.0,
+              "right_speed_rpm": 0.0
+            }
+          },
+          "hwt_state": "HEALTHY"
+        },
+        "start_reference": {
+          "current": [
+            -1.3877787807814452e-16,
+            1.1658053266239842e-16,
+            -3.2059858240396366e-16
+          ],
+          "initial": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "retained": [
+            82,
+            0
+          ],
+          "projected": [
+            0,
+            0
+          ],
+          "valid": [
+            false,
+            true
+          ],
+          "reasons": [
+            "start_egress_new_unknown_or_obstacle",
+            ""
+          ]
+        },
+        "start_decision": {
+          "strategy": "adaptive",
+          "selected_motion": "observation_goal",
+          "scan_admissible": false,
+          "scan_useful": true,
+          "unobserved_cells_in_scope": 9474,
+          "initial_contour_missing_cells": {
+            "raw": 33,
+            "costmap": 1
+          },
+          "start_egress_enabled": true,
+          "first_rejecting_predicate": null,
+          "scan_rejection": "initial_scan_footprint_invalid"
+        },
+        "candidates": 1,
+        "ranking": {
+          "raw": 14,
+          "unsafe": 13,
+          "deferred_or_served": 0,
+          "accepted": 1,
+          "route_rejections": {
+            "goal_orientation_invalid": 13
+          },
+          "bounded_start_observation": true
+        },
+        "active_goal": {
+          "task_id": "metric-task-1",
+          "x": 0.3899999979883432,
+          "y": 0.0,
+          "route_length_m": 0.3899999979883432,
+          "cost": 0.5700000073760747,
+          "revision": 27
+        },
+        "attempt": 1,
+        "controller_geometry_contract": {
+          "FollowPath.use_rotate_to_heading": true,
+          "FollowPath.rotate_to_heading_min_angle": 0.35,
+          "FollowPath.lookahead_dist": 0.4,
+          "FollowPath.use_velocity_scaled_lookahead_dist": false,
+          "FollowPath.allow_reversing": false,
+          "FollowPath.use_collision_detection": true,
+          "FollowPath.use_interpolation": true,
+          "general_goal_checker.xy_goal_tolerance": 0.15,
+          "general_goal_checker.yaw_goal_tolerance": 0.4,
+          "goal_checker_plugins": [
+            "general_goal_checker"
+          ],
+          "controller_plugins": [
+            "FollowPath"
+          ],
+          "FollowPath.plugin": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+          "general_goal_checker.plugin": "nav2_controller::SimpleGoalChecker",
+          "controller_frequency": 20.0,
+          "FollowPath.desired_linear_vel": 0.1,
+          "FollowPath.rotate_to_heading_angular_vel": 0.2,
+          "FollowPath.max_angular_accel": 2.0
+        },
+        "reason": "hwt_terminal",
+        "attempts": 1,
+        "failures": 0,
+        "observation_window_s": 3.0,
+        "scope_bound": true,
+        "source_fault": null,
+        "child_terminal": true,
+        "partial_map_ready_to_save": true,
+        "persistence": {
+          "state": "waiting_for_saved_map"
+        }
+      },
+      "time": 1791192893.262032
+    },
+    "map_oracle": {
+      "reference_free_cells": 14254,
+      "reference_observed_cells": 8275,
+      "reference_observed_fraction": 0.5805387961274029,
+      "maximum_occupied_wall_error_m": 0.024852904168200907
+    },
+    "travel_m": 0.17594206746167174,
+    "minimum_padded_clearance_m": 0.4781083732075266,
+    "rear_cleared": false,
+    "plant_tick_gaps": [
+      0.0329207009926904,
+      0.034356083982856944,
+      0.035907687997678295,
+      0.05513344600331038,
+      0.038013671990484,
+      0.040823963994625956,
+      0.03218679898418486,
+      0.03967660298803821
+    ],
+    "map_growth": true,
+    "simulated_register_writes": 82,
+    "error": "AP06 acceptance not met: hwt_terminal",
+    "consumer_first_fault_compact": {
+      "reason": "wheel_missing_stale_or_invalid",
+      "evaluation_monotonic_s": 158838.399443079,
+      "sources": [
+        {
+          "source": "raw",
+          "sample_age_s": 0.055856999999377877,
+          "callback_receive_age_s": 0.012441564002074301,
+          "status_receive_age_s": 2.733410702989204,
+          "first_rejecting_predicate": null
+        },
+        {
+          "source": "yaw",
+          "sample_age_s": 0.06551992500317283,
+          "callback_receive_age_s": 0.012248338985955343,
+          "status_receive_age_s": 2.442932143982034,
+          "first_rejecting_predicate": null
+        },
+        {
+          "source": "wheel",
+          "sample_age_s": 0.2989652240066789,
+          "callback_receive_age_s": 0.010879315988859162,
+          "status_receive_age_s": 0.010702534986194223,
+          "first_rejecting_predicate": "measurement_age_out_of_bounds"
+        }
+      ]
+    },
+    "label": "reference-c-v2",
+    "gate_first_after_explorer_fault": {
+      "at": 158838.42666605,
+      "after_first_fault_s": 0.027222971024457365,
+      "sources_ready": true,
+      "state": "HEALTHY",
+      "reason": "awaiting_explore_resume"
+    }
+  },
+  {
+    "case": {
+      "id": "cancel",
+      "door_m": 0.8,
+      "start": [
+        -1.9,
+        -0.45,
+        0.0
+      ],
+      "inject": "cancel_after_first_motion"
+    },
+    "passed": true,
+    "hardware_qualified": false,
+    "manifest_compatible": true,
+    "actual_lidar_beams": 2160,
+    "sensor_profile": "native_mast_mask",
+    "reference_geometry_provided_to_product": false,
+    "truth_map_publisher": false,
+    "truth_tf_publisher": false,
+    "manual_navigation_goals": 0,
+    "prefixes": {
+      "explore": "/evidence/ap06-product-install/explore",
+      "mission_manager": "/evidence/ap06-product-install/mission_manager",
+      "bt_orchestrator": "/evidence/ap06-product-install/bt_orchestrator",
+      "robot_navigation": "/evidence/ap06-product-install/robot_navigation",
+      "robot_state_estimation": "/evidence/ap06-product-install/robot_state_estimation",
+      "base_hardware": "/evidence/ap06-product-install/base_hardware",
+      "robot_map_manager": "/evidence/ap06-product-install/robot_map_manager",
+      "robot_localization": "/evidence/ap06-support-install/robot_localization",
+      "slam_toolbox": "/evidence/ap06-support-install/slam_toolbox",
+      "nav2_bt_navigator": "/evidence/ap06-support-install/nav2_bt_navigator",
+      "nav2_controller": "/evidence/ap03-nav2-install/nav2_controller",
+      "nav2_planner": "/evidence/ap03-nav2-install/nav2_planner",
+      "nav2_velocity_smoother": "/evidence/ap06-support-install/nav2_velocity_smoother",
+      "nav2_collision_monitor": "/evidence/ap06-support-install/nav2_collision_monitor",
+      "vl53_near_field": "/evidence/ap06-product-install/vl53_near_field",
+      "safety_monitor": "/evidence/ap06-product-install/safety_monitor",
+      "amadeus_lidar_bringup": "/evidence/ap06-product-install/amadeus_lidar_bringup"
+    },
+    "initial_map": {
+      "fingerprint": "ec16ee520df76e897402399559d98984ae5a1ba1370872831e47f802a8eea9f9",
+      "width": 187,
+      "height": 93
+    },
+    "tf_owners": {
+      "odom->base_link": [
+        "hwt601_mapping_ekf"
+      ],
+      "map->odom": [
+        "slam_toolbox"
+      ]
+    },
+    "injection_at_s": 6.1238856129930355,
+    "action_maximum_active": {
+      "/explore_area/_action/status": 1,
+      "/navigate_to_pose/_action/status": 1
+    },
+    "action_active_at_terminal": {
+      "/explore_area/_action/status": [],
+      "/navigate_to_pose/_action/status": []
+    },
+    "command_values_at_terminal": {
+      "/cmd_vel_nav": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_smoothed": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_nav_raw": [
+        0.0,
+        0.0
+      ]
+    },
+    "map_save": {
+      "success": true,
+      "message": "Karte 'amadeus' als Version 20261005T093955211071Z-57999bd516c3 gespeichert."
+    },
+    "checkpoint_after_save": {
+      "state": "unavailable",
+      "reason": "metric_checkpoint_exact_saved_snapshot_unavailable",
+      "motion_authorized": false
+    },
+    "metric": {
+      "schema_version": 1,
+      "state": "canceled",
+      "outcome": "user_canceled",
+      "started_wall_time": 1791193189.5486572,
+      "arrivals": 0,
+      "observations": 0,
+      "observed_area_m2": 0.0,
+      "full_apartment_complete": false,
+      "semantic_complete": false,
+      "floor_coverage_verified": false,
+      "chain": [],
+      "decision_snapshot": {
+        "time_monotonic": 159140.791878868,
+        "safe": true,
+        "first_rejecting_predicate": null,
+        "standstill": true,
+        "encoder_state": {
+          "dry_run": false,
+          "allow_rs485": true,
+          "timed_out": true,
+          "cmd_v_mps": 0.0,
+          "cmd_w_radps": 0.0,
+          "invalid_cmd_count": 0,
+          "v_left_mps": 0.0,
+          "v_right_mps": 0.0,
+          "rpm_left": 0.0,
+          "rpm_right": 0.0,
+          "motor_rpm_left": 0.0,
+          "motor_rpm_right": 0.0,
+          "gear_ratio": 10.0,
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0,
+          "odometry_source": "encoder_position",
+          "encoder_initialized": true,
+          "encoder_feedback_ok": true,
+          "encoder_stale": false,
+          "encoder_feedback_age_s": 0.019877724000252783,
+          "encoder_counts_per_motor_revolution": 1000.0,
+          "encoder_expected_segment": 1000,
+          "encoder_expected_resolution": 4000,
+          "encoder_connection_initialized": true,
+          "encoder_config_fault_latched": false,
+          "encoder_position_left_u32": 0,
+          "encoder_position_right_u32": 0,
+          "encoder_position_left_i32": 0,
+          "encoder_position_right_i32": 0,
+          "encoder_delta_left": 0,
+          "encoder_delta_right": 0,
+          "encoder_sample_dt_s": 0.06010904849972576,
+          "encoder_pair_read_duration_s": 0.0001436019956599921,
+          "encoder_maximum_pair_read_duration_s": 0.01046690798830241,
+          "encoder_pair_left_first": true,
+          "encoder_last_reason": "ok",
+          "encoder_consecutive_failures": 0,
+          "modbus_read_failures": 0,
+          "encoder_rejected_updates": 0,
+          "encoder_rebases": 0,
+          "encoder_word_order_left": true,
+          "encoder_word_order_right": true,
+          "encoder_segment_left": 1000,
+          "encoder_segment_right": 1000,
+          "encoder_resolution_left": 4000,
+          "encoder_resolution_right": 4000,
+          "feedback_ok": true,
+          "meas_motor_rpm_left": 0.0,
+          "meas_motor_rpm_right": 0.0,
+          "meas_v_mps": 0.0,
+          "meas_w_radps": 0.0,
+          "rs485_port": "/dev/ttyUSB_BASE",
+          "rs485_ready": true,
+          "left_motor_id": 1,
+          "right_motor_id": 2,
+          "stamp_sec": 1791193190.0528686,
+          "encoder_timing_recovery": {
+            "state": "ready",
+            "ready": true,
+            "timing_recovery_pending": false,
+            "timing_recovery_count": 0,
+            "timing_recovery_budget_s": 2.0,
+            "timing_recovery_attempt_limit": 2,
+            "timing_recovery_deadline_s": null,
+            "odometry_continuity_valid": true,
+            "first_timing_rejection": null,
+            "last_timing_rejection": null,
+            "current_reason": "ok",
+            "diagnostic_pair_count": 0,
+            "timing_recovered_count": 0,
+            "timing_recovery_valid_pairs": 0,
+            "continuity_max_gap_s": 0.18,
+            "source": "ess23_absolute_fc03",
+            "synthetic": false,
+            "command_derived": false,
+            "shadow_only": true,
+            "fusion_ready": false,
+            "read_only": false,
+            "modbus_function_code": 3,
+            "sensor_write_commands": false,
+            "actuator_output": true,
+            "cmd_vel_subscription": false,
+            "publishes_tf": false,
+            "connected": true,
+            "configuration_valid": true,
+            "fault_latched": false,
+            "fault_reason": null,
+            "port": "/dev/ttyUSB_BASE",
+            "resolved_port": "/dev/ttyUSB_BASE",
+            "left_motor_id": 1,
+            "right_motor_id": 2,
+            "complete_pair_count": 461,
+            "rejected_pair_count": 0,
+            "published_count": 460,
+            "baseline_count": 1,
+            "rejected": 0,
+            "successful_connections": 0,
+            "reconnects": 0,
+            "fc03_pair_error_count": 0,
+            "rebases": 0,
+            "x_m": 0.0,
+            "y_m": 0.0,
+            "yaw_rad": 0.0,
+            "last_attempt_gap_s": 0.06010904849972576,
+            "last_pair_duration_s": 0.0001436019956599921,
+            "maximum_pair_duration_s": 0.01046690798830241,
+            "last_rejected_pair_duration_s": null,
+            "maximum_attempted_pair_duration_s": 0.01046690798830241,
+            "startup_overrun_retries": 0,
+            "last_feedback_age_s": 0.019892356009222567,
+            "max_feedback_age_s": 0.18,
+            "last_reason": "ok",
+            "sample_dt_s": 0.06010904849972576,
+            "linear_velocity_mps": 0.0,
+            "angular_velocity_radps": 0.0,
+            "left_delta_counts": 0,
+            "right_delta_counts": 0,
+            "left_position_u32": 0,
+            "right_position_u32": 0,
+            "left_speed_rpm": 0.0,
+            "right_speed_rpm": 0.0
+          }
+        },
+        "hwt_state": "HEALTHY"
+      },
+      "start_reference": {
+        "current": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "initial": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "retained": [
+          114,
+          1
+        ],
+        "projected": [
+          114,
+          1
+        ],
+        "valid": [
+          true,
+          true
+        ],
+        "reasons": [
+          "",
+          ""
+        ]
+      },
+      "start_decision": {
+        "strategy": "adaptive",
+        "selected_motion": "observation_goal",
+        "scan_admissible": false,
+        "scan_useful": true,
+        "unobserved_cells_in_scope": 9460,
+        "initial_contour_missing_cells": {
+          "raw": 34,
+          "costmap": 1
+        },
+        "start_egress_enabled": true,
+        "first_rejecting_predicate": null,
+        "scan_rejection": "initial_scan_footprint_invalid"
+      },
+      "candidates": 1,
+      "ranking": {
+        "raw": 14,
+        "unsafe": 13,
+        "deferred_or_served": 0,
+        "accepted": 1,
+        "route_rejections": {
+          "goal_orientation_invalid": 12,
+          "no_visible_frontier": 1
+        },
+        "bounded_start_observation": true
+      },
+      "active_goal": {
+        "task_id": "metric-task-1",
+        "x": 0.3899999979883432,
+        "y": 0.0,
+        "route_length_m": 0.3899999979883432,
+        "cost": 0.7800000026822089,
+        "revision": 27
+      },
+      "attempt": 1,
+      "controller_geometry_contract": {
+        "FollowPath.use_rotate_to_heading": true,
+        "FollowPath.rotate_to_heading_min_angle": 0.35,
+        "FollowPath.lookahead_dist": 0.4,
+        "FollowPath.use_velocity_scaled_lookahead_dist": false,
+        "FollowPath.allow_reversing": false,
+        "FollowPath.use_collision_detection": true,
+        "FollowPath.use_interpolation": true,
+        "general_goal_checker.xy_goal_tolerance": 0.15,
+        "general_goal_checker.yaw_goal_tolerance": 0.4,
+        "goal_checker_plugins": [
+          "general_goal_checker"
+        ],
+        "controller_plugins": [
+          "FollowPath"
+        ],
+        "FollowPath.plugin": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+        "general_goal_checker.plugin": "nav2_controller::SimpleGoalChecker",
+        "controller_frequency": 20.0,
+        "FollowPath.desired_linear_vel": 0.1,
+        "FollowPath.rotate_to_heading_angular_vel": 0.2,
+        "FollowPath.max_angular_accel": 2.0
+      },
+      "reason": "user_canceled",
+      "attempts": 1,
+      "failures": 0,
+      "observation_window_s": 3.0,
+      "scope_bound": true,
+      "source_fault": null,
+      "child_terminal": true,
+      "partial_map_ready_to_save": true,
+      "persistence": {
+        "state": "unavailable",
+        "reason": "metric_checkpoint_exact_saved_snapshot_unavailable",
+        "motion_authorized": false
+      }
+    },
+    "manager": {
+      "state": "canceled",
+      "phase": "abgebrochen",
+      "message": "Mission abgebrochen",
+      "progress": 0.0,
+      "active_command": {
+        "type": "explore"
+      },
+      "rooms": [
+        "Wohnzimmer",
+        "Kueche",
+        "Flur",
+        "Schlafzimmer",
+        "Werkstatt"
+      ],
+      "pick_and_place_rooms": [
+        "Wohnzimmer",
+        "Kueche",
+        "Flur",
+        "Schlafzimmer",
+        "Werkstatt"
+      ],
+      "targets": [
+        "Tisch",
+        "Arbeitsplatte",
+        "Regal",
+        "Ladestation_Naehe",
+        "Benutzer"
+      ],
+      "objects": [
+        "Tasse",
+        "Flasche",
+        "Fernbedienung",
+        "Werkzeug",
+        "Schluessel"
+      ],
+      "offboard_available": null,
+      "cancel_pending": false,
+      "last_rejection": "",
+      "semantic_map": {
+        "available": false,
+        "error": "Noch kein gueltiger Semantik-Status empfangen",
+        "status_age_seconds": null,
+        "stale_timeout_seconds": 6.0
+      },
+      "localization": {
+        "required_for_real_go_to_room": true,
+        "ready": false,
+        "last_signal": false,
+        "status_age_seconds": null,
+        "stale_timeout_seconds": 1.0,
+        "loss_age_seconds": null,
+        "mission_cancel_grace_seconds": 0.8
+      },
+      "resolved_room_goal": null,
+      "go_to_room_execution": "simulation_only_no_navigation",
+      "explore_execution": "bt_explicit_opt_in",
+      "metric_exploration_result": {
+        "schema_version": 1,
+        "state": "running",
+        "outcome": "in_progress",
+        "started_wall_time": 1791193189.5486572,
+        "arrivals": 0,
+        "observations": 0,
+        "observed_area_m2": 0.0,
+        "full_apartment_complete": false,
+        "semantic_complete": false,
+        "floor_coverage_verified": false,
+        "chain": [],
+        "decision_snapshot": {
+          "time_monotonic": 159140.791878868,
+          "safe": true,
+          "first_rejecting_predicate": null,
+          "standstill": true,
+          "encoder_state": {
+            "dry_run": false,
+            "allow_rs485": true,
+            "timed_out": true,
+            "cmd_v_mps": 0.0,
+            "cmd_w_radps": 0.0,
+            "invalid_cmd_count": 0,
+            "v_left_mps": 0.0,
+            "v_right_mps": 0.0,
+            "rpm_left": 0.0,
+            "rpm_right": 0.0,
+            "motor_rpm_left": 0.0,
+            "motor_rpm_right": 0.0,
+            "gear_ratio": 10.0,
+            "x": 0.0,
+            "y": 0.0,
+            "yaw": 0.0,
+            "odometry_source": "encoder_position",
+            "encoder_initialized": true,
+            "encoder_feedback_ok": true,
+            "encoder_stale": false,
+            "encoder_feedback_age_s": 0.019877724000252783,
+            "encoder_counts_per_motor_revolution": 1000.0,
+            "encoder_expected_segment": 1000,
+            "encoder_expected_resolution": 4000,
+            "encoder_connection_initialized": true,
+            "encoder_config_fault_latched": false,
+            "encoder_position_left_u32": 0,
+            "encoder_position_right_u32": 0,
+            "encoder_position_left_i32": 0,
+            "encoder_position_right_i32": 0,
+            "encoder_delta_left": 0,
+            "encoder_delta_right": 0,
+            "encoder_sample_dt_s": 0.06010904849972576,
+            "encoder_pair_read_duration_s": 0.0001436019956599921,
+            "encoder_maximum_pair_read_duration_s": 0.01046690798830241,
+            "encoder_pair_left_first": true,
+            "encoder_last_reason": "ok",
+            "encoder_consecutive_failures": 0,
+            "modbus_read_failures": 0,
+            "encoder_rejected_updates": 0,
+            "encoder_rebases": 0,
+            "encoder_word_order_left": true,
+            "encoder_word_order_right": true,
+            "encoder_segment_left": 1000,
+            "encoder_segment_right": 1000,
+            "encoder_resolution_left": 4000,
+            "encoder_resolution_right": 4000,
+            "feedback_ok": true,
+            "meas_motor_rpm_left": 0.0,
+            "meas_motor_rpm_right": 0.0,
+            "meas_v_mps": 0.0,
+            "meas_w_radps": 0.0,
+            "rs485_port": "/dev/ttyUSB_BASE",
+            "rs485_ready": true,
+            "left_motor_id": 1,
+            "right_motor_id": 2,
+            "stamp_sec": 1791193190.0528686,
+            "encoder_timing_recovery": {
+              "state": "ready",
+              "ready": true,
+              "timing_recovery_pending": false,
+              "timing_recovery_count": 0,
+              "timing_recovery_budget_s": 2.0,
+              "timing_recovery_attempt_limit": 2,
+              "timing_recovery_deadline_s": null,
+              "odometry_continuity_valid": true,
+              "first_timing_rejection": null,
+              "last_timing_rejection": null,
+              "current_reason": "ok",
+              "diagnostic_pair_count": 0,
+              "timing_recovered_count": 0,
+              "timing_recovery_valid_pairs": 0,
+              "continuity_max_gap_s": 0.18,
+              "source": "ess23_absolute_fc03",
+              "synthetic": false,
+              "command_derived": false,
+              "shadow_only": true,
+              "fusion_ready": false,
+              "read_only": false,
+              "modbus_function_code": 3,
+              "sensor_write_commands": false,
+              "actuator_output": true,
+              "cmd_vel_subscription": false,
+              "publishes_tf": false,
+              "connected": true,
+              "configuration_valid": true,
+              "fault_latched": false,
+              "fault_reason": null,
+              "port": "/dev/ttyUSB_BASE",
+              "resolved_port": "/dev/ttyUSB_BASE",
+              "left_motor_id": 1,
+              "right_motor_id": 2,
+              "complete_pair_count": 461,
+              "rejected_pair_count": 0,
+              "published_count": 460,
+              "baseline_count": 1,
+              "rejected": 0,
+              "successful_connections": 0,
+              "reconnects": 0,
+              "fc03_pair_error_count": 0,
+              "rebases": 0,
+              "x_m": 0.0,
+              "y_m": 0.0,
+              "yaw_rad": 0.0,
+              "last_attempt_gap_s": 0.06010904849972576,
+              "last_pair_duration_s": 0.0001436019956599921,
+              "maximum_pair_duration_s": 0.01046690798830241,
+              "last_rejected_pair_duration_s": null,
+              "maximum_attempted_pair_duration_s": 0.01046690798830241,
+              "startup_overrun_retries": 0,
+              "last_feedback_age_s": 0.019892356009222567,
+              "max_feedback_age_s": 0.18,
+              "last_reason": "ok",
+              "sample_dt_s": 0.06010904849972576,
+              "linear_velocity_mps": 0.0,
+              "angular_velocity_radps": 0.0,
+              "left_delta_counts": 0,
+              "right_delta_counts": 0,
+              "left_position_u32": 0,
+              "right_position_u32": 0,
+              "left_speed_rpm": 0.0,
+              "right_speed_rpm": 0.0
+            }
+          },
+          "hwt_state": "HEALTHY"
+        },
+        "start_reference": {
+          "current": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "initial": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "retained": [
+            114,
+            1
+          ],
+          "projected": [
+            114,
+            1
+          ],
+          "valid": [
+            true,
+            true
+          ],
+          "reasons": [
+            "",
+            ""
+          ]
+        },
+        "start_decision": {
+          "strategy": "adaptive",
+          "selected_motion": "observation_goal",
+          "scan_admissible": false,
+          "scan_useful": true,
+          "unobserved_cells_in_scope": 9460,
+          "initial_contour_missing_cells": {
+            "raw": 34,
+            "costmap": 1
+          },
+          "start_egress_enabled": true,
+          "first_rejecting_predicate": null,
+          "scan_rejection": "initial_scan_footprint_invalid"
+        },
+        "candidates": 1,
+        "ranking": {
+          "raw": 14,
+          "unsafe": 13,
+          "deferred_or_served": 0,
+          "accepted": 1,
+          "route_rejections": {
+            "goal_orientation_invalid": 12,
+            "no_visible_frontier": 1
+          },
+          "bounded_start_observation": true
+        },
+        "active_goal": {
+          "task_id": "metric-task-1",
+          "x": 0.3899999979883432,
+          "y": 0.0,
+          "route_length_m": 0.3899999979883432,
+          "cost": 0.7800000026822089,
+          "revision": 27
+        },
+        "attempt": 1,
+        "controller_geometry_contract": {
+          "FollowPath.use_rotate_to_heading": true,
+          "FollowPath.rotate_to_heading_min_angle": 0.35,
+          "FollowPath.lookahead_dist": 0.4,
+          "FollowPath.use_velocity_scaled_lookahead_dist": false,
+          "FollowPath.allow_reversing": false,
+          "FollowPath.use_collision_detection": true,
+          "FollowPath.use_interpolation": true,
+          "general_goal_checker.xy_goal_tolerance": 0.15,
+          "general_goal_checker.yaw_goal_tolerance": 0.4,
+          "goal_checker_plugins": [
+            "general_goal_checker"
+          ],
+          "controller_plugins": [
+            "FollowPath"
+          ],
+          "FollowPath.plugin": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+          "general_goal_checker.plugin": "nav2_controller::SimpleGoalChecker",
+          "controller_frequency": 20.0,
+          "FollowPath.desired_linear_vel": 0.1,
+          "FollowPath.rotate_to_heading_angular_vel": 0.2,
+          "FollowPath.max_angular_accel": 2.0
+        },
+        "scope_bound": true,
+        "source_fault": null,
+        "child_terminal": false,
+        "partial_map_ready_to_save": false,
+        "persistence": {
+          "state": "waiting_for_saved_map"
+        }
+      },
+      "time": 1791193195.8313546
+    },
+    "map_oracle": {
+      "reference_free_cells": 14254,
+      "reference_observed_cells": 8206,
+      "reference_observed_fraction": 0.5756980496702679,
+      "maximum_occupied_wall_error_m": 0.02493021432652609
+    },
+    "travel_m": 0.03423495193822756,
+    "minimum_padded_clearance_m": 0.69996141885405,
+    "rear_cleared": false,
+    "plant_tick_gaps": [
+      0.045422392984619364,
+      0.07312720501795411,
+      0.0413566869974602,
+      0.12705496000126004,
+      0.10163392298272811,
+      0.04075910500250757,
+      0.030408993014134467
+    ],
+    "map_growth": true,
+    "simulated_register_writes": 40,
+    "injection_to_terminal_s": 0.6021553339960519,
+    "injection_to_standstill_s": 0.3014463660074398,
+    "consumer_first_fault_compact": {
+      "reason": "wheel_missing_stale_or_invalid",
+      "evaluation_monotonic_s": 159145.586330052,
+      "sources": [
+        {
+          "source": "raw",
+          "sample_age_s": 0.061512905987910926,
+          "callback_receive_age_s": 0.013494801009073853,
+          "status_receive_age_s": 0.4078392240044195,
+          "first_rejecting_predicate": null
+        },
+        {
+          "source": "yaw",
+          "sample_age_s": 0.06150825900840573,
+          "callback_receive_age_s": 0.012996564997592941,
+          "status_receive_age_s": 0.5931396629894152,
+          "first_rejecting_predicate": null
+        },
+        {
+          "source": "wheel",
+          "sample_age_s": 0.2683574300026521,
+          "callback_receive_age_s": 0.26542489300481975,
+          "status_receive_age_s": 0.008884621987817809,
+          "first_rejecting_predicate": "callback_receive_age_out_of_bounds"
+        }
+      ]
+    },
+    "label": "reference-cancel",
+    "gate_first_after_explorer_fault": {
+      "at": 159145.782066499,
+      "after_first_fault_s": 0.19573644699994475,
+      "sources_ready": true,
+      "state": "HEALTHY",
+      "reason": "awaiting_explore_resume"
+    }
+  },
+  {
+    "case": {
+      "id": "gyro_hold",
+      "door_m": 0.8,
+      "start": [
+        -1.9,
+        -0.45,
+        0.0
+      ],
+      "inject": "gyro_gap_after_first_motion"
+    },
+    "passed": true,
+    "hardware_qualified": false,
+    "manifest_compatible": true,
+    "actual_lidar_beams": 2160,
+    "sensor_profile": "native_mast_mask",
+    "reference_geometry_provided_to_product": false,
+    "truth_map_publisher": false,
+    "truth_tf_publisher": false,
+    "manual_navigation_goals": 0,
+    "prefixes": {
+      "explore": "/evidence/ap06-product-install/explore",
+      "mission_manager": "/evidence/ap06-product-install/mission_manager",
+      "bt_orchestrator": "/evidence/ap06-product-install/bt_orchestrator",
+      "robot_navigation": "/evidence/ap06-product-install/robot_navigation",
+      "robot_state_estimation": "/evidence/ap06-product-install/robot_state_estimation",
+      "base_hardware": "/evidence/ap06-product-install/base_hardware",
+      "robot_map_manager": "/evidence/ap06-product-install/robot_map_manager",
+      "robot_localization": "/evidence/ap06-support-install/robot_localization",
+      "slam_toolbox": "/evidence/ap06-support-install/slam_toolbox",
+      "nav2_bt_navigator": "/evidence/ap06-support-install/nav2_bt_navigator",
+      "nav2_controller": "/evidence/ap03-nav2-install/nav2_controller",
+      "nav2_planner": "/evidence/ap03-nav2-install/nav2_planner",
+      "nav2_velocity_smoother": "/evidence/ap06-support-install/nav2_velocity_smoother",
+      "nav2_collision_monitor": "/evidence/ap06-support-install/nav2_collision_monitor",
+      "vl53_near_field": "/evidence/ap06-product-install/vl53_near_field",
+      "safety_monitor": "/evidence/ap06-product-install/safety_monitor",
+      "amadeus_lidar_bringup": "/evidence/ap06-product-install/amadeus_lidar_bringup"
+    },
+    "initial_map": {
+      "fingerprint": "ec16ee520df76e897402399559d98984ae5a1ba1370872831e47f802a8eea9f9",
+      "width": 187,
+      "height": 93
+    },
+    "tf_owners": {
+      "odom->base_link": [
+        "hwt601_mapping_ekf"
+      ],
+      "map->odom": [
+        "slam_toolbox"
+      ]
+    },
+    "injection_at_s": 6.867105896002613,
+    "injected_gyro_gap_s": 0.45,
+    "action_maximum_active": {
+      "/explore_area/_action/status": 1,
+      "/navigate_to_pose/_action/status": 1
+    },
+    "action_active_at_terminal": {
+      "/explore_area/_action/status": [],
+      "/navigate_to_pose/_action/status": []
+    },
+    "command_values_at_terminal": {
+      "/cmd_vel_nav": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_smoothed": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_nav_raw": [
+        0.0,
+        0.0
+      ]
+    },
+    "map_save": {
+      "success": true,
+      "message": "Karte 'amadeus' als Version 20261005T094037997862Z-5f705a30bbff gespeichert."
+    },
+    "checkpoint_after_save": {
+      "state": "unavailable",
+      "reason": "metric_checkpoint_exact_saved_snapshot_unavailable",
+      "motion_authorized": false
+    },
+    "metric": {
+      "schema_version": 1,
+      "state": "failed",
+      "outcome": "error",
+      "started_wall_time": 1791193228.0874772,
+      "arrivals": 0,
+      "observations": 0,
+      "observed_area_m2": 0.0,
+      "full_apartment_complete": false,
+      "semantic_complete": false,
+      "floor_coverage_verified": false,
+      "chain": [
+        {
+          "task": "metric-task-1",
+          "result": "hwt_hold",
+          "terminal_child": true
+        }
+      ],
+      "decision_snapshot": {
+        "time_monotonic": 159179.323074568,
+        "safe": true,
+        "first_rejecting_predicate": null,
+        "standstill": true,
+        "encoder_state": {
+          "dry_run": false,
+          "allow_rs485": true,
+          "timed_out": true,
+          "cmd_v_mps": 0.0,
+          "cmd_w_radps": 0.0,
+          "invalid_cmd_count": 0,
+          "v_left_mps": 0.0,
+          "v_right_mps": 0.0,
+          "rpm_left": 0.0,
+          "rpm_right": 0.0,
+          "motor_rpm_left": 0.0,
+          "motor_rpm_right": 0.0,
+          "gear_ratio": 10.0,
+          "x": 0.0,
+          "y": 0.0,
+          "yaw": 0.0,
+          "odometry_source": "encoder_position",
+          "encoder_initialized": true,
+          "encoder_feedback_ok": true,
+          "encoder_stale": false,
+          "encoder_feedback_age_s": 0.03668620050302707,
+          "encoder_counts_per_motor_revolution": 1000.0,
+          "encoder_expected_segment": 1000,
+          "encoder_expected_resolution": 4000,
+          "encoder_connection_initialized": true,
+          "encoder_config_fault_latched": false,
+          "encoder_position_left_u32": 0,
+          "encoder_position_right_u32": 0,
+          "encoder_position_left_i32": 0,
+          "encoder_position_right_i32": 0,
+          "encoder_delta_left": 0,
+          "encoder_delta_right": 0,
+          "encoder_sample_dt_s": 0.06287142599467188,
+          "encoder_pair_read_duration_s": 0.00012235098984092474,
+          "encoder_maximum_pair_read_duration_s": 0.0118200910219457,
+          "encoder_pair_left_first": true,
+          "encoder_last_reason": "ok",
+          "encoder_consecutive_failures": 0,
+          "modbus_read_failures": 0,
+          "encoder_rejected_updates": 0,
+          "encoder_rebases": 0,
+          "encoder_word_order_left": true,
+          "encoder_word_order_right": true,
+          "encoder_segment_left": 1000,
+          "encoder_segment_right": 1000,
+          "encoder_resolution_left": 4000,
+          "encoder_resolution_right": 4000,
+          "feedback_ok": true,
+          "meas_motor_rpm_left": 0.0,
+          "meas_motor_rpm_right": 0.0,
+          "meas_v_mps": 0.0,
+          "meas_w_radps": 0.0,
+          "rs485_port": "/dev/ttyUSB_BASE",
+          "rs485_ready": true,
+          "left_motor_id": 1,
+          "right_motor_id": 2,
+          "stamp_sec": 1791193228.577071,
+          "encoder_timing_recovery": {
+            "state": "ready",
+            "ready": true,
+            "timing_recovery_pending": false,
+            "timing_recovery_count": 0,
+            "timing_recovery_budget_s": 2.0,
+            "timing_recovery_attempt_limit": 2,
+            "timing_recovery_deadline_s": null,
+            "odometry_continuity_valid": true,
+            "first_timing_rejection": null,
+            "last_timing_rejection": null,
+            "current_reason": "ok",
+            "diagnostic_pair_count": 0,
+            "timing_recovered_count": 0,
+            "timing_recovery_valid_pairs": 0,
+            "continuity_max_gap_s": 0.18,
+            "source": "ess23_absolute_fc03",
+            "synthetic": false,
+            "command_derived": false,
+            "shadow_only": true,
+            "fusion_ready": false,
+            "read_only": false,
+            "modbus_function_code": 3,
+            "sensor_write_commands": false,
+            "actuator_output": true,
+            "cmd_vel_subscription": false,
+            "publishes_tf": false,
+            "connected": true,
+            "configuration_valid": true,
+            "fault_latched": false,
+            "fault_reason": null,
+            "port": "/dev/ttyUSB_BASE",
+            "resolved_port": "/dev/ttyUSB_BASE",
+            "left_motor_id": 1,
+            "right_motor_id": 2,
+            "complete_pair_count": 459,
+            "rejected_pair_count": 0,
+            "published_count": 458,
+            "baseline_count": 1,
+            "rejected": 0,
+            "successful_connections": 0,
+            "reconnects": 0,
+            "fc03_pair_error_count": 0,
+            "rebases": 0,
+            "x_m": 0.0,
+            "y_m": 0.0,
+            "yaw_rad": 0.0,
+            "last_attempt_gap_s": 0.06287142599467188,
+            "last_pair_duration_s": 0.00012235098984092474,
+            "maximum_pair_duration_s": 0.0118200910219457,
+            "last_rejected_pair_duration_s": null,
+            "maximum_attempted_pair_duration_s": 0.0118200910219457,
+            "startup_overrun_retries": 0,
+            "last_feedback_age_s": 0.036700090509839356,
+            "max_feedback_age_s": 0.18,
+            "last_reason": "ok",
+            "sample_dt_s": 0.06287142599467188,
+            "linear_velocity_mps": 0.0,
+            "angular_velocity_radps": 0.0,
+            "left_delta_counts": 0,
+            "right_delta_counts": 0,
+            "left_position_u32": 0,
+            "right_position_u32": 0,
+            "left_speed_rpm": 0.0,
+            "right_speed_rpm": 0.0
+          }
+        },
+        "hwt_state": "HEALTHY"
+      },
+      "start_reference": {
+        "current": [
+          6.938893903907228e-17,
+          -1.1178293804915002e-17,
+          4.87890977618477e-19
+        ],
+        "initial": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "retained": [
+          85,
+          0
+        ],
+        "projected": [
+          61,
+          0
+        ],
+        "valid": [
+          false,
+          true
+        ],
+        "reasons": [
+          "start_egress_new_unknown_or_obstacle",
+          ""
+        ]
+      },
+      "start_decision": {
+        "strategy": "adaptive",
+        "selected_motion": "observation_goal",
+        "scan_admissible": false,
+        "scan_useful": true,
+        "unobserved_cells_in_scope": 9460,
+        "initial_contour_missing_cells": {
+          "raw": 34,
+          "costmap": 1
+        },
+        "start_egress_enabled": true,
+        "first_rejecting_predicate": null,
+        "scan_rejection": "initial_scan_footprint_invalid"
+      },
+      "candidates": 1,
+      "ranking": {
+        "raw": 14,
+        "unsafe": 13,
+        "deferred_or_served": 0,
+        "accepted": 1,
+        "route_rejections": {
+          "goal_orientation_invalid": 12,
+          "no_visible_frontier": 1
+        },
+        "bounded_start_observation": true
+      },
+      "active_goal": {
+        "task_id": "metric-task-1",
+        "x": 0.3899999979883432,
+        "y": 0.0,
+        "route_length_m": 0.3899999979883432,
+        "cost": 0.7800000026822089,
+        "revision": 27
+      },
+      "attempt": 1,
+      "controller_geometry_contract": {
+        "FollowPath.use_rotate_to_heading": true,
+        "FollowPath.rotate_to_heading_min_angle": 0.35,
+        "FollowPath.lookahead_dist": 0.4,
+        "FollowPath.use_velocity_scaled_lookahead_dist": false,
+        "FollowPath.allow_reversing": false,
+        "FollowPath.use_collision_detection": true,
+        "FollowPath.use_interpolation": true,
+        "general_goal_checker.xy_goal_tolerance": 0.15,
+        "general_goal_checker.yaw_goal_tolerance": 0.4,
+        "goal_checker_plugins": [
+          "general_goal_checker"
+        ],
+        "controller_plugins": [
+          "FollowPath"
+        ],
+        "FollowPath.plugin": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+        "general_goal_checker.plugin": "nav2_controller::SimpleGoalChecker",
+        "controller_frequency": 20.0,
+        "FollowPath.desired_linear_vel": 0.1,
+        "FollowPath.rotate_to_heading_angular_vel": 0.2,
+        "FollowPath.max_angular_accel": 2.0
+      },
+      "reason": "hwt_terminal",
+      "attempts": 1,
+      "failures": 0,
+      "observation_window_s": 3.0,
+      "scope_bound": true,
+      "source_fault": null,
+      "child_terminal": true,
+      "partial_map_ready_to_save": true,
+      "persistence": {
+        "state": "unavailable",
+        "reason": "metric_checkpoint_exact_saved_snapshot_unavailable",
+        "motion_authorized": false
+      }
+    },
+    "manager": {
+      "state": "failed",
+      "phase": "fehler",
+      "message": "Mission fehlgeschlagen (BT FAILURE)",
+      "progress": 0.0,
+      "active_command": {
+        "type": "explore"
+      },
+      "rooms": [
+        "Wohnzimmer",
+        "Kueche",
+        "Flur",
+        "Schlafzimmer",
+        "Werkstatt"
+      ],
+      "pick_and_place_rooms": [
+        "Wohnzimmer",
+        "Kueche",
+        "Flur",
+        "Schlafzimmer",
+        "Werkstatt"
+      ],
+      "targets": [
+        "Tisch",
+        "Arbeitsplatte",
+        "Regal",
+        "Ladestation_Naehe",
+        "Benutzer"
+      ],
+      "objects": [
+        "Tasse",
+        "Flasche",
+        "Fernbedienung",
+        "Werkzeug",
+        "Schluessel"
+      ],
+      "offboard_available": null,
+      "cancel_pending": false,
+      "last_rejection": "",
+      "semantic_map": {
+        "available": false,
+        "error": "Noch kein gueltiger Semantik-Status empfangen",
+        "status_age_seconds": null,
+        "stale_timeout_seconds": 6.0
+      },
+      "localization": {
+        "required_for_real_go_to_room": true,
+        "ready": false,
+        "last_signal": false,
+        "status_age_seconds": null,
+        "stale_timeout_seconds": 1.0,
+        "loss_age_seconds": null,
+        "mission_cancel_grace_seconds": 0.8
+      },
+      "resolved_room_goal": null,
+      "go_to_room_execution": "simulation_only_no_navigation",
+      "explore_execution": "bt_explicit_opt_in",
+      "metric_exploration_result": {
+        "schema_version": 1,
+        "state": "failed",
+        "outcome": "error",
+        "started_wall_time": 1791193228.0874772,
+        "arrivals": 0,
+        "observations": 0,
+        "observed_area_m2": 0.0,
+        "full_apartment_complete": false,
+        "semantic_complete": false,
+        "floor_coverage_verified": false,
+        "chain": [
+          {
+            "task": "metric-task-1",
+            "result": "hwt_hold",
+            "terminal_child": true
+          }
+        ],
+        "decision_snapshot": {
+          "time_monotonic": 159179.323074568,
+          "safe": true,
+          "first_rejecting_predicate": null,
+          "standstill": true,
+          "encoder_state": {
+            "dry_run": false,
+            "allow_rs485": true,
+            "timed_out": true,
+            "cmd_v_mps": 0.0,
+            "cmd_w_radps": 0.0,
+            "invalid_cmd_count": 0,
+            "v_left_mps": 0.0,
+            "v_right_mps": 0.0,
+            "rpm_left": 0.0,
+            "rpm_right": 0.0,
+            "motor_rpm_left": 0.0,
+            "motor_rpm_right": 0.0,
+            "gear_ratio": 10.0,
+            "x": 0.0,
+            "y": 0.0,
+            "yaw": 0.0,
+            "odometry_source": "encoder_position",
+            "encoder_initialized": true,
+            "encoder_feedback_ok": true,
+            "encoder_stale": false,
+            "encoder_feedback_age_s": 0.03668620050302707,
+            "encoder_counts_per_motor_revolution": 1000.0,
+            "encoder_expected_segment": 1000,
+            "encoder_expected_resolution": 4000,
+            "encoder_connection_initialized": true,
+            "encoder_config_fault_latched": false,
+            "encoder_position_left_u32": 0,
+            "encoder_position_right_u32": 0,
+            "encoder_position_left_i32": 0,
+            "encoder_position_right_i32": 0,
+            "encoder_delta_left": 0,
+            "encoder_delta_right": 0,
+            "encoder_sample_dt_s": 0.06287142599467188,
+            "encoder_pair_read_duration_s": 0.00012235098984092474,
+            "encoder_maximum_pair_read_duration_s": 0.0118200910219457,
+            "encoder_pair_left_first": true,
+            "encoder_last_reason": "ok",
+            "encoder_consecutive_failures": 0,
+            "modbus_read_failures": 0,
+            "encoder_rejected_updates": 0,
+            "encoder_rebases": 0,
+            "encoder_word_order_left": true,
+            "encoder_word_order_right": true,
+            "encoder_segment_left": 1000,
+            "encoder_segment_right": 1000,
+            "encoder_resolution_left": 4000,
+            "encoder_resolution_right": 4000,
+            "feedback_ok": true,
+            "meas_motor_rpm_left": 0.0,
+            "meas_motor_rpm_right": 0.0,
+            "meas_v_mps": 0.0,
+            "meas_w_radps": 0.0,
+            "rs485_port": "/dev/ttyUSB_BASE",
+            "rs485_ready": true,
+            "left_motor_id": 1,
+            "right_motor_id": 2,
+            "stamp_sec": 1791193228.577071,
+            "encoder_timing_recovery": {
+              "state": "ready",
+              "ready": true,
+              "timing_recovery_pending": false,
+              "timing_recovery_count": 0,
+              "timing_recovery_budget_s": 2.0,
+              "timing_recovery_attempt_limit": 2,
+              "timing_recovery_deadline_s": null,
+              "odometry_continuity_valid": true,
+              "first_timing_rejection": null,
+              "last_timing_rejection": null,
+              "current_reason": "ok",
+              "diagnostic_pair_count": 0,
+              "timing_recovered_count": 0,
+              "timing_recovery_valid_pairs": 0,
+              "continuity_max_gap_s": 0.18,
+              "source": "ess23_absolute_fc03",
+              "synthetic": false,
+              "command_derived": false,
+              "shadow_only": true,
+              "fusion_ready": false,
+              "read_only": false,
+              "modbus_function_code": 3,
+              "sensor_write_commands": false,
+              "actuator_output": true,
+              "cmd_vel_subscription": false,
+              "publishes_tf": false,
+              "connected": true,
+              "configuration_valid": true,
+              "fault_latched": false,
+              "fault_reason": null,
+              "port": "/dev/ttyUSB_BASE",
+              "resolved_port": "/dev/ttyUSB_BASE",
+              "left_motor_id": 1,
+              "right_motor_id": 2,
+              "complete_pair_count": 459,
+              "rejected_pair_count": 0,
+              "published_count": 458,
+              "baseline_count": 1,
+              "rejected": 0,
+              "successful_connections": 0,
+              "reconnects": 0,
+              "fc03_pair_error_count": 0,
+              "rebases": 0,
+              "x_m": 0.0,
+              "y_m": 0.0,
+              "yaw_rad": 0.0,
+              "last_attempt_gap_s": 0.06287142599467188,
+              "last_pair_duration_s": 0.00012235098984092474,
+              "maximum_pair_duration_s": 0.0118200910219457,
+              "last_rejected_pair_duration_s": null,
+              "maximum_attempted_pair_duration_s": 0.0118200910219457,
+              "startup_overrun_retries": 0,
+              "last_feedback_age_s": 0.036700090509839356,
+              "max_feedback_age_s": 0.18,
+              "last_reason": "ok",
+              "sample_dt_s": 0.06287142599467188,
+              "linear_velocity_mps": 0.0,
+              "angular_velocity_radps": 0.0,
+              "left_delta_counts": 0,
+              "right_delta_counts": 0,
+              "left_position_u32": 0,
+              "right_position_u32": 0,
+              "left_speed_rpm": 0.0,
+              "right_speed_rpm": 0.0
+            }
+          },
+          "hwt_state": "HEALTHY"
+        },
+        "start_reference": {
+          "current": [
+            6.938893903907228e-17,
+            -1.1178293804915002e-17,
+            4.87890977618477e-19
+          ],
+          "initial": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "retained": [
+            85,
+            0
+          ],
+          "projected": [
+            61,
+            0
+          ],
+          "valid": [
+            false,
+            true
+          ],
+          "reasons": [
+            "start_egress_new_unknown_or_obstacle",
+            ""
+          ]
+        },
+        "start_decision": {
+          "strategy": "adaptive",
+          "selected_motion": "observation_goal",
+          "scan_admissible": false,
+          "scan_useful": true,
+          "unobserved_cells_in_scope": 9460,
+          "initial_contour_missing_cells": {
+            "raw": 34,
+            "costmap": 1
+          },
+          "start_egress_enabled": true,
+          "first_rejecting_predicate": null,
+          "scan_rejection": "initial_scan_footprint_invalid"
+        },
+        "candidates": 1,
+        "ranking": {
+          "raw": 14,
+          "unsafe": 13,
+          "deferred_or_served": 0,
+          "accepted": 1,
+          "route_rejections": {
+            "goal_orientation_invalid": 12,
+            "no_visible_frontier": 1
+          },
+          "bounded_start_observation": true
+        },
+        "active_goal": {
+          "task_id": "metric-task-1",
+          "x": 0.3899999979883432,
+          "y": 0.0,
+          "route_length_m": 0.3899999979883432,
+          "cost": 0.7800000026822089,
+          "revision": 27
+        },
+        "attempt": 1,
+        "controller_geometry_contract": {
+          "FollowPath.use_rotate_to_heading": true,
+          "FollowPath.rotate_to_heading_min_angle": 0.35,
+          "FollowPath.lookahead_dist": 0.4,
+          "FollowPath.use_velocity_scaled_lookahead_dist": false,
+          "FollowPath.allow_reversing": false,
+          "FollowPath.use_collision_detection": true,
+          "FollowPath.use_interpolation": true,
+          "general_goal_checker.xy_goal_tolerance": 0.15,
+          "general_goal_checker.yaw_goal_tolerance": 0.4,
+          "goal_checker_plugins": [
+            "general_goal_checker"
+          ],
+          "controller_plugins": [
+            "FollowPath"
+          ],
+          "FollowPath.plugin": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+          "general_goal_checker.plugin": "nav2_controller::SimpleGoalChecker",
+          "controller_frequency": 20.0,
+          "FollowPath.desired_linear_vel": 0.1,
+          "FollowPath.rotate_to_heading_angular_vel": 0.2,
+          "FollowPath.max_angular_accel": 2.0
+        },
+        "reason": "hwt_terminal",
+        "attempts": 1,
+        "failures": 0,
+        "observation_window_s": 3.0,
+        "scope_bound": true,
+        "source_fault": null,
+        "child_terminal": true,
+        "partial_map_ready_to_save": true,
+        "persistence": {
+          "state": "waiting_for_saved_map"
+        }
+      },
+      "time": 1791193238.310347
+    },
+    "map_oracle": {
+      "reference_free_cells": 14254,
+      "reference_observed_cells": 8208,
+      "reference_observed_fraction": 0.5758383611617791,
+      "maximum_occupied_wall_error_m": 0.024840378042408573
+    },
+    "travel_m": 0.05191738464054768,
+    "minimum_padded_clearance_m": 0.6999458177526561,
+    "rear_cleared": false,
+    "plant_tick_gaps": [
+      0.04114359800587408,
+      0.056502473016735166,
+      0.03065958700608462,
+      0.031014000007417053,
+      0.03601639499538578,
+      0.0976700930041261,
+      0.04070276199490763,
+      0.06950734497513622,
+      0.030966054007876664,
+      0.03493960900232196,
+      0.03675012302119285
+    ],
+    "map_growth": true,
+    "simulated_register_writes": 48,
+    "injection_to_terminal_s": 4.133888673997717,
+    "injection_to_standstill_s": 0.5941683239943814,
+    "hold_to_standstill_s": 0.26837841200176626,
+    "hold_resume_qualified": false,
+    "consumer_first_fault_compact": {
+      "reason": "raw_missing_stale_or_invalid",
+      "evaluation_monotonic_s": 159184.896853408,
+      "sources": [
+        {
+          "source": "raw",
+          "sample_age_s": 0.3189023249724414,
+          "callback_receive_age_s": 0.3170157659915276,
+          "status_receive_age_s": 0.04726593699888326,
+          "first_rejecting_predicate": "callback_receive_age_out_of_bounds"
+        },
+        {
+          "source": "yaw",
+          "sample_age_s": 0.3188995409873314,
+          "callback_receive_age_s": 0.3149015459930524,
+          "status_receive_age_s": 0.36761103599565104,
+          "first_rejecting_predicate": null
+        },
+        {
+          "source": "wheel",
+          "sample_age_s": 0.055325480992905796,
+          "callback_receive_age_s": 0.05193846399197355,
+          "status_receive_age_s": 0.014100487984251231,
+          "first_rejecting_predicate": null
+        }
+      ]
+    },
+    "label": "reference-gyro-hold",
+    "gate_first_after_explorer_fault": {
+      "at": 159184.904826114,
+      "after_first_fault_s": 0.007972706021973863,
+      "sources_ready": false,
+      "state": "HOLD",
+      "reason": "raw_missing_stale_or_invalid"
+    }
+  }
+]

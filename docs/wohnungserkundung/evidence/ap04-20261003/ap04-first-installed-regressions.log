@@ -1,0 +1,12 @@
+........................................................................ [ 43%]
+........................................................................ [ 87%]
+...............F....                                                     [100%]
+=================================== FAILURES ===================================
+____ test_visibility_does_not_credit_unobserved_sensor_origin_or_min_range _____
+src/explore/test/test_metric_frontier_candidates.py:222: in test_visibility_does_not_credit_unobserved_sensor_origin_or_min_range
+    assert not visible_boundary_cells(g,allowed,(2.,4.15,math.pi/2),v)
+E   assert not frozenset({(42, 10), (42, 29)})
+E    +  where frozenset({(42, 10), (42, 29)}) = visible_boundary_cells(nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id=...00, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), array([[ True,  True,  True, ...,  True,  True,  True],\n       [ True,  True,  True, ...,  True,  True,  True],\n      ...True],\n       [ True,  True,  True, ...,  True,  True,  True],\n       [ True,  True,  True, ...,  True,  True,  True]]), (2.0, 4.15, 1.5707963267948966), LidarView(mount=(0.0, 0.0, 0.0), angles=array([-3.14159265, -3.12413936, -3.10668607, -3.08923278, -3.07177948,\n      ...3.0368729 ,\n        3.05432619,  3.07177948,  3.08923278,  3.10668607,  3.12413936]), range_m=1.2, minimum_range_m=1.0))
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_frontier_candidates.py::test_visibility_does_not_credit_unobserved_sensor_origin_or_min_range
+1 failed, 163 passed in 17.51s

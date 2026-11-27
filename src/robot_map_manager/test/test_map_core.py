@@ -76,6 +76,11 @@ class SnapshotValidationTests(unittest.TestCase):
         first = valid_snapshot(stamp=1)
         second = valid_snapshot(stamp=999)
         self.assertEqual(first.fingerprint, second.fingerprint)
+        self.assertEqual(
+            first.fingerprint,
+            "1d326ce4c3579a26b519c3a9083bb6c2"
+            "2b7c22d1fe320bfb05076da850b01261",
+        )
         self.assertEqual(first.summary()["width"], 2)
         self.assertIsInstance(first.cells, bytes)
         self.assertEqual(first.cells, bytes((0, 100, 255, 50)))
@@ -434,6 +439,42 @@ class RuntimeGuardTests(unittest.TestCase):
         self.assertIn("parse_cached_command_response(", replay_block)
         self.assertIn("self._publish_status(**replay)", replay_block)
         self.assertNotIn("self.status_publisher.publish", replay_block)
+
+    def test_node_ends_executor_before_context_and_node_destruction(self):
+        node_source = (
+            Path(__file__).parents[1]
+            / "robot_map_manager"
+            / "robot_map_manager_node.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("signal_handler_options=SignalHandlerOptions.NO", node_source)
+        self.assertIn("executor.spin_once(timeout_sec=0.1)", node_source)
+        self.assertLess(node_source.index("executor.shutdown(timeout_sec=5.0)"),
+                        node_source.index("node.destroy_node()", node_source.index("def main")))
+        self.assertLess(node_source.index("node.destroy_node()", node_source.index("def main")),
+                        node_source.index("rclpy.shutdown()", node_source.index("def main")))
+        shutdown_source = node_source[node_source.index("def main"):]
+        self.assertIn("if not stop.is_set():\n            raise", shutdown_source)
+        self.assertNotIn("except RuntimeError:", shutdown_source)
+
+    def test_duplicate_geometry_retains_latest_validated_observation(self):
+        node_source = (
+            Path(__file__).parents[1]
+            / "robot_map_manager"
+            / "robot_map_manager_node.py"
+        ).read_text(encoding="utf-8")
+        duplicate_start = node_source.index(
+            "        if snapshot.fingerprint == self._latest_fingerprint:")
+        duplicate_end = node_source.index(
+            "\n\n        self._latest_map = snapshot", duplicate_start)
+        duplicate_block = node_source[duplicate_start:duplicate_end]
+        self.assertIn("self._latest_map = snapshot", duplicate_block)
+        self.assertIn("self._latest_source = source", duplicate_block)
+        self.assertIn('event="map_observed"', duplicate_block)
+        self.assertLess(
+            node_source.index("self._observed_maps += 1", duplicate_start - 200),
+            duplicate_start,
+        )
+        self.assertNotIn("self._accepted_maps += 1", duplicate_block)
 
     def test_raw_duplicate_guard_skips_only_valid_cross_qos_delivery(self):
         guard = RawDuplicateGuard(1.0)

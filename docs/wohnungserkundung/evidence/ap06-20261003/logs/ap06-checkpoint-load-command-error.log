@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/evidence/ap06-checkpoint-load.py", line 12, in <module>
+    versions=MapRepository(p/'maps').list_versions('amadeus')
+TypeError: MapRepository.list_versions() takes 1 positional argument but 2 were given

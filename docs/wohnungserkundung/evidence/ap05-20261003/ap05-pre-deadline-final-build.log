@@ -1,0 +1,22 @@
+Starting >>> nav2_common
+Starting >>> base_hardware
+Starting >>> robot_interfaces
+Starting >>> amadeus_map_identity
+Finished <<< nav2_common [0.58s]
+Starting >>> nav2_msgs
+Finished <<< base_hardware [0.70s]
+Starting >>> robot_state_estimation
+Finished <<< amadeus_map_identity [0.86s]
+Finished <<< robot_state_estimation [0.54s]
+Finished <<< robot_interfaces [21.3s]
+Finished <<< nav2_msgs [47.7s]
+Starting >>> explore
+Starting >>> mission_manager
+Finished <<< mission_manager [0.67s]
+Finished <<< explore [0.77s]
+Starting >>> robot_navigation
+Finished <<< robot_navigation [0.54s]
+Starting >>> robot_map_manager
+Finished <<< robot_map_manager [0.57s]
+
+Summary: 10 packages finished [50.3s]

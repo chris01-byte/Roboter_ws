@@ -49,6 +49,10 @@ class SemanticMapLaunchContractTests(unittest.TestCase):
         self.assertIn("'active_drive': active_drive", source)
         self.assertIn(
             "'explore_params_overlay': explore_params_overlay", source)
+        # Selbstheilung muss auch beim App-Start waehlbar sein; Default bleibt aus.
+        self.assertIn("'self_healing': self_healing", source)
+        self.assertIn(
+            "'self_healing', default_value='false'", source)
         self.assertIn('roboterknoten.py\" --still', helper)
         self.assertIn('AMADEUS_FAHRFREIGABE', helper)
         self.assertIn('/robot_map_manager', helper)

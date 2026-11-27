@@ -1,0 +1,8 @@
+[INFO] [1791256873.129907322] [slam_toolbox]: Node using stack size 40000000
+[INFO] [1791256873.167500239] [slam_toolbox]: Using solver plugin solver_plugins::CeresSolver
+[INFO] [1791256873.167647717] [slam_toolbox]: CeresSolver: Using SCHUR_JACOBI preconditioner.
+[WARN] [1791256873.438505171] [slam_toolbox]: minimum laser range setting (0.0 m) exceeds the capabilities of the used Lidar (0.1 m)
+Info: clipped range threshold to be within minimum and maximum range!
+Registering sensor: [Custom Described Lidar]
+[INFO] [1791256878.591039713] [slam_toolbox]: Message Filter dropping message: frame 'laser_frame' at time 1791256878.386 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791256963.795923115] [rclcpp]: signal_handler(signum=2)

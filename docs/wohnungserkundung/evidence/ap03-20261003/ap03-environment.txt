@@ -1,0 +1,17 @@
+Linux-6.18.44-x86_64-with-glibc2.35
+3.10.12
+1.21.5 1.8.0 6.2.5 5.4.1
+ros-humble-angles	1.15.0-1jammy.20250701.021637
+ros-humble-bondcpp	4.1.2-1jammy.20251008.035332
+ros-humble-rclpy	3.3.17-1jammy.20251008.022757
+ros-humble-tf2-ros	0.25.16-1jammy.20251017.015716
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>nav2_common</name>
+  <version>1.1.20</version>
+  <description>Common support functionality used throughout the navigation 2 stack</description>
+  <maintainer email="carl.r.delsey@intel.com">Carl Delsey</maintainer>
+  <license>Apache-2.0</license>
+
+  <depend>launch</depend>

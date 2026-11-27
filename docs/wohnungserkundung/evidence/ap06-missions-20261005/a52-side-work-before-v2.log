@@ -1,0 +1,56 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+__________ test_impossible_view_geometry_consumes_no_visibility_work ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f4624f8efb0>
+
+    def test_impossible_view_geometry_consumes_no_visibility_work(monkeypatch):
+        node, inputs, _ = fixture('ap06_a52_selection')
+        import explore.metric_frontier_runtime as runtime
+        original = runtime.visible_boundary_cells
+        checked = {}; visible = []
+        route = node._metric_route
+        def geometry(values, xy, yaw):
+            result = route(values, xy, yaw)
+            checked[(*xy, yaw)] = result is not None
+            return result
+        def sight(grid, scope, pose, view):
+            # A failed route is already conclusive; this expensive work cannot
+            # make its pose admissible. All geometry and rays remain real code.
+            assert checked.get(tuple(pose)), ('unproved view', pose)
+            visible.append(pose)
+            return original(grid, scope, pose, view)
+        node._metric_route = geometry
+        monkeypatch.setattr(runtime, 'visible_boundary_cells', sight)
+        # Use the same exact evidence-bound memo as the owning selection pass.
+        node._metric_selection_cache = threading.local()
+        node._metric_selection_cache.memo = {'inputs': inputs}
+        frontier = Frontier((1.304999970830977, .13499999698251486), 1)
+        candidate = node._metric_robot_side_observation(inputs, frontier,
+            MetricTaskPolicy(.6, 30., 2), node._metric_scope_mask(inputs), time.monotonic())
+>       assert candidate is not None and candidate.observation_points
+E       assert (None is not None)
+
+evidence/ap06-repo/src/explore/test/test_metric_side_work_budget.py:35: AssertionError
+_ test_actual_selection_finds_view_with_served_first_observer_and_same_budget __
+
+    def test_actual_selection_finds_view_with_served_first_observer_and_same_budget():
+        from explore.metric_checkpoint import restore_policy
+        node, inputs, metadata = fixture('ap06_a52_selection')
+        recorded, _ = restore_policy(metadata['checkpoint'], time.monotonic(),
+                                     metadata['checkpoint']['saved_wall_time'])
+        # Earlier-history component variant, on these explicitly later rasters.
+        policy = MetricTaskPolicy(.6, 30., 2)
+        policy.attempts['metric-task-4'] = copy.deepcopy(recorded.attempts['metric-task-4'])
+        policy.next_id = 4
+        node._global_costmap_received_at = time.monotonic()
+        candidates = node._metric_select(inputs, policy, .3)
+>       assert candidates and not candidates[0].requires_nav2_plan
+E       AssertionError: assert ([MetricCandidate(task_id='metric-task-5', x=1.304999970830977, y=0.46499998960644007, yaw=0.0, frontier_xy=(1.30499997...49999701604247, 0.8849999802187085)), evidence_key='ebd0ed2a2e0f58805ba2b359fdde0ea2b5b902c8f83ffbfcb174c1e90b5c1c6d')] and not True)
+E        +  where True = MetricCandidate(task_id='metric-task-5', x=1.304999970830977, y=0.46499998960644007, yaw=0.0, frontier_xy=(1.304999970...349999701604247, 0.8849999802187085)), evidence_key='ebd0ed2a2e0f58805ba2b359fdde0ea2b5b902c8f83ffbfcb174c1e90b5c1c6d').requires_nav2_plan
+
+evidence/ap06-repo/src/explore/test/test_metric_side_work_budget.py:50: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_side_work_budget.py::test_impossible_view_geometry_consumes_no_visibility_work
+FAILED evidence/ap06-repo/src/explore/test/test_metric_side_work_budget.py::test_actual_selection_finds_view_with_served_first_observer_and_same_budget
+2 failed in 3.26s

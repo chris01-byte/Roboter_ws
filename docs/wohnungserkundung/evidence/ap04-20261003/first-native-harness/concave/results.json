@@ -1,0 +1,138 @@
+[
+  {
+    "case": "concave",
+    "revision": 1,
+    "core": "legacy_centroid",
+    "attempts": [
+      {
+        "index": 0,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.15366981900115206
+      }
+    ],
+    "planable": 1
+  },
+  {
+    "case": "concave",
+    "revision": 1,
+    "core": "upstream_418e971",
+    "attempts": [
+      {
+        "index": 0,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.1794520109997393
+      }
+    ],
+    "planable": 1
+  },
+  {
+    "case": "concave",
+    "revision": 1,
+    "core": "boundary_samples",
+    "attempts": [
+      {
+        "index": 0,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.059700597999835736
+      },
+      {
+        "index": 1,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.15448499400008586
+      },
+      {
+        "index": 2,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.16706416600027296
+      },
+      {
+        "index": 3,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.20410571599859395
+      },
+      {
+        "index": 4,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.20591454200075532
+      },
+      {
+        "index": 5,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.29577372899984766
+      },
+      {
+        "index": 6,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.3273287000010896
+      },
+      {
+        "index": 7,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.31577788300091925
+      },
+      {
+        "index": 8,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.08204031100103748
+      },
+      {
+        "index": 9,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.3622970449996501
+      },
+      {
+        "index": 10,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.0759490039999946
+      },
+      {
+        "index": 11,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.08955709099973319
+      },
+      {
+        "index": 12,
+        "planner_status": 4,
+        "full_path_valid": true,
+        "rejection": null,
+        "elapsed_s": 0.4612032620007085
+      },
+      {
+        "index": 13,
+        "planner_status": 4,
+        "full_path_valid": false,
+        "rejection": "goal_orientation_invalid",
+        "elapsed_s": 0.08546425700114924
+      }
+    ],
+    "planable": 9
+  }
+]

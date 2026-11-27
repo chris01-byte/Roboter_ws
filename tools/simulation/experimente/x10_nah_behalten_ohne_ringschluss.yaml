@@ -1,0 +1,8 @@
+# Experiment X10 (+ X6): Recovery leert die Kostenkarten nur ausserhalb von 2 x 2 m
+# um den Roboter. Ringschluss aus, damit verbogene Karten das Ergebnis nicht
+# ueberdecken. Keine Abnahme, nur Messung.
+sh_treiber:
+  explorer_behavior_tree: x10_navigate_to_pose_nah_behalten.xml
+slam_toolbox:
+  ros__parameters:
+    do_loop_closing: false

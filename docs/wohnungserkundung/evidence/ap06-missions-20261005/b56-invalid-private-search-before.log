@@ -1,0 +1,190 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+_ test_public_view_does_not_require_private_ledger_epoch_expiry[ap06_a53_selection] _
+
+name = 'ap06_a53_selection'
+
+    @pytest.mark.parametrize('name', ['ap06_a53_selection', 'ap06_a54_selection', 'ap06_a55_selection'])
+    def test_public_view_does_not_require_private_ledger_epoch_expiry(name):
+        from explore.metric_frontier import StartEgressEvidence
+        node, inputs, metadata = fixture(name)
+        state = metadata['checkpoint']
+        policy, _ = restore_policy(state, time.monotonic(), state['saved_wall_time'])
+        # Public current body, invalid private ledger with no current exemptions:
+        # this is the actual A53-55 state boundary, not a reconstruction of the
+        # historical first inventory. Failure of the private monotone permission
+        # does not mean the map/session identity itself has expired.
+        node._metric_egress_expired = False
+        node._metric_body_anchor_expired = False
+        evidence = []
+        for grid, allowed in ((inputs[0], inputs[3]), (inputs[5], inputs[6])):
+            item = StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(allowed.shape), allowed,
+                np.ones_like(allowed), inputs[2], node._metric_bounds, node._world_to_grid)
+            assert not item.unknown.any()
+            item.valid = False; item.reason = 'start_egress_approaches_unknown'
+            evidence.append(item)
+        node._metric_egress = tuple(evidence)
+        node._metric_egress_identity = (inputs[1].context,
+            tuple(node._metric_grid_geometry(g) for g in (inputs[0], inputs[5])))
+        before = {k: (a.tries, a.failures, a.completed) for k, a in policy.attempts.items()}
+        original_route = node._metric_route
+        queried = []
+        def route(current, target, yaw=None):
+            queried.append(math.dist(current[2][:2], target))
+            assert queried[-1] <= node._min_goal_dist_m+node._goal_search_m+1e-12, (
+                'Invalid private evidence must not start the longer first-egress search')
+            return original_route(current, target, yaw)
+        node._metric_route = route
+>       candidates = node._metric_select(inputs, policy, .3)
+
+src/explore/test/test_metric_public_observation.py:114: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1947: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1646: in _metric_candidates_in_pass
+    route = self._metric_route(inputs, goal, pose[2])
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+current = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id... -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]), ...]
+target = (-0.6670165378375278, 1.4782606551318722), yaw = 2.3493495465612804
+
+    def route(current, target, yaw=None):
+        queried.append(math.dist(current[2][:2], target))
+>       assert queried[-1] <= node._min_goal_dist_m+node._goal_search_m+1e-12, (
+            'Invalid private evidence must not start the longer first-egress search')
+E       AssertionError: Invalid private evidence must not start the longer first-egress search
+E       assert 1.0799999993294478 <= ((0.3 + 0.3) + 1e-12)
+E        +  where 0.3 = <explore.explore_node.ExploreNode object at 0x7f8cb9c49990>._min_goal_dist_m
+E        +  and   0.3 = <explore.explore_node.ExploreNode object at 0x7f8cb9c49990>._goal_search_m
+
+src/explore/test/test_metric_public_observation.py:110: AssertionError
+_ test_public_view_does_not_require_private_ledger_epoch_expiry[ap06_a54_selection] _
+
+name = 'ap06_a54_selection'
+
+    @pytest.mark.parametrize('name', ['ap06_a53_selection', 'ap06_a54_selection', 'ap06_a55_selection'])
+    def test_public_view_does_not_require_private_ledger_epoch_expiry(name):
+        from explore.metric_frontier import StartEgressEvidence
+        node, inputs, metadata = fixture(name)
+        state = metadata['checkpoint']
+        policy, _ = restore_policy(state, time.monotonic(), state['saved_wall_time'])
+        # Public current body, invalid private ledger with no current exemptions:
+        # this is the actual A53-55 state boundary, not a reconstruction of the
+        # historical first inventory. Failure of the private monotone permission
+        # does not mean the map/session identity itself has expired.
+        node._metric_egress_expired = False
+        node._metric_body_anchor_expired = False
+        evidence = []
+        for grid, allowed in ((inputs[0], inputs[3]), (inputs[5], inputs[6])):
+            item = StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(allowed.shape), allowed,
+                np.ones_like(allowed), inputs[2], node._metric_bounds, node._world_to_grid)
+            assert not item.unknown.any()
+            item.valid = False; item.reason = 'start_egress_approaches_unknown'
+            evidence.append(item)
+        node._metric_egress = tuple(evidence)
+        node._metric_egress_identity = (inputs[1].context,
+            tuple(node._metric_grid_geometry(g) for g in (inputs[0], inputs[5])))
+        before = {k: (a.tries, a.failures, a.completed) for k, a in policy.attempts.items()}
+        original_route = node._metric_route
+        queried = []
+        def route(current, target, yaw=None):
+            queried.append(math.dist(current[2][:2], target))
+            assert queried[-1] <= node._min_goal_dist_m+node._goal_search_m+1e-12, (
+                'Invalid private evidence must not start the longer first-egress search')
+            return original_route(current, target, yaw)
+        node._metric_route = route
+>       candidates = node._metric_select(inputs, policy, .3)
+
+src/explore/test/test_metric_public_observation.py:114: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1947: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1646: in _metric_candidates_in_pass
+    route = self._metric_route(inputs, goal, pose[2])
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+current = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id... -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]), ...]
+target = (-0.6697905858583317, 1.4799359956763871), yaw = 2.34561568366545
+
+    def route(current, target, yaw=None):
+        queried.append(math.dist(current[2][:2], target))
+>       assert queried[-1] <= node._min_goal_dist_m+node._goal_search_m+1e-12, (
+            'Invalid private evidence must not start the longer first-egress search')
+E       AssertionError: Invalid private evidence must not start the longer first-egress search
+E       assert 1.0799999993294478 <= ((0.3 + 0.3) + 1e-12)
+E        +  where 0.3 = <explore.explore_node.ExploreNode object at 0x7f8cb9caf910>._min_goal_dist_m
+E        +  and   0.3 = <explore.explore_node.ExploreNode object at 0x7f8cb9caf910>._goal_search_m
+
+src/explore/test/test_metric_public_observation.py:110: AssertionError
+_ test_public_view_does_not_require_private_ledger_epoch_expiry[ap06_a55_selection] _
+
+name = 'ap06_a55_selection'
+
+    @pytest.mark.parametrize('name', ['ap06_a53_selection', 'ap06_a54_selection', 'ap06_a55_selection'])
+    def test_public_view_does_not_require_private_ledger_epoch_expiry(name):
+        from explore.metric_frontier import StartEgressEvidence
+        node, inputs, metadata = fixture(name)
+        state = metadata['checkpoint']
+        policy, _ = restore_policy(state, time.monotonic(), state['saved_wall_time'])
+        # Public current body, invalid private ledger with no current exemptions:
+        # this is the actual A53-55 state boundary, not a reconstruction of the
+        # historical first inventory. Failure of the private monotone permission
+        # does not mean the map/session identity itself has expired.
+        node._metric_egress_expired = False
+        node._metric_body_anchor_expired = False
+        evidence = []
+        for grid, allowed in ((inputs[0], inputs[3]), (inputs[5], inputs[6])):
+            item = StartEgressEvidence.capture(grid,
+                np.asarray(grid.data).reshape(allowed.shape), allowed,
+                np.ones_like(allowed), inputs[2], node._metric_bounds, node._world_to_grid)
+            assert not item.unknown.any()
+            item.valid = False; item.reason = 'start_egress_approaches_unknown'
+            evidence.append(item)
+        node._metric_egress = tuple(evidence)
+        node._metric_egress_identity = (inputs[1].context,
+            tuple(node._metric_grid_geometry(g) for g in (inputs[0], inputs[5])))
+        before = {k: (a.tries, a.failures, a.completed) for k, a in policy.attempts.items()}
+        original_route = node._metric_route
+        queried = []
+        def route(current, target, yaw=None):
+            queried.append(math.dist(current[2][:2], target))
+            assert queried[-1] <= node._min_goal_dist_m+node._goal_search_m+1e-12, (
+                'Invalid private evidence must not start the longer first-egress search')
+            return original_route(current, target, yaw)
+        node._metric_route = route
+>       candidates = node._metric_select(inputs, policy, .3)
+
+src/explore/test/test_metric_public_observation.py:114: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1947: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1589: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+../ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1646: in _metric_candidates_in_pass
+    route = self._metric_route(inputs, goal, pose[2])
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+current = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id... -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]), ...]
+target = (-0.6748433466410537, 1.4764580570509567), yaw = 2.3503077286330334
+
+    def route(current, target, yaw=None):
+        queried.append(math.dist(current[2][:2], target))
+>       assert queried[-1] <= node._min_goal_dist_m+node._goal_search_m+1e-12, (
+            'Invalid private evidence must not start the longer first-egress search')
+E       AssertionError: Invalid private evidence must not start the longer first-egress search
+E       assert 1.0799999993294478 <= ((0.3 + 0.3) + 1e-12)
+E        +  where 0.3 = <explore.explore_node.ExploreNode object at 0x7f8cb99e3850>._min_goal_dist_m
+E        +  and   0.3 = <explore.explore_node.ExploreNode object at 0x7f8cb99e3850>._goal_search_m
+
+src/explore/test/test_metric_public_observation.py:110: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_public_observation.py::test_public_view_does_not_require_private_ledger_epoch_expiry[ap06_a53_selection]
+FAILED src/explore/test/test_metric_public_observation.py::test_public_view_does_not_require_private_ledger_epoch_expiry[ap06_a54_selection]
+FAILED src/explore/test/test_metric_public_observation.py::test_public_view_does_not_require_private_ledger_epoch_expiry[ap06_a55_selection]
+3 failed, 8 deselected in 2.82s

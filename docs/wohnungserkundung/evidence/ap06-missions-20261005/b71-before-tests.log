@@ -1,0 +1,20 @@
+Component countercheck: only candidate/runtime modules from b8189a9; current policy and exact B70 evidence-derived partial classification retained.
+F                                                                        [100%]
+=================================== FAILURES ===================================
+__________ test_b70_partial_followup_uses_unmodified_counter_history ___________
+
+    def test_b70_partial_followup_uses_unmodified_counter_history():
+        # Analytically elapsed original cooldown on frozen component inputs.
+        # No fresh source sample, movement permission or acceptance is implied.
+        n,i,p,_,_=partial_data(elapsed_s=31.)
+        before=policy_state(p,time.monotonic())
+        selected=n._metric_select(i,p,.3)
+>       assert selected and not selected[0].requires_nav2_plan,n._frontier_rank_stats
+E       AssertionError: {'accepted': 1, 'deferred_or_served': 0, 'proposal_search_stopped_on_eligible_task': True, 'raw': 12, ...}
+E       assert ([MetricCandidate(task_id='metric-task-6', x=3.1792359632895084, y=-0.5518748889730266, yaw=0.07052881835460703, fronti...9999305978417, -0.9749999782070518)), evidence_key='c0f31b46f99be24a86ab45cd27b836c8a53109a36971dc8f501f8b2e5da17155')] and not True)
+E        +  where True = MetricCandidate(task_id='metric-task-6', x=3.1792359632895084, y=-0.5518748889730266, yaw=0.07052881835460703, frontie...49999305978417, -0.9749999782070518)), evidence_key='c0f31b46f99be24a86ab45cd27b836c8a53109a36971dc8f501f8b2e5da17155').requires_nav2_plan
+
+src/explore/test/test_metric_retained_observation.py:77: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_retained_observation.py::test_b70_partial_followup_uses_unmodified_counter_history
+1 failed in 0.71s

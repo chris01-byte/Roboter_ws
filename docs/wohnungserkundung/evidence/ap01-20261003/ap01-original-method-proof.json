@@ -1,0 +1,15 @@
+{
+  "first_stamp_ns": 1010000000000,
+  "second_true_receipt_ros_ns": 1010010000000,
+  "observed": [
+    {
+      "stamp_ns": 1009990000000,
+      "received_at": 10.01,
+      "clock_ns": 1010010000000,
+      "bracket": 10.03
+    }
+  ],
+  "terminal_fault": "HWT-Messzeit nicht monoton",
+  "transport_open": false,
+  "published": 1
+}

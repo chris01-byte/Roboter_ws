@@ -1,0 +1,82 @@
+........................................................................ [  3%]
+........................................................................ [  6%]
+........................................................................ [ 10%]
+........................................................................ [ 13%]
+........................................................................ [ 16%]
+........................................................................ [ 20%]
+........................................................................ [ 23%]
+........................................................................ [ 26%]
+........................................................................ [ 30%]
+........................................................................ [ 33%]
+........................................................................ [ 37%]
+........................................................................ [ 40%]
+..............................................F......................... [ 43%]
+........................................................................ [ 47%]
+........................................................................ [ 50%]
+........................................................................ [ 53%]
+........................................................................ [ 57%]
+........................................................................ [ 60%]
+...........................................F............................ [ 64%]
+........................................................................ [ 67%]
+........................................................................ [ 70%]
+........................................................................ [ 74%]
+........................................................................ [ 77%]
+........................................................................ [ 80%]
+........................................................................ [ 84%]
+........................................................................ [ 87%]
+........................................................................ [ 90%]
+........................................................................ [ 94%]
+........................................................................ [ 97%]
+.................................................                        [100%]
+=================================== FAILURES ===================================
+___ test_actual_boundary_tangent_improves_last_view_without_renewing_history ___
+
+    def test_actual_boundary_tangent_improves_last_view_without_renewing_history():
+        n,i,p=frozen(NAME)
+        before=policy_state(p,time.monotonic())
+        candidates=n._metric_select(i,p,.3)
+        assert candidates and not candidates[0].requires_nav2_plan
+        candidate=candidates[0]
+        assert candidate.task_id=='metric-task-9'
+        assert len(candidate.observation_points)>=7  # old first-safe view has one
+        assert math.dist(i[2][:2],(candidate.x,candidate.y))<=.6+1e-12
+        assert n._metric_waypoints_clear(i,candidate.route,candidate.yaw) is not None
+        after=policy_state(p,time.monotonic())
+>       assert before['tasks']==after['tasks']
+E       AssertionError: assert {'metric-task...'', ...}, ...} == {'metric-task...'', ...}, ...}
+E         Omitting 8 identical items, use -vv to show
+E         Differing items:
+E         {'metric-task-2': {'completed': False, 'evidence_key': '861a3c3a7c232c9d8111d691fca22d8183e03580a4745993a6023b53b0d25c24', 'failures': 1, 'fingerprint': '7f12744b6cef6af35c7eb9f091d1ed7695829505a103866d8251cb4d39264468', ...}} != {'metric-task-2': {'completed': False, 'evidence_key': '861a3c3a7c232c9d8111d691fca22d8183e03580a4745993a6023b53b0d25c24', 'failures': 1, 'fingerprint': '7f12744b6cef6af35c7eb9f091d1ed7695829505a103866d8251cb4d39264468', ...}}
+E         Full diff:
+E           {
+E            'metric-task-1': {'completed': True,
+E                  ...
+E         
+E         ...Full output truncated (84 lines hidden), use '-vv' to show
+
+src/explore/test/test_metric_boundary_tangent_view.py:27: AssertionError
+_____________ test_recorded_exhausted_a51_history_stays_exhausted ______________
+
+    def test_recorded_exhausted_a51_history_stays_exhausted():
+        node, inputs, metadata = fixture('ap06_a51_selection')
+        state = metadata['checkpoint']
+        policy, _ = restore_policy(state, time.monotonic(), state['saved_wall_time'])
+        node._global_costmap_received_at = time.monotonic()
+        before = [(key, a.tries, a.failures, a.completed) for key, a in policy.attempts.items()]
+>       assert node._metric_select(inputs, policy, .3) == []
+E       AssertionError: assert [MetricCandid...9e64b260d05')] == []
+E         Left contains one more item: MetricCandidate(task_id='metric-task-7', x=0.09530090008266279, y=-0.008472600539803869, yaw=1.6217779805056431, front...4999931268394, 0.10499999765306711),), evidence_key='fe218443be75e7e6bd98733403b9fba86960290e992906a4102729e64b260d05')
+E         Full diff:
+E           [
+E         -  ,
+E         +  MetricCandidate(task_id='metric-task-7',
+E         +                  x=0.09530090008266279,
+E         +                  y=-0.008472600539803869,...
+E         
+E         ...Full output truncated (17 lines hidden), use '-vv' to show
+
+src/explore/test/test_metric_side_before_rejection.py:42: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_boundary_tangent_view.py::test_actual_boundary_tangent_improves_last_view_without_renewing_history
+FAILED src/explore/test/test_metric_side_before_rejection.py::test_recorded_exhausted_a51_history_stays_exhausted
+2 failed, 2135 passed in 131.79s (0:02:11)

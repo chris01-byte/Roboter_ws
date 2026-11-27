@@ -1,0 +1,60 @@
+{
+  "source": "mission-b-v70-capture/events.jsonl.gz",
+  "at": 225646.052580087,
+  "metric": {
+    "outcome": "user_canceled",
+    "reason": "user_canceled",
+    "arrivals": 2,
+    "observations": 2,
+    "attempts": 6,
+    "failures": 0,
+    "reachable_boundary_cells": 226,
+    "ranking": {
+      "raw": 12,
+      "unsafe": 0,
+      "deferred_or_served": 12,
+      "accepted": 0,
+      "route_rejections": {}
+    },
+    "route_rejection": "footprint_sweep_invalid",
+    "departure_plan_rejection": null,
+    "planning_stop_reason": "route_invalidated"
+  },
+  "chain": [
+    {
+      "task": "metric-task-1",
+      "decision": "observed",
+      "result": "success",
+      "arrived": true,
+      "observed_cells": 12
+    },
+    {
+      "task": "metric-task-6",
+      "decision": "proposal_rejected",
+      "result": "planning_failed",
+      "arrived": false,
+      "observed_cells": 0
+    },
+    {
+      "task": "metric-task-4",
+      "decision": "observed",
+      "result": "success",
+      "arrived": true,
+      "observed_cells": 2
+    },
+    {
+      "task": "metric-task-6",
+      "decision": "proposal_rejected",
+      "result": "planning_failed",
+      "arrived": false,
+      "observed_cells": 0
+    },
+    {
+      "task": "metric-task-6",
+      "decision": "proposal_rejected",
+      "result": "planning_failed",
+      "arrived": false,
+      "observed_cells": 0
+    }
+  ]
+}

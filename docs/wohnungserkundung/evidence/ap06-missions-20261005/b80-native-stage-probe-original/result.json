@@ -1,0 +1,221 @@
+[
+  {
+    "goal": [
+      0.532233448061989,
+      -0.4659653773255745,
+      0.16398347194968657
+    ],
+    "arrival_plan_valid": true,
+    "arrival_rejection": null,
+    "kind": "Original B76 coherent selection32; first and subsequent readonly native C++ plans at predicted stops, no motion or whole acceptance",
+    "projected_stop": [
+      0.6643151745640107,
+      -0.4010813761123567,
+      -0.23601652805031348
+    ],
+    "path_endpoint": [
+      0.532233448061989,
+      -0.4659653773255745
+    ],
+    "stop_goal_distance": 0.14715813293593968,
+    "scan_ready": true,
+    "departure_valid": true,
+    "following": [
+      {
+        "goal": [
+          2.2949999487,
+          -0.5249999883,
+          0.65
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.2949999487,
+          -0.5399999879,
+          0.65
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.594999942,
+          -0.4349999903,
+          0.0
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          3.19759082944,
+          -0.55692148631,
+          -0.05888996373
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "footprint_sweep_invalid"
+      }
+    ],
+    "astar": "true"
+  },
+  {
+    "goal": [
+      0.5697196344975095,
+      -0.5127819003312706,
+      0.18609226825192382
+    ],
+    "arrival_plan_valid": true,
+    "arrival_rejection": null,
+    "kind": "Original B76 coherent selection32; first and subsequent readonly native C++ plans at predicted stops, no motion or whole acceptance",
+    "projected_stop": [
+      0.69906499223494,
+      -0.4368538643408324,
+      -0.2139077317480762
+    ],
+    "path_endpoint": [
+      0.5697196344975095,
+      -0.5127819003312706
+    ],
+    "stop_goal_distance": 0.14998429323628906,
+    "scan_ready": true,
+    "departure_valid": true,
+    "following": [
+      {
+        "goal": [
+          2.2949999487,
+          -0.5249999883,
+          0.65
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.2949999487,
+          -0.5399999879,
+          0.65
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.594999942,
+          -0.4349999903,
+          0.0
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          2.445854902295352,
+          -0.43489595078469667,
+          -0.000896297617571753
+        ],
+        "departure_valid": false
+      },
+      {
+        "goal": [
+          3.19759082944,
+          -0.55692148631,
+          -0.05888996373
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          3.064773372701125,
+          -0.48723422990516546,
+          -0.3849390060950107
+        ],
+        "departure_valid": false
+      }
+    ],
+    "astar": "true"
+  },
+  {
+    "goal": [
+      0.5901704021853186,
+      -0.5347267998891077,
+      0.19687857139643994
+    ],
+    "arrival_plan_valid": true,
+    "arrival_rejection": null,
+    "kind": "Original B76 coherent selection32; first and subsequent readonly native C++ plans at predicted stops, no motion or whole acceptance",
+    "projected_stop": [
+      0.7128447585653696,
+      -0.4507391870718884,
+      -0.20312142860356008
+    ],
+    "path_endpoint": [
+      0.5901704021853186,
+      -0.5347267998891077
+    ],
+    "stop_goal_distance": 0.14867049747678548,
+    "scan_ready": true,
+    "departure_valid": true,
+    "following": [
+      {
+        "goal": [
+          2.2949999487,
+          -0.5249999883,
+          0.65
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.2949999487,
+          -0.5399999879,
+          0.65
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.594999942,
+          -0.4349999903,
+          0.0
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          2.447445328517067,
+          -0.4346274560263314,
+          -0.005368316976142583
+        ],
+        "departure_valid": false
+      },
+      {
+        "goal": [
+          3.19759082944,
+          -0.55692148631,
+          -0.05888996373
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          3.063734608998153,
+          -0.4899154709588167,
+          -0.3737324101071853
+        ],
+        "departure_valid": false
+      }
+    ],
+    "astar": "true"
+  }
+]

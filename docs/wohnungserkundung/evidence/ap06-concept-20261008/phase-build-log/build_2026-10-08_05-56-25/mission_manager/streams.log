@@ -1,0 +1,21 @@
+[0.439s] Invoking command in '/evidence/ap06-repo/src/mission_manager': AMENT_PREFIX_PATH=/evidence/ap06-old-product-install/robot_interfaces:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/evidence/ap06-old-product-install/robot_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/evidence/ap06-old-product-install/robot_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/evidence/ap06-old-product-build/mission_manager/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_interfaces/local/lib/python3.10/dist-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap06-old-product-build/mission_manager build --build-base /evidence/ap06-old-product-build/mission_manager/build install --record /evidence/ap06-old-product-build/mission_manager/install.log --single-version-externally-managed install_data
+[0.578s] running egg_info
+[0.578s] writing ../../../ap06-old-product-build/mission_manager/mission_manager.egg-info/PKG-INFO
+[0.579s] writing dependency_links to ../../../ap06-old-product-build/mission_manager/mission_manager.egg-info/dependency_links.txt
+[0.579s] writing entry points to ../../../ap06-old-product-build/mission_manager/mission_manager.egg-info/entry_points.txt
+[0.579s] writing requirements to ../../../ap06-old-product-build/mission_manager/mission_manager.egg-info/requires.txt
+[0.579s] writing top-level names to ../../../ap06-old-product-build/mission_manager/mission_manager.egg-info/top_level.txt
+[0.580s] reading manifest file '../../../ap06-old-product-build/mission_manager/mission_manager.egg-info/SOURCES.txt'
+[0.581s] writing manifest file '../../../ap06-old-product-build/mission_manager/mission_manager.egg-info/SOURCES.txt'
+[0.581s] running build
+[0.581s] running build_py
+[0.582s] running install
+[0.582s] running install_lib
+[0.584s] running install_data
+[0.584s] running install_egg_info
+[0.585s] removing '/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages/mission_manager-0.1.0-py3.10.egg-info' (and everything under it)
+[0.585s] Copying ../../../ap06-old-product-build/mission_manager/mission_manager.egg-info to /evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages/mission_manager-0.1.0-py3.10.egg-info
+[0.586s] running install_scripts
+[0.603s] Installing mission_manager script to /evidence/ap06-old-product-install/mission_manager/lib/mission_manager
+[0.603s] writing list of installed files to '/evidence/ap06-old-product-build/mission_manager/install.log'
+[0.621s] Invoked command in '/evidence/ap06-repo/src/mission_manager' returned '0': AMENT_PREFIX_PATH=/evidence/ap06-old-product-install/robot_interfaces:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/evidence/ap06-old-product-install/robot_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/evidence/ap06-old-product-install/robot_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/evidence/ap06-old-product-build/mission_manager/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_interfaces/local/lib/python3.10/dist-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap06-old-product-build/mission_manager build --build-base /evidence/ap06-old-product-build/mission_manager/build install --record /evidence/ap06-old-product-build/mission_manager/install.log --single-version-externally-managed install_data

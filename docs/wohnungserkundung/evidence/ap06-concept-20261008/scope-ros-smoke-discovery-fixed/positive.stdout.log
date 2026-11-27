@@ -1,0 +1,4 @@
+Privates konservatives Profil gebunden: /evidence/ap06-concept-20261008/scope-ros-smoke-discovery-fixed/positive-private.yaml
+Nur anzeigen; keine Mission oder Bewegung gestartet. Bestehenden passiven Stack weiterlaufen lassen:
+Snapshotbindung: Explorer muss beim ersten Kartenempfang denselben Fingerprint erhalten; bei Änderung neu binden.
+ros2 launch explore explore.launch.py explore_params_overlay:=/evidence/ap06-concept-20261008/scope-ros-smoke-discovery-fixed/positive-private.yaml require_hwt601_fusion:=true hwt601_active_drive:=false hwt_development_contract:=true

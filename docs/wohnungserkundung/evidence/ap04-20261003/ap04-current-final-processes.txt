@@ -1,0 +1,4 @@
+    PID    PPID COMMAND
+      1       0 /sbin/docker-init -- /ros_entrypoint.sh bash -c sleep infinity
+      7       1 sleep infinity
+   5769       0 ps -eo pid,ppid,args

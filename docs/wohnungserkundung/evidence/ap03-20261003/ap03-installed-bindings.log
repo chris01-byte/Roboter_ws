@@ -1,0 +1,18 @@
+3.10.12 (main, Aug 15 2025, 14:32:43) [GCC 11.4.0]
+explore.metric_frontier /evidence/ap03-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py
+explore.metric_frontier_runtime /evidence/ap03-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py
+explore.explore_node /evidence/ap03-install/explore/lib/python3.10/site-packages/explore/explore_node.py
+amadeus_map_identity.fingerprint /evidence/ap03-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py
+robot_map_manager.robot_map_manager_node /evidence/ap03-install/robot_map_manager/lib/python3.10/site-packages/robot_map_manager/robot_map_manager_node.py
+robot_state_estimation._hwt601_clock /evidence/ap03-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/_hwt601_clock.py
+robot_navigation.cmd_vel_mission_gate /evidence/ap03-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/cmd_vel_mission_gate.py
+base_hardware.encoder_shadow_node /evidence/ap03-install/base_hardware/lib/python3.10/site-packages/base_hardware/encoder_shadow_node.py
+robot_interfaces.action /evidence/ap03-install/robot_interfaces/local/lib/python3.10/dist-packages/robot_interfaces/action/__init__.py
+nav2_msgs.action /evidence/ap03-nav2-install/nav2_msgs/local/lib/python3.10/dist-packages/nav2_msgs/action/__init__.py
+nav2_planner /evidence/ap03-nav2-install/nav2_planner
+nav2_controller /evidence/ap03-nav2-install/nav2_controller
+nav2_navfn_planner /evidence/ap03-nav2-install/nav2_navfn_planner
+nav2_regulated_pure_pursuit_controller /evidence/ap03-nav2-install/nav2_regulated_pure_pursuit_controller
+identical-installed-source metric_frontier.py a318b2687f4162441a73a981b760edd4a0b9501b491d9509786410c381ce963c
+identical-installed-source metric_frontier_runtime.py d2c30535e3a62d27dfe46ae6f019a22e5b4feab9c064e3492e793a4fd4859d3a
+identical-installed-source explore_node.py 96bf36ba784c8767bcfe72f22f10beceb399e22483b233987a4734f9dab7907c

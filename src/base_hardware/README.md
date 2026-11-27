@@ -151,3 +151,67 @@ Nach bestandenem aufgebocktem H3-Test:
 2. H5-Fehler- und Wiederanlauftests kontrolliert abnehmen.
 3. Status-/Alarmregister der Motoren ergänzen.
 4. Not-Aus-/Enable-Kette mit `safety_monitor` koppeln.
+
+## Encoder-Shadow: begrenzte Timing-Heilung (30.09.2026)
+
+Die vorhandenen gemeinsamen FC03-Blöcke für Position/RPM bleiben bestehen.
+Diagnose trennt Alias/USB-Prüfung vor und nach dem Zugriff, tatsächlichen
+Modbus-Aufruf, Antwortprüfung, Gesamtpaardauer, Motorzeitversatz,
+Pollstartabstand und Publikationsalter. ROS-Stempel bleiben echte
+Paarmittelpunkte; kein Verschieben zur künstlichen Verjüngung.
+
+Nur die Suche nach den USB-Attributpfaden wird pro Verbindung gespeichert.
+Vor und nach jedem Zugriff werden Aliasbindung, Exklusivität, tty/sysfs-
+Gerätegeneration und die drei USB-Identitätswerte tatsächlich geprüft;
+Modbus behält seine CRC-/Antwortprüfung. Eine neue Gerätegeneration oder
+verlorene Verbindung darf nicht implizit wiederverbunden werden.
+
+Ein isolierter vollständiger Timing-Ausreißer nach mindestens 20 akzeptierten
+Paaren wird verworfen, ohne Baseline/Pose zu verändern. `ready=false`,
+`timing_recovery_pending=true`; der Transport bleibt bei intakter Identität
+offen und liest weiter. Zwei neue gültige vollständige Paare müssen die
+Kontinuität unter derselben 180-ms-Grenze bestätigen. Das erste gültige Paar
+publiziert die vollständig integrierten Zähleränderungen bereits bei weiterhin
+gesperrter Bereitschaft; das zweite stellt diese wieder her. So entsteht weder
+versteckte Nullodometrie noch unterschlagene Bewegung. Der ungültige Ausreißer
+wird nie publiziert. 120-ms-Paargrenze und 180-ms-Lückengrenze bleiben unverändert.
+Erneuter Ausreißer vor 20 weiteren gesunden Paaren ist kein isolierter Fall.
+
+Passive Fusion erkennt ausschließlich diesen expliziten, frischen, identitäts-
+gesicherten Zwischenzustand als HOLD; echte veraltete/unvollständige Daten,
+Port-/Konfigurationsfehler, unplausible Änderungen, Zeitrücksprung und zu lange
+Lücke bleiben terminal. Die bestehende Recoveryvalidierung bleibt notwendig;
+keine automatische aktive Wiederanfahrt. Bei fehlender Kontinuität bleibt die
+letzte akzeptierte Baseline erhalten; nötig ist ein neuer nachgewiesen
+stationärer Initialisierungslauf mit neu zugeordnetem Karten-/Odometriebezug.
+Ein bloßes Löschen eines Faultflags genügt nicht.
+
+Diese Korrektur betrifft den **passiven** Reader. Der aktive Basistreiber hat
+einen eigenen Encoder-/Watchdogvertrag und wird getrennt regressiert;
+seine Frischegrenzen und Fahrparameter bleiben unverändert. Niemals beide
+Prozesse gleichzeitig auf dem Basisbus starten.
+
+
+Der erste gemeinsame Vollstackstart zeigte vor der dritten Probe eine echte
+Datenlücke: Pollstartabstand 197,695 ms, Paarzeit noch unter 120 ms. Der Core
+blieb korrekt terminal und behielt Baseline/Pose (`rebases=0`). Gemessene
+Alias-/USB-Anteile waren während dieses Starts deutlich länger; daraus wird
+kein alleiniger CPU- oder Kabelauslöser behauptet. Der vorhandene passive
+HWT-Launch startet den Reader nun erst 15 s nach Beginn der übrigen Starts
+(`encoder_shadow_start_delay_s`). Dies verschiebt den ersten Lese-/Baseline-
+Beginn, keine Messzeitstempel oder Frischegrenzen. Bis echte Daten vorliegen,
+bleibt Fusion unbereit; der aktive Basistreiber ist von dieser Startstaffelung
+nicht betroffen. Bereits entstandene unüberbrückbare Lücken werden damit
+nicht geheilt oder gelöscht: neue stationäre Initialisierung, kein Flagreset.
+
+Der nachgeordnete passive HWT-Verbraucher verarbeitet die neuesten tatsächlichen
+Quellenproben (Sensordaten depth 1, Radodometrie reliable depth 1). Im passiven
+Missionsgate laufen ausschließlich diese Quellencallbacks in einer eigenen
+seriellen Callbackgruppe mit zweitem Executor-Thread. Befehle, Not-Aus und
+Gate-Timer bleiben untereinander seriell; die bestehende Health-Sperre schützt
+den gemeinsamen Zustand. Anlass waren frisch aufgezeichnete Radproben, während
+das Gate noch eine 189,8 ms alte Probe bewertete. Gerätefreie DDS-Regression
+blockiert den gewöhnlichen Callback 350 ms: Quellen bleiben aktuell, ein
+tatsächlicher Radquellenausfall bleibt über 180 ms terminal. Aktiver Gate-Pfad
+und seine bisherige QoS/Callbackgruppe bleiben erhalten. Keine Stempel werden
+verjüngt und keine alte Verriegelung wird durch diese Korrektur gelöscht.

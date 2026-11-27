@@ -1,0 +1,16 @@
+F..                                                                      [100%]
+=================================== FAILURES ===================================
+_ test_native_start_has_autonomous_proved_local_observation_without_whitening __
+
+    def test_native_start_has_autonomous_proved_local_observation_without_whitening():
+        node,inputs,_ = fixture(); before = copy.deepcopy(inputs[0].data)
+        candidates = node._metric_candidates(inputs,.3)
+        proved = [c for c in candidates if not c.requires_nav2_plan]
+>       assert proved, node._frontier_rank_stats
+E       AssertionError: {'accepted': 1, 'deferred_or_served': 0, 'raw': 14, 'route_rejections': {'goal_orientation_invalid': 13}, ...}
+E       assert []
+
+evidence/ap06-repo/src/explore/test/test_metric_start_observation.py:63: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_start_observation.py::test_native_start_has_autonomous_proved_local_observation_without_whitening
+1 failed, 2 passed in 2.48s

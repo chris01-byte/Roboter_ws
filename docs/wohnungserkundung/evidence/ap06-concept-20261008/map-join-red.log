@@ -1,0 +1,315 @@
+.F.F.F.F.............F........                                           [100%]
+=================================== FAILURES ===================================
+_ test_active_old_join_retains_original_identity_and_only_withdraws[gain-True] _
+
+change = 'gain', referenced = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f096d6f9e70>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('change', ['gain', 'obstacle', 'unknown', 'growth'])
+    def test_active_old_join_retains_original_identity_and_only_withdraws(change, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if change in ('obstacle', 'unknown'):
+            newer.data[20*100+11] = 100 if change == 'obstacle' else -1
+        if change == 'growth':
+            newer.info.width += 1; newer.info.origin.position.x -= grid.info.resolution
+            newer.data = np.pad(np.asarray(newer.data).reshape(100,100),
+                                ((0,0),(1,0)),constant_values=-1).ravel().tolist()
+        raw_bytes = list(grid.data)
+        node._on_map(newer)
+        assert not node._metric_matches_status(node._metric_raw[1])
+>       current = node._metric_inputs(active=True)
+
+test/test_metric_pending_withdrawal.py:50: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7f096d6f9720>
+active = True
+
+    def _metric_inputs_locked(self, active=False):
+        with self._metric_lock:
+            fault = self._metric_fault
+            raw, c, scope = self._metric_raw, self._metric_correlation, self._metric_scope
+            at, pending = self._metric_status_at, self._metric_pending_since
+        now = time.monotonic()
+        if fault:
+            raise ValueError(fault)
+        if raw is None or c is None or scope is None:
+            raise ValueError('map_scope_not_joined')
+        if not self._metric_resume_localization_ready():
+            raise ValueError('resume_localization_unconfirmed')
+        withdrawal = None
+        if not self._metric_matches_status(raw[1]):
+            joined = getattr(self, '_metric_joined', None)
+            if (not active or pending is None or now-pending > 1.25 or joined is None
+                    or c.fingerprint != joined[1].fingerprint or c.context != joined[1].context):
+                raise ValueError('map_status_join_pending')
+            if raw[1].fingerprint != joined[0][1].fingerprint:
+                if (getattr(self, '_metric_path_validation', 'conservative') != 'rpp_rollout'
+                        or getattr(self, '_wohnungserkundung_active_child', None) is None
+                        or any(e.valid for e in (getattr(self, '_metric_egress', None) or ()))):
+>                   raise ValueError('map_status_join_pending')
+E                   ValueError: map_status_join_pending
+
+explore/metric_frontier_runtime.py:583: ValueError
+_ test_active_old_join_retains_original_identity_and_only_withdraws[obstacle-True] _
+
+change = 'obstacle', referenced = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f096db4cc40>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('change', ['gain', 'obstacle', 'unknown', 'growth'])
+    def test_active_old_join_retains_original_identity_and_only_withdraws(change, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if change in ('obstacle', 'unknown'):
+            newer.data[20*100+11] = 100 if change == 'obstacle' else -1
+        if change == 'growth':
+            newer.info.width += 1; newer.info.origin.position.x -= grid.info.resolution
+            newer.data = np.pad(np.asarray(newer.data).reshape(100,100),
+                                ((0,0),(1,0)),constant_values=-1).ravel().tolist()
+        raw_bytes = list(grid.data)
+        node._on_map(newer)
+        assert not node._metric_matches_status(node._metric_raw[1])
+>       current = node._metric_inputs(active=True)
+
+test/test_metric_pending_withdrawal.py:50: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7f096db4d630>
+active = True
+
+    def _metric_inputs_locked(self, active=False):
+        with self._metric_lock:
+            fault = self._metric_fault
+            raw, c, scope = self._metric_raw, self._metric_correlation, self._metric_scope
+            at, pending = self._metric_status_at, self._metric_pending_since
+        now = time.monotonic()
+        if fault:
+            raise ValueError(fault)
+        if raw is None or c is None or scope is None:
+            raise ValueError('map_scope_not_joined')
+        if not self._metric_resume_localization_ready():
+            raise ValueError('resume_localization_unconfirmed')
+        withdrawal = None
+        if not self._metric_matches_status(raw[1]):
+            joined = getattr(self, '_metric_joined', None)
+            if (not active or pending is None or now-pending > 1.25 or joined is None
+                    or c.fingerprint != joined[1].fingerprint or c.context != joined[1].context):
+                raise ValueError('map_status_join_pending')
+            if raw[1].fingerprint != joined[0][1].fingerprint:
+                if (getattr(self, '_metric_path_validation', 'conservative') != 'rpp_rollout'
+                        or getattr(self, '_wohnungserkundung_active_child', None) is None
+                        or any(e.valid for e in (getattr(self, '_metric_egress', None) or ()))):
+>                   raise ValueError('map_status_join_pending')
+E                   ValueError: map_status_join_pending
+
+explore/metric_frontier_runtime.py:583: ValueError
+_ test_active_old_join_retains_original_identity_and_only_withdraws[unknown-True] _
+
+change = 'unknown', referenced = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f096daf71c0>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('change', ['gain', 'obstacle', 'unknown', 'growth'])
+    def test_active_old_join_retains_original_identity_and_only_withdraws(change, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if change in ('obstacle', 'unknown'):
+            newer.data[20*100+11] = 100 if change == 'obstacle' else -1
+        if change == 'growth':
+            newer.info.width += 1; newer.info.origin.position.x -= grid.info.resolution
+            newer.data = np.pad(np.asarray(newer.data).reshape(100,100),
+                                ((0,0),(1,0)),constant_values=-1).ravel().tolist()
+        raw_bytes = list(grid.data)
+        node._on_map(newer)
+        assert not node._metric_matches_status(node._metric_raw[1])
+>       current = node._metric_inputs(active=True)
+
+test/test_metric_pending_withdrawal.py:50: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7f096daf65c0>
+active = True
+
+    def _metric_inputs_locked(self, active=False):
+        with self._metric_lock:
+            fault = self._metric_fault
+            raw, c, scope = self._metric_raw, self._metric_correlation, self._metric_scope
+            at, pending = self._metric_status_at, self._metric_pending_since
+        now = time.monotonic()
+        if fault:
+            raise ValueError(fault)
+        if raw is None or c is None or scope is None:
+            raise ValueError('map_scope_not_joined')
+        if not self._metric_resume_localization_ready():
+            raise ValueError('resume_localization_unconfirmed')
+        withdrawal = None
+        if not self._metric_matches_status(raw[1]):
+            joined = getattr(self, '_metric_joined', None)
+            if (not active or pending is None or now-pending > 1.25 or joined is None
+                    or c.fingerprint != joined[1].fingerprint or c.context != joined[1].context):
+                raise ValueError('map_status_join_pending')
+            if raw[1].fingerprint != joined[0][1].fingerprint:
+                if (getattr(self, '_metric_path_validation', 'conservative') != 'rpp_rollout'
+                        or getattr(self, '_wohnungserkundung_active_child', None) is None
+                        or any(e.valid for e in (getattr(self, '_metric_egress', None) or ()))):
+>                   raise ValueError('map_status_join_pending')
+E                   ValueError: map_status_join_pending
+
+explore/metric_frontier_runtime.py:583: ValueError
+_ test_active_old_join_retains_original_identity_and_only_withdraws[growth-True] _
+
+change = 'growth', referenced = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f096d5b3d90>
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('change', ['gain', 'obstacle', 'unknown', 'growth'])
+    def test_active_old_join_retains_original_identity_and_only_withdraws(change, referenced, monkeypatch):
+        node, grid, before = fixture(monkeypatch, referenced=referenced)
+        newer = copy.deepcopy(grid); newer.header.stamp.nanosec = 20_000_000
+        newer.data[25*100+40] = 0
+        if change in ('obstacle', 'unknown'):
+            newer.data[20*100+11] = 100 if change == 'obstacle' else -1
+        if change == 'growth':
+            newer.info.width += 1; newer.info.origin.position.x -= grid.info.resolution
+            newer.data = np.pad(np.asarray(newer.data).reshape(100,100),
+                                ((0,0),(1,0)),constant_values=-1).ravel().tolist()
+        raw_bytes = list(grid.data)
+        node._on_map(newer)
+        assert not node._metric_matches_status(node._metric_raw[1])
+>       current = node._metric_inputs(active=True)
+
+test/test_metric_pending_withdrawal.py:50: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:537: in _metric_inputs
+    return self._metric_inputs_locked(active)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7f096d5b3610>
+active = True
+
+    def _metric_inputs_locked(self, active=False):
+        with self._metric_lock:
+            fault = self._metric_fault
+            raw, c, scope = self._metric_raw, self._metric_correlation, self._metric_scope
+            at, pending = self._metric_status_at, self._metric_pending_since
+        now = time.monotonic()
+        if fault:
+            raise ValueError(fault)
+        if raw is None or c is None or scope is None:
+            raise ValueError('map_scope_not_joined')
+        if not self._metric_resume_localization_ready():
+            raise ValueError('resume_localization_unconfirmed')
+        withdrawal = None
+        if not self._metric_matches_status(raw[1]):
+            joined = getattr(self, '_metric_joined', None)
+            if (not active or pending is None or now-pending > 1.25 or joined is None
+                    or c.fingerprint != joined[1].fingerprint or c.context != joined[1].context):
+                raise ValueError('map_status_join_pending')
+            if raw[1].fingerprint != joined[0][1].fingerprint:
+                if (getattr(self, '_metric_path_validation', 'conservative') != 'rpp_rollout'
+                        or getattr(self, '_wohnungserkundung_active_child', None) is None
+                        or any(e.valid for e in (getattr(self, '_metric_egress', None) or ()))):
+>                   raise ValueError('map_status_join_pending')
+E                   ValueError: map_status_join_pending
+
+explore/metric_frontier_runtime.py:583: ValueError
+_ test_actual_parent_keeps_one_child_or_stops_on_withdrawn_authority[none-True] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f096dc90880>
+fault = 'none', referenced = True
+
+    @pytest.mark.parametrize('referenced', [False, True])
+    @pytest.mark.parametrize('fault', ['none', 'obstacle', 'deadline', 'source', 'epoch'])
+    def test_actual_parent_keeps_one_child_or_stops_on_withdrawn_authority(monkeypatch, fault, referenced):
+        import math
+        from geometry_msgs.msg import PoseStamped
+        from nav_msgs.msg import Path
+        from test_metric_progress import parent_fixture
+        node, grid, clock, parent, terminal = parent_fixture(monkeypatch, 'open')
+        node._metric_path_validation = 'rpp_rollout'
+        node._max_frontier_goals = 1
+        node._metric_egress = None  # this leg uses public free space only
+        if referenced:
+            node._metric_start_egress_enabled = True
+            node._metric_body_reference = lambda: (0., 0., 0.)
+            node._metric_inputs()
+            assert all(isinstance(e, ReferencedStartEgress) and e.valid
+                       and not e.fixed.unknown.any() and e.retained_region.is_empty
+                       and not e.unknown.any() for e in node._metric_egress)
+        chosen = []; children = []; stops = []
+        def planner(target, *_, **kwargs):
+            chosen.append(target)
+            path = Path(); path.header.frame_id = 'map'
+            start = kwargs.get('start_pose', node._robot_pose_sample()[0])
+            for x,y in (start[:2], (target.x,target.y)):
+                p = PoseStamped(); p.pose.position.x=x; p.pose.position.y=y
+                p.pose.orientation.z=math.sin(target.yaw/2)
+                p.pose.orientation.w=math.cos(target.yaw/2); path.poses.append(p)
+            return path, None
+        node._metric_request_nav_plan = planner
+        node._prealign_to_goal = lambda *_, **__: ('skipped',)
+        def navigate(*_, stop_requested, **__):
+            target=chosen[-1]; children.append(target)
+            assert node._wohnungserkundung_active_child is target
+            latest = copy.deepcopy(grid)
+            for index in range(3):
+                clock[0]+=.1; latest=copy.deepcopy(latest)
+                latest.header.stamp.nanosec=int((clock[0]-10)*1e9)
+                latest.data[80*latest.info.width+80] = (index+1)*10
+                if fault == 'obstacle': latest.data[20*latest.info.width+10] = 100
+                node._on_map(latest)
+                if fault == 'deadline': node._metric_pending_since=clock[0]-2
+                if fault == 'source':
+                    raw,cor,at=node._metric_joined
+                    node._metric_joined=((*raw[:2],4.),cor,at)
+                if fault == 'epoch': node._metric_fault='map_epoch_changed'
+                stops.append(stop_requested())
+                node._on_metric_map_status(status(latest,accepted=3+index,observed=3+index,
+                                                 when=100+clock[0]-10))
+                if stops[-1]: return 'canceled'
+            node._robot_pose_sample=lambda:((target.x,target.y,target.yaw),0.)
+            clock[0]+=.1; latest=copy.deepcopy(latest)
+            for xy in target.observation_points:
+                col,row=node._world_to_grid(*xy,latest.info)
+                latest.data[row*latest.info.width+col]=0
+            latest.header.stamp.nanosec=int((clock[0]-10)*1e9)
+            node._on_map(latest)
+            node._on_metric_map_status(status(latest,accepted=6,observed=6,when=100+clock[0]-10))
+            return 'success'
+        node._navigate_to=navigate
+        result=node._execute_metric_frontier(parent,10.,.3)
+        assert terminal and not result.success  # original total limit, no whole claim
+        assert len(children)==1 and node._wohnungserkundung_active_child is None
+        assert node._metric_status['attempts']==1
+        if fault == 'none':
+>           assert stops==[False,False,False]
+E           assert [True] == [False, False, False]
+E             At index 0 diff: True != False
+E             Right contains 2 more items, first extra item: False
+E             Full diff:
+E             - [False, False, False]
+E             + [True]
+
+test/test_metric_pending_withdrawal.py:170: AssertionError
+=========================== short test summary info ============================
+FAILED test/test_metric_pending_withdrawal.py::test_active_old_join_retains_original_identity_and_only_withdraws[gain-True]
+FAILED test/test_metric_pending_withdrawal.py::test_active_old_join_retains_original_identity_and_only_withdraws[obstacle-True]
+FAILED test/test_metric_pending_withdrawal.py::test_active_old_join_retains_original_identity_and_only_withdraws[unknown-True]
+FAILED test/test_metric_pending_withdrawal.py::test_active_old_join_retains_original_identity_and_only_withdraws[growth-True]
+FAILED test/test_metric_pending_withdrawal.py::test_actual_parent_keeps_one_child_or_stops_on_withdrawn_authority[none-True]
+5 failed, 25 passed in 4.28s

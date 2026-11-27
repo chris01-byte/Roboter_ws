@@ -1,0 +1,94 @@
+........................................................................ [  3%]
+........................................................................ [  6%]
+........................................................................ [ 10%]
+........................................................................ [ 13%]
+........................................................................ [ 17%]
+........................................................................ [ 20%]
+........................................................................ [ 24%]
+........................................................................ [ 27%]
+........................................................................ [ 30%]
+........................................................................ [ 34%]
+........................................................................ [ 37%]
+........................................................................ [ 41%]
+........................................................................ [ 44%]
+........................................................................ [ 48%]
+........................................................................ [ 51%]
+........................................................................ [ 54%]
+........................................................................ [ 58%]
+........................................................................ [ 61%]
+..............F......................................................... [ 65%]
+........................................................................ [ 68%]
+........................................................................ [ 72%]
+........................................................................ [ 75%]
+........................................................................ [ 78%]
+........................................................................ [ 82%]
+........................................................................ [ 85%]
+........................................................................ [ 89%]
+........................................................................ [ 92%]
+........................................................................ [ 96%]
+........................................................................ [ 99%]
+............                                                             [100%]
+=================================== FAILURES ===================================
+__________ test_impossible_view_geometry_consumes_no_visibility_work ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fd7b38f09a0>
+
+    def test_impossible_view_geometry_consumes_no_visibility_work(monkeypatch):
+        node, inputs, _ = fixture('ap06_a52_selection')
+        import explore.metric_frontier_runtime as runtime
+        original = runtime.visible_boundary_cells
+        checked = {}; visible = []
+        route = node._metric_route
+        def geometry(values, xy, yaw):
+            result = route(values, xy, yaw)
+            checked[(*xy, yaw)] = result is not None
+            return result
+        def sight(grid, scope, pose, view):
+            # A failed route is already conclusive; this expensive work cannot
+            # make its pose admissible. All geometry and rays remain real code.
+            assert checked.get(tuple(pose)), ('unproved view', pose)
+            visible.append(pose)
+            return original(grid, scope, pose, view)
+        node._metric_route = geometry
+        monkeypatch.setattr(runtime, 'visible_boundary_cells', sight)
+        # Use the same exact evidence-bound memo as the owning selection pass.
+        node._metric_selection_cache = threading.local()
+        node._metric_selection_cache.memo = {'inputs': inputs}
+        frontier = Frontier((1.304999970830977, .13499999698251486), 1)
+>       candidate = node._metric_robot_side_observation(inputs, frontier,
+            MetricTaskPolicy(.6, 30., 2), node._metric_scope_mask(inputs), time.monotonic())
+
+src/explore/test/test_metric_side_work_budget.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/explore/explore/metric_frontier_runtime.py:1616: in _metric_robot_side_observation
+    return self._metric_public_search(inputs,policy,self._metric_robot_side_observation_in_pass,
+src/explore/explore/metric_frontier_runtime.py:1602: in _metric_public_search
+    return search(inputs,*args)
+src/explore/explore/metric_frontier_runtime.py:1661: in _metric_robot_side_observation_in_pass
+    visible = visible_boundary_cells(grid, scope_mask,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+grid = nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id=...1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1])
+scope = array([[False, False, False, ..., False, False, False],
+       [False,  True,  True, ...,  True,  True, False],
+      ...alse],
+       [False, False, False, ..., False, False, False],
+       [False, False, False, ..., False, False, False]])
+pose = (0.7555606152350505, 0.002688800922450526, 0.4)
+view = LidarView(mount=(0.245, 0.0, 1.5707963267948966), angles=array([0.00000000e+00, 2.90888199e-03, 5.81776397e-03, ...,
+       6.27445844e+00, 6.27736733e+00, 6.28027621e+00]), range_m=4.0, minimum_range_m=0.05)
+
+    def sight(grid, scope, pose, view):
+        # A failed route is already conclusive; this expensive work cannot
+        # make its pose admissible. All geometry and rays remain real code.
+>       assert checked.get(tuple(pose)), ('unproved view', pose)
+E       AssertionError: ('unproved view', (0.7555606152350505, 0.002688800922450526, 0.4))
+E       assert None
+E        +  where None = <built-in method get of dict object at 0x7fd7b384ad80>((0.7555606152350505, 0.002688800922450526, 0.4))
+E        +    where <built-in method get of dict object at 0x7fd7b384ad80> = {(0.824999981559813, 0.13499999698251486, 0.0): True, (0.8549999808892608, 0.10499999765306711, -1.5042281630190728): ...99999765306711, 0.06656816377582381): False, (0.8549999808892608, 0.10499999765306711, 1.6373644905707203): False, ...}.get
+E        +    and   (0.7555606152350505, 0.002688800922450526, 0.4) = tuple((0.7555606152350505, 0.002688800922450526, 0.4))
+
+src/explore/test/test_metric_side_work_budget.py:24: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_side_work_budget.py::test_impossible_view_geometry_consumes_no_visibility_work
+1 failed, 2099 passed in 122.09s (0:02:02)

@@ -1,0 +1,186 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_ test_expired_motion_snapshot_replans_only_after_stop_with_same_limits[fresh-pose_stale_after_processing] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ff885316890>
+fault = 'fresh', reason = 'pose_stale_after_processing'
+
+    @pytest.mark.parametrize('reason', ['start_motion_wheel_stale_after_processing',
+                                        'start_motion_wheel_tf_disagreement',
+                                        'pose_stale_after_processing', 'self_body_scan_stale_after_processing'])
+    @pytest.mark.parametrize('fault', ['fresh', 'source_gap', 'persistent', 'retry_budget', 'cancel', 'deadline',
+                                       'context', 'unsafe_stop', 'cancel_failed'])
+    def test_expired_motion_snapshot_replans_only_after_stop_with_same_limits(monkeypatch, fault, reason):
+        node, grid, clock, parent, terminal = parent_fixture(monkeypatch, 'open')
+        node._max_frontier_goals = 2 if fault != 'retry_budget' else 5
+        if fault == 'retry_budget':
+            node._metric_retry_limit = 1
+        planned, navigation, confirmed = [], [], []
+        actual_inputs = node._metric_inputs
+        pending_error = [False]
+        post_stop_error = [False]
+        source_gap = {'pose_stale_after_processing': 'pose_missing_stale_or_invalid',
+                      'self_body_scan_stale_after_processing': 'self_body_scan_stale'}.get(
+                          reason, 'start_motion_wheel_missing_stale_or_invalid')
+        def inputs(*args, **kwargs):
+            if post_stop_error[0]:
+                post_stop_error[0] = False
+                node._metric_status['geometry_snapshot_rejection'] = dict(reason=reason, selection='post_child')
+                raise ValueError(reason)
+            if pending_error[0]:
+                if fault != 'persistent':
+                    pending_error[0] = False
+                node._metric_status['geometry_snapshot_rejection'] = dict(reason=reason, selection='during_child')
+                raise ValueError(reason)
+            if fault == 'source_gap' and navigation:
+                raise ValueError(source_gap)
+            return actual_inputs(*args, **kwargs)
+        node._metric_inputs = inputs
+        def planner(target, *_):
+            planned.append((target, clock[0]))
+            path = Path(); path.header.frame_id = 'map'
+            for x, y in target.route:
+                pose = PoseStamped(); pose.pose.position.x = x; pose.pose.position.y = y
+                pose.pose.orientation.z = math.sin(target.yaw/2)
+                pose.pose.orientation.w = math.cos(target.yaw/2)
+                path.poses.append(pose)
+            return path, None
+        node._metric_request_nav_plan = planner
+        node._prealign_to_goal = lambda *_, **__: ('skipped',)
+        def confirm(*_):
+            assert node._wohnungserkundung_active_child is None
+            confirmed.append(len(navigation))
+            if fault == 'fresh' and len(navigation) == 1 and reason in (
+                    'pose_stale_after_processing', 'self_body_scan_stale_after_processing'):
+                post_stop_error[0] = True
+            return not (fault == 'unsafe_stop' and navigation)
+        node._metric_confirm_stop = confirm
+        def navigate(*_, stop_requested, **__):
+            assert node._wohnungserkundung_active_child is not None
+            target = planned[-1][0]; navigation.append(clock[0]); clock[0] += .1
+            if len(navigation) == 1 or fault == 'retry_budget':
+                pending_error[0] = True
+                assert stop_requested()  # old geometry never authorizes more motion
+                if fault == 'cancel':
+                    parent.is_cancel_requested = True
+                if fault == 'deadline':
+                    clock[0] += 10.
+                if fault == 'context':
+                    node._metric_fault = 'map_epoch_changed'
+                if fault == 'cancel_failed':
+                    return 'cancel_failed'
+                return 'canceled'  # terminal action peer; production parent now owns stop
+            assert confirmed[-1] == 1
+            assert not stop_requested()
+            newer = copy.deepcopy(grid)
+            for xy in target.observation_points:
+                col, row = node._world_to_grid(*xy, newer.info)
+                newer.data[row*newer.info.width+col] = 0
+            newer.header.stamp.nanosec = int((clock[0]-10)*1e9)
+            node._on_map(newer)
+            node._on_metric_map_status(status(newer, accepted=3, observed=3, when=100+clock[0]-10))
+            node._robot_pose_sample = lambda: ((target.x, target.y, target.yaw), 0.)
+            return 'success'
+        node._navigate_to = navigate
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert not result.success  # fixed two-attempt fixture is partial, never whole acceptance
+        if fault in ('fresh', 'retry_budget'):
+>           assert len(planned) == len(navigation) == 2
+E           assert 1 == 2
+E            +  where 1 = len([10.02])
+
+src/explore/test/test_metric_snapshot_replan.py:95: AssertionError
+_ test_expired_motion_snapshot_replans_only_after_stop_with_same_limits[fresh-self_body_scan_stale_after_processing] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ff88b2a5630>
+fault = 'fresh', reason = 'self_body_scan_stale_after_processing'
+
+    @pytest.mark.parametrize('reason', ['start_motion_wheel_stale_after_processing',
+                                        'start_motion_wheel_tf_disagreement',
+                                        'pose_stale_after_processing', 'self_body_scan_stale_after_processing'])
+    @pytest.mark.parametrize('fault', ['fresh', 'source_gap', 'persistent', 'retry_budget', 'cancel', 'deadline',
+                                       'context', 'unsafe_stop', 'cancel_failed'])
+    def test_expired_motion_snapshot_replans_only_after_stop_with_same_limits(monkeypatch, fault, reason):
+        node, grid, clock, parent, terminal = parent_fixture(monkeypatch, 'open')
+        node._max_frontier_goals = 2 if fault != 'retry_budget' else 5
+        if fault == 'retry_budget':
+            node._metric_retry_limit = 1
+        planned, navigation, confirmed = [], [], []
+        actual_inputs = node._metric_inputs
+        pending_error = [False]
+        post_stop_error = [False]
+        source_gap = {'pose_stale_after_processing': 'pose_missing_stale_or_invalid',
+                      'self_body_scan_stale_after_processing': 'self_body_scan_stale'}.get(
+                          reason, 'start_motion_wheel_missing_stale_or_invalid')
+        def inputs(*args, **kwargs):
+            if post_stop_error[0]:
+                post_stop_error[0] = False
+                node._metric_status['geometry_snapshot_rejection'] = dict(reason=reason, selection='post_child')
+                raise ValueError(reason)
+            if pending_error[0]:
+                if fault != 'persistent':
+                    pending_error[0] = False
+                node._metric_status['geometry_snapshot_rejection'] = dict(reason=reason, selection='during_child')
+                raise ValueError(reason)
+            if fault == 'source_gap' and navigation:
+                raise ValueError(source_gap)
+            return actual_inputs(*args, **kwargs)
+        node._metric_inputs = inputs
+        def planner(target, *_):
+            planned.append((target, clock[0]))
+            path = Path(); path.header.frame_id = 'map'
+            for x, y in target.route:
+                pose = PoseStamped(); pose.pose.position.x = x; pose.pose.position.y = y
+                pose.pose.orientation.z = math.sin(target.yaw/2)
+                pose.pose.orientation.w = math.cos(target.yaw/2)
+                path.poses.append(pose)
+            return path, None
+        node._metric_request_nav_plan = planner
+        node._prealign_to_goal = lambda *_, **__: ('skipped',)
+        def confirm(*_):
+            assert node._wohnungserkundung_active_child is None
+            confirmed.append(len(navigation))
+            if fault == 'fresh' and len(navigation) == 1 and reason in (
+                    'pose_stale_after_processing', 'self_body_scan_stale_after_processing'):
+                post_stop_error[0] = True
+            return not (fault == 'unsafe_stop' and navigation)
+        node._metric_confirm_stop = confirm
+        def navigate(*_, stop_requested, **__):
+            assert node._wohnungserkundung_active_child is not None
+            target = planned[-1][0]; navigation.append(clock[0]); clock[0] += .1
+            if len(navigation) == 1 or fault == 'retry_budget':
+                pending_error[0] = True
+                assert stop_requested()  # old geometry never authorizes more motion
+                if fault == 'cancel':
+                    parent.is_cancel_requested = True
+                if fault == 'deadline':
+                    clock[0] += 10.
+                if fault == 'context':
+                    node._metric_fault = 'map_epoch_changed'
+                if fault == 'cancel_failed':
+                    return 'cancel_failed'
+                return 'canceled'  # terminal action peer; production parent now owns stop
+            assert confirmed[-1] == 1
+            assert not stop_requested()
+            newer = copy.deepcopy(grid)
+            for xy in target.observation_points:
+                col, row = node._world_to_grid(*xy, newer.info)
+                newer.data[row*newer.info.width+col] = 0
+            newer.header.stamp.nanosec = int((clock[0]-10)*1e9)
+            node._on_map(newer)
+            node._on_metric_map_status(status(newer, accepted=3, observed=3, when=100+clock[0]-10))
+            node._robot_pose_sample = lambda: ((target.x, target.y, target.yaw), 0.)
+            return 'success'
+        node._navigate_to = navigate
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert not result.success  # fixed two-attempt fixture is partial, never whole acceptance
+        if fault in ('fresh', 'retry_budget'):
+>           assert len(planned) == len(navigation) == 2
+E           assert 1 == 2
+E            +  where 1 = len([10.02])
+
+src/explore/test/test_metric_snapshot_replan.py:95: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_snapshot_replan.py::test_expired_motion_snapshot_replans_only_after_stop_with_same_limits[fresh-pose_stale_after_processing]
+FAILED src/explore/test/test_metric_snapshot_replan.py::test_expired_motion_snapshot_replans_only_after_stop_with_same_limits[fresh-self_body_scan_stale_after_processing]
+2 failed, 34 deselected in 0.74s

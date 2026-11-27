@@ -1,0 +1,47 @@
+POSE (0.9607212737685388, -0.4648932498627781, 0.27795843482653765) TASKS [('metric-task-1', '', 0, 0), ('metric-task-2', 'partially_observed', 1, 0), ('metric-task-3', 'proposal_rejected', 1, 0), ('metric-task-4', '', 0, 0), ('metric-task-5', '', 0, 0), ('metric-task-6', '', 0, 0), ('metric-task-7', 'partially_observed', 3, 0)]
+CANDIDATES [('metric-task-5', 2.734999938867986, -0.42499999050050974, 0.0)]
+ELAPSED 4.2519283709989395 RANK {'raw': 16, 'unsafe': 0, 'deferred_or_served': 16, 'accepted': 1, 'route_rejections': {}, 'alternative_approach_pose_requires_native_plan': True}
+         6666945 function calls (6663265 primitive calls) in 4.252 seconds
+
+   Ordered by: cumulative time
+   List reduced from 362 to 35 due to restriction <35>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.001    0.001    4.252    4.252 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:2394(_metric_select)
+        1    0.001    0.001    4.202    4.202 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:2013(_metric_candidates)
+        1    0.017    0.017    4.201    4.201 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:2024(_metric_candidates_in_pass)
+       18    0.001    0.000    3.677    0.204 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:1656(_metric_public_search)
+      464    0.042    0.000    3.340    0.007 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:933(_metric_route)
+       17    0.000    0.000    3.169    0.186 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:1672(_metric_robot_side_observation)
+       17    0.006    0.000    3.161    0.186 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:1676(_metric_robot_side_observation_in_pass)
+      432    0.005    0.000    1.639    0.004 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:1000(_metric_waypoints_clear)
+      433    0.004    0.000    1.405    0.003 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:1123(_metric_standard_waypoints_clear)
+      102    0.000    0.000    1.292    0.013 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:1081(_metric_checked_public_rollout)
+1673/1578    0.001    0.000    0.819    0.001 {built-in method builtins.all}
+      686    0.107    0.000    0.789    0.001 /evidence/ap06-repo/src/explore/explore/metric_frontier.py:368(footprint_poses_clear)
+      465    0.536    0.001    0.708    0.002 /evidence/ap06-repo/src/explore/explore/metric_frontier.py:176(route_cells)
+      102    0.000    0.000    0.687    0.007 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:1087(clear)
+      221    0.001    0.000    0.686    0.003 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:1088(<genexpr>)
+      109    0.371    0.003    0.612    0.006 /evidence/ap06-repo/src/explore/explore/metric_frontier.py:700(rpp_trajectory)
+      102    0.001    0.000    0.605    0.006 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:1082(trajectory)
+        1    0.000    0.000    0.508    0.508 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:1733(_metric_public_observation)
+        1    0.001    0.001    0.507    0.507 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:1737(_metric_public_observation_in_pass)
+    74684    0.035    0.000    0.464    0.000 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:979(<genexpr>)
+    74866    0.304    0.000    0.431    0.000 /evidence/ap06-repo/src/explore/explore/explore_node.py:3759(_grid_to_world)
+    21233    0.374    0.000    0.374    0.000 {built-in method explore._reserved_sweep.clear}
+    14246    0.024    0.000    0.327    0.000 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:927(_metric_grid_line_clear)
+    14246    0.294    0.000    0.296    0.000 /evidence/ap06-repo/src/explore/explore/explore_node.py:269(grid_line_is_clear)
+       36    0.009    0.000    0.277    0.008 /evidence/ap06-repo/src/explore/explore/explore_node.py:3785(_frontier_approach_goal)
+        6    0.001    0.000    0.268    0.045 /evidence/ap06-repo/src/explore/explore/metric_progress.py:10(local_evidence)
+7351/3771    0.012    0.000    0.265    0.000 {built-in method numpy.core._multiarray_umath.implement_array_function}
+    37328    0.187    0.000    0.264    0.000 /evidence/ap06-repo/src/explore/explore/explore_node.py:3772(_world_to_grid)
+      230    0.012    0.000    0.250    0.001 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:781(_metric_local_evidence)
+    21233    0.048    0.000    0.207    0.000 /evidence/ap06-repo/src/explore/explore/metric_frontier.py:401(<listcomp>)
+        8    0.151    0.019    0.189    0.024 /evidence/ap06-repo/src/explore/explore/metric_frontier_candidates.py:114(visible_boundary_cells)
+      451    0.028    0.000    0.188    0.000 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:1642(_metric_public_inputs)
+        6    0.091    0.015    0.184    0.031 /evidence/ap06-repo/src/explore/explore/metric_progress.py:29(<listcomp>)
+       12    0.120    0.010    0.169    0.014 /evidence/ap06-repo/src/explore/explore/explore_node.py:3857(<listcomp>)
+      902    0.001    0.000    0.157    0.000 <__array_function__ internals>:2(array_equal)
+
+
+

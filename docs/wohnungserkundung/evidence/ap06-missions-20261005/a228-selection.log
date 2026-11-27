@@ -1,0 +1,43 @@
+original pose (0.0, 0.0, 0.0) policy {'radius': 0.6, 'cooldown_s': 30.0, 'retry_limit': 2, 'next_id': 0, 'tasks': {}}
+original error ValueError('frontier_candidate_processing_budget_exhausted') seconds 5.186090559000149
+         2022815 function calls (2011152 primitive calls) in 5.186 seconds
+
+   Ordered by: cumulative time
+   List reduced from 439 to 32 due to restriction <32>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    5.186    5.186 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:2407(_metric_select)
+        1    0.000    0.000    5.186    5.186 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:2026(_metric_candidates)
+        1    0.017    0.017    5.186    5.186 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:2037(_metric_candidates_in_pass)
+      181    0.046    0.000    4.396    0.024 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:933(_metric_route)
+      220    0.012    0.000    3.814    0.017 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1000(_metric_waypoints_clear)
+       10    0.001    0.000    3.614    0.361 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py:333(check_trajectory)
+       20    0.183    0.009    3.610    0.180 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:626(check_trajectory)
+      302    0.015    0.000    1.705    0.006 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:550(_cell_distances)
+      604    0.796    0.001    1.641    0.003 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:556(distance)
+      312    0.039    0.000    1.424    0.005 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:502(_cell_intersections)
+33664/22026    0.266    0.000    1.416    0.000 {built-in method numpy.core._multiarray_umath.implement_array_function}
+    11792    1.213    0.000    1.213    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+      240    0.583    0.002    0.990    0.004 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:523(_cell_intersections_full)
+     8132    0.016    0.000    0.813    0.000 /usr/lib/python3/dist-packages/numpy/core/fromnumeric.py:69(_wrapreduction)
+     2052    0.003    0.000    0.619    0.000 <__array_function__ internals>:2(sum)
+     2052    0.004    0.000    0.613    0.000 /usr/lib/python3/dist-packages/numpy/core/fromnumeric.py:2123(sum)
+     1505    0.013    0.000    0.543    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:751(_metric_selection_memo)
+     4515    0.021    0.000    0.440    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:768(<genexpr>)
+     6030    0.385    0.000    0.385    0.000 {built-in method builtins.sorted}
+      182    0.039    0.000    0.242    0.001 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:903(_metric_seed_mask)
+      143    0.003    0.000    0.240    0.002 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1217(_metric_nav2_proposal)
+     3430    0.003    0.000    0.223    0.000 <__array_function__ internals>:2(stack)
+     3430    0.011    0.000    0.212    0.000 /usr/lib/python3/dist-packages/numpy/core/shape_base.py:357(stack)
+        6    0.002    0.000    0.204    0.034 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:781(_metric_local_evidence)
+        5    0.001    0.000    0.200    0.040 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_progress.py:10(local_evidence)
+     5217    0.008    0.000    0.198    0.000 /usr/lib/python3/dist-packages/numpy/core/fromnumeric.py:51(_wrapfunc)
+     4755    0.004    0.000    0.197    0.000 <__array_function__ internals>:2(concatenate)
+      402    0.032    0.000    0.196    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:795(_metric_prepare_egress)
+     1038    0.001    0.000    0.193    0.000 {method 'min' of 'numpy.ndarray' objects}
+     1038    0.001    0.000    0.192    0.000 /usr/lib/python3/dist-packages/numpy/core/_methods.py:42(_amin)
+     1039    0.001    0.000    0.192    0.000 {method 'max' of 'numpy.ndarray' objects}
+     1039    0.000    0.000    0.191    0.000 /usr/lib/python3/dist-packages/numpy/core/_methods.py:38(_amax)
+
+
+

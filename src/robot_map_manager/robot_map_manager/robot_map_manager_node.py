@@ -5,13 +5,17 @@ from __future__ import annotations
 
 from pathlib import Path
 import math
+import signal
+import threading
 import time
 from typing import Any, Optional
 
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import OccupancyGrid
 import rclpy
+from rclpy.executors import ExternalShutdownException, SingleThreadedExecutor
 from rclpy.node import Node
+from rclpy.signals import SignalHandlerOptions
 from rclpy.qos import (
     DurabilityPolicy,
     HistoryPolicy,
@@ -183,6 +187,7 @@ class RobotMapManager(Node):
         self._last_validation_error: Optional[str] = None
         self._last_status_json: Optional[str] = None
         self._accepted_maps = 0
+        self._observed_maps = 0
         self._duplicate_maps = 0
         self._early_duplicate_maps = 0
         self._rejected_maps = 0
@@ -322,6 +327,15 @@ class RobotMapManager(Node):
                 ),
                 source_stamp_ns=stamp_ns,
             )
+            previous = self._latest_map
+            if (previous is not None and snapshot.source_stamp_ns > 0
+                    and previous.source_stamp_ns > 0):
+                if snapshot.source_stamp_ns < previous.source_stamp_ns:
+                    self._last_operation = "map_delayed"
+                    return  # no revision or freshness from delayed producer work
+                if (snapshot.source_stamp_ns == previous.source_stamp_ns
+                        and snapshot.fingerprint != previous.fingerprint):
+                    raise MapValidationError("Widerspruechlicher Karteninhalt bei gleichem Quellstempel")
         except (MapValidationError, TypeError, ValueError, OverflowError) as error:
             self._rejected_maps += 1
             self._last_validation_error = f"Ungültige Karte verworfen: {error}"
@@ -344,9 +358,27 @@ class RobotMapManager(Node):
         self._last_map_received_wall = now
         self._last_map_received_iso = self._iso_time(now)
         self._last_error = None
+        if (self._latest_map is None
+                or snapshot.source_stamp_ns != self._latest_map.source_stamp_ns
+                or snapshot.fingerprint != self._latest_fingerprint):
+            self._observed_maps += 1
         if snapshot.fingerprint == self._latest_fingerprint:
+            # Keep the geometry revision stable, but retain the identity of
+            # the newest validated observation.  Consumers that correlate an
+            # exact raw OccupancyGrid need its current source stamp even when
+            # the raster content did not change.
+            self._latest_map = snapshot
+            self._latest_source = source
             self._duplicate_maps += 1
             self._last_operation = "map_duplicate"
+            self._publish_status(
+                event="map_observed",
+                ok=True,
+                message=(
+                    "Neue gültige Rohkartenbeobachtung bei unveränderter "
+                    "Kartengeometrie empfangen."
+                ),
+            )
             return
 
         self._latest_map = snapshot
@@ -831,6 +863,7 @@ class RobotMapManager(Node):
             },
             "counters": {
                 "accepted_maps": self._accepted_maps,
+                "observed_maps": self._observed_maps,
                 "duplicate_maps": self._duplicate_maps,
                 "early_qos_duplicates": self._early_duplicate_maps,
                 "rejected_maps": self._rejected_maps,
@@ -915,18 +948,40 @@ class RobotMapManager(Node):
 
 
 def main(args: Optional[list[str]] = None) -> None:
-    rclpy.init(args=args)
+    # Humble's global SIGINT handler can invalidate the ROS context while
+    # SingleThreadedExecutor.take_message() is converting a Python message.
+    # Request shutdown in our handler, let the active callback finish, and
+    # invalidate the context only after the executor has stopped.
+    stop = threading.Event()
+    previous_sigint = signal.getsignal(signal.SIGINT)
+    previous_sigterm = signal.getsignal(signal.SIGTERM)
+    def request_stop(_signum, _frame):
+        stop.set()
+    signal.signal(signal.SIGINT, request_stop)
+    signal.signal(signal.SIGTERM, request_stop)
     node: Optional[RobotMapManager] = None
+    executor: Optional[SingleThreadedExecutor] = None
     try:
+        rclpy.init(args=args, signal_handler_options=SignalHandlerOptions.NO)
         node = RobotMapManager()
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
+        executor = SingleThreadedExecutor()
+        executor.add_node(node)
+        while rclpy.ok() and not stop.is_set():
+            executor.spin_once(timeout_sec=0.1)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        if not stop.is_set():
+            raise
     finally:
+        if executor is not None:
+            executor.shutdown(timeout_sec=5.0)
+            if node is not None:
+                executor.remove_node(node)
         if node is not None:
             node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
+        signal.signal(signal.SIGINT, previous_sigint)
+        signal.signal(signal.SIGTERM, previous_sigterm)
 
 
 if __name__ == "__main__":

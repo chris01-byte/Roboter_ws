@@ -1,0 +1,30 @@
+[WARN] [1791062280.129659076] [base_hardware]: RS485 verbunden auf /dev/ttyUSB_BASE @ 115200; Fahrfreigabe erst nach bestaetigtem Stop, Rampen und Feedback.
+[INFO] [1791062280.130016984] [base_hardware]: Anfahrverhalten bestaetigt: Beschleunigen 2000 ms, Bremsen 400 ms, Startdrehzahl 5 rpm.
+[WARN] [1791062280.130520107] [base_hardware]: RS485 Initialisierung vollstaendig bestaetigt. Raeder muessen frei drehen, Not-Aus bereithalten.
+[INFO] [1791062280.130725891] [base_hardware]: base_hardware bereit: dry_run=False, cmd_vel=/cmd_vel, wheel_radius=0.062 m, separation=0.385 m
+[INFO] [1791062280.147428553] [base_hardware]: CMD: v=+0.000 m/s w=+0.000 rad/s | Rad L=+0.0 R=+0.0 rpm | Motor L=+0 R=+0 rpm
+[INFO] [1791062280.155478923] [hwt601_imu]: HWT601 passiv vorbereitet: /dev/ttyUSB_HWT601 bei 115200 Baud, Adresse 80; nur Modbus-Lesefunktion 0x03
+[INFO] [1791062280.157043404] [hwt601_imu]: HWT601 verbunden: /dev/ttyUSB_HWT601
+Traceback (most recent call last):
+  File "/evidence/ap06-repo/tools/simulation/ap06_closed_product.py", line 289, in loop
+    ex.spin_once(timeout_sec=.05)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 751, in spin_once
+    self._spin_once_impl(timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 748, in _spin_once_impl
+    raise handler.exception()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/task.py", line 254, in __call__
+    self._handler.send(None)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 447, in handler
+    await call_coroutine(entity, arg)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 372, in _execute_subscription
+    await await_or_execute(sub.callback, msg)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 107, in await_or_execute
+    return callback(*args)
+TypeError: Observer.on_tf() missing 1 required positional argument: 'info'
+Traceback (most recent call last):
+  File "/evidence/ap06-repo/tools/simulation/ap06_closed_product.py", line 363, in run
+    wait(lambda: observer.map is not None, 30., 'SLAM initial actual map')
+  File "/evidence/ap06-repo/tools/simulation/ap06_closed_product.py", line 303, in wait
+    raise RuntimeError(f'{label}: process/executor failure {failed}')
+RuntimeError: SLAM initial actual map: process/executor failure []
+{"case": {"id": "door68_start_a", "door_m": 0.68, "start": [-1.9, -0.45, 0.0]}, "passed": false, "hardware_qualified": false, "sensor_profile": "native_mast_mask", "reference_geometry_provided_to_product": false, "truth_map_publisher": false, "truth_tf_publisher": false, "manual_navigation_goals": 0, "prefixes": {"explore": "/evidence/ap06-product-install/explore", "mission_manager": "/evidence/ap06-product-install/mission_manager", "bt_orchestrator": "/evidence/ap06-product-install/bt_orchestrator", "robot_navigation": "/evidence/ap06-product-install/robot_navigation", "robot_state_estimation": "/evidence/ap06-product-install/robot_state_estimation", "base_hardware": "/evidence/ap06-product-install/base_hardware", "robot_map_manager": "/evidence/ap06-product-install/robot_map_manager", "robot_localization": "/evidence/ap06-support-install/robot_localization", "slam_toolbox": "/evidence/ap06-support-install/slam_toolbox", "nav2_bt_navigator": "/evidence/ap06-support-install/nav2_bt_navigator", "nav2_controller": "/evidence/ap03-nav2-install/nav2_controller", "nav2_planner": "/evidence/ap03-nav2-install/nav2_planner", "nav2_velocity_smoother": "/evidence/ap06-support-install/nav2_velocity_smoother", "nav2_collision_monitor": "/evidence/ap06-support-install/nav2_collision_monitor"}, "error": "SLAM initial actual map: process/executor failure []"}

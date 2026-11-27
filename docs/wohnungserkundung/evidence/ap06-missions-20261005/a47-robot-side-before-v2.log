@@ -1,0 +1,54 @@
+FF....                                                                   [100%]
+=================================== FAILURES ===================================
+___ test_useful_proved_robot_side_pose_precedes_unsafe_passage_query[False] ____
+
+prior_rejection = False
+
+    @pytest.mark.parametrize('prior_rejection', [False, True])
+    def test_useful_proved_robot_side_pose_precedes_unsafe_passage_query(prior_rejection):
+        node, inputs, _ = fixture()
+        policy = MetricTaskPolicy(.6, 30., 2)
+        anchor = (1.304999970830977, .13499999698251486)
+        key = policy.identify(anchor)
+        if prior_rejection:
+            attempt = policy.attempts[key]
+            attempt.tries = 1
+            attempt.reason = 'proposal_rejected'
+            attempt.target_xy = (1.304999970830977, .46499998960644007)
+            attempt.evidence_key = 'older actual local evidence'
+        before = [bytes(np.asarray(inputs[i].data, dtype=np.int8)) for i in (0, 5)]
+        candidates = node._metric_select(inputs, policy, .3)
+>       assert candidates and not candidates[0].requires_nav2_plan, node._frontier_rank_stats
+E       AssertionError: {'accepted': 1, 'alternative_approach_pose_requires_native_plan': True, 'deferred_or_served': 0, 'raw': 12, ...}
+E       assert ([MetricCandidate(task_id='metric-task-1', x=1.304999970830977, y=0.46499998960644007, yaw=0.0, frontier_xy=(1.30499997...49999694898725, 0.8849999802187085)), evidence_key='5ae7fb76ddd5ee0a1c67f66834944786ca7cd8b266b6b15bdc26afd58b002379')] and not True)
+E        +  where True = MetricCandidate(task_id='metric-task-1', x=1.304999970830977, y=0.46499998960644007, yaw=0.0, frontier_xy=(1.304999970...649999694898725, 0.8849999802187085)), evidence_key='5ae7fb76ddd5ee0a1c67f66834944786ca7cd8b266b6b15bdc26afd58b002379').requires_nav2_plan
+
+evidence/ap06-repo/src/explore/test/test_metric_robot_side_observation.py:50: AssertionError
+____ test_useful_proved_robot_side_pose_precedes_unsafe_passage_query[True] ____
+
+prior_rejection = True
+
+    @pytest.mark.parametrize('prior_rejection', [False, True])
+    def test_useful_proved_robot_side_pose_precedes_unsafe_passage_query(prior_rejection):
+        node, inputs, _ = fixture()
+        policy = MetricTaskPolicy(.6, 30., 2)
+        anchor = (1.304999970830977, .13499999698251486)
+        key = policy.identify(anchor)
+        if prior_rejection:
+            attempt = policy.attempts[key]
+            attempt.tries = 1
+            attempt.reason = 'proposal_rejected'
+            attempt.target_xy = (1.304999970830977, .46499998960644007)
+            attempt.evidence_key = 'older actual local evidence'
+        before = [bytes(np.asarray(inputs[i].data, dtype=np.int8)) for i in (0, 5)]
+        candidates = node._metric_select(inputs, policy, .3)
+>       assert candidates and not candidates[0].requires_nav2_plan, node._frontier_rank_stats
+E       AssertionError: {'accepted': 1, 'alternative_approach_pose_requires_native_plan': True, 'deferred_or_served': 0, 'raw': 12, ...}
+E       assert ([MetricCandidate(task_id='metric-task-1', x=1.304999970830977, y=0.46499998960644007, yaw=0.0, frontier_xy=(1.30499997...49999694898725, 0.8849999802187085)), evidence_key='5ae7fb76ddd5ee0a1c67f66834944786ca7cd8b266b6b15bdc26afd58b002379')] and not True)
+E        +  where True = MetricCandidate(task_id='metric-task-1', x=1.304999970830977, y=0.46499998960644007, yaw=0.0, frontier_xy=(1.304999970...649999694898725, 0.8849999802187085)), evidence_key='5ae7fb76ddd5ee0a1c67f66834944786ca7cd8b266b6b15bdc26afd58b002379').requires_nav2_plan
+
+evidence/ap06-repo/src/explore/test/test_metric_robot_side_observation.py:50: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_robot_side_observation.py::test_useful_proved_robot_side_pose_precedes_unsafe_passage_query[False]
+FAILED evidence/ap06-repo/src/explore/test/test_metric_robot_side_observation.py::test_useful_proved_robot_side_pose_precedes_unsafe_passage_query[True]
+2 failed, 4 passed in 2.85s

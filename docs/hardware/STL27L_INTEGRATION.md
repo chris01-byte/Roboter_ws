@@ -43,7 +43,7 @@ von Navigation. Der rotierende Sensorkopf wird nicht berührt oder blockiert.
 
 | Teil | Zustand |
 |---|---|
-| Herstellertreiber | gebaut in `~/amadeus_lidar_ws`, Commit gepinnt, **unverändert** |
+| Herstellertreiber | Commit gepinnt; Amadeus-Patch behebt ausschließlich die serielle Shutdown-Race |
 | Bringup-Paket | `src/amadeus_lidar_bringup/` — baut, Launch löst auf |
 | Sensorparameter | `config/stl27l.yaml`; ROS-CCW-Ausgabe (`laser_scan_dir: true`) |
 | udev-Beispielregel | `config/udev/99-amadeus-stl27l.rules.example` |
@@ -210,8 +210,13 @@ Der Zweig feature/stl27l-integration bleibt erhalten - auch fehlgeschlagene
 Ergebnisse gehören ins Protokoll.
 ```
 
-Der Treiber liegt in `~/amadeus_lidar_ws` **außerhalb** des Roboter-Workspace.
-Er beeinflusst den bestehenden Betrieb nicht, solange er nicht gesourct wird.
+Der Treiber liegt in einem eigenen Overlay **außerhalb** des Roboter-Workspace.
+Der reproduzierbare Aufbau erfolgt mit
+`tools/kartierung/build_ldlidar_stl27l_overlay.sh`. Der Patch wartet beim
+Stoppen auf den Empfangsthread, bevor dessen serieller Dateideskriptor
+geschlossen wird. Dadurch kann der Thread nicht mehr parallel mit
+`FD_SET(-1)` seinen Stack beschädigen. Das Overlay beeinflusst den bestehenden
+Betrieb nicht, solange es nicht gesourct wird.
 
 ---
 
@@ -229,3 +234,25 @@ Er beeinflusst den bestehenden Betrieb nicht, solange er nicht gesourct wird.
 **Projektspezifisch:** Am Jetson hängt bereits ein FTDI auf `/dev/ttyUSB0`
 (Motor-RS485). Deshalb ist der udev-Alias Pflicht — ein vertauschter Port
 ließe den LiDAR-Treiber auf den Motorbus sprechen.
+
+
+## 30.09.2026 – Mastmaske und metrischer Startvertrag
+
+Betreiberzuordnung: Der rückwärtige graue Sichtkeil stammt vom OAK-Kameramast,
+kein neu zu identifizierendes Hindernis. Die vorhandene native Maske 236–304°
+bleibt NaN; bei ROS-CCW-Ausgabe und bestätigtem +90°-Montage-TF liegt sie hinten.
+Keine neue Maskierung, keine erfundenen Maximalreichweiten oder Rohkartenänderung.
+
+`metric_self_body_enabled` behandelt ausschließlich ganze unbekannte Rasterzellen
+innerhalb des gemessenen **ungepaddeten** Körpers (x −0,11..0,31 m, y ±0,23 m).
+Die Zellen müssen einschließlich aller Ecken innen liegen. Belegte Zellen werden
+niemals ausgenommen. TF/aktuelle Pose/Scan und Scope bleiben notwendig; falscher
+Montage-TF sperrt. Der private Gültigkeitsmaskenbeleg wird auf die erste korrelierte
+Karte/Pose fixiert und folgt weder der Bewegung noch einer neuen Kartenidentität.
+Die gepaddete Kontur, Rasterreserve, unbekannter Außenraum und Dreh-/Fahrraumsweep
+bleiben vollständig geprüft. Eine vorhandene Körperpose beweist keinen Rundblick.
+
+Gerätefreie positive Regression mit versetztem LiDAR, NaN-Mastsektor und tatsächlich
+bekanntem Außen-/Paddingraum; Gegenfälle für Nachbarhindernis, unbekannten Schwenkraum,
+falschen TF und ungültige Pose. Verbundener `mast_start`-Produktgraph erreicht drei
+synthetische Folgeaufgaben. Das sind keine reale Start-/Durchfahrtsabnahme.

@@ -1,0 +1,131 @@
+"""Die Trennregeln der KI-Linie als Tests (README, MASTERPLAN §10).
+
+* Der Lotse ist reines Python: Standardbibliothek, numpy, Pillow.
+* Nichts in diesem Ordner sendet Fahrbefehle oder ruft Dienste und Aktionen.
+  Gesendet wird nur Text auf den vier eigenen Themen ``/ki_erkundung/…``.
+  Das Fahrziel (ein bis drei Punkte für den Erkunder) sendet nur der Roboter
+  selbst; der Lotsen-Dienst auf dem KI-Rechner kennt dieses Thema nicht.
+* Nach außen spricht nur ``lotse/ki_rechner.py`` (mit dem KI-Rechner im Haus).
+  Das Lotsen-Fenster liefert seine Anzeige nur an den eigenen Rechner aus.
+* Diese Linie hängt von keinem Paket der Hauptlinie ab.
+* Im Ordner liegen keine Bilder, Scans oder Blickrunden.
+"""
+import ast
+import sys
+from pathlib import Path
+
+WURZEL = Path(__file__).resolve().parents[1]
+STANDARD = set(sys.stdlib_module_names)
+NETZ = {'urllib', 'http', 'socket', 'requests', 'ftplib', 'smtplib', 'ssl', 'httpx',
+        'aiohttp', 'websocket', 'websockets', 'paramiko'}
+
+
+def einfuhren(datei: Path) -> set:
+    """Oberste Modulnamen aller Einfuhren einer Datei (ohne relative)."""
+    namen = set()
+    for knoten in ast.walk(ast.parse(datei.read_text(encoding='utf-8'))):
+        if isinstance(knoten, ast.Import):
+            namen |= {alias.name.split('.')[0] for alias in knoten.names}
+        elif isinstance(knoten, ast.ImportFrom) and knoten.level == 0 and knoten.module:
+            namen.add(knoten.module.split('.')[0])
+    return namen
+
+
+def quelldateien(*unterordner):
+    return sorted(p for name in unterordner for p in (WURZEL / name).rglob('*.py'))
+
+
+def test_der_lotse_braucht_nur_standardbibliothek_numpy_und_pillow():
+    assert quelldateien('lotse')
+    for datei in quelldateien('lotse'):
+        fremd = einfuhren(datei) - STANDARD - {'numpy', 'PIL', 'lotse'}
+        assert not fremd, f'{datei.name} führt ein: {sorted(fremd)}'
+
+
+def test_werkzeuge_haengen_von_keinem_paket_der_hauptlinie_ab():
+    erlaubt = STANDARD | {'numpy', 'PIL', 'lotse', 'rclpy', 'sensor_msgs', 'nav_msgs',
+                          'std_msgs', 'tf2_ros', 'beispielrunde_erzeugen',
+                          'ki_verbindung_ros', 'ros_ende'}
+    for datei in quelldateien('werkzeuge'):
+        fremd = einfuhren(datei) - erlaubt
+        assert not fremd, f'{datei.name} führt ein: {sorted(fremd)}'
+
+
+def test_nichts_sendet_fahrbefehle_oder_ruft_dienste_und_aktionen():
+    verboten = ('ActionClient', 'create_client', 'cmd_vel', 'Twist',
+                'set_parameters', 'ros2 topic pub')
+    for datei in quelldateien('lotse', 'werkzeuge'):
+        text = datei.read_text(encoding='utf-8')
+        for wort in verboten:
+            assert wort not in text, f'{datei.name} enthält {wort!r}'
+
+
+def test_gesendet_wird_nur_text_auf_den_eigenen_themen_der_ki_linie():
+    """Frage, Antwort, Status und das Fahrziel an den Erkunder; sonst nichts."""
+    sender = {}
+    for datei in quelldateien('lotse', 'werkzeuge'):
+        zeilen = [z.strip() for z in datei.read_text(encoding='utf-8').splitlines()
+                  if 'create_publisher(' in z]
+        if zeilen:
+            sender[datei.name] = zeilen
+    assert set(sender) == {'ki_verbindung_ros.py', 'lotse_dienst.py'}
+    for name, zeilen in sender.items():
+        for zeile in zeilen:
+            assert 'create_publisher(String, THEMA_' in zeile, f'{name}: {zeile}'
+    import ki_verbindung_ros
+    themen = [getattr(ki_verbindung_ros, n) for n in dir(ki_verbindung_ros)
+              if n.startswith('THEMA_')]
+    assert sorted(themen) == ['/ki_erkundung/antwort_json', '/ki_erkundung/fahrziel_json',
+                              '/ki_erkundung/frage_json',
+                              '/ki_erkundung/lotse_status_json']
+
+
+def test_das_fahrziel_sendet_nur_der_roboter_nie_der_ki_rechner():
+    """Die KI nennt eine Nummer; Punkte für den Erkunder rechnet der Roboter."""
+    for name in ('lotse_dienst.py', 'lotse_fenster.py'):
+        text = (WURZEL / 'werkzeuge' / name).read_text(encoding='utf-8')
+        assert 'FAHRZIEL' not in text and 'fahrziel' not in text, name
+    nutzer = sorted(datei.name for datei in quelldateien('lotse', 'werkzeuge')
+                    if 'Fahrzielsender(' in datei.read_text(encoding='utf-8'))
+    assert nutzer == ['fahrziel_senden.py']
+    # Antworten der KI enthalten nie Punkte: geprüft wird nur eine Nummer
+    assert 'punkte' not in (WURZEL / 'lotse' / 'antwort.py').read_text(encoding='utf-8')
+
+
+def test_nach_aussen_spricht_nur_die_verbindung_zum_ki_rechner():
+    for datei in quelldateien('lotse', 'werkzeuge'):
+        netz = einfuhren(datei) & NETZ
+        if datei.name == 'ki_rechner.py':
+            assert netz == {'urllib', 'socket'}
+            text = datei.read_text(encoding='utf-8')
+            assert 'ProxyHandler({})' in text         # kein Umweg über einen Proxy
+            assert "STANDARD_URL = 'http://localhost:11434'" in text
+        elif datei.name in ('lotse_fenster.py', 'sucher.py'):
+            # Anzeigen am Bildschirm (KI-Rechner: Lotsen-Fenster; Jetson:
+            # Sucher): je eine Seite, die nur der eigene Rechner abrufen
+            # kann. Sie bauen selbst keine Verbindung auf.
+            assert netz == {'http'}
+            text = datei.read_text(encoding='utf-8')
+            assert "ADRESSE = '127.0.0.1'" in text
+            assert text.count('ThreadingHTTPServer((') == 1
+            assert 'ThreadingHTTPServer((ADRESSE, wahl.port)' in text
+            assert '0.0.0.0' not in text and "''," not in text
+        else:
+            assert not netz, f'{datei.name} führt ein: {sorted(netz)}'
+
+
+def test_im_ordner_liegen_keine_bilder_scans_oder_blickrunden():
+    verboten = {'.jpg', '.jpeg', '.png', '.bmp', '.npz', '.npy', '.bag', '.db3', '.mcap',
+                '.pgm'}
+    for datei in WURZEL.rglob('*'):
+        if not datei.is_file() or '__pycache__' in datei.parts:
+            continue
+        assert datei.suffix.lower() not in verboten, datei
+        assert datei.name not in ('meta.json', 'wahrheit.json', 'ergebnis.json'), datei
+        assert not datei.name.startswith('scan_'), datei
+
+
+def test_keine_ros_paketdatei_im_ordner():
+    """Ohne package.xml sieht kein colcon-Build der Hauptlinie diesen Ordner."""
+    assert not list(WURZEL.rglob('package.xml'))
+    assert not list(WURZEL.rglob('setup.py'))

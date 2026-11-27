@@ -1,0 +1,203 @@
+diff --git a/src/explore/explore/metric_frontier.py b/src/explore/explore/metric_frontier.py
+index 518593b..aef4385 100644
+--- a/src/explore/explore/metric_frontier.py
++++ b/src/explore/explore/metric_frontier.py
+@@ -115,7 +115,7 @@ class MetricTaskPolicy:
+             # require new local measured evidence; no tries/limits are reset.
+             def new_input(a):
+                 return (evidence_key != a.evidence_key or
+-                    (a.reason == 'proposal_rejected' and
++                    (a.reason in ('proposal_rejected','partially_observed') and valid_view and
+                      math.dist(a.target_xy, target_xy) > .15+1e-12))
+             return (all(a.tries < self.retry_limit+1 and a.failures < self.retry_limit
+                         and now >= a.retry_after and new_input(a)
+@@ -130,7 +130,7 @@ class MetricTaskPolicy:
+                count_try=True, arrival_xy=None, count_failure=True):
+         attempt = self.attempts[candidate.task_id]
+         visited = (candidate.x, candidate.y)
+-        if outcome == 'observed' and arrival_xy is not None:
++        if outcome in ('observed','partially_observed') and arrival_xy is not None:
+             if (len(arrival_xy) != 2 or not all(math.isfinite(v) for v in arrival_xy)
+                     or math.dist(arrival_xy, visited) > .15+1e-12):
+                 raise ValueError('metric_observed_arrival_invalid')
+@@ -142,8 +142,8 @@ class MetricTaskPolicy:
+         attempt.evidence_key = candidate.evidence_key if evidence_key is None else evidence_key
+         attempt.retry_after = now + self.cooldown_s
+         attempt.completed = outcome == 'observed'
+-        if outcome == 'observed':
+-            attempt.completed = True
++        if outcome in ('observed','partially_observed'):
++            attempt.completed = outcome == 'observed'
+         elif outcome != 'pending' and count_failure:
+             attempt.failures += 1
+ 
+diff --git a/src/explore/explore/metric_frontier_runtime.py b/src/explore/explore/metric_frontier_runtime.py
+index 7f42323..4e68b80 100644
+--- a/src/explore/explore/metric_frontier_runtime.py
++++ b/src/explore/explore/metric_frontier_runtime.py
+@@ -30,7 +30,7 @@ from .frontier_task_evidence import _validated_snapshot
+ from .exploration_scope import AuthorizedExplorationScope
+ from .metric_frontier_candidates import boundary_samples, lidar_view, visible_boundary_cells
+ from .metric_progress import (local_evidence, reachable_remainder, CompletionWindow,
+-                              ObservationBaseline, measured_gain)
++                              ObservationBaseline, measured_gain, observation_complete)
+ from .exploration_persistence import (ExplorationStateRepository, ExplorationPersistenceError,
+                                      binding_from_map_manager_status)
+ from pathlib import Path as FilePath
+@@ -2838,6 +2838,9 @@ class MetricFrontierRuntime:
+                 return finish('canceled', 'user_canceled')
+             outcome=('observed' if gained else 'arrival_without_observation') if reached else (
+                 'route_invalidated' if hard=='route_invalidated' else 'task_unreached_cause_unproven')
++            if gained and not observation_complete(baseline,after[0],after[1],
++                    self._world_to_grid,self._grid_to_world):
++                outcome = 'partially_observed'
+             proposal_rejected = (not task_motion_dispatched and status == 'planning_failed'
+                                  and hard == 'route_invalidated')
+             if proposal_rejected:
+diff --git a/src/explore/explore/metric_progress.py b/src/explore/explore/metric_progress.py
+index cb7cbad..e60b77d 100644
+--- a/src/explore/explore/metric_progress.py
++++ b/src/explore/explore/metric_progress.py
+@@ -85,6 +85,29 @@ class ObservationBaseline:
+     points: tuple
+ 
+ 
++def observation_complete(baseline, grid, correlation, to_grid, to_world):
++    """All original finite points resolved, never a new-gain receipt.
++
++    A few genuine new cells are progress without necessarily finishing the
++    selected view. Unknown, cropped or fractionally regridded points remain
++    unresolved; a newer occupied cell is resolved evidence too.
++    """
++    q = grid.info.origin.orientation
++    yaw = math.atan2(2*(q.w*q.z+q.x*q.y), 1-2*(q.y*q.y+q.z*q.z))
++    if (not baseline.points or correlation.context != baseline.context or
++            correlation.source_stamp_ns <= baseline.source_stamp or
++            grid.info.resolution != baseline.resolution or
++            abs(math.atan2(math.sin(yaw-baseline.grid_yaw),math.cos(yaw-baseline.grid_yaw)))>1e-8):
++        return False
++    data = np.asarray(grid.data).reshape(grid.info.height,grid.info.width)
++    for xy in baseline.points:
++        col,row = to_grid(*xy,grid.info)
++        if (not (0<=row<data.shape[0] and 0<=col<data.shape[1]) or
++                data[row,col]<0 or math.dist(xy,to_world(col,row,grid.info))>1e-7):
++            return False
++    return True
++
++
+ def measured_gain(baseline, grid, correlation, pose, scan, mount, to_grid, to_world, maximum_range_m=4.):
+     """Unknown-to-observed change, seen by a newer finite actual LiDAR ray.
+ 
+diff --git a/tools/simulation/README_AP06.md b/tools/simulation/README_AP06.md
+index 87ccc85..522938b 100644
+--- a/tools/simulation/README_AP06.md
++++ b/tools/simulation/README_AP06.md
+@@ -77,7 +77,7 @@ python3 tools/simulation/prepare_ap06_sources.py \
+ ```
+ 
+ Für Offlineprüfung vorhandener Archive zusätzlich `--offline --verify-only`.
+-Der Quellbaum erhält den bestehenden Pure-Rotation-Patch und den deklarierten festen Karto-Rasterpatch; es wird kein Git-HEAD
++Der Quellbaum erhält den bestehenden Pure-Rotation-Patch, den deklarierten festen Karto-Rasterpatch und die gebundene NavFn-Zellmittenkorrektur; es wird kein Git-HEAD
+ für extrahierte Archive erfunden. Lizenzen bleiben in den Quellarchiven erhalten.
+ 
+ Die zugehörigen System-/ROS-Entwicklungsabhängigkeiten vor dem Build mit
+@@ -244,3 +244,16 @@ die aktuell vorhandene originale Wheel-DDS-Probe ohne neuen Stempel. Der
+ gesonderte HOLD-Test verwendet auch getrennte Gesundheitsobjekte: ein nur vom
+ Tor beobachteter Ausfall muss das Kind beenden und den bestehenden validierten
+ HOLD-/RESUME-Ablauf auslösen. Die Gesamtmission erhält keinen gesunden Ersatz.
++
++## NavFn-Zellmitten und öffentliche Vorausrichtung
++
++Die AP-06-Vorbereitung wendet `patches/nav2_navfn_humble_cell_centers.patch` auf den unveränderten Nav2-Pin an. Der reale Kostenrasterindex wird in die Zellmitte übersetzt; Weltpunkte verwenden die tatsächlich enthaltende Zelle. Originalradius, Kontur und alle Fristen bleiben erhalten. Direkter Test gegen das tatsächlich gelinkte Plugin ohne Node-/Aktorstart:
++
++```bash
++source /tmp/ap06/native-install/setup.bash
++cmake -S tools/simulation/navfn_cell_regression -B /tmp/ap06/navfn-cell-regression
++cmake --build /tmp/ap06/navfn-cell-regression -j2
++ctest --test-dir /tmp/ap06/navfn-cell-regression --output-on-failure
++```
++
++Der Explorer nutzt vor einer Fahrt die bestehende öffentliche Vorausrichtung nur als vollständig geprüfte Abhilfe für einen sonst unzulässigen nativen Sweep. Die erste private Abfahrt und die Liveprüfung eines aktiven Kindes bleiben native; keine fiktive erneute Drehung. Native Komponentenwerkzeuge übergeben dafür ihre tatsächlichen Eingaben an denselben vorhandenen Alignmentpfad. Alle Resultate bleiben Software-/Komponentenbelege, keine Hardwarequalifikation.
+diff --git a/tools/simulation/ap06_closed_product.py b/tools/simulation/ap06_closed_product.py
+index daed37c..0c42b04 100644
+--- a/tools/simulation/ap06_closed_product.py
++++ b/tools/simulation/ap06_closed_product.py
+@@ -649,7 +649,7 @@ def run(args):
+     out.mkdir(parents=True, exist_ok=False)
+     (out/'manifest.json').write_bytes(manifest_path.read_bytes())
+     result = {'case': case, 'passed': False, 'hardware_qualified': False,
+-              'manifest_compatible': not (args.ideal_lidar or args.profile_selection or args.capture_geometry or args.diagnostic_beams),
++              'manifest_compatible': not (args.ideal_lidar or args.profile_selection or args.capture_decisions or args.capture_geometry or args.diagnostic_beams),
+               'actual_lidar_beams': args.diagnostic_beams or manifest['sensor']['lidar_beams'],
+               'sensor_profile': 'native_mast_mask' if not args.ideal_lidar else 'ideal_full_360',
+               'reference_geometry_provided_to_product': False, 'truth_map_publisher': False,
+@@ -792,16 +792,18 @@ def run(args):
+             '-p', f'behavior_tree:={args.repo}/src/explore/behavior_trees/navigate_to_pose_no_recovery.xml',
+             '-p', f'wohnungserkundung_persistence_directory:={out}/checkpoints']+shared[1:]
+         explorer_command = py('explore.explore_node')
+-        if args.profile_selection:
++        if args.profile_selection or args.capture_decisions:
+             # Diagnostic wrapper only; original decisions and deadline stay.
+             code = (
+                 'import cProfile,json,numpy as np,pickle,time; from explore.metric_frontier_runtime import MetricFrontierRuntime as R; '
+                 'from explore.metric_checkpoint import policy_state; '
+-                'original=R._metric_candidates; counter=[0]\n'
++                'original=R._metric_select; counter=[0]\n'
++                f'profile_enabled={not args.capture_decisions!r}\n'
+                 'def profiled(self,*a,**kw):\n'
+-                ' p=cProfile.Profile(); counter[0]+=1\n'
++                ' p=cProfile.Profile() if profile_enabled else None; counter[0]+=1\n'
++                ' if counter[0]>32: return original(self,*a,**kw)\n'
+                 ' inputs=a[0]\n'
+-                ' policy=getattr(getattr(self,"_metric_selection_cache",None),"policy",None)\n'
++                ' policy=a[1]\n'
+                 ' scan=self._door_lidar_scan_snapshot()\n'
+                 ' attributes={k:getattr(self,k,None) for k in ('
+                 '"_metric_start_egress_enabled","_metric_egress_expired","_metric_body_anchor_expired",'
+@@ -825,9 +827,9 @@ def run(args):
+                 ' geometry=[{"resolution":g.info.resolution,"origin":[g.info.origin.position.x,g.info.origin.position.y],'
+                 '"width":g.info.width,"height":g.info.height} for g in (inputs[0],inputs[5])]\n'
+                 f' open({str(out)!r}+"/selection-geometry.json","w").write(json.dumps(geometry))\n'
+-                ' try: return p.runcall(original,self,*a,**kw)\n'
++                ' try: return p.runcall(original,self,*a,**kw) if p is not None else original(self,*a,**kw)\n'
+                 ' finally:\n'
+-                f'  p.dump_stats({str(out)!r}+"/selection-"+str(counter[0])+".prof")\n'
++                f'  if p is not None: p.dump_stats({str(out)!r}+"/selection-"+str(counter[0])+".prof")\n'
+                 '  inputs=a[0]\n'
+                 '  state={"body_anchor_expired":getattr(self,"_metric_body_anchor_expired",None),'
+                 '"egress_expired":getattr(self,"_metric_egress_expired",None),'
+@@ -837,7 +839,25 @@ def run(args):
+                 '"first_egress_grid":getattr(self,"_metric_egress_identity",None),'
+                 '"current_grids":[self._metric_grid_geometry(g) for g in (inputs[0],inputs[5])]}\n'
+                 f'  open({str(out)!r}+"/selection-state.json","w").write(json.dumps(state,default=str,indent=2))\n'
+-                'R._metric_candidates=profiled\nfrom explore.explore_node import main; main()')
++                'R._metric_select=profiled\n'
++                'departure=R._metric_departure_plan_ready; departure_count=[0]\n'
++                'def recorded_departure(self,inputs,route,target,stopped):\n'
++                ' departure_count[0]+=1; index=departure_count[0]\n'
++                ' if index>16: return departure(self,inputs,route,target,stopped)\n'
++                ' record=dict(kind="Own synthetic diagnostic bound native departure inputs; no health or acceptance",'
++                'inputs=list(inputs),reference=getattr(inputs,"map_odom_reference",None),'
++                'physical_motion=getattr(inputs,"physical_motion",None),route=route,target=target,'
++                'scope=self._metric_scope,body_bounds=self._metric_bounds,'
++                'controller_contract=dict(self._metric_status.get("controller_geometry_contract",{})),'
++                'ranking=dict(self._metric_status.get("ranking",{})))\n'
++                f' with open({str(out)!r}+"/departure-input-"+str(index)+".pickle","wb") as f: pickle.dump(record,f)\n'
++                ' result=departure(self,inputs,route,target,stopped)\n'
++                ' state=dict(result=result,rejection=self._metric_status.get("departure_plan_rejection"),'
++                'native_sight=self._metric_status.get("native_stop_observation"))\n'
++                f' open({str(out)!r}+"/departure-result-"+str(index)+".json","w").write(json.dumps(state,default=str,indent=2))\n'
++                ' return result\n'
++                'R._metric_departure_plan_ready=recorded_departure\n'
++                'from explore.explore_node import main; main()')
+             explorer_command = [sys.executable, '-c', code]
+         if args.capture_geometry:
+             # Passive diagnostic snapshots; never a manifest acceptance run.
+@@ -1055,6 +1075,7 @@ if __name__ == '__main__':
+                         default=Path(__file__).with_name('ap06_product_scenarios.json'))
+     parser.add_argument('--capture-geometry',action='store_true',help='diagnostic actual proof snapshots; no manifest acceptance')
+     parser.add_argument('--profile-selection', action='store_true', help='diagnostic overhead; not a qualification run')
++    parser.add_argument('--capture-decisions', action='store_true', help='bounded input snapshots without call profiling; not a qualification run')
+     parser.add_argument('--ideal-lidar', action='store_true', help='separate ideal sensor diagnostic, not native-mask qualification')
+     parser.add_argument('--diagnostic-beams', type=int, choices=(720, 2160),
+                         help='explicit density diagnostic; never qualifies the declared manifest')

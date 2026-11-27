@@ -1,0 +1,114 @@
+FFFFFF....                                                               [100%]
+=================================== FAILURES ===================================
+_ test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof[-0.00198534484739743--6.557910150495e-05-0.0-False] _
+
+dx = -0.00198534484739743, dy = -6.557910150495e-05, yaw = 0.0, growth = False
+
+    @pytest.mark.parametrize('dx,dy,yaw,growth', [(-.00198534484739743,-.00006557910150495,0.,False),
+        (.11,-.07,0.,True), (.12,-.08,.03,True)])
+    def test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof(dx,dy,yaw,growth):
+        node, inputs = referenced_fixture(native=True)
+        inventory = node._metric_egress
+        before = copy.deepcopy(inputs[0].data)
+        inputs = shift(node, inputs, dx, dy, yaw=yaw, growth=growth)
+>       assert node._metric_egress is inventory and not node._metric_egress_expired
+E       assert ((StartEgressEvidence(grid=nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=...ue],\n       [ True,  True,  True, ...,  True,  True,  True],\n       [ True,  True,  True, ...,  True,  True,  True]]))) is (StartEgressEvidence(grid=nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=...ue],\n       [ True,  True,  True, ...,  True,  True,  True],\n       [ True,  True,  True, ...,  True,  True,  True]]))) and not True)
+E        +  where (StartEgressEvidence(grid=nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=...ue],\n       [ True,  True,  True, ...,  True,  True,  True],\n       [ True,  True,  True, ...,  True,  True,  True]]))) = <explore.explore_node.ExploreNode object at 0x7f39c23be050>._metric_egress
+E        +  and   True = <explore.explore_node.ExploreNode object at 0x7f39c23be050>._metric_egress_expired
+
+src/explore/test/test_metric_egress_reference.py:54: AssertionError
+_ test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof[0.11--0.07-0.0-True] _
+
+dx = 0.11, dy = -0.07, yaw = 0.0, growth = True
+
+    @pytest.mark.parametrize('dx,dy,yaw,growth', [(-.00198534484739743,-.00006557910150495,0.,False),
+        (.11,-.07,0.,True), (.12,-.08,.03,True)])
+    def test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof(dx,dy,yaw,growth):
+        node, inputs = referenced_fixture(native=True)
+        inventory = node._metric_egress
+        before = copy.deepcopy(inputs[0].data)
+        inputs = shift(node, inputs, dx, dy, yaw=yaw, growth=growth)
+>       assert node._metric_egress is inventory and not node._metric_egress_expired
+E       assert ((StartEgressEvidence(grid=nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=...ue],\n       [ True,  True,  True, ...,  True,  True,  True],\n       [ True,  True,  True, ...,  True,  True,  True]]))) is (StartEgressEvidence(grid=nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=...ue],\n       [ True,  True,  True, ...,  True,  True,  True],\n       [ True,  True,  True, ...,  True,  True,  True]]))) and not True)
+E        +  where (StartEgressEvidence(grid=nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=...ue],\n       [ True,  True,  True, ...,  True,  True,  True],\n       [ True,  True,  True, ...,  True,  True,  True]]))) = <explore.explore_node.ExploreNode object at 0x7f39c2242ef0>._metric_egress
+E        +  and   True = <explore.explore_node.ExploreNode object at 0x7f39c2242ef0>._metric_egress_expired
+
+src/explore/test/test_metric_egress_reference.py:54: AssertionError
+_ test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof[0.12--0.08-0.03-True] _
+
+dx = 0.12, dy = -0.08, yaw = 0.03, growth = True
+
+    @pytest.mark.parametrize('dx,dy,yaw,growth', [(-.00198534484739743,-.00006557910150495,0.,False),
+        (.11,-.07,0.,True), (.12,-.08,.03,True)])
+    def test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof(dx,dy,yaw,growth):
+        node, inputs = referenced_fixture(native=True)
+        inventory = node._metric_egress
+        before = copy.deepcopy(inputs[0].data)
+        inputs = shift(node, inputs, dx, dy, yaw=yaw, growth=growth)
+>       assert node._metric_egress is inventory and not node._metric_egress_expired
+E       assert ((StartEgressEvidence(grid=nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=...ue],\n       [ True,  True,  True, ...,  True,  True,  True],\n       [ True,  True,  True, ...,  True,  True,  True]]))) is (StartEgressEvidence(grid=nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=...ue],\n       [ True,  True,  True, ...,  True,  True,  True],\n       [ True,  True,  True, ...,  True,  True,  True]]))) and not True)
+E        +  where (StartEgressEvidence(grid=nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=...ue],\n       [ True,  True,  True, ...,  True,  True,  True],\n       [ True,  True,  True, ...,  True,  True,  True]]))) = <explore.explore_node.ExploreNode object at 0x7f39c240c640>._metric_egress
+E        +  and   True = <explore.explore_node.ExploreNode object at 0x7f39c240c640>._metric_egress_expired
+
+src/explore/test/test_metric_egress_reference.py:54: AssertionError
+___ test_slam_correction_does_not_erase_departure_or_allow_physical_reentry ____
+
+    def test_slam_correction_does_not_erase_departure_or_allow_physical_reentry():
+        node, inputs = referenced_fixture()
+        inputs[2] = (.15,.05,0.)
+        node._metric_prepare_egress(inputs)
+        committed = dict(node._metric_egress[0].remaining_area)
+        updated = shift(node, inputs, .002, travel=0.)
+>       assert all(e.valid for e in node._metric_egress)
+E       assert False
+E        +  where False = all(<generator object test_slam_correction_does_not_erase_departure_or_allow_physical_reentry.<locals>.<genexpr> at 0x7f39c245ef10>)
+
+src/explore/test/test_metric_egress_reference.py:67: AssertionError
+_ test_new_unknown_or_occupied_departure_cell_is_never_added_after_correction[-1] _
+
+value = -1
+
+    @pytest.mark.parametrize('value', [-1, 100])
+    def test_new_unknown_or_occupied_departure_cell_is_never_added_after_correction(value):
+        node, inputs = referenced_fixture()
+        updated = shift(node, inputs, .002)
+        row, col = 20, 15
+        a = np.asarray(updated[0].data).reshape(updated[3].shape).copy()
+        a[row,col] = value
+        updated[0].data = a.ravel().tolist()
+        updated[3][row,col] = False
+        assert node._metric_waypoints_clear(updated,(updated[2][:2],(.752,.05))) is None
+>       assert node._metric_last_route_rejection == 'start_egress_new_unknown_or_obstacle'
+E       AssertionError: assert 'start_egress...rence_expired' == 'start_egress...n_or_obstacle'
+E         - start_egress_new_unknown_or_obstacle
+E         + start_egress_reference_expired
+
+src/explore/test/test_metric_egress_reference.py:85: AssertionError
+_ test_new_unknown_or_occupied_departure_cell_is_never_added_after_correction[100] _
+
+value = 100
+
+    @pytest.mark.parametrize('value', [-1, 100])
+    def test_new_unknown_or_occupied_departure_cell_is_never_added_after_correction(value):
+        node, inputs = referenced_fixture()
+        updated = shift(node, inputs, .002)
+        row, col = 20, 15
+        a = np.asarray(updated[0].data).reshape(updated[3].shape).copy()
+        a[row,col] = value
+        updated[0].data = a.ravel().tolist()
+        updated[3][row,col] = False
+        assert node._metric_waypoints_clear(updated,(updated[2][:2],(.752,.05))) is None
+>       assert node._metric_last_route_rejection == 'start_egress_new_unknown_or_obstacle'
+E       AssertionError: assert 'start_egress...rence_expired' == 'start_egress...n_or_obstacle'
+E         - start_egress_new_unknown_or_obstacle
+E         + start_egress_reference_expired
+
+src/explore/test/test_metric_egress_reference.py:85: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_egress_reference.py::test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof[-0.00198534484739743--6.557910150495e-05-0.0-False]
+FAILED src/explore/test/test_metric_egress_reference.py::test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof[0.11--0.07-0.0-True]
+FAILED src/explore/test/test_metric_egress_reference.py::test_native_measured_start_survives_rigid_slam_correction_with_fresh_proof[0.12--0.08-0.03-True]
+FAILED src/explore/test/test_metric_egress_reference.py::test_slam_correction_does_not_erase_departure_or_allow_physical_reentry
+FAILED src/explore/test/test_metric_egress_reference.py::test_new_unknown_or_occupied_departure_cell_is_never_added_after_correction[-1]
+FAILED src/explore/test/test_metric_egress_reference.py::test_new_unknown_or_occupied_departure_cell_is_never_added_after_correction[100]
+6 failed, 4 passed in 0.58s

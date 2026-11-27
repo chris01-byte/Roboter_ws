@@ -1,0 +1,35 @@
+Starting >>> amadeus_map_identity
+Finished <<< amadeus_map_identity [0.40s]
+Starting >>> base_hardware
+Finished <<< base_hardware [1.50s]
+Starting >>> robot_interfaces
+Finished <<< robot_interfaces [0.02s]
+Starting >>> bt_orchestrator
+Finished <<< bt_orchestrator [0.35s]
+Starting >>> mission_manager
+Finished <<< mission_manager [0.81s]
+Starting >>> robot_state_estimation
+Finished <<< robot_state_estimation [1.52s]
+Starting >>> vl53_near_field
+Finished <<< vl53_near_field [0.64s]
+Starting >>> explore
+Finished <<< explore [30.8s]
+Starting >>> robot_navigation
+[36.385s] ERROR:colcon.colcon_core.task.python.test:Failed to find the following files:
+- /evidence/ap06-product-install/safety_monitor/share/safety_monitor/package.sh
+- /evidence/ap06-product-install/amadeus_lidar_bringup/share/amadeus_lidar_bringup/package.sh
+Check that the following packages have been built:
+- safety_monitor
+- amadeus_lidar_bringup
+Failed   <<< robot_navigation [0.00s, exited with code 1]
+Starting >>> robot_map_manager
+[36.389s] ERROR:colcon.colcon_core.task.python.test:Failed to find the following files:
+- /evidence/ap06-product-install/safety_monitor/share/safety_monitor/package.sh
+- /evidence/ap06-product-install/amadeus_lidar_bringup/share/amadeus_lidar_bringup/package.sh
+Check that the following packages have been built:
+- safety_monitor
+- amadeus_lidar_bringup
+Failed   <<< robot_map_manager [0.00s, exited with code 1]
+
+Summary: 8 packages finished [36.3s]
+  2 packages failed: robot_map_manager robot_navigation

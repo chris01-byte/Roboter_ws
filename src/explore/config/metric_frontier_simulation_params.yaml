@@ -1,0 +1,12 @@
+# AP-03 opt-in model, load AFTER metric_frontier_params.yaml.
+# Qualified only by tools/simulation/ap03_nav2_closed_loop.py. The 20-mm /
+# 0.05-rad band describes that synthetic plant; real tracking/sensor/stop
+# qualification belongs to AP-06. Never infer hardware approval from this file.
+# Existing conservative validation remains the node default.
+explore_node:
+  ros__parameters:
+    metric_path_validation: rpp_rollout
+    prealign_enabled: true
+    prealign_handoff_tolerance_rad: 0.02
+    prealign_stop_margin_rad: 0.01
+    prealign_min_improvement_rad: 0.005

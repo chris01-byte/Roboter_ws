@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "scope": "bounded stopped waiting only",
+  "source_baseline": "34fbad1",
+  "simulation": {
+    "path": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-order-source-a",
+    "accepted": false,
+    "manifest_compatible": false,
+    "travel_m": 0.1915289219251545,
+    "arrivals": 0,
+    "observations": 0,
+    "first_trigger": "start_motion_wheel_stale_after_processing",
+    "followup": "route_invalidated",
+    "terminal": "vl53_triplet_unmatched"
+  },
+  "before": {
+    "path": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/publication-before",
+    "failures": 2
+  },
+  "after": {
+    "path": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/publication-after",
+    "passed": 34
+  },
+  "limits_unchanged": true,
+  "no_movement_in_wait": true,
+  "hardware_test": false,
+  "rollback": "revert only publication-window wait diff",
+  "sha256": {
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-order-source-a/result.json": "cfde3b11752f99405fedd83e16e71a57f0fab56c2df0ad2377af02aeee68f01b",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-order-source-a/input-stage-timings.jsonl": "3a772719086c7703a4aa27746d3f2778e97f532908800e510296a49765eb32e3",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/publication-before/results.xml": "4be15c9c6dcd480a176f983bf188fe3e870b6ba9df1eb2d5cce2827ce2be4e52",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/publication-after/results.xml": "55b686c8f29bbde51730d710e0a0163526491fdcf37fe502039fb5105c97f8b2"
+  }
+}

@@ -1,0 +1,304 @@
+"""Aufnahme einer Blickrunde über echte ROS-Themen (nur wo rclpy vorhanden ist).
+
+Ein Hilfsknoten spielt Kamera-Relay, LiDAR, Odometrie und TF mit Daten der
+künstlichen Beispielwelt; das Aufnahmewerkzeug hört wie am Roboter mit.
+Aufruf in einer abgeschotteten ROS-Umgebung, zum Beispiel:
+
+    env -u CYCLONEDDS_URI ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 \\
+        python3 -m pytest -q ki_erkundung/tests/test_aufnahme_ros.py
+"""
+import math
+import threading
+import time
+
+import numpy as np
+import pytest
+
+rclpy = pytest.importorskip('rclpy')
+
+import beispielrunde_erzeugen as welt  # noqa: E402
+from blickrunde_aufnehmen import eingabe, nehme_auf  # noqa: E402
+from lotse.ablauf import bereite_vor  # noqa: E402
+from lotse.blickrunde import Blickrunde  # noqa: E402
+from lotse.geometrie import Kamera, kamera_montage, lidar_montage  # noqa: E402
+
+
+def test_aufnahme_ueber_ros_ergibt_eine_auswertbare_blickrunde(tmp_path):
+    from geometry_msgs.msg import TransformStamped
+    from nav_msgs.msg import Odometry
+    from sensor_msgs.msg import CameraInfo, CompressedImage, LaserScan
+    from tf2_ros import StaticTransformBroadcaster
+
+    kamera = Kamera.aus_oeffnungswinkel(640, 360, 69.0)
+    flaechen = welt.welt()
+    x, y, gier0 = welt.STANDPUNKT
+    rclpy.init()
+    quelle = rclpy.create_node('ki_test_quelle')
+    try:
+        sender = {
+            'bild': quelle.create_publisher(CompressedImage, '/kitest/rgb', 5),
+            'tiefe': quelle.create_publisher(CompressedImage, '/kitest/tiefe', 5),
+            'info': quelle.create_publisher(CameraInfo, '/kitest/info', 5),
+            'scan': quelle.create_publisher(LaserScan, '/kitest/scan', 5),
+            'odom': quelle.create_publisher(Odometry, '/kitest/odom', 5),
+        }
+        # TF wie am Roboter: base_link 0,09 m über dem Boden
+        tf_sender = StaticTransformBroadcaster(quelle)
+        transformationen = []
+        for kind, verschiebung, quaternion in (
+                ('laser_frame', (0.245, 0.0, 0.66), (0.0, 0.0, math.sqrt(0.5), math.sqrt(0.5))),
+                ('oak_rgb_camera_optical_frame', (0.15, 0.0, 1.25), None)):
+            tf = TransformStamped()
+            tf.header.frame_id, tf.child_frame_id = 'base_link', kind
+            (tf.transform.translation.x, tf.transform.translation.y,
+             tf.transform.translation.z) = verschiebung
+            if quaternion is None:              # Kamera: aus der Montagematrix
+                r = kamera_montage()[:3, :3]
+                w = math.sqrt(1.0 + r[0, 0] + r[1, 1] + r[2, 2]) / 2.0
+                quaternion = ((r[2, 1] - r[1, 2]) / (4 * w), (r[0, 2] - r[2, 0]) / (4 * w),
+                              (r[1, 0] - r[0, 1]) / (4 * w), w)
+            (tf.transform.rotation.x, tf.transform.rotation.y,
+             tf.transform.rotation.z, tf.transform.rotation.w) = quaternion
+            transformationen.append(tf)
+        schritte = 25                           # 25 Bilder in 15-Grad-Schritten
+        # Lage in der Karte (vom SLAM): am Ende der Drehung, Blick wie das letzte Bild
+        gier_ende = gier0 + math.radians(15.0 * (schritte - 1))
+        karte = TransformStamped()
+        karte.header.frame_id, karte.child_frame_id = 'map', 'base_link'
+        karte.transform.translation.x, karte.transform.translation.y = x, y
+        karte.transform.rotation.z = math.sin(gier_ende / 2.0)
+        karte.transform.rotation.w = math.cos(gier_ende / 2.0)
+        transformationen.append(karte)
+        tf_sender.sendTransform(transformationen)
+
+        fertig = threading.Event()
+
+        def stempel(t):
+            nachricht = quelle.get_clock().now().to_msg()
+            nachricht.sec, nachricht.nanosec = int(t), int((t % 1.0) * 1e9)
+            return nachricht
+
+        def spiele():
+            time.sleep(1.0)                     # Abonnements finden lassen
+            t0 = time.time()
+            for k in range(schritte):
+                gier = gier0 + math.radians(15.0 * k)
+                t = t0 + 0.4 * k
+                info = CameraInfo()
+                info.header.frame_id = 'oak_rgb_camera_optical_frame'
+                info.width, info.height = kamera.breite, kamera.hoehe
+                info.k = [float(v) for v in kamera.als_info()['k']]
+                sender['info'].publish(info)
+                roh = welt.scan(flaechen, x, y, gier, t)
+                scan = LaserScan()
+                scan.header.frame_id, scan.header.stamp = 'laser_frame', stempel(t)
+                scan.angle_min, scan.angle_increment = roh['winkel_min'], roh['winkel_schritt']
+                scan.range_min, scan.range_max = 0.03, 25.0
+                werte = np.array([np.nan if v is None else v for v in roh['entfernungen']])
+                werte[roh['weit']] = np.inf
+                scan.ranges = [float(v) for v in werte]
+                sender['scan'].publish(scan)
+                odom = Odometry()
+                odom.header.stamp = stempel(t)
+                odom.pose.pose.orientation.z = math.sin((gier - gier0) / 2.0)
+                odom.pose.pose.orientation.w = math.cos((gier - gier0) / 2.0)
+                sender['odom'].publish(odom)
+                for name, daten, form in (('tiefe', b'\x89PNGtiefe', '16UC1; png'),
+                                          ('bild', welt.foto(flaechen, kamera, x, y, gier),
+                                           'jpeg; bgr8')):
+                    bild = CompressedImage()
+                    bild.header.frame_id = 'oak_rgb_camera_optical_frame'
+                    bild.header.stamp = stempel(t + 0.01)
+                    bild.format, bild.data = form, daten
+                    sender[name].publish(bild)
+                time.sleep(0.08)
+            # ein letzter Scan, damit das letzte Bild abgeschlossen wird
+            scan.header.stamp = stempel(t + 1.0)
+            sender['scan'].publish(scan)
+            time.sleep(0.5)
+            fertig.set()
+
+        faden = threading.Thread(target=spiele, daemon=True)
+        faden.start()
+        wahl = eingabe().parse_args([
+            '--name', 'ros_probe', '--ausgabe', str(tmp_path), '--dauer', '30',
+            '--bild-topic', '/kitest/rgb', '--tiefe-topic', '/kitest/tiefe',
+            '--info-topic', '/kitest/info', '--scan-topic', '/kitest/scan',
+            '--odom-topic', '/kitest/odom'])
+        ordner = nehme_auf(wahl, halt=fertig.is_set)
+        faden.join(timeout=5.0)
+    finally:
+        quelle.destroy_node()
+        rclpy.shutdown()
+
+    assert ordner is not None and ordner.parent == tmp_path
+    runde = Blickrunde.lade(ordner)
+    assert len(runde.aufnahmen) >= schritte - 2          # Bestes Bemühen: fast alle
+    assert runde.kamera() == kamera
+    assert runde.meta['quelle']['lidar_rahmen'] == 'laser_frame'
+    assert runde.aufnahmen[0]['tiefe'].endswith('.png')
+    # Montage wurde aus TF gelesen und stimmt mit dem Roboter überein
+    assert runde.meta['montage']['quelle'] == 'tf'
+    assert np.allclose(runde.boden_lidar(), lidar_montage(), atol=1e-6)
+    assert np.allclose(runde.boden_kamera(), kamera_montage(), atol=1e-6)
+    vorbereitung = bereite_vor(runde)
+    assert vorbereitung.auswahl['vollstaendig']
+    assert len(vorbereitung.oeffnungen) == 2
+    # Lage am Ende der Runde aus TF: daraus der Standpunktrahmen der Runde
+    from lotse.wahl import standpunkt_in_der_karte
+    assert runde.karte['rahmen'] == 'map'
+    assert runde.karte['basis_ende'][:2] == pytest.approx([x, y], abs=1e-4)
+    sx, sy, sgier = standpunkt_in_der_karte(runde.karte, vorbereitung.gier_ende_rad)
+    assert (sx, sy) == pytest.approx((x, y), abs=1e-4)
+    assert math.degrees(sgier) == pytest.approx(math.degrees(gier0), abs=1.5)
+
+
+def test_sucher_zeigt_das_laufende_kamerabild_und_endet_von_selbst(tmp_path):
+    """sucher.py als eigenes Programm: liest mit, speichert nichts, endet nach --dauer."""
+    import json
+    import socket
+    import subprocess
+    import sys
+    import urllib.request
+    from pathlib import Path
+    from sensor_msgs.msg import CompressedImage
+    with socket.socket() as probe:
+        probe.bind(('127.0.0.1', 0))
+        port = probe.getsockname()[1]
+    skript = Path(__file__).resolve().parents[1] / 'werkzeuge' / 'sucher.py'
+    programm = subprocess.Popen(
+        [sys.executable, str(skript), '--kein-browser', '--port', str(port), '--dauer', '6',
+         '--bild-topic', '/kitest/sucher'], cwd=tmp_path, stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT, text=True)
+    kamera = Kamera.aus_oeffnungswinkel(320, 180, 64.0)
+    bild = welt.foto(welt.welt(), kamera, *welt.STANDPUNKT)
+    ohne_umweg = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    zustand = {'bilder': 0}
+    rclpy.init()
+    quelle = rclpy.create_node('ki_test_sucher_quelle')
+    try:
+        sender = quelle.create_publisher(CompressedImage, '/kitest/sucher', 5)
+        ende = time.monotonic() + 5.0
+        while zustand['bilder'] < 2 and time.monotonic() < ende:
+            nachricht = CompressedImage()
+            nachricht.format = 'jpeg'
+            nachricht.data = bild
+            sender.publish(nachricht)
+            rclpy.spin_once(quelle, timeout_sec=0.1)
+            try:
+                with ohne_umweg.open(f'http://127.0.0.1:{port}/api/zustand', timeout=2) as a:
+                    zustand = json.loads(a.read())
+            except OSError:
+                pass
+        assert zustand['bilder'] >= 2 and (zustand['breite'], zustand['hoehe']) == (320, 180)
+        with ohne_umweg.open(f'http://127.0.0.1:{port}/bild', timeout=2) as antwort:
+            assert antwort.read() == bytes(bild)
+        ausgabe, _ = programm.communicate(timeout=12)       # endet nach --dauer von selbst
+    finally:
+        if programm.poll() is None:
+            programm.kill()
+        quelle.destroy_node()
+        rclpy.shutdown()
+    assert programm.returncode == 0
+    assert 'keines gespeichert' in ausgabe
+    assert list(tmp_path.iterdir()) == []
+
+
+def _aufnahme_mit_gespieltem_erkunder(tmp_path, status, dauer, nachlauf):
+    """Aufnahme im selben Prozess, Sensoren und Erkunder gespielt; gibt Ordner, Zeit, Ausgabe."""
+    from ros_spieler import Spieler, aufnahme_argumente
+    rclpy.init()
+    spieler = None
+    try:
+        spieler = Spieler(rclpy, status=status).start()
+        wahl = eingabe().parse_args(aufnahme_argumente(tmp_path, dauer=dauer)
+                                    + ['--bis-wartephase', str(nachlauf)])
+        beginn = time.monotonic()
+        ordner = nehme_auf(wahl)
+        return ordner, time.monotonic() - beginn
+    finally:
+        if spieler is not None:
+            spieler.stopp()
+        rclpy.shutdown()
+
+
+def test_aufnahme_endet_von_selbst_kurz_nach_dem_rundblick(tmp_path, capsys):
+    """Kein kill -INT nötig: 1 s nach der Wartephase des Erkunders ist Schluss."""
+    status = [(0.0, {'state': 'idle', 'phase': None}),
+              (1.0, {'state': 'running', 'phase': 'initial_scan'}),
+              (4.0, {'state': 'running', 'phase': 'stage_drive_wait_target'})]
+    ordner, dauer = _aufnahme_mit_gespieltem_erkunder(tmp_path, status, 40, 1)
+    ausgabe = capsys.readouterr().out
+    assert ordner is not None and 4.0 <= dauer <= 9.0, (dauer, ausgabe)
+    assert 'Erkunder: Rundblick läuft.' in ausgabe and 'Aufnahme endet in 1 s' in ausgabe
+    zeile = [z for z in ausgabe.splitlines() if z.startswith('ERGEBNIS')][-1]
+    assert f'grund=wartephase runde={ordner.name}' in zeile and 'lage=ja' in zeile
+    assert 'wartephase_unix=-' not in zeile
+    runde = Blickrunde.lade(ordner)
+    assert runde.karte['rahmen'] == 'map' and runde.meta['quelle']['ende'] == 'wartephase'
+
+
+def test_wartephase_ohne_rundblick_beendet_die_aufnahme_nicht(tmp_path, capsys):
+    status = [(0.0, {'state': 'running', 'phase': 'stage_drive_wait_target'})]
+    ordner, dauer = _aufnahme_mit_gespieltem_erkunder(tmp_path, status, 4, 0)
+    assert ordner is not None and dauer >= 3.9
+    assert 'ERGEBNIS grund=dauer' in capsys.readouterr().out
+
+
+def test_endet_die_mission_vor_der_wartephase_endet_die_aufnahme(tmp_path, capsys):
+    status = [(0.5, {'state': 'running', 'phase': 'initial_scan'}),
+              (2.0, {'state': 'failed', 'phase': 'initial_scan'})]
+    ordner, dauer = _aufnahme_mit_gespieltem_erkunder(tmp_path, status, 40, 5)
+    ausgabe = capsys.readouterr().out
+    assert ordner is not None and dauer < 6.0
+    assert 'ERGEBNIS grund=mission_ende' in ausgabe and 'Mission beendet (failed)' in ausgabe
+
+
+def test_signal_mitten_in_der_aufnahme_schreibt_trotzdem_die_runde(tmp_path):
+    """Wie am Roboter: eigener Prozess, genau ein Signal an seine PID (KI-F9, Lauf 2w).
+
+    Zehn Durchgänge: das Kriterium von Schritt 1 (Bewertung nach KI-F9, §10).
+    """
+    import random
+    import signal
+    import subprocess
+    import sys
+    from pathlib import Path
+    from ros_spieler import Spieler, aufnahme_argumente
+    skript = Path(__file__).resolve().parents[1] / 'werkzeuge' / 'blickrunde_aufnehmen.py'
+    zufall = random.Random(11)
+    rclpy.init()
+    spieler = Spieler(rclpy, scan_hz=20.0, bild_hz=4.0, tf_hz=100.0, grad_je_s=20.0).start()
+    try:
+        for durchgang in range(10):
+            kind = subprocess.Popen(
+                [sys.executable, str(skript)]
+                + aufnahme_argumente(tmp_path / 'runden', name=f'signal{durchgang}', dauer=60)
+                + ['--bereit-nach', '1'],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            try:
+                zeilen = []
+                for _ in range(80):
+                    zeilen.append(kind.stdout.readline())
+                    if zeilen[-1].startswith('BEREIT') or not zeilen[-1]:
+                        break
+                assert zeilen[-1].startswith('BEREIT'), ''.join(zeilen)
+                try:
+                    kind.wait(timeout=zufall.uniform(0.5, 2.5))
+                except subprocess.TimeoutExpired:
+                    pass
+                kind.send_signal(signal.SIGTERM if durchgang == 2 else signal.SIGINT)
+                rest, _ = kind.communicate(timeout=30)
+            finally:
+                if kind.poll() is None:
+                    kind.kill()
+            ausgabe = ''.join(zeilen) + rest
+            assert kind.returncode == 0, ausgabe
+            assert 'Traceback' not in ausgabe and 'Blickrunde geschrieben' in ausgabe, ausgabe
+            assert 'ERGEBNIS grund=signal' in ausgabe, ausgabe
+    finally:
+        spieler.stopp()
+        rclpy.shutdown()
+    runden = sorted((tmp_path / 'runden').iterdir())
+    assert len(runden) == 10
+    assert all(len(Blickrunde.lade(r).aufnahmen) >= 1 for r in runden)

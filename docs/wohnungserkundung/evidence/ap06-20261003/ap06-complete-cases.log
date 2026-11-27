@@ -1,0 +1,10 @@
+START complete-a
+RESULT complete-a {"passed": false, "error": "AP06 acceptance not met: completion_raw_pose_not_observed_free", "travel_m": 0.057476972438944264, "injection_to_standstill_s": null, "hold_to_standstill_s": null}
+START complete-b
+RESULT complete-b {"passed": false, "error": "AP06 acceptance not met: completion_raw_pose_not_observed_free", "travel_m": 0.056465170256522035, "injection_to_standstill_s": null, "hold_to_standstill_s": null}
+START complete-c
+RESULT complete-c {"passed": false, "error": "AP06 acceptance not met: completion_raw_pose_not_observed_free", "travel_m": 0.05180036166951022, "injection_to_standstill_s": null, "hold_to_standstill_s": null}
+START complete-cancel
+RESULT complete-cancel {"passed": true, "error": null, "travel_m": 0.03486005738861332, "injection_to_standstill_s": 0.33097599799657473, "hold_to_standstill_s": null}
+START complete-gyro-hold
+RESULT complete-gyro-hold {"passed": true, "error": null, "travel_m": 0.048755662937486705, "injection_to_standstill_s": 0.5606006129964953, "hold_to_standstill_s": 0.24237376699602464}

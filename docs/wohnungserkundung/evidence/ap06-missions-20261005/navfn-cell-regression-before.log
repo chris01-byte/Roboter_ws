@@ -1,0 +1,107 @@
+[ERROR] [1791251567.921321454] [NavfnPlanner]: worldToMap failed: mx,my: 1,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921362134] [NavfnPlanner]: worldToMap failed: mx,my: 5,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921365659] [NavfnPlanner]: worldToMap failed: mx,my: 17,1, size_x,size_y: 17,13
+[ERROR] [1791251567.921367522] [NavfnPlanner]: worldToMap failed: mx,my: 17,7, size_x,size_y: 17,13
+[ERROR] [1791251567.921368823] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921370175] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921371548] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[ERROR] [1791251567.921373280] [NavfnPlanner]: worldToMap failed: mx,my: 0,-2147483648, size_x,size_y: 17,13
+[INFO] [1791251567.921377336] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251567.921381001] [NavfnPlanner]: worldToMap failed: mx,my: 1,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921383055] [NavfnPlanner]: worldToMap failed: mx,my: 5,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921384396] [NavfnPlanner]: worldToMap failed: mx,my: 17,1, size_x,size_y: 17,13
+[ERROR] [1791251567.921385728] [NavfnPlanner]: worldToMap failed: mx,my: 17,6, size_x,size_y: 17,13
+[ERROR] [1791251567.921386920] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921388232] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921389684] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[ERROR] [1791251567.921391166] [NavfnPlanner]: worldToMap failed: mx,my: 0,-2147483648, size_x,size_y: 17,13
+[INFO] [1791251567.921392799] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251567.921394762] [NavfnPlanner]: worldToMap failed: mx,my: 1,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921396254] [NavfnPlanner]: worldToMap failed: mx,my: 5,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921397616] [NavfnPlanner]: worldToMap failed: mx,my: 17,1, size_x,size_y: 17,13
+[ERROR] [1791251567.921398838] [NavfnPlanner]: worldToMap failed: mx,my: 17,7, size_x,size_y: 17,13
+[ERROR] [1791251567.921400010] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921401231] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921402383] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[ERROR] [1791251567.921403555] [NavfnPlanner]: worldToMap failed: mx,my: 0,-2147483648, size_x,size_y: 17,13
+[INFO] [1791251567.921404757] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251567.921406269] [NavfnPlanner]: worldToMap failed: mx,my: 1,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921407671] [NavfnPlanner]: worldToMap failed: mx,my: 5,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921409043] [NavfnPlanner]: worldToMap failed: mx,my: 17,1, size_x,size_y: 17,13
+[ERROR] [1791251567.921410255] [NavfnPlanner]: worldToMap failed: mx,my: 17,7, size_x,size_y: 17,13
+[ERROR] [1791251567.921411456] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921412628] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921413990] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[ERROR] [1791251567.921415172] [NavfnPlanner]: worldToMap failed: mx,my: 0,-2147483648, size_x,size_y: 17,13
+[INFO] [1791251567.921416534] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251567.921418176] [NavfnPlanner]: worldToMap failed: mx,my: 1,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921419709] [NavfnPlanner]: worldToMap failed: mx,my: 5,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921420900] [NavfnPlanner]: worldToMap failed: mx,my: 17,1, size_x,size_y: 17,13
+[ERROR] [1791251567.921422122] [NavfnPlanner]: worldToMap failed: mx,my: 17,7, size_x,size_y: 17,13
+[ERROR] [1791251567.921423304] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921424466] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921429082] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[ERROR] [1791251567.921430665] [NavfnPlanner]: worldToMap failed: mx,my: 0,-2147483648, size_x,size_y: 17,13
+[INFO] [1791251567.921431927] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251567.921433910] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[ERROR] [1791251567.921435332] [NavfnPlanner]: worldToMap failed: mx,my: 17,7, size_x,size_y: 17,13
+[ERROR] [1791251567.921436604] [NavfnPlanner]: worldToMap failed: mx,my: 17,12, size_x,size_y: 17,13
+[ERROR] [1791251567.921437815] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921438977] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[ERROR] [1791251567.921440139] [NavfnPlanner]: worldToMap failed: mx,my: 0,-2147483648, size_x,size_y: 17,13
+[INFO] [1791251567.921441351] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251567.921443033] [NavfnPlanner]: worldToMap failed: mx,my: 1,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921444595] [NavfnPlanner]: worldToMap failed: mx,my: 5,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921445787] [NavfnPlanner]: worldToMap failed: mx,my: 17,1, size_x,size_y: 17,13
+[ERROR] [1791251567.921446959] [NavfnPlanner]: worldToMap failed: mx,my: 17,7, size_x,size_y: 17,13
+[ERROR] [1791251567.921448141] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921449322] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921450444] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[ERROR] [1791251567.921451616] [NavfnPlanner]: worldToMap failed: mx,my: 0,-2147483648, size_x,size_y: 17,13
+[INFO] [1791251567.921452998] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251567.921454670] [NavfnPlanner]: worldToMap failed: mx,my: 0,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921456413] [NavfnPlanner]: worldToMap failed: mx,my: 4,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921457695] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[ERROR] [1791251567.921458937] [NavfnPlanner]: worldToMap failed: mx,my: 17,6, size_x,size_y: 17,13
+[ERROR] [1791251567.921460108] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921461280] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921462462] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[ERROR] [1791251567.921463784] [NavfnPlanner]: worldToMap failed: mx,my: 0,-2147483648, size_x,size_y: 17,13
+[INFO] [1791251567.921464985] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251567.921466438] [NavfnPlanner]: worldToMap failed: mx,my: 1,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921468040] [NavfnPlanner]: worldToMap failed: mx,my: 4,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921469322] [NavfnPlanner]: worldToMap failed: mx,my: 17,1, size_x,size_y: 17,13
+[ERROR] [1791251567.921470674] [NavfnPlanner]: worldToMap failed: mx,my: 17,7, size_x,size_y: 17,13
+[ERROR] [1791251567.921471876] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921473198] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921474500] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[ERROR] [1791251567.921475671] [NavfnPlanner]: worldToMap failed: mx,my: 0,-2147483648, size_x,size_y: 17,13
+[INFO] [1791251567.921476863] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251567.921478485] [NavfnPlanner]: worldToMap failed: mx,my: 1,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921480018] [NavfnPlanner]: worldToMap failed: mx,my: 5,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921481350] [NavfnPlanner]: worldToMap failed: mx,my: 17,1, size_x,size_y: 17,13
+[ERROR] [1791251567.921482531] [NavfnPlanner]: worldToMap failed: mx,my: 17,7, size_x,size_y: 17,13
+[ERROR] [1791251567.921485726] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921487188] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921488340] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[ERROR] [1791251567.921489692] [NavfnPlanner]: worldToMap failed: mx,my: 0,-2147483648, size_x,size_y: 17,13
+[INFO] [1791251567.921490904] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251567.921492416] [NavfnPlanner]: worldToMap failed: mx,my: 1,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921494018] [NavfnPlanner]: worldToMap failed: mx,my: 5,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921495260] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[ERROR] [1791251567.921496482] [NavfnPlanner]: worldToMap failed: mx,my: 17,7, size_x,size_y: 17,13
+[ERROR] [1791251567.921497664] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921498815] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921499967] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[ERROR] [1791251567.921501139] [NavfnPlanner]: worldToMap failed: mx,my: 0,-2147483648, size_x,size_y: 17,13
+[INFO] [1791251567.921502331] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+[ERROR] [1791251567.921504023] [NavfnPlanner]: worldToMap failed: mx,my: 0,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921505455] [NavfnPlanner]: worldToMap failed: mx,my: 5,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921506837] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[ERROR] [1791251567.921508019] [NavfnPlanner]: worldToMap failed: mx,my: 17,6, size_x,size_y: 17,13
+[ERROR] [1791251567.921509201] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921510523] [NavfnPlanner]: worldToMap failed: mx,my: 17,13, size_x,size_y: 17,13
+[ERROR] [1791251567.921511845] [NavfnPlanner]: worldToMap failed: mx,my: 17,0, size_x,size_y: 17,13
+[ERROR] [1791251567.921513016] [NavfnPlanner]: worldToMap failed: mx,my: 0,-2147483648, size_x,size_y: 17,13
+[INFO] [1791251567.921514238] [NavfnPlanner]: Destroying plugin  of type NavfnPlanner
+492 real NavFn coordinate checks, 388 failures

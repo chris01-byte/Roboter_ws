@@ -1,0 +1,158 @@
+[INFO] [1791444322.363891686] [controller_server]: 
+	controller_server lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791444322.428067393] [controller_server]: Creating controller server
+[INFO] [1791444322.473187213] [local_costmap.local_costmap]: 
+	local_costmap lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791444322.473985596] [local_costmap.local_costmap]: Creating Costmap
+[INFO] [1791444324.692384926] [controller_server]: Configuring controller interface
+[INFO] [1791444324.693631655] [controller_server]: getting goal checker plugins..
+[INFO] [1791444324.695555955] [controller_server]: Controller frequency set to 20.0000Hz
+[INFO] [1791444324.695784529] [local_costmap.local_costmap]: Configuring
+[INFO] [1791444324.730100401] [local_costmap.local_costmap]: Using plugin "obstacle_layer"
+[INFO] [1791444324.744400122] [local_costmap.local_costmap]: Subscribed to Topics: vl53_left vl53_right vl53_left_mark vl53_right_mark oak
+[INFO] [1791444324.786085344] [local_costmap.local_costmap]: Initialized plugin "obstacle_layer"
+[INFO] [1791444324.786582794] [local_costmap.local_costmap]: Using plugin "inflation_layer"
+[INFO] [1791444324.787467697] [local_costmap.local_costmap]: Initialized plugin "inflation_layer"
+[INFO] [1791444324.813481823] [controller_server]: Created progress_checker : progress_checker of type nav2_controller::PoseProgressChecker
+[INFO] [1791444324.814074667] [controller_server]: Created goal checker : general_goal_checker of type nav2_controller::SimpleGoalChecker
+[INFO] [1791444324.814200927] [controller_server]: Controller Server has general_goal_checker  goal checkers available.
+[INFO] [1791444324.814892028] [controller_server]: Created controller : FollowPath of type nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791444324.823586211] [controller_server]: Controller Server has FollowPath  controllers available.
+[INFO] [1791444324.864244035] [controller_server]: Activating
+[INFO] [1791444324.864313881] [local_costmap.local_costmap]: Activating
+[INFO] [1791444324.864328422] [local_costmap.local_costmap]: Checking transform
+[INFO] [1791444324.864369124] [local_costmap.local_costmap]: Timed out waiting for transform from base_link to odom to become available, tf error: Could not find a connection between 'odom' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[INFO] [1791444325.364582816] [local_costmap.local_costmap]: start
+[INFO] [1791444325.579610773] [controller_server]: Activating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791444325.579691605] [controller_server]: Creating bond (controller_server) to lifecycle manager.
+[INFO] [1791444325.696259253] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444325.382 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444325.696337591] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444325.382 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444325.696541629] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444325.382 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444325.696578154] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444325.382 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444325.696594639] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444325.382 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444326.795798351] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444326.481 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444326.795875557] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444326.481 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444326.795888897] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444326.481 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444326.795900555] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444326.481 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444326.795910520] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444326.481 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444327.893962186] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444327.580 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444327.894021846] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444327.580 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444327.894034535] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444327.580 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444327.894045812] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444327.580 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444327.895878414] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444327.580 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444328.993579140] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444328.681 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444328.993699692] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444328.681 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444328.993723307] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444328.681 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444328.994345545] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444328.681 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444328.997477175] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444328.681 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444330.095343016] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444329.781 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444330.095437147] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444329.781 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444330.095458740] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444329.781 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444330.095499622] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444329.781 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444330.098176887] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444329.781 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444331.194808607] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444330.881 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444331.194934026] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444330.881 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444331.194950181] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444330.881 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444331.195021168] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444330.881 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444331.196014404] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444330.881 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444332.294237588] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444331.980 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444332.294340233] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444331.980 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444332.294400915] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444331.980 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444332.294445512] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444331.980 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444332.297221906] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444331.980 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444333.394907784] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444333.081 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444333.394980543] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444333.081 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444333.394995906] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444333.081 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444333.395009427] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444333.081 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444333.398240186] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444333.081 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444334.498968732] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444334.181 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444334.500089121] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444334.181 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444334.500145416] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444334.181 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444334.500346369] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444334.181 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444334.500371567] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444334.181 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444335.594974760] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444335.280 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444335.595670569] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444335.280 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444335.595742067] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444335.280 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444335.595773644] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444335.280 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444335.597429690] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444335.280 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444336.693998347] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444336.381 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444336.694080390] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444336.381 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444336.694150766] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444336.381 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444336.694174022] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444336.381 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444336.698558910] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444336.381 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444337.094130429] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444336.780 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444337.094289279] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444336.780 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444337.094307096] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444336.780 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444337.094336270] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444336.780 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444337.094526957] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444336.780 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444337.793558672] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444337.480 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444337.793622108] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444337.480 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444337.794310235] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444337.480 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444337.794351687] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444337.480 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444337.796166793] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444337.480 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444338.895153970] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444338.580 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444338.895273089] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444338.580 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444338.895297316] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444338.580 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444338.895316465] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444338.580 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444338.898750480] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444338.580 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444339.995022564] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444339.681 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444339.995118329] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444339.681 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444339.995201815] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444339.681 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444339.995223067] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444339.681 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444339.996515054] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444339.681 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444341.096929337] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444340.780 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444341.097012393] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444340.780 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444341.097030670] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444340.780 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444341.097047606] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444340.780 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444341.097063480] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444340.780 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444342.194545576] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444341.881 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444342.194692928] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444341.881 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444342.194711246] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444341.881 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444342.194723154] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444341.881 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444342.195518553] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444341.881 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444343.293542750] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444342.980 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444343.293642830] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444342.980 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444343.293666466] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444342.980 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444343.293708850] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444342.980 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444343.294682838] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444342.980 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444344.397888533] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444344.080 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444344.397986090] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444344.080 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444344.399217246] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444344.080 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444344.399234362] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444344.080 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444344.399247602] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444344.080 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444345.495146976] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444345.181 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444345.495211804] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444345.181 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444345.495229170] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444345.181 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444345.495244994] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444345.181 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444345.498693491] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444345.181 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444346.596598939] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444346.281 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444346.596661774] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444346.281 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444346.596676096] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444346.281 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444346.596688514] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444346.281 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444346.596700022] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444346.281 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444347.695750812] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444347.381 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444347.695803531] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444347.381 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444347.695815940] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444347.381 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444347.695827547] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444347.381 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444347.695837743] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444347.381 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444348.793580341] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444348.480 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444348.795804043] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791444348.480 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444348.795882992] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444348.480 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444348.795897964] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791444348.480 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444348.797441961] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791444348.480 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791444388.297221140] [rclcpp]: signal_handler(signum=2)
+[INFO] [1791444388.297385778] [controller_server]: Running Nav2 LifecycleNode rcl preshutdown (controller_server)
+[INFO] [1791444388.297466650] [controller_server]: Deactivating
+[INFO] [1791444388.297484007] [controller_server]: Deactivating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791444388.297504578] [local_costmap.local_costmap]: Deactivating
+[INFO] [1791444388.364921117] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[INFO] [1791444388.375153819] [controller_server]: Cleaning up
+[INFO] [1791444388.375198837] [controller_server]: Cleaning up controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791444388.375311567] [local_costmap.local_costmap]: Cleaning up
+[INFO] [1791444388.396364407] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[INFO] [1791444388.403958042] [local_costmap.local_costmap]: Destroying
+[INFO] [1791444388.422782544] [controller_server]: Destroying

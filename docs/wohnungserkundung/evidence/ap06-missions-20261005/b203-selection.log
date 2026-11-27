@@ -1,0 +1,43 @@
+original pose (0.16494685565387046, -3.3145576708389285e-06, 0.0003961120088754237) policy {'radius': 0.6, 'cooldown_s': 30.0, 'retry_limit': 2, 'next_id': 2, 'tasks': {'metric-task-1': {'frontier_xy': (-0.2849999936297536, -1.4549999674782157), 'target_xy': (-0.2849999936297536, -1.4549999674782157), 'failures': 0, 'fingerprint': '', 'completed': False, 'reason': '', 'tries': 0, 'evidence_key': '', 'partial_observation': False, 'retry_remaining_s': 0.0}, 'metric-task-2': {'frontier_xy': (0.634999985806644, -0.6849999846890569), 'target_xy': (0.16504362378711068, -3.3599057298850496e-06), 'failures': 0, 'fingerprint': '73b2adf821c80a67aeb88b643ca42cd5baa8e6fa3e497e161096c76bafd62768', 'completed': False, 'reason': 'partially_observed', 'tries': 1, 'evidence_key': '4afd66939abab7a899a407013e4e8692c0c0edbe721ebe20080519ca39d21f0a', 'partial_observation': True, 'retry_remaining_s': 29.64146892199642}}}
+original candidates [('metric-task-3', 1.0749467806859438, 0.00035714735956282655, 0.0003961120088754237)] ranking {'raw': 15, 'unsafe': 0, 'deferred_or_served': 0, 'accepted': 1, 'route_rejections': {}, 'bounded_start_observation': True} seconds 2.208066865001456
+         2736014 function calls (2733174 primitive calls) in 2.208 seconds
+
+   Ordered by: cumulative time
+   List reduced from 420 to 32 due to restriction <32>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.001    0.001    2.208    2.208 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:2394(_metric_select)
+        1    0.000    0.000    1.948    1.948 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:2013(_metric_candidates)
+        1    0.002    0.002    1.948    1.948 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:2024(_metric_candidates_in_pass)
+       17    0.001    0.000    1.027    0.060 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:933(_metric_route)
+       25    0.001    0.000    0.970    0.039 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:1000(_metric_waypoints_clear)
+        4    0.000    0.000    0.946    0.237 /evidence/ap06-repo/src/explore/explore/metric_egress_reference.py:333(check_trajectory)
+        8    0.058    0.007    0.945    0.118 /evidence/ap06-repo/src/explore/explore/metric_frontier.py:615(check_trajectory)
+       18    0.106    0.006    0.595    0.033 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:903(_metric_seed_mask)
+      114    0.005    0.000    0.580    0.005 /evidence/ap06-repo/src/explore/explore/metric_frontier.py:539(_cell_distances)
+      228    0.272    0.001    0.558    0.002 /evidence/ap06-repo/src/explore/explore/metric_frontier.py:545(distance)
+        6    0.038    0.006    0.521    0.087 /evidence/ap06-repo/src/explore/explore/metric_progress.py:10(local_evidence)
+    58241    0.343    0.000    0.456    0.000 /evidence/ap06-repo/src/explore/explore/explore_node.py:3769(_grid_to_world)
+     4112    0.406    0.000    0.406    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+9458/6666    0.031    0.000    0.376    0.000 {built-in method numpy.core._multiarray_umath.implement_array_function}
+     2924    0.005    0.000    0.277    0.000 /usr/lib/python3/dist-packages/numpy/core/fromnumeric.py:69(_wrapreduction)
+       12    0.004    0.000    0.271    0.023 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:781(_metric_local_evidence)
+      720    0.001    0.000    0.211    0.000 <__array_function__ internals>:2(sum)
+      720    0.001    0.000    0.209    0.000 /usr/lib/python3/dist-packages/numpy/core/fromnumeric.py:2123(sum)
+      118    0.007    0.000    0.205    0.002 /evidence/ap06-repo/src/explore/explore/metric_frontier.py:491(_cell_intersections)
+    31440    0.143    0.000    0.199    0.000 /evidence/ap06-repo/src/explore/explore/explore_node.py:3782(_world_to_grid)
+        5    0.081    0.016    0.188    0.038 /evidence/ap06-repo/src/explore/explore/metric_progress.py:29(<listcomp>)
+   226897    0.114    0.000    0.114    0.000 {built-in method builtins.round}
+        6    0.072    0.012    0.072    0.012 {built-in method builtins.repr}
+      418    0.000    0.000    0.067    0.000 {method 'min' of 'numpy.ndarray' objects}
+      418    0.000    0.000    0.067    0.000 /usr/lib/python3/dist-packages/numpy/core/_methods.py:42(_amin)
+      393    0.000    0.000    0.066    0.000 {method 'max' of 'numpy.ndarray' objects}
+      393    0.000    0.000    0.066    0.000 /usr/lib/python3/dist-packages/numpy/core/_methods.py:38(_amax)
+       36    0.037    0.001    0.062    0.002 /evidence/ap06-repo/src/explore/explore/metric_frontier.py:512(_cell_intersections_full)
+      137    0.001    0.000    0.047    0.000 /evidence/ap06-repo/src/explore/explore/metric_frontier_runtime.py:751(_metric_selection_memo)
+      573    0.044    0.000    0.044    0.000 {built-in method builtins.sorted}
+      228    0.000    0.000    0.044    0.000 <__array_function__ internals>:2(amin)
+      228    0.000    0.000    0.043    0.000 /usr/lib/python3/dist-packages/numpy/core/fromnumeric.py:2763(amin)
+
+
+

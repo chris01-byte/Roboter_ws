@@ -1,0 +1,2 @@
+[WARN] [1791444323.021010078] [cmd_vel_mission_gate]: Nav2-Fahrtor aktiv: Befehle nur bei explizit freigegebener Mission.
+[WARN] [1791444323.022234023] [cmd_vel_mission_gate]: AUTOMATISCHE ERKUNDUNG im Fahrtor freigegeben; Karte, LiDAR, Odometrie und beide VL53 muessen fortlaufend frisch bleiben.

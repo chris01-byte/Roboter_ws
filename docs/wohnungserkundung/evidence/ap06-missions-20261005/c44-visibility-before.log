@@ -1,0 +1,208 @@
+FFFFFF.................                                                  [100%]
+=================================== FAILURES ===================================
+_ test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it[15-None] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e85cbe9b0>
+column = 15, blocker = None
+
+    @pytest.mark.parametrize('column,blocker', [(15, None), (16, None), (17, None),
+        (40, 'wall'), (40, 'scope'), (40, 'near_unknown')])
+    def test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it(monkeypatch, column, blocker):
+        grid = OccupancyGrid(); grid.info.width = 200; grid.info.height = 3
+        grid.info.resolution = .03; grid.info.origin.orientation.w = 1.
+        data = np.zeros((3, 200), np.int8); data[:, column] = -1
+        inside = np.ones(data.shape, bool)
+        if blocker == 'wall':
+            data[:, 16] = 100
+        elif blocker == 'scope':
+            inside[:, 16] = False
+        elif blocker == 'near_unknown':
+            data[:, 16] = -1
+        grid.data = data.ravel().tolist()
+        view = LidarView((0., 0., 0.), np.zeros(64), 4., .6 if blocker == 'near_unknown' else 0.)
+        matrices = []; original = np.floor
+        def measured(values):
+            matrices.append(values.shape)
+            return original(values)
+        monkeypatch.setattr('explore.metric_frontier_candidates.np.floor', measured)
+        result = visible_boundary_cells(grid, inside, (0., .045, 0.), view)
+        assert result == (frozenset() if blocker else frozenset({(1, column)}))
+        # Every finite ray still exists; no full-range matrix after a first stop.
+>       assert matrices and max(shape[1] for shape in matrices) <= 33
+E       assert ([(64, 267), (64, 267)] and 267 <= 33)
+E        +  where 267 = max(<generator object test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it.<locals>.<genexpr> at 0x7f7e85c7b290>)
+
+src/explore/test/test_metric_visibility_blocks.py:43: AssertionError
+_ test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it[16-None] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e85cbcd90>
+column = 16, blocker = None
+
+    @pytest.mark.parametrize('column,blocker', [(15, None), (16, None), (17, None),
+        (40, 'wall'), (40, 'scope'), (40, 'near_unknown')])
+    def test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it(monkeypatch, column, blocker):
+        grid = OccupancyGrid(); grid.info.width = 200; grid.info.height = 3
+        grid.info.resolution = .03; grid.info.origin.orientation.w = 1.
+        data = np.zeros((3, 200), np.int8); data[:, column] = -1
+        inside = np.ones(data.shape, bool)
+        if blocker == 'wall':
+            data[:, 16] = 100
+        elif blocker == 'scope':
+            inside[:, 16] = False
+        elif blocker == 'near_unknown':
+            data[:, 16] = -1
+        grid.data = data.ravel().tolist()
+        view = LidarView((0., 0., 0.), np.zeros(64), 4., .6 if blocker == 'near_unknown' else 0.)
+        matrices = []; original = np.floor
+        def measured(values):
+            matrices.append(values.shape)
+            return original(values)
+        monkeypatch.setattr('explore.metric_frontier_candidates.np.floor', measured)
+        result = visible_boundary_cells(grid, inside, (0., .045, 0.), view)
+        assert result == (frozenset() if blocker else frozenset({(1, column)}))
+        # Every finite ray still exists; no full-range matrix after a first stop.
+>       assert matrices and max(shape[1] for shape in matrices) <= 33
+E       assert ([(64, 267), (64, 267)] and 267 <= 33)
+E        +  where 267 = max(<generator object test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it.<locals>.<genexpr> at 0x7f7e85d16dc0>)
+
+src/explore/test/test_metric_visibility_blocks.py:43: AssertionError
+_ test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it[17-None] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e85caead0>
+column = 17, blocker = None
+
+    @pytest.mark.parametrize('column,blocker', [(15, None), (16, None), (17, None),
+        (40, 'wall'), (40, 'scope'), (40, 'near_unknown')])
+    def test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it(monkeypatch, column, blocker):
+        grid = OccupancyGrid(); grid.info.width = 200; grid.info.height = 3
+        grid.info.resolution = .03; grid.info.origin.orientation.w = 1.
+        data = np.zeros((3, 200), np.int8); data[:, column] = -1
+        inside = np.ones(data.shape, bool)
+        if blocker == 'wall':
+            data[:, 16] = 100
+        elif blocker == 'scope':
+            inside[:, 16] = False
+        elif blocker == 'near_unknown':
+            data[:, 16] = -1
+        grid.data = data.ravel().tolist()
+        view = LidarView((0., 0., 0.), np.zeros(64), 4., .6 if blocker == 'near_unknown' else 0.)
+        matrices = []; original = np.floor
+        def measured(values):
+            matrices.append(values.shape)
+            return original(values)
+        monkeypatch.setattr('explore.metric_frontier_candidates.np.floor', measured)
+        result = visible_boundary_cells(grid, inside, (0., .045, 0.), view)
+        assert result == (frozenset() if blocker else frozenset({(1, column)}))
+        # Every finite ray still exists; no full-range matrix after a first stop.
+>       assert matrices and max(shape[1] for shape in matrices) <= 33
+E       assert ([(64, 267), (64, 267)] and 267 <= 33)
+E        +  where 267 = max(<generator object test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it.<locals>.<genexpr> at 0x7f7e85d173e0>)
+
+src/explore/test/test_metric_visibility_blocks.py:43: AssertionError
+_ test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it[40-wall] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e85d2f520>
+column = 40, blocker = 'wall'
+
+    @pytest.mark.parametrize('column,blocker', [(15, None), (16, None), (17, None),
+        (40, 'wall'), (40, 'scope'), (40, 'near_unknown')])
+    def test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it(monkeypatch, column, blocker):
+        grid = OccupancyGrid(); grid.info.width = 200; grid.info.height = 3
+        grid.info.resolution = .03; grid.info.origin.orientation.w = 1.
+        data = np.zeros((3, 200), np.int8); data[:, column] = -1
+        inside = np.ones(data.shape, bool)
+        if blocker == 'wall':
+            data[:, 16] = 100
+        elif blocker == 'scope':
+            inside[:, 16] = False
+        elif blocker == 'near_unknown':
+            data[:, 16] = -1
+        grid.data = data.ravel().tolist()
+        view = LidarView((0., 0., 0.), np.zeros(64), 4., .6 if blocker == 'near_unknown' else 0.)
+        matrices = []; original = np.floor
+        def measured(values):
+            matrices.append(values.shape)
+            return original(values)
+        monkeypatch.setattr('explore.metric_frontier_candidates.np.floor', measured)
+        result = visible_boundary_cells(grid, inside, (0., .045, 0.), view)
+        assert result == (frozenset() if blocker else frozenset({(1, column)}))
+        # Every finite ray still exists; no full-range matrix after a first stop.
+>       assert matrices and max(shape[1] for shape in matrices) <= 33
+E       assert ([(64, 267), (64, 267)] and 267 <= 33)
+E        +  where 267 = max(<generator object test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it.<locals>.<genexpr> at 0x7f7e85d174c0>)
+
+src/explore/test/test_metric_visibility_blocks.py:43: AssertionError
+_ test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it[40-scope] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e85caf970>
+column = 40, blocker = 'scope'
+
+    @pytest.mark.parametrize('column,blocker', [(15, None), (16, None), (17, None),
+        (40, 'wall'), (40, 'scope'), (40, 'near_unknown')])
+    def test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it(monkeypatch, column, blocker):
+        grid = OccupancyGrid(); grid.info.width = 200; grid.info.height = 3
+        grid.info.resolution = .03; grid.info.origin.orientation.w = 1.
+        data = np.zeros((3, 200), np.int8); data[:, column] = -1
+        inside = np.ones(data.shape, bool)
+        if blocker == 'wall':
+            data[:, 16] = 100
+        elif blocker == 'scope':
+            inside[:, 16] = False
+        elif blocker == 'near_unknown':
+            data[:, 16] = -1
+        grid.data = data.ravel().tolist()
+        view = LidarView((0., 0., 0.), np.zeros(64), 4., .6 if blocker == 'near_unknown' else 0.)
+        matrices = []; original = np.floor
+        def measured(values):
+            matrices.append(values.shape)
+            return original(values)
+        monkeypatch.setattr('explore.metric_frontier_candidates.np.floor', measured)
+        result = visible_boundary_cells(grid, inside, (0., .045, 0.), view)
+        assert result == (frozenset() if blocker else frozenset({(1, column)}))
+        # Every finite ray still exists; no full-range matrix after a first stop.
+>       assert matrices and max(shape[1] for shape in matrices) <= 33
+E       assert ([(64, 267), (64, 267)] and 267 <= 33)
+E        +  where 267 = max(<generator object test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it.<locals>.<genexpr> at 0x7f7e85d17ae0>)
+
+src/explore/test/test_metric_visibility_blocks.py:43: AssertionError
+_ test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it[40-near_unknown] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e85cbd450>
+column = 40, blocker = 'near_unknown'
+
+    @pytest.mark.parametrize('column,blocker', [(15, None), (16, None), (17, None),
+        (40, 'wall'), (40, 'scope'), (40, 'near_unknown')])
+    def test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it(monkeypatch, column, blocker):
+        grid = OccupancyGrid(); grid.info.width = 200; grid.info.height = 3
+        grid.info.resolution = .03; grid.info.origin.orientation.w = 1.
+        data = np.zeros((3, 200), np.int8); data[:, column] = -1
+        inside = np.ones(data.shape, bool)
+        if blocker == 'wall':
+            data[:, 16] = 100
+        elif blocker == 'scope':
+            inside[:, 16] = False
+        elif blocker == 'near_unknown':
+            data[:, 16] = -1
+        grid.data = data.ravel().tolist()
+        view = LidarView((0., 0., 0.), np.zeros(64), 4., .6 if blocker == 'near_unknown' else 0.)
+        matrices = []; original = np.floor
+        def measured(values):
+            matrices.append(values.shape)
+            return original(values)
+        monkeypatch.setattr('explore.metric_frontier_candidates.np.floor', measured)
+        result = visible_boundary_cells(grid, inside, (0., .045, 0.), view)
+        assert result == (frozenset() if blocker else frozenset({(1, column)}))
+        # Every finite ray still exists; no full-range matrix after a first stop.
+>       assert matrices and max(shape[1] for shape in matrices) <= 33
+E       assert ([(64, 267), (64, 267)] and 267 <= 33)
+E        +  where 267 = max(<generator object test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it.<locals>.<genexpr> at 0x7f7e85d17d80>)
+
+src/explore/test/test_metric_visibility_blocks.py:43: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_visibility_blocks.py::test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it[15-None]
+FAILED src/explore/test/test_metric_visibility_blocks.py::test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it[16-None]
+FAILED src/explore/test/test_metric_visibility_blocks.py::test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it[17-None]
+FAILED src/explore/test/test_metric_visibility_blocks.py::test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it[40-wall]
+FAILED src/explore/test/test_metric_visibility_blocks.py::test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it[40-scope]
+FAILED src/explore/test/test_metric_visibility_blocks.py::test_first_hit_crossing_work_block_preserves_stop_and_no_gain_behind_it[40-near_unknown]
+6 failed, 17 passed in 1.33s

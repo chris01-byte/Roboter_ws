@@ -1,0 +1,10 @@
+[WARN] [1791283637.426306441] [cmd_vel_mission_gate]: Nav2-Fahrtor aktiv: Befehle nur bei explizit freigegebener Mission.
+[WARN] [1791283637.426952635] [cmd_vel_mission_gate]: AUTOMATISCHE ERKUNDUNG im Fahrtor freigegeben; Karte, LiDAR, Odometrie und beide VL53 muessen fortlaufend frisch bleiben.
+[WARN] [1791283666.342621445] [cmd_vel_mission_gate]: Fahrtor-Modus: mission
+[WARN] [1791283672.995398760] [cmd_vel_mission_gate]: Fahrtor-Modus: blocked
+[WARN] [1791283674.942734423] [cmd_vel_mission_gate]: Fahrtor-Modus: mission
+[WARN] [1791283690.793628653] [cmd_vel_mission_gate]: Fahrtor-Modus: blocked
+[WARN] [1791283695.843454111] [cmd_vel_mission_gate]: Fahrtor-Modus: mission
+[WARN] [1791283733.394970769] [cmd_vel_mission_gate]: Fahrtor-Modus: blocked
+[WARN] [1791283735.042626401] [cmd_vel_mission_gate]: Fahrtor-Modus: mission
+[WARN] [1791283827.443053166] [cmd_vel_mission_gate]: Fahrtor-Modus: blocked

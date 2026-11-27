@@ -1,0 +1,14 @@
+# EK-1 "Erkundung zielgerichtet, Teil 1" (MASTERPLAN §9 Schritt 2), Fassung 14.11.2026:
+#   A Teilschwenk 90 Grad statt Vollkreis: Der Mast verdeckt 68 Grad; mit 292 Grad
+#     Sichtfeld schliesst eine Vierteldrehung den Rundblick (am 09.11. kostete der
+#     Vollkreis mit 0,10 rad/s je etwa 65 s und verfehlte E3).
+#   C "gut genug": Ende, wenn die freie Flaeche in 150 s um weniger als 2 % wuchs
+#     und keine Luecke ab 0,6 m uebrig ist.
+#   D Anlauf abbrechen, wenn 45 s lang kein Weggewinn von 0,25 m.
+# Nur Simulation; im Produktprofil ist nichts davon gesetzt.
+sh_treiber:
+  explorer_parameter:
+    self_healing_scan_rad: 1.5708
+    self_healing_scan_spacing_m: 2.5
+    self_healing_saturation_window_s: 150.0
+    self_healing_attempt_stall_s: 45.0

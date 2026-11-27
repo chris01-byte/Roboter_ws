@@ -1,0 +1,483 @@
+{
+  "all_synthetic_nodes_destroyed": true,
+  "cases": [
+    {
+      "all_observed_children_reaped": true,
+      "command": [
+        "/usr/bin/python3",
+        "/evidence/ap06-repo/tools/kartierung/metric_scope_vorbereiten.py",
+        "--scope",
+        "/evidence/ap06-concept-20261008/scope-ros-smoke-complete/explicit-synthetic-scope.json",
+        "--output",
+        "/evidence/ap06-concept-20261008/scope-ros-smoke-complete/positive-private.yaml",
+        "--tf-probe",
+        "/evidence/ap06-tf-probe-build/tf_ownership_probe",
+        "--install-root",
+        "/evidence/ap06-old-product-install",
+        "--timeout",
+        "12"
+      ],
+      "duration_s": 0.8301637550175656,
+      "exit_code": 0,
+      "native_dds_owner_match": true,
+      "observed_owned_children": [
+        117191
+      ],
+      "owned_cli_pid": 117180,
+      "passed": true,
+      "passive_start_displayed": true,
+      "profile": "/evidence/ap06-concept-20261008/scope-ros-smoke-complete/positive-private.yaml",
+      "profile_mode": "0600",
+      "profile_sha256": "52eafa0733bae9f9de92d71face6cf6a255664b53134f4d8102cac3b078277a8",
+      "stderr": "/evidence/ap06-concept-20261008/scope-ros-smoke-complete/positive.stderr.log",
+      "stdout": "/evidence/ap06-concept-20261008/scope-ros-smoke-complete/positive.stdout.log"
+    },
+    {
+      "all_observed_children_reaped": true,
+      "command": [
+        "/usr/bin/python3",
+        "/evidence/ap06-repo/tools/kartierung/metric_scope_vorbereiten.py",
+        "--scope",
+        "/evidence/ap06-concept-20261008/scope-ros-smoke-complete/explicit-synthetic-scope.json",
+        "--output",
+        "/evidence/ap06-concept-20261008/scope-ros-smoke-complete/positive-private.yaml",
+        "--tf-probe",
+        "/evidence/ap06-tf-probe-build/tf_ownership_probe",
+        "--install-root",
+        "/evidence/ap06-old-product-install",
+        "--timeout",
+        "12"
+      ],
+      "duration_s": 0.14322887899470516,
+      "exit_code": 1,
+      "observed_owned_children": [],
+      "owned_cli_pid": 117202,
+      "passed": true,
+      "stderr": "/evidence/ap06-concept-20261008/scope-ros-smoke-complete/exclusive-existing-output.stderr.log",
+      "stdout": "/evidence/ap06-concept-20261008/scope-ros-smoke-complete/exclusive-existing-output.stdout.log"
+    },
+    {
+      "all_observed_children_reaped": true,
+      "command": [
+        "/usr/bin/python3",
+        "/evidence/ap06-repo/tools/kartierung/metric_scope_vorbereiten.py",
+        "--scope",
+        "/evidence/ap06-concept-20261008/scope-ros-smoke-complete/explicit-synthetic-scope.json",
+        "--output",
+        "/evidence/ap06-concept-20261008/scope-ros-smoke-complete/negative-forbidden.yaml",
+        "--tf-probe",
+        "/evidence/ap06-tf-probe-build/tf_ownership_probe",
+        "--install-root",
+        "/evidence/ap06-old-product-install",
+        "--timeout",
+        "12"
+      ],
+      "duration_s": 0.950221237988444,
+      "exit_code": 1,
+      "no_action_goal_received": true,
+      "no_profile_created": true,
+      "observed_owned_children": [
+        117214
+      ],
+      "owned_cli_pid": 117203,
+      "passed": true,
+      "stderr": "/evidence/ap06-concept-20261008/scope-ros-smoke-complete/negative-existing-action.stderr.log",
+      "stdout": "/evidence/ap06-concept-20261008/scope-ros-smoke-complete/negative-existing-action.stdout.log"
+    }
+  ],
+  "child_inspection": "Exact owned CLI children via proc task/children or proc stat PPid, with starttime identity against PID reuse",
+  "cleanup": {
+    "all_observed_owned_children_reaped": true,
+    "cli_and_native_probe_absent_from_graph": true
+  },
+  "created_utc": "2026-10-08T06:46:41.154642+00:00",
+  "hardware_qualified": false,
+  "installed_modules": {
+    "amadeus_map_identity.fingerprint": {
+      "path": "/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py",
+      "sha256": "61c2ee882e3e25dbc8d6b1b25573152d3c271b817b4d81f074333c99a1ed0759"
+    },
+    "explore.exploration_scope": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_scope.py",
+      "sha256": "74d1031a5b5a0145bfceea80c34a556ce21f9b6543782cc09891783f7b8d143e"
+    },
+    "explore.map_status_adapter": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/map_status_adapter.py",
+      "sha256": "0a688ac8587761393e1c233335a585f00ba49a5ec983ac51a318a7a54706d421"
+    },
+    "explore.metric_frontier_runtime": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+      "sha256": "aa5f18db87891793a749d59e2940542d4336e12b3864727e0059d238332ba8ca"
+    },
+    "explore.portal_source_adapter": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_source_adapter.py",
+      "sha256": "bc6ac8e767d9c05c1b24e3a10e5e99681755e68f14b882e6d1d9017877943475"
+    },
+    "robot_interfaces.action._explore_area": {
+      "path": "/evidence/ap06-old-product-install/robot_interfaces/local/lib/python3.10/dist-packages/robot_interfaces/action/_explore_area.py",
+      "sha256": "088cbb84588a4b8d2df7b3cef53d56381be0b036882ca5744c87e24fcdc7148c"
+    }
+  },
+  "non_actuating": true,
+  "passed": true,
+  "positive_binding": {
+    "bound_ros_ns": 1791442002729199043,
+    "installed_inputs": {
+      "amadeus_map_identity": {
+        "path": "/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/__init__.py",
+        "sha256": "7192c47502fa71d6cdef32f04dc461f84f1bf9e8865ba1b9d8bedcecd381e9d3"
+      },
+      "amadeus_map_identity.fingerprint": {
+        "path": "/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py",
+        "sha256": "61c2ee882e3e25dbc8d6b1b25573152d3c271b817b4d81f074333c99a1ed0759"
+      },
+      "base_profile": {
+        "path": "/evidence/ap06-old-product-install/explore/share/explore/config/explore_params.yaml",
+        "sha256": "83ba002c74421513ee849a1a5728b13f79acdbb1cba298650a5d277ee409109c"
+      },
+      "explore.exploration_scope": {
+        "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_scope.py",
+        "sha256": "74d1031a5b5a0145bfceea80c34a556ce21f9b6543782cc09891783f7b8d143e"
+      },
+      "explore.map_status_adapter": {
+        "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/map_status_adapter.py",
+        "sha256": "0a688ac8587761393e1c233335a585f00ba49a5ec983ac51a318a7a54706d421"
+      },
+      "explore.metric_frontier_runtime": {
+        "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+        "sha256": "aa5f18db87891793a749d59e2940542d4336e12b3864727e0059d238332ba8ca"
+      },
+      "explore.portal_memory": {
+        "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_memory.py",
+        "sha256": "d1e2a59848883f675354b07e10c8cce94d2387b5ba1f8193a7b633e7f2787051"
+      },
+      "explore.portal_source_adapter": {
+        "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_source_adapter.py",
+        "sha256": "bc6ac8e767d9c05c1b24e3a10e5e99681755e68f14b882e6d1d9017877943475"
+      },
+      "metric_profile": {
+        "path": "/evidence/ap06-old-product-install/explore/share/explore/config/metric_frontier_params.yaml",
+        "sha256": "8a88ca2117983b09b1234f9e8c2a38159223fafc997d4bc28b89dd338d7ffe51"
+      }
+    },
+    "map_fingerprint": "3d6857b789c3078ee9080e62de4838b85a4d5a612f8393868127d955b22fb1ca",
+    "map_odom": {
+      "child": "odom",
+      "parent": "map",
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "stamp_ns": 1791442002674937349,
+      "translation": [
+        0.1,
+        0.1,
+        0.0
+      ]
+    },
+    "movement_authorized": false,
+    "observed_maps": 3,
+    "owners": {
+      "manager": {
+        "gid": [
+          1,
+          15,
+          127,
+          1,
+          91,
+          201,
+          83,
+          10,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          46,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "node": "/robot_map_manager"
+      },
+      "map": {
+        "gid": [
+          1,
+          15,
+          127,
+          1,
+          91,
+          201,
+          83,
+          10,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          45,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "node": "/slam_toolbox"
+      },
+      "map_odom": {
+        "gid": [
+          1,
+          15,
+          127,
+          1,
+          91,
+          201,
+          83,
+          10,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          47,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "node": "/slam_toolbox"
+      },
+      "odom_base": {
+        "gid": [
+          1,
+          15,
+          127,
+          1,
+          91,
+          201,
+          83,
+          10,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          48,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "node": "/hwt601_mapping_ekf"
+      }
+    },
+    "path_validation": "conservative",
+    "pose": {
+      "child": "base_link",
+      "parent": "map",
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "stamp_ns": 1791442002674937349,
+      "translation": [
+        0.25,
+        0.0,
+        0.0
+      ]
+    },
+    "preparation_tool": {
+      "path": "/evidence/ap06-repo/tools/kartierung/metric_scope_vorbereiten.py",
+      "sha256": "a8053a3e5b80db554c764b86213ddc69ddd0f6bded072e2a07521ff52b549e45"
+    },
+    "publisher_provenance": {
+      "map_status": "single current graph endpoint, latched GID; Humble Python has no per-message GID",
+      "tf": "native per-transform DDS GID joined to current graph endpoint"
+    },
+    "schema_version": 1,
+    "scope_file_sha256": "c57f8cb46b51ee9ce5091e7e801e6304355db39c5577b1c425c48e0c0764562e",
+    "scope_fingerprint": "bdab21a51a50975df4ff53d510506f8ca17332ebd16de7e2d24df86f875e6c90",
+    "session_id": "synthetic-scope-ros-smoke",
+    "snapshot_only": true,
+    "source_stamp_ns": 1791442002424760192,
+    "tf_probe_sha256": "09e644a193cc63d31b3593a603382143294309d050117bb0c71929a1b0cf7b02"
+  },
+  "producer_summary": {
+    "accepted_action_goals": 0,
+    "last_map": 171655.898639951,
+    "last_status": 171656.098687297,
+    "map_messages": 6,
+    "map_publishers": 1,
+    "map_qos": {
+      "depth": 2,
+      "durability": "TRANSIENT_LOCAL",
+      "reliability": "RELIABLE"
+    },
+    "map_stamp_ns": 1791442003924989188,
+    "observed_maps": 6,
+    "status_messages": 16,
+    "test_input_only": true,
+    "tf_messages": 112,
+    "velocity_publishers": 0
+  },
+  "publisher_graph_before_cli": [
+    {
+      "endpoint_gid": [
+        1,
+        15,
+        127,
+        1,
+        91,
+        201,
+        83,
+        10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        45,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "node_name": "slam_toolbox",
+      "node_namespace": "/",
+      "topic": "/map"
+    },
+    {
+      "endpoint_gid": [
+        1,
+        15,
+        127,
+        1,
+        91,
+        201,
+        83,
+        10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        46,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "node_name": "robot_map_manager",
+      "node_namespace": "/",
+      "topic": "/robot_map_manager/status_json"
+    },
+    {
+      "endpoint_gid": [
+        1,
+        15,
+        127,
+        1,
+        91,
+        201,
+        83,
+        10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        47,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "node_name": "slam_toolbox",
+      "node_namespace": "/",
+      "topic": "/tf"
+    },
+    {
+      "endpoint_gid": [
+        1,
+        15,
+        127,
+        1,
+        91,
+        201,
+        83,
+        10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        48,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "node_name": "hwt601_mapping_ekf",
+      "node_namespace": "/",
+      "topic": "/tf"
+    }
+  ],
+  "ros_domain_id": 193,
+  "schema": 1,
+  "smoke_script_sha256": "a5632bd5088481fea714a3eeeb9d09f9e16416d011644167d7d5ddaf553a43a9",
+  "synthetic": true,
+  "tf_probe_sha256": "09e644a193cc63d31b3593a603382143294309d050117bb0c71929a1b0cf7b02",
+  "tool_sha256": "a8053a3e5b80db554c764b86213ddc69ddd0f6bded072e2a07521ff52b549e45"
+}

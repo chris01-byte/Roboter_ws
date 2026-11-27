@@ -1,0 +1,21 @@
+[0.388s] Invoking command in '/evidence/ap06-repo/src/amadeus_lidar_bringup': AMENT_PREFIX_PATH=/evidence/ap06-old-product-install/robot_state_estimation:/evidence/ap06-old-product-install/base_hardware:${AMENT_PREFIX_PATH} PYTHONPATH=/evidence/ap06-old-product-build/amadeus_lidar_bringup/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap06-old-product-install/amadeus_lidar_bringup/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages:/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap06-old-product-build/amadeus_lidar_bringup build --build-base /evidence/ap06-old-product-build/amadeus_lidar_bringup/build install --record /evidence/ap06-old-product-build/amadeus_lidar_bringup/install.log --single-version-externally-managed install_data
+[0.526s] running egg_info
+[0.526s] writing ../../../ap06-old-product-build/amadeus_lidar_bringup/amadeus_lidar_bringup.egg-info/PKG-INFO
+[0.526s] writing dependency_links to ../../../ap06-old-product-build/amadeus_lidar_bringup/amadeus_lidar_bringup.egg-info/dependency_links.txt
+[0.526s] writing entry points to ../../../ap06-old-product-build/amadeus_lidar_bringup/amadeus_lidar_bringup.egg-info/entry_points.txt
+[0.526s] writing requirements to ../../../ap06-old-product-build/amadeus_lidar_bringup/amadeus_lidar_bringup.egg-info/requires.txt
+[0.526s] writing top-level names to ../../../ap06-old-product-build/amadeus_lidar_bringup/amadeus_lidar_bringup.egg-info/top_level.txt
+[0.528s] reading manifest file '../../../ap06-old-product-build/amadeus_lidar_bringup/amadeus_lidar_bringup.egg-info/SOURCES.txt'
+[0.529s] writing manifest file '../../../ap06-old-product-build/amadeus_lidar_bringup/amadeus_lidar_bringup.egg-info/SOURCES.txt'
+[0.529s] running build
+[0.529s] running build_py
+[0.529s] running install
+[0.529s] running install_lib
+[0.530s] running install_data
+[0.531s] running install_egg_info
+[0.532s] removing '/evidence/ap06-old-product-install/amadeus_lidar_bringup/lib/python3.10/site-packages/amadeus_lidar_bringup-0.1.0-py3.10.egg-info' (and everything under it)
+[0.532s] Copying ../../../ap06-old-product-build/amadeus_lidar_bringup/amadeus_lidar_bringup.egg-info to /evidence/ap06-old-product-install/amadeus_lidar_bringup/lib/python3.10/site-packages/amadeus_lidar_bringup-0.1.0-py3.10.egg-info
+[0.533s] running install_scripts
+[0.550s] Installing scan_vereinheitlichen script to /evidence/ap06-old-product-install/amadeus_lidar_bringup/lib/amadeus_lidar_bringup
+[0.550s] writing list of installed files to '/evidence/ap06-old-product-build/amadeus_lidar_bringup/install.log'
+[0.571s] Invoked command in '/evidence/ap06-repo/src/amadeus_lidar_bringup' returned '0': AMENT_PREFIX_PATH=/evidence/ap06-old-product-install/robot_state_estimation:/evidence/ap06-old-product-install/base_hardware:${AMENT_PREFIX_PATH} PYTHONPATH=/evidence/ap06-old-product-build/amadeus_lidar_bringup/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap06-old-product-install/amadeus_lidar_bringup/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages:/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap06-old-product-build/amadeus_lidar_bringup build --build-base /evidence/ap06-old-product-build/amadeus_lidar_bringup/build install --record /evidence/ap06-old-product-build/amadeus_lidar_bringup/install.log --single-version-externally-managed install_data

@@ -1,0 +1,13 @@
+[
+  {
+    "goal": [
+      1.9049999574199319,
+      -0.4949999889358878,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "footprint_sweep_invalid",
+    "kind": "Original B73 after-fourth-observation selection14 raw/cost rasters, recorded map pose, native CPP read-only query; no motion or whole acceptance",
+    "astar": "true"
+  }
+]

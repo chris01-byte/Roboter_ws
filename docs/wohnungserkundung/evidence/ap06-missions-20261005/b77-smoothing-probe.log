@@ -1,0 +1,2 @@
+{"refinements": 1, "valid": false, "rejection": "footprint_sweep_invalid", "iterations": [54]}
+{"refinements": 5, "valid": false, "rejection": "footprint_sweep_invalid", "iterations": [54, 54, 53, 53, 53]}

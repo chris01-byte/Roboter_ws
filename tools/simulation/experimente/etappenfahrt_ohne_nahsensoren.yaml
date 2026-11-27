@@ -1,0 +1,10 @@
+# Etappenfahrt ohne Nahsensoren (Laborprobe, Entscheidung Projektinhaber
+# 22.11.2026): wie etappenfahrt.yaml, aber ohne VL53 – wie am Roboter mit
+# app_mapping.launch.py stage_drive_only:=true nahsensoren:=false. Keine
+# VL53-Wolken, collision_monitor ohne VL53-Quellen, Fahrtor gibt nur Dreh-
+# und Direktbefehle des Explorers ohne VL53 frei. Niedrige Dinge unter der
+# LiDAR-Höhe sieht dann niemand. Nur Simulation, keine Abnahme.
+sh_treiber:
+  explorer_parameter:
+    stage_drive_only: true
+  nahsensoren: false

@@ -1,0 +1,11 @@
+{
+  "compressed_bytes": 24903794,
+  "compressed_sha256": "c969b5bab1c1c9bf9d32a68329b304c51df5849d0a87c6be5f9cbe0a7c44d099",
+  "container_path": "/evidence/ap06-concept-20261008/revalidation-a/door68_start_a/events.jsonl.gz",
+  "independently_verified": true,
+  "metadata_path": "/workspace/scratch/ap06-concept-20261008/revalidation-a/door68_start_a/events.jsonl.gz.meta.json",
+  "path": "/workspace/scratch/ap06-concept-20261008/revalidation-a/door68_start_a/events.jsonl.gz",
+  "stored_in_git": false,
+  "uncompressed_bytes": 180245639,
+  "uncompressed_sha256": "80afe6e09401ddd4a3300527d6fbbf64bb17f446d0aff8c4cdc09050870dd0ce"
+}

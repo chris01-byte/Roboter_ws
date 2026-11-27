@@ -1,0 +1,56 @@
+{
+  "candidates": [
+    "MetricCandidate(task_id='metric-task-6', x=3.0695365675291395, y=-0.373827325074703, yaw=0.04775613687567103, frontier_xy=(4.874999891035259, 0.4049999909475446), route=((0.6247410424007004, -0.37573297629186825), (0.6149999862536788, -0.37499999161809683), (0.6449999855831265, -0.37499999161809683), (0.6749999849125743, -0.37499999161809683), (0.704999984242022, -0.37499999161809683), (0.7349999835714698, -0.37499999161809683), (0.7649999829009175, -0.37499999161809683), (0.7949999822303653, -0.37499999161809683), (0.824999981559813, -0.37499999161809683), (0.8549999808892608, -0.37499999161809683), (0.8849999802187085, -0.37499999161809683), (0.9149999795481563, -0.37499999161809683), (0.944999978877604, -0.37499999161809683), (0.9749999782070518, -0.37499999161809683), (1.0049999775364995, -0.37499999161809683), (1.0349999768659472, -0.37499999161809683), (1.064999976195395, -0.37499999161809683), (1.0949999755248427, -0.37499999161809683), (1.1249999748542905, -0.37499999161809683), (1.1549999741837382, -0.37499999161809683), (1.184999973513186, -0.37499999161809683), (1.2149999728426337, -0.37499999161809683), (1.2449999721720815, -0.37499999161809683), (1.2749999715015292, -0.37499999161809683), (1.304999970830977, -0.37499999161809683), (1.3349999701604247, -0.37499999161809683), (1.3649999694898725, -0.37499999161809683), (1.3949999688193202, -0.37499999161809683), (1.424999968148768, -0.37499999161809683), (1.4549999674782157, -0.37499999161809683), (1.4849999668076634, -0.37499999161809683), (1.5149999661371112, -0.37499999161809683), (1.544999965466559, -0.37499999161809683), (1.5749999647960067, -0.37499999161809683), (1.6049999641254544, -0.37499999161809683), (1.6349999634549022, -0.37499999161809683), (1.66499996278435, -0.37499999161809683), (1.6949999621137977, -0.37499999161809683), (1.7249999614432454, -0.37499999161809683), (1.7549999607726932, -0.37499999161809683), (1.784999960102141, -0.37499999161809683), (1.8149999594315886, -0.37499999161809683), (1.8449999587610364, -0.37499999161809683), (1.8749999580904841, -0.37499999161809683), (1.9049999574199319, -0.37499999161809683), (1.9349999567493796, -0.37499999161809683), (1.9649999560788274, -0.37499999161809683), (1.9949999554082751, -0.37499999161809683), (2.024999954737723, -0.37499999161809683), (2.0549999540671706, -0.37499999161809683), (2.0849999533966184, -0.37499999161809683), (2.114999952726066, -0.37499999161809683), (2.144999952055514, -0.37499999161809683), (2.1749999513849616, -0.37499999161809683), (2.2049999507144094, -0.37499999161809683), (2.234999950043857, -0.37499999161809683), (2.264999949373305, -0.37499999161809683), (2.2949999487027526, -0.37499999161809683), (2.3249999480322003, -0.37499999161809683), (2.354999947361648, -0.37499999161809683), (2.384999946691096, -0.37499999161809683), (2.4149999460205436, -0.37499999161809683), (2.4449999453499913, -0.37499999161809683), (2.474999944679439, -0.37499999161809683), (2.504999944008887, -0.37499999161809683), (2.5349999433383346, -0.37499999161809683), (2.5649999426677823, -0.37499999161809683), (2.59499994199723, -0.37499999161809683), (2.624999941326678, -0.37499999161809683), (2.6549999406561255, -0.37499999161809683), (2.6849999399855733, -0.37499999161809683), (2.714999939315021, -0.37499999161809683), (2.744999938644469, -0.37499999161809683), (2.7749999379739165, -0.37499999161809683), (2.8049999373033643, -0.37499999161809683), (2.834999936632812, -0.37499999161809683), (2.8649999359622598, -0.37499999161809683), (2.8949999352917075, -0.37499999161809683), (2.9249999346211553, -0.37499999161809683), (2.954999933950603, -0.37499999161809683), (2.9849999332800508, -0.37499999161809683), (3.0149999326094985, -0.37499999161809683), (3.0449999319389462, -0.37499999161809683), (3.074999931268394, -0.37499999161809683), (3.0695365675291395, -0.373827325074703)), route_length_m=2.4753563379917742, cost=7.240857385748737, fingerprint='d1c81386678af3a57c3f20d0293f0a5edaa610368cd35cb5c2570307cf1ca855', revision=1, requires_nav2_plan=True, observation_points=((4.154999907128513, 0.25499999430030584), (4.184999906457961, 0.25499999430030584), (4.274999904446304, 0.2849999936297536), (4.304999903775752, 0.2849999936297536), (4.334999903105199, 0.2849999936297536), (4.424999901093543, 0.31499999295920134), (4.45499990042299, 0.31499999295920134), (4.574999897740781, 0.3449999922886491), (4.6649998957291245, 0.37499999161809683), (4.694999895058572, 0.37499999161809683), (4.814999892376363, 0.4049999909475446)), evidence_key='8a7c7b581d8e99fffcbb424c06bfc44b709e9e4178ce5bde2db1116c0c4ea418')"
+  ],
+  "seconds": 4.189125589999094,
+  "ranking": {
+    "raw": 15,
+    "unsafe": 9,
+    "deferred_or_served": 1,
+    "accepted": 1,
+    "route_rejections": {
+      "start_egress_reference_expired": 4,
+      "goal_orientation_invalid": 4,
+      "no_visible_frontier": 1
+    },
+    "proposal_search_stopped_on_eligible_task": true
+  }
+}
+         7959937 function calls (7953788 primitive calls) in 4.189 seconds
+
+   Ordered by: cumulative time
+   List reduced from 345 to 30 due to restriction <30>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    4.189    4.189 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:2159(_metric_select)
+        1    0.000    0.000    4.169    4.169 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1778(_metric_candidates)
+        1    0.004    0.004    4.169    4.169 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1789(_metric_candidates_in_pass)
+       16    0.000    0.000    2.957    0.185 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1599(_metric_public_search)
+      911    0.042    0.000    2.851    0.003 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:909(_metric_route)
+       15    0.000    0.000    2.450    0.163 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1615(_metric_robot_side_observation)
+       15    0.005    0.000    2.448    0.163 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1619(_metric_robot_side_observation_in_pass)
+      852    0.006    0.000    1.642    0.002 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:976(_metric_waypoints_clear)
+     1000    0.006    0.000    1.565    0.002 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1099(_metric_standard_waypoints_clear)
+       98    0.000    0.000    1.231    0.013 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1057(_metric_checked_public_rollout)
+1298/1167    0.001    0.000    1.135    0.001 {built-in method builtins.all}
+     1314    0.619    0.000    1.121    0.001 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:283(footprint_poses_clear)
+       98    0.000    0.000    0.804    0.008 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1063(clear)
+      220    0.001    0.000    0.803    0.004 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1064(<genexpr>)
+   137616    0.495    0.000    0.711    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py:3768(_grid_to_world)
+       30    0.037    0.001    0.654    0.022 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py:3794(_frontier_approach_goal)
+     1059    0.478    0.000    0.557    0.001 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:152(route_cells)
+        1    0.000    0.000    0.508    0.508 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1676(_metric_public_observation)
+        1    0.001    0.001    0.507    0.507 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1680(_metric_public_observation_in_pass)
+      122    0.277    0.002    0.449    0.004 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:608(rpp_trajectory)
+       98    0.000    0.000    0.427    0.004 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1058(trajectory)
+    60611    0.029    0.000    0.350    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:955(<genexpr>)
+       45    0.305    0.007    0.323    0.007 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py:240(connected_mask)
+    44497    0.204    0.000    0.289    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py:3781(_world_to_grid)
+     2144    0.004    0.000    0.285    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1115(<genexpr>)
+19934/13918    0.018    0.000    0.283    0.000 {built-in method numpy.core._multiarray_umath.implement_array_function}
+       30    0.212    0.007    0.266    0.009 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_candidates.py:114(visible_boundary_cells)
+      148    0.003    0.000    0.235    0.002 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1188(_metric_nav2_proposal)
+     3481    0.036    0.000    0.217    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:312(<listcomp>)
+    14207    0.020    0.000    0.151    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:903(_metric_grid_line_clear)
+
+

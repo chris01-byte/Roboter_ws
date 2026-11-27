@@ -1,0 +1,11 @@
+# Vergleichsstand vor SH-9: Produktprofil ohne EK-1 (Stand W-1, 15.11.2026).
+# Seit dem 16.11.2026 stehen die vier EK-1-Werte im Produktprofil
+# (self_healing_params.yaml); dieses Experiment setzt sie auf 0 = aus zurück
+# (gap_reach_m wirkt nur zusammen mit gap_depth_m und bleibt deshalb stehen).
+# Nur Simulation, zum Vergleich "mit EK-1" gegen "ohne EK-1" in derselben Welt.
+sh_treiber:
+  explorer_parameter:
+    self_healing_scan_rad: 0.0
+    self_healing_scan_spacing_m: 0.0
+    self_healing_gap_depth_m: 0.0
+    self_healing_attempt_stall_s: 0.0

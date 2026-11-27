@@ -1,0 +1,434 @@
+[
+  {
+    "case": {
+      "id": "door68_start_a",
+      "door_m": 0.68,
+      "start": [
+        -1.9,
+        -0.45,
+        0.0
+      ]
+    },
+    "passed": false,
+    "hardware_qualified": false,
+    "manifest_compatible": true,
+    "travel_m": 0.057476972438944264,
+    "minimum_padded_clearance_m": 0.6999738328200522,
+    "map_oracle": {
+      "reference_free_cells": 14230,
+      "reference_observed_cells": 7809,
+      "reference_observed_fraction": 0.5487702037947997,
+      "maximum_occupied_wall_error_m": 0.02491909735601816
+    },
+    "tf_owners": {
+      "odom->base_link": [
+        "hwt601_mapping_ekf"
+      ],
+      "map->odom": [
+        "slam_toolbox"
+      ]
+    },
+    "action_maximum_active": {
+      "/explore_area/_action/status": 1,
+      "/navigate_to_pose/_action/status": 1
+    },
+    "action_active_at_terminal": {
+      "/explore_area/_action/status": [],
+      "/navigate_to_pose/_action/status": []
+    },
+    "command_values_at_terminal": {
+      "/cmd_vel_nav": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_smoothed": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_nav_raw": [
+        0.0,
+        0.0
+      ]
+    },
+    "map_save": {
+      "success": true,
+      "message": "Karte 'amadeus' als Version 20261004T001100164106Z-204d9c529cc8 gespeichert."
+    },
+    "checkpoint_after_save": {
+      "state": "saved",
+      "path": "/evidence/ap06-runs/complete-a/checkpoints/amadeus/20261004T001100164106Z-204d9c529cc8/state-00000001.json",
+      "map_id": "map-204d9c529cc80fa5975366bdd6403c6dfa84aad94fdfe5a6a9f28863bddb461b",
+      "version": "20261004T001100164106Z-204d9c529cc8",
+      "outcome": "blocked_help_required"
+    },
+    "injection_to_terminal_s": null,
+    "injection_to_standstill_s": null,
+    "hold_to_standstill_s": null,
+    "hold_resume_qualified": null,
+    "map_growth": true,
+    "label": "complete-a",
+    "state": "blocked",
+    "reason": "completion_raw_pose_not_observed_free",
+    "route_rejection": "start_egress_reference_expired",
+    "arrivals": 0,
+    "observations": 0,
+    "autonomous_tasks": [
+      {
+        "task": "metric-task-1",
+        "target": [
+          0.3899999979883432,
+          0.0
+        ],
+        "result": "canceled",
+        "decision": "route_invalidated"
+      }
+    ]
+  },
+  {
+    "case": {
+      "id": "door68_start_b",
+      "door_m": 0.68,
+      "start": [
+        -2.1,
+        0.45,
+        0.0
+      ]
+    },
+    "passed": false,
+    "hardware_qualified": false,
+    "manifest_compatible": true,
+    "travel_m": 0.056465170256522035,
+    "minimum_padded_clearance_m": 0.5699999999975955,
+    "map_oracle": {
+      "reference_free_cells": 14230,
+      "reference_observed_cells": 8091,
+      "reference_observed_fraction": 0.5685874912157414,
+      "maximum_occupied_wall_error_m": 0.024912364888919902
+    },
+    "tf_owners": {
+      "odom->base_link": [
+        "hwt601_mapping_ekf"
+      ],
+      "map->odom": [
+        "slam_toolbox"
+      ]
+    },
+    "action_maximum_active": {
+      "/explore_area/_action/status": 1,
+      "/navigate_to_pose/_action/status": 1
+    },
+    "action_active_at_terminal": {
+      "/explore_area/_action/status": [],
+      "/navigate_to_pose/_action/status": []
+    },
+    "command_values_at_terminal": {
+      "/cmd_vel_nav": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_smoothed": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_nav_raw": [
+        0.0,
+        0.0
+      ]
+    },
+    "map_save": {
+      "success": true,
+      "message": "Karte 'amadeus' als Version 20261004T001141245345Z-ea12f79c761b gespeichert."
+    },
+    "checkpoint_after_save": {
+      "state": "saved",
+      "path": "/evidence/ap06-runs/complete-b/checkpoints/amadeus/20261004T001141245345Z-ea12f79c761b/state-00000001.json",
+      "map_id": "map-ea12f79c761b5fbf6c7acce219621fac9acb5a649d366b3957b1d84a14fccfc9",
+      "version": "20261004T001141245345Z-ea12f79c761b",
+      "outcome": "blocked_help_required"
+    },
+    "injection_to_terminal_s": null,
+    "injection_to_standstill_s": null,
+    "hold_to_standstill_s": null,
+    "hold_resume_qualified": null,
+    "map_growth": true,
+    "label": "complete-b",
+    "state": "blocked",
+    "reason": "completion_raw_pose_not_observed_free",
+    "route_rejection": "start_egress_reference_expired",
+    "arrivals": 0,
+    "observations": 0,
+    "autonomous_tasks": [
+      {
+        "task": "metric-task-1",
+        "target": [
+          0.3599999986588955,
+          0.0
+        ],
+        "result": "canceled",
+        "decision": "route_invalidated"
+      }
+    ]
+  },
+  {
+    "case": {
+      "id": "door80_start_c",
+      "door_m": 0.8,
+      "start": [
+        -1.6,
+        0.0,
+        0.0
+      ]
+    },
+    "passed": false,
+    "hardware_qualified": false,
+    "manifest_compatible": true,
+    "travel_m": 0.05180036166951022,
+    "minimum_padded_clearance_m": 0.5973360698031923,
+    "map_oracle": {
+      "reference_free_cells": 14254,
+      "reference_observed_cells": 8187,
+      "reference_observed_fraction": 0.574365090500912,
+      "maximum_occupied_wall_error_m": 0.024934265569419856
+    },
+    "tf_owners": {
+      "odom->base_link": [
+        "hwt601_mapping_ekf"
+      ],
+      "map->odom": [
+        "slam_toolbox"
+      ]
+    },
+    "action_maximum_active": {
+      "/explore_area/_action/status": 1,
+      "/navigate_to_pose/_action/status": 1
+    },
+    "action_active_at_terminal": {
+      "/explore_area/_action/status": [],
+      "/navigate_to_pose/_action/status": []
+    },
+    "command_values_at_terminal": {
+      "/cmd_vel_nav": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_smoothed": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_nav_raw": [
+        0.0,
+        0.0
+      ]
+    },
+    "map_save": {
+      "success": true,
+      "message": "Karte 'amadeus' als Version 20261004T001221999930Z-43b850c83bfa gespeichert."
+    },
+    "checkpoint_after_save": {
+      "state": "saved",
+      "path": "/evidence/ap06-runs/complete-c/checkpoints/amadeus/20261004T001221999930Z-43b850c83bfa/state-00000001.json",
+      "map_id": "map-43b850c83bfa9d36f577c274b2148f600c6329260ccb1953e967f1e0302c7a41",
+      "version": "20261004T001221999930Z-43b850c83bfa",
+      "outcome": "blocked_help_required"
+    },
+    "injection_to_terminal_s": null,
+    "injection_to_standstill_s": null,
+    "hold_to_standstill_s": null,
+    "hold_resume_qualified": null,
+    "map_growth": true,
+    "label": "complete-c",
+    "state": "blocked",
+    "reason": "completion_raw_pose_not_observed_free",
+    "route_rejection": "start_egress_reference_expired",
+    "arrivals": 0,
+    "observations": 0,
+    "autonomous_tasks": [
+      {
+        "task": "metric-task-1",
+        "target": [
+          0.3899999979883432,
+          0.0
+        ],
+        "result": "canceled",
+        "decision": "route_invalidated"
+      }
+    ]
+  },
+  {
+    "case": {
+      "id": "cancel",
+      "door_m": 0.8,
+      "start": [
+        -1.9,
+        -0.45,
+        0.0
+      ],
+      "inject": "cancel_after_first_motion"
+    },
+    "passed": true,
+    "hardware_qualified": false,
+    "manifest_compatible": true,
+    "travel_m": 0.03486005738861332,
+    "minimum_padded_clearance_m": 0.6999777084562038,
+    "map_oracle": {
+      "reference_free_cells": 14254,
+      "reference_observed_cells": 8207,
+      "reference_observed_fraction": 0.5757682054160236,
+      "maximum_occupied_wall_error_m": 0.024899481079912134
+    },
+    "tf_owners": {
+      "odom->base_link": [
+        "hwt601_mapping_ekf"
+      ],
+      "map->odom": [
+        "slam_toolbox"
+      ]
+    },
+    "action_maximum_active": {
+      "/explore_area/_action/status": 1,
+      "/navigate_to_pose/_action/status": 1
+    },
+    "action_active_at_terminal": {
+      "/explore_area/_action/status": [],
+      "/navigate_to_pose/_action/status": []
+    },
+    "command_values_at_terminal": {
+      "/cmd_vel_nav": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_smoothed": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_nav_raw": [
+        0.0,
+        0.0
+      ]
+    },
+    "map_save": {
+      "success": true,
+      "message": "Karte 'amadeus' als Version 20261004T001303205566Z-ec16ee520df7 gespeichert."
+    },
+    "checkpoint_after_save": {
+      "state": "saved",
+      "path": "/evidence/ap06-runs/complete-cancel/checkpoints/amadeus/20261004T001303205566Z-ec16ee520df7/state-00000001.json",
+      "map_id": "map-ec16ee520df76e897402399559d98984ae5a1ba1370872831e47f802a8eea9f9",
+      "version": "20261004T001303205566Z-ec16ee520df7",
+      "outcome": "user_canceled"
+    },
+    "injection_to_terminal_s": 0.20417262199771358,
+    "injection_to_standstill_s": 0.33097599799657473,
+    "hold_to_standstill_s": null,
+    "hold_resume_qualified": null,
+    "map_growth": true,
+    "label": "complete-cancel",
+    "state": "canceled",
+    "reason": "user_canceled",
+    "route_rejection": null,
+    "arrivals": 0,
+    "observations": 0,
+    "autonomous_tasks": []
+  },
+  {
+    "case": {
+      "id": "gyro_hold",
+      "door_m": 0.8,
+      "start": [
+        -1.9,
+        -0.45,
+        0.0
+      ],
+      "inject": "gyro_gap_after_first_motion"
+    },
+    "passed": true,
+    "hardware_qualified": false,
+    "manifest_compatible": true,
+    "travel_m": 0.048755662937486705,
+    "minimum_padded_clearance_m": 0.6999590456601834,
+    "map_oracle": {
+      "reference_free_cells": 14254,
+      "reference_observed_cells": 8209,
+      "reference_observed_fraction": 0.5759085169075348,
+      "maximum_occupied_wall_error_m": 0.024946323788048952
+    },
+    "tf_owners": {
+      "odom->base_link": [
+        "hwt601_mapping_ekf"
+      ],
+      "map->odom": [
+        "slam_toolbox"
+      ]
+    },
+    "action_maximum_active": {
+      "/explore_area/_action/status": 1,
+      "/navigate_to_pose/_action/status": 1
+    },
+    "action_active_at_terminal": {
+      "/explore_area/_action/status": [],
+      "/navigate_to_pose/_action/status": []
+    },
+    "command_values_at_terminal": {
+      "/cmd_vel_nav": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_smoothed": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel": [
+        0.0,
+        0.0
+      ],
+      "/cmd_vel_nav_raw": [
+        0.0,
+        0.0
+      ]
+    },
+    "map_save": {
+      "success": true,
+      "message": "Karte 'amadeus' als Version 20261004T001345798610Z-14d98b477963 gespeichert."
+    },
+    "checkpoint_after_save": {
+      "state": "unavailable",
+      "reason": "metric_checkpoint_exact_saved_snapshot_unavailable",
+      "motion_authorized": false
+    },
+    "injection_to_terminal_s": 5.555074397998396,
+    "injection_to_standstill_s": 0.5606006129964953,
+    "hold_to_standstill_s": 0.24237376699602464,
+    "hold_resume_qualified": false,
+    "map_growth": true,
+    "label": "complete-gyro-hold",
+    "state": "failed",
+    "reason": "hwt_terminal",
+    "route_rejection": null,
+    "arrivals": 0,
+    "observations": 0,
+    "autonomous_tasks": [
+      {
+        "task": "metric-task-1",
+        "target": null,
+        "result": "hwt_hold",
+        "decision": null
+      }
+    ]
+  }
+]

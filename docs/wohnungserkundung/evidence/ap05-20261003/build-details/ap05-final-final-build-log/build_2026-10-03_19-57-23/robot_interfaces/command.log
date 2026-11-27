@@ -1,0 +1,6 @@
+Invoking command in '/evidence/ap05-final-build/robot_interfaces': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /evidence/ap05-repo/src/robot_interfaces -DCMAKE_INSTALL_PREFIX=/evidence/ap05-final-install/robot_interfaces
+Invoked command in '/evidence/ap05-final-build/robot_interfaces' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /evidence/ap05-repo/src/robot_interfaces -DCMAKE_INSTALL_PREFIX=/evidence/ap05-final-install/robot_interfaces
+Invoking command in '/evidence/ap05-final-build/robot_interfaces': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /evidence/ap05-final-build/robot_interfaces -- -j5 -l5
+Invoked command in '/evidence/ap05-final-build/robot_interfaces' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /evidence/ap05-final-build/robot_interfaces -- -j5 -l5
+Invoking command in '/evidence/ap05-final-build/robot_interfaces': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /evidence/ap05-final-build/robot_interfaces
+Invoked command in '/evidence/ap05-final-build/robot_interfaces' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /evidence/ap05-final-build/robot_interfaces

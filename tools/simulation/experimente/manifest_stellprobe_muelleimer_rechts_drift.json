@@ -1,0 +1,94 @@
+{
+ "schema": 4,
+ "zweck": "Stellprobe Mülleimer wie SH-8 s3a (13.11.2026): Amadeus startet 5 cm vor zwei 38-cm-Eimern (29 cm, 10 cm Lücke), die nur die VL53 sehen. Gemessen wird, ob er sich ohne Gehäuseberührung befreit und 0,5 m wegkommt (MASTERPLAN §9 Regel 6). Experiment, keine Abnahme.",
+ "qualifikation": "nur_software_cloud_ros2_jazzy",
+ "festgelegt": "2026-11-13 nach SH-8; Welt v4, nur Startpose, Eimer und Budget geändert",
+ "welt": {
+  "quelle": "tools/simulation/ap06_world.py (zwei Räume, Verbindung, Umweginsel, blockierte Alternative); plus vier feste, unsymmetrische Möbel aus experimente/manifest_asymmetrisch.json, unverändert übernommen",
+  "door_m": 0.8,
+  "start": [
+   -1.7,
+   -0.34,
+   -0.0698
+  ],
+  "zusatz_hindernisse": [
+   [
+    -2.8,
+    -2.35,
+    0.95,
+    1.4
+   ],
+   [
+    -1.35,
+    -1.25,
+    -1.4,
+    -1.05
+   ],
+   [
+    -1.1,
+    -0.9,
+    0.85,
+    1.05
+   ],
+   [
+    2.25,
+    2.8,
+    -1.4,
+    -1.05
+   ]
+  ],
+  "niedrige_hindernisse": [
+   [
+    -1.195,
+    -0.105,
+    0.29,
+    0.38
+   ],
+   [
+    -1.195,
+    -0.495,
+    0.29,
+    0.38
+   ]
+  ],
+  "odometrie_drift": {
+   "gier_skala": 0.03,
+   "laenge_skala": -0.02
+  }
+ },
+ "sensor": {
+  "lidar_hz": 10,
+  "lidar_beams": 2160,
+  "mastmaske": true,
+  "vl53_hz": 10,
+  "odometrie": "ideal aus dem Fahrmodell (Standardweg); HWT601 ist hier nicht modelliert"
+ },
+ "budgets": {
+  "start_s": 180,
+  "mission_s": 420,
+  "nachlauf_s": 5,
+  "ueberzug_s": 30
+ },
+ "abnahme": {
+  "erlaubte_enden": [
+   "exploration_complete",
+   "usable_partial"
+  ],
+  "min_abdeckung_erreichbar": 0.95,
+  "max_kartenfehler_m": 0.1,
+  "keine_kollision": true,
+  "kein_prozessabsturz": true,
+  "erlaeuterung": "Bestanden mit sauberem Ende, mindestens 95 % der vom Start aus erreichbaren Fläche frei kartiert (ohne Ausnahme für Teilenden), keine belegte Kartenzelle weiter als 0,10 m von einer Wand der Welt (wie das frühere AP06-Kriterium), kein Kontakt, kein Absturz, Störung ausgelöst und, wo erwartet, Heilung beobachtet. v2 ließ einen Lauf mit verbogener Karte (3,3 m) über die Teilende-Klausel bestehen."
+ },
+ "szenarien": [
+  {
+   "id": "stellprobe_muelleimer",
+   "beschreibung": "wie mittig, Start -4 cm seitlich, -4°, Odometrie mit Skalenfehler",
+   "stoerung": null,
+   "erwartet": {}
+  }
+ ],
+ "version": 4,
+ "vorgaenger": "sh_robustheit_szenarien_v3.json (v3; Ergebnisse dort bleiben unverändert bewertet)",
+ "stellprobe_m": 0.5
+}
