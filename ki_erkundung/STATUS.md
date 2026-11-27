@@ -1,6 +1,18 @@
 # KI-Erkundung – aktueller Status
 
-**Stand 27.11.2026: KI-F9R ausgeführt – das reparierte Sehen hält an den
+**Stand 27.11.2026 (abends): Auftrag KI-F11 erteilt – das neue Sehen am
+Roboter.** Christopher: „Ja los geht es mit KI-F11“. Wie KI-F9, mit der
+Ablaufhilfe: Vorlauf im Stand mit Blick zur Tür (Messen und Belege), dann
+drei Läufe von drei Plätzen, darunter der Fensterplatz aus KI-F9, Lauf 2;
+die KI wählt, Christopher sagt ja oder nein. Eine Verhaltensänderung: das
+neue Sehen. Bewertet wird das Sehen (G-1: Tür 3 von 3, Fenster nie) getrennt
+vom Fahren (G-2). Der Auftrag wurde vor der Übergabe zweimal gegengeprüft
+(drei Prüfer, dann zwei zur Nachprüfung; unter anderem: Christophers Platz
+mit einem Schritt zum Not-Aus im Gehäuse und nie zwischen Amadeus und Tür
+oder Fenster, Startschutz gegen einen zweiten Stack, Abbruch mit `cancel`,
+ein eigener Fall „gefahren, aber nicht hindurch“).
+
+**Davor, 27.11.2026: KI-F9R ausgeführt – das reparierte Sehen hält an den
 echten Aufnahmen.** Nichts ist gefahren, kein Sensor lief. In Lauf 2 aus
 KI-F9 hat die Labortür jetzt eine Nummer, und die KI wählt sie; mit dem
 alten Stand wiederholte sich der Fehler genau (Wahl der Fensterlücke). In
@@ -214,7 +226,7 @@ fährt mit seiner Schutzkette.
 |---|---|---|---|
 | Erstes Sehen | im Stand Bild und Laser aufnehmen, die KI fragen, die Antwort prüfen | KI-0 | **erledigt** (21.11.) |
 | Blickrunde | sich selbst einmal herumdrehen; aus acht Bildern nennt die KI den Ausgang | KI-1 | **am Roboter gelungen** (21.11., eine Runde im Labor); für die Kriterien fehlen weitere Runden |
-| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1), Ausrichten (KI-F2), drei Etappen genau auf der Linie bis kurz vor die Tür (KI-F3b); **selbst vor die Tür gestellt und hindurchgefahren (KI-F7; KI-F8: drei von drei in einem Ablauf)**; die Tür bestimmte dabei der Mensch. **Die KI wählt die Tür: am Roboter in KI-F9 einer von zwei Läufen hindurch; Ursachen und Weg in der [Bewertung](BEWERTUNG_KIF9.md)** |
+| Die KI wählt, Amadeus fährt | zur gewählten Tür und hindurch, im nächsten Raum neu umsehen; zuerst in der Simulation, dann im Labor | KI-2, KI-3 | **in Arbeit:** Fahrteil gebaut (Etappenfahrt ohne Nav2); am Roboter gelungen: gerade Etappe (KI-F1), Ausrichten (KI-F2), drei Etappen genau auf der Linie bis kurz vor die Tür (KI-F3b); **selbst vor die Tür gestellt und hindurchgefahren (KI-F7; KI-F8: drei von drei in einem Ablauf)**; die Tür bestimmte dabei der Mensch. **Die KI wählt die Tür: am Roboter in KI-F9 einer von zwei Läufen hindurch; Ursachen und Weg in der [Bewertung](BEWERTUNG_KIF9.md); das Sehen ist repariert und an den gespeicherten Runden bestätigt (KI-F9R); als Nächstes KI-F11 am Roboter** |
 | Raum für Raum | weiter, bis kein Ausgang mehr offen ist (Laborraum, Flur, Schlafzimmer) | KI-3 | offen |
 | Räume benennen, um Hilfe rufen | Raumnamen als Vorschlag in der App; Hilferuf mit Grund und Bild | KI-4 | offen |
 | Auf Zuruf | „fahr in die Küche“, „such die Tasse“ | KI-5 | offen |
@@ -224,10 +236,11 @@ Die Stufen und ihre Kriterien stehen verbindlich im
 
 ## Arbeitsliste
 
-**Kein offener Auftrag.** KI-F9R ist ausgeführt (Abschnitt unten). Die
-Reihenfolge aus der [Bewertung](BEWERTUNG_KIF9.md) §10, von Christopher am
-24.11.2026 bestätigt („Ja beginne“), mit dem Realtest des neuen Sehens vor
-dem Nachfassen; Schritt 1 bis 3 sind erledigt:
+**Offener Auftrag: [KI-F11](AUFTRAG.md)** (das neue Sehen am Roboter,
+erteilt 27.11.2026, wartet auf die Übergabe an den Jetson). Die Reihenfolge
+aus der [Bewertung](BEWERTUNG_KIF9.md) §10, von Christopher am 24.11.2026
+bestätigt („Ja beginne“), mit dem Realtest des neuen Sehens vor dem
+Nachfassen; Schritt 1 bis 3 sind erledigt:
 1. **Werkzeuge robust machen** – **gebaut und gegengeprüft 24.11.2026**
    (Abschnitt „Werkzeuge robust gemacht“ unten; am Jetson noch nicht
    erprobt):
@@ -245,11 +258,13 @@ dem Nachfassen; Schritt 1 bis 3 sind erledigt:
    gespeicherten Runden: KI-F9R, 27.11.2026** (Lauf 2 behoben, nichts
    verloren, eine neue Fehlwahl in einer Seitenansicht). Falls nötig:
    heutiges Modell gegen Qwen3.8-27B; eine zweite Meinung als Veto.
-4. **KI-F11 – das neue Sehen am Roboter** (vorgeschlagen, nicht
-   beauftragt): wie KI-F9, die KI wählt und Christopher sagt ja oder nein;
-   eine Verhaltensänderung, das neue Sehen. Dazu ein Vorlauf mit Blick auf
-   die Tür (für `messen` und die Belege) und ein fester Platz für
-   Christopher während des Rundblicks.
+4. **KI-F11 – das neue Sehen am Roboter** – **Auftrag erteilt 27.11.2026**
+   ([AUFTRAG.md](AUFTRAG.md)): wie KI-F9, die KI wählt und Christopher sagt
+   ja oder nein; eine Verhaltensänderung, das neue Sehen. Vorlauf mit Blick
+   auf die Tür (für `messen` und die Belege), drei Läufe (Lauf 2 am
+   Fensterplatz aus KI-F9), Christophers Platz hinter Amadeus mit einem
+   Schritt zum Not-Aus. Fehlschläge beim Fahren gehen mit Grund in KI-F10
+   ein.
 5. **KI-F10 „Nachfassen im Stand“**, eine Verhaltensänderung: die Regeln
    des Werkzeugs vor dem Senden (Wiederfinden in Stufen, Wegvarianten mit
    Ansage, durch die Tür nur nach frontaler Messung mit zwei Kanten).
@@ -1818,10 +1833,8 @@ Jetson, echte Bilder.
 
 ## Genau ein nächster Schritt
 
-Mit Christopher entscheiden, ob als Nächstes der Realtest KI-F11 (das neue
-Sehen am Roboter, Arbeitsliste Punkt 4) vorbereitet wird oder zuerst im
-Stand ein zweites Modell an denselben 17 Runden verglichen wird (wegen der
-Fehlwahl in `labor_tuer_seite_nah`). Vorschlag: KI-F11, denn die Fehlwahl
-lag an einer alten Seitenansicht einer halb geschlossenen Tür, aus den
-Aufstellungen von KI-F9 wählt die KI jetzt immer die Tür, und Christophers
-Ja bleibt vor jeder Fahrt.
+Christopher übergibt den Auftrag [KI-F11](AUFTRAG.md) an den Jetson-Agenten
+(Vorlauf im Stand, dann drei Läufe; die KI wählt, Christopher sagt ja oder
+nein). Danach wird der Bericht ausgewertet: G-1 (Sehen) entscheidet, ob das
+neue Sehen bleibt; die Gründe der Läufe ohne Durchfahrt gehen in KI-F10
+(Nachfassen im Stand) ein.
